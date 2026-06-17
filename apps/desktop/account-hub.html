@@ -363,18 +363,18 @@ button.publish-btn:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5); transf
 
  <!-- Account Selection Modal (-->
   <div class="modal-overlay" id="selectionModal">
-    <div class="modal-content" style="width: 400px;">
-      <div class="modal-header" id="selectionModalHeader">Select Accounts</div>
-      
-      <div style="margin-bottom: 1.5rem; color: #94a3b8; font-size: 0.9rem; text-align: center;">
-        Choose which profiles, pages, or groups to link to this campaign.
+    <div class="modal-content" style="width: 520px; max-height: 85vh; display:flex; flex-direction:column;">
+      <div class="modal-header" id="selectionModalHeader">Choose Accounts to Link</div>
+      <div style="margin-bottom: 1rem; color: #94a3b8; font-size: 0.88rem; text-align: center;">
+        We found the profiles, pages, groups, servers, and communities below. Check the ones you want linked to this campaign.
       </div>
-      
-      <div id="accountSelectionList" style="max-height: 200px; overflow-y: auto; margin-bottom: 1.5rem; background: rgba(15,23,42,0.5); border: 1px solid #475569; border-radius: 6px; padding: 0x 0.5rem;">
-        <!-- Dynamically populated -->
+      <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+        <button type="button" class="refresh-btn" id="selectAllAccountsBtn">Select All</button>
+        <button type="button" class="refresh-btn" id="selectNoneAccountsBtn">Select None</button>
       </div>
-
-      <div style="display: flex; gap: 1rem;">
+      <div id="accountSelectionList" style="flex:1; min-height:180px; max-height:340px; overflow-y:auto; margin-bottom:1rem; background:rgba(15,23,42,0.5); border:1px solid #475569; border-radius:6px; padding:0.5rem;">
+      </div>
+      <div style="display:flex; gap:1rem;">
         <button class="modal-close" id="cancelSelectionBtn" style="margin-top:0; flex:1;">Cancel</button>
         <button id="saveSelectionBtn" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #2563eb); color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 15px rgba(37,99,235,0.3);">Link Selected</button>
       </div>
@@ -517,20 +517,16 @@ button.publish-btn:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5); transf
       </div>
 
       <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-          <h3 style="margin:0;color:#e2e8f0;font-size:1rem;">Groups &amp; Communities</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+          <h3 style="margin:0;color:#e2e8f0;font-size:1rem;">Automation Targets</h3>
+          <div style="display:flex;gap:0.5rem;">
+            <button type="button" class="refresh-btn" id="selectAllTargetsBtn">Enable All</button>
+            <button type="button" class="refresh-btn" id="saveAutomationTargetsBtn"><i class="fas fa-save"></i> Save Selection</button>
+          </div>
         </div>
-        <div class="groups-list" id="groupsList">
-          <div style="color:#64748b;font-style:italic;">Select an account to load groups.</div>
-        </div>
-      </div>
-
-      <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-          <h3 style="margin:0;color:#e2e8f0;font-size:1rem;">Pages &amp; Sub-Accounts</h3>
-        </div>
-        <div class="groups-list" id="childrenList" style="max-height:220px;">
-          <div style="color:#64748b;font-style:italic;">Select an account to load linked pages and channels.</div>
+        <p style="color:#64748b;font-size:0.82rem;margin:0 0 1rem;">Choose which profiles, pages, groups, servers, and communities this connection should automate.</p>
+        <div class="groups-list" id="automationTargetsList" style="max-height:320px;">
+          <div style="color:#64748b;font-style:italic;">Select a connection, then click Refresh Sub-Accounts to pull pages and communities.</div>
         </div>
       </div>
 
@@ -615,42 +611,89 @@ function renderProfile(profile, refreshedAt) {
   }
 }
 
-async function loadGroups() {
-  const listEl = document.getElementById('groupsList');
+const TYPE_LABELS = {
+  Profile: 'Profile',
+  Page: 'Page',
+  Channel: 'Channel',
+  Group: 'Group',
+  Server: 'Server',
+  Subreddit: 'Community',
+  Community: 'Community',
+  Board: 'Board',
+  Bot: 'Bot',
+};
+
+function targetCheckboxId(target) {
+  return `target_${target.source || 'account'}_${target.id}`;
+}
+
+async function loadAutomationTargets() {
+  const listEl = document.getElementById('automationTargetsList');
   if (!listEl || !currentAccountId) return;
-  const res = await ipcRenderer.invoke('get-account-groups', currentAccountId);
-  const groups = res.groups || [];
-  if (!groups.length) {
-    listEl.innerHTML = '<div style="color:#64748b;font-style:italic;">No groups or communities found. Click <strong>Refresh Sub-Accounts</strong> to pull from the platform API.</div>';
+  const res = await ipcRenderer.invoke('get-account-automation-targets', currentAccountId);
+  const targets = res.targets || [];
+  if (!targets.length) {
+    listEl.innerHTML = '<div style="color:#64748b;font-style:italic;">No targets found. Click <strong>Refresh Sub-Accounts</strong> to pull pages, profiles, groups, and communities from the platform API.</div>';
     return;
   }
+
+  const byType = {};
+  targets.forEach((t) => {
+    const label = TYPE_LABELS[t.type] || t.type || 'Account';
+    if (!byType[label]) byType[label] = [];
+    byType[label].push(t);
+  });
+
   listEl.innerHTML = '';
-  groups.forEach((g) => {
-    const div = document.createElement('div');
-    div.className = 'group-item';
-    div.innerHTML = `<div style="flex:1;"><div style="color:#e2e8f0;font-weight:600;">${escapeHtml(g.name)}</div><div class="group-meta">${escapeHtml(g.platform || '')} · ${escapeHtml(g.type || 'Group')}${g.privacy ? ' · ' + escapeHtml(g.privacy) : ''}${g.subreddit ? ' · r/' + escapeHtml(g.subreddit) : ''}</div></div>`;
-    listEl.appendChild(div);
+  Object.keys(byType).sort().forEach((typeLabel) => {
+    const heading = document.createElement('div');
+    heading.style.cssText = 'font-size:0.72rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin:0.75rem 0 0.35rem;font-weight:600;';
+    heading.textContent = typeLabel + 's';
+    listEl.appendChild(heading);
+
+    byType[typeLabel].forEach((t) => {
+      const div = document.createElement('label');
+      div.className = 'group-item';
+      const checked = t.automationEnabled !== false ? 'checked' : '';
+      const meta = [
+        t.platform,
+        t.type,
+        t.privacy,
+        t.subreddit ? `r/${t.subreddit}` : null,
+        t.linked === false ? 'not linked yet' : null,
+      ].filter(Boolean).join(' · ');
+      div.innerHTML = `
+        <input type="checkbox" id="${targetCheckboxId(t)}" data-target-id="${escapeHtml(t.id)}" data-target-source="${escapeHtml(t.source || 'account')}" ${checked}>
+        <div style="flex:1;">
+          <div style="color:#e2e8f0;font-weight:600;">${escapeHtml(t.name)}</div>
+          <div class="group-meta">${escapeHtml(meta)}</div>
+        </div>`;
+      listEl.appendChild(div);
+    });
   });
 }
 
-async function loadChildren() {
-  const listEl = document.getElementById('childrenList');
-  if (!listEl || !currentAccountId) return;
-  const res = await ipcRenderer.invoke('get-account-children', currentAccountId);
-  const children = res.children || [];
-  if (!children.length) {
-    listEl.innerHTML = '<div style="color:#64748b;font-style:italic;">No linked pages or sub-accounts yet. Use <strong>Refresh Sub-Accounts</strong> to discover them, then link from the banner above.</div>';
-    return;
-  }
-  listEl.innerHTML = '';
-  children.forEach((c) => {
-    const cfg = platformConfig[c.platform] || { icon: '?', class: '' };
-    const div = document.createElement('div');
-    div.className = 'group-item';
-    div.style.cursor = 'default';
-    div.innerHTML = `<div class="acc-icon ${cfg.class}" style="width:32px;height:32px;font-size:0.9rem;${cfg.colorStyle ? cfg.colorStyle.replace(/"/g, '') : ''}">${cfg.icon}</div><div style="flex:1;"><div style="color:#e2e8f0;font-weight:600;">${escapeHtml(c.handle)}</div><div class="group-meta">${escapeHtml(c.platform)} · ${escapeHtml(c.type || 'Account')}</div></div>`;
-    listEl.appendChild(div);
+async function saveAutomationTargets() {
+  if (!currentAccountId) return;
+  const checks = Array.from(document.querySelectorAll('#automationTargetsList input[type="checkbox"]'));
+  const enabledAccountIds = [];
+  const enabledGroupIds = [];
+  checks.forEach((cb) => {
+    if (!cb.checked) return;
+    if (cb.dataset.targetSource === 'group') enabledGroupIds.push(cb.dataset.targetId);
+    else enabledAccountIds.push(cb.dataset.targetId);
   });
+  const res = await ipcRenderer.invoke('save-automation-target-selection', {
+    accountId: currentAccountId,
+    enabledAccountIds,
+    enabledGroupIds,
+  });
+  if (res.success) {
+    showToast(`Automation saved for ${enabledAccountIds.length + enabledGroupIds.length} target(s).`, 'success');
+    await loadAccounts();
+  } else {
+    showToast(res.error || 'Could not save automation targets', 'error');
+  }
 }
 
 let refreshInFlight = false;
@@ -665,8 +708,7 @@ async function refreshAccountData({ silent = false } = {}) {
       currentAccount = res.account;
       renderProfile(res.profile, res.account?.profileRefreshedAt);
       if (res.newAccounts?.length) showSubAccountsBanner(res.newAccounts);
-      await loadGroups();
-      await loadChildren();
+      await loadAutomationTargets();
       if (!silent) {
         const pageCount = (res.newAccounts || []).filter((a) => a.type === 'Page').length;
         const groupCount = (res.groups || []).length;
@@ -764,9 +806,71 @@ async function selectAccount(acc, element, config) {
 
   hideSubAccountsBanner();
   renderProfile(acc.profile, acc.profileRefreshedAt);
-  await loadGroups();
-  await loadChildren();
+  await loadAutomationTargets();
   refreshAccountData({ silent: true });
+}
+
+function showSelectionModal(accounts, platform) {
+  pendingAccounts = accounts || [];
+  const list = document.getElementById('accountSelectionList');
+  const modalEl = document.getElementById('selectionModal');
+  document.getElementById('selectionModalHeader').innerText = `Link ${platform} Accounts`;
+  list.innerHTML = '';
+
+  if (!pendingAccounts.length) {
+    list.innerHTML = '<div style="color:#64748b;padding:0.75rem;">No accounts returned from platform.</div>';
+    modalEl.classList.add('active');
+    return;
+  }
+
+  const byType = {};
+  pendingAccounts.forEach((acc, index) => {
+    const type = TYPE_LABELS[acc.type] || acc.type || 'Account';
+    if (!byType[type]) byType[type] = [];
+    byType[type].push({ acc, index });
+  });
+
+  Object.keys(byType).sort().forEach((typeLabel) => {
+    const heading = document.createElement('div');
+    heading.style.cssText = 'font-size:0.72rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin:0.5rem 0 0.25rem;font-weight:600;';
+    heading.textContent = typeLabel + 's';
+    list.appendChild(heading);
+
+    byType[typeLabel].forEach(({ acc, index }) => {
+      const row = document.createElement('label');
+      row.className = 'group-item';
+      row.style.marginBottom = '0.35rem';
+      row.innerHTML = `
+        <input type="checkbox" id="sel_${index}" value="${index}" checked>
+        <div style="flex:1;">
+          <div style="color:#e2e8f0;font-weight:600;">${escapeHtml(acc.handle || acc.name)}</div>
+          <div class="group-meta">${escapeHtml(acc.platform || platform)} · ${escapeHtml(acc.type || 'Profile')}</div>
+        </div>`;
+      list.appendChild(row);
+    });
+  });
+
+  modalEl.classList.add('active');
+}
+
+async function discoverAndSelectAccounts(connectPayload) {
+  const platform = connectPayload.platform;
+  const btn = document.getElementById('addAccountBtn');
+  btn.innerText = 'Discovering accounts...';
+  btn.disabled = true;
+  try {
+    const discovered = await ipcRenderer.invoke('link-account', connectPayload);
+    if (!Array.isArray(discovered) || !discovered.length) {
+      showToast('No accounts returned. Check API credentials and try again.', 'error');
+      return;
+    }
+    showSelectionModal(discovered, platform);
+  } catch (err) {
+    showToast('Discovery failed: ' + err.message, 'error');
+  } finally {
+    btn.innerText = '+ Add Platform Link';
+    btn.disabled = false;
+  }
 }
 
 const modal = document.getElementById('addAccountModal');
@@ -863,48 +967,13 @@ document.getElementById('startCredentialsBtn').addEventListener('click', async (
   }
   const savedPlatform = platform;
   closeConnectModal();
-  const btn = document.getElementById('addAccountBtn');
-  btn.innerText = platform === 'YouTube' && password
-    ? 'Opening Google sign-in & pulling all channels...'
-    : platform === 'Quora'
-      ? 'Opening Quora sign-in & saving session...'
-      : 'Connecting & pulling all sub-accounts...';
-  btn.disabled = true;
-  try {
-    const res = await ipcRenderer.invoke('connect-platform', {
-      platform: savedPlatform,
-      email: email || undefined,
-      password,
-      username: username || undefined,
-      method: 'credentials',
-    });
-    if (res.success) {
-      const names = (res.discovered || []).map((d) => d.handle).join(', ');
-      const multiBrand = savedPlatform === 'YouTube' && password;
-      showToast(
-        `Linked ${res.linked} account(s)${names ? ': ' + names : ''}. Pulling live profile data…`
-        + (multiBrand ? ' Link again to add more YouTube brands from Google\'s picker.' : ''),
-        'success'
-      );
-      await loadAccounts();
-      if (res.profileAccountId) {
-        try {
-          const disc = await ipcRenderer.invoke('discover-sub-accounts', res.profileAccountId);
-          if (disc.newAccounts?.length) {
-            await ipcRenderer.invoke('link-discovered-sub-accounts', res.profileAccountId);
-          }
-          await ipcRenderer.invoke('refresh-account-profile', res.profileAccountId);
-        } catch (e) { /* non-fatal */ }
-        await loadAccounts();
-      }
-    } else {
-      showToast(res.error || 'Connection failed', 'error');
-    }
-  } catch (err) {
-    showToast('Connection failed: ' + err.message, 'error');
-  }
-  btn.innerText = '+ Add Platform Link';
-  btn.disabled = false;
+  await discoverAndSelectAccounts({
+    platform: savedPlatform,
+    email: email || undefined,
+    password,
+    username: username || undefined,
+    method: 'credentials',
+  });
   pendingPlatform = null;
 });
 
@@ -922,36 +991,11 @@ document.getElementById('startOAuthBtn').addEventListener('click', async () => {
   const email = document.getElementById('connectEmail').value.trim();
   const savedPlatform = pendingPlatform;
   connectModal.classList.remove('active');
-  const btn = document.getElementById('addAccountBtn');
-  btn.innerText = 'Connecting via OAuth...';
-  btn.disabled = true;
-  try {
-    const res = await ipcRenderer.invoke('connect-platform', {
-      platform: savedPlatform,
-      email: email || undefined,
-      method: 'oauth',
-    });
-    if (res.success) {
-      showToast(`Linked ${res.linked} account(s) from ${savedPlatform}. Pulling live profile data…`, 'success');
-      await loadAccounts();
-      if (res.profileAccountId) {
-        currentAccountId = res.profileAccountId;
-        try {
-          const disc = await ipcRenderer.invoke('discover-sub-accounts', res.profileAccountId);
-          if (disc.newAccounts?.length) {
-            await ipcRenderer.invoke('link-discovered-sub-accounts', res.profileAccountId);
-          }
-          await refreshAccountData({ silent: true });
-        } catch (e) { /* non-fatal */ }
-      }
-    } else {
-      showToast(res.error || 'OAuth connection failed', 'error');
-    }
-  } catch (err) {
-    showToast('Connection failed: ' + err.message, 'error');
-  }
-  btn.innerText = '+ Add Platform Link';
-  btn.disabled = false;
+  await discoverAndSelectAccounts({
+    platform: savedPlatform,
+    email: email || undefined,
+    method: 'oauth',
+  });
   pendingPlatform = null;
 });
 
@@ -961,28 +1005,48 @@ if(document.getElementById('cancelSelectionBtn')) {
   });
 
   document.getElementById('saveSelectionBtn').addEventListener('click', async () => {
-    const selectedIndices = Array.from(document.querySelectorAll('[id^="sel_"]:checked')).map(cb => parseInt(cb.value));
-    
+    const selectedIndices = Array.from(document.querySelectorAll('[id^="sel_"]:checked')).map((cb) => parseInt(cb.value, 10));
     if (selectedIndices.length === 0) {
-      showToast('Select at least one account.', 'error');
+      showToast('Select at least one profile, page, or group.', 'error');
       return;
     }
-    const selectedAccounts = selectedIndices.map(i => pendingAccounts[i]);
+    const selectedAccounts = selectedIndices.map((i) => pendingAccounts[i]);
     document.getElementById('selectionModal').classList.remove('active');
     const btn = document.getElementById('addAccountBtn');
-    btn.innerText = 'Saving accounts...';
+    btn.innerText = 'Linking selected accounts...';
     btn.disabled = true;
     try {
-      await ipcRenderer.invoke('use-selected-accounts', selectedAccounts);
-      showToast(`${selectedAccounts.length} account(s) linked.`, 'success');
-      loadAccounts();
+      const res = await ipcRenderer.invoke('use-selected-accounts', selectedAccounts);
+      showToast(`${res.linked || selectedAccounts.length} account(s) linked. Configure automation targets below.`, 'success');
+      await loadAccounts();
+      const profile = selectedAccounts.find((a) => a.type === 'Profile') || selectedAccounts[0];
+      if (profile?.id) {
+        currentAccountId = String(profile.id);
+        try {
+          await ipcRenderer.invoke('refresh-account-profile', currentAccountId);
+          await loadAutomationTargets();
+        } catch (e) { /* non-fatal */ }
+      }
     } catch (err) {
       showToast('Failed to save: ' + err.message, 'error');
     }
     btn.innerText = '+ Add Platform Link';
     btn.disabled = false;
+    pendingAccounts = [];
+  });
+
+  document.getElementById('selectAllAccountsBtn')?.addEventListener('click', () => {
+    document.querySelectorAll('#accountSelectionList input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
+  });
+  document.getElementById('selectNoneAccountsBtn')?.addEventListener('click', () => {
+    document.querySelectorAll('#accountSelectionList input[type="checkbox"]').forEach((cb) => { cb.checked = false; });
   });
 }
+
+document.getElementById('selectAllTargetsBtn')?.addEventListener('click', () => {
+  document.querySelectorAll('#automationTargetsList input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
+});
+document.getElementById('saveAutomationTargetsBtn')?.addEventListener('click', saveAutomationTargets);
 
 function hideSubAccountsBanner() {
   const el = document.getElementById('subAccountsBanner');
@@ -994,17 +1058,20 @@ function showSubAccountsBanner(newAccounts) {
   const el = document.getElementById('subAccountsBanner');
   if (!newAccounts?.length) { hideSubAccountsBanner(); return; }
   el.classList.remove('hidden');
-  el.innerHTML = `<strong>${newAccounts.length} new sub-account(s) found.</strong><br>${newAccounts.map(a => `• ${a.platform} — ${a.handle}`).join('<br>')}
-    <button class="refresh-btn" style="margin-top:0.75rem;" onclick="linkNewSubAccounts()"><i class="fas fa-link"></i> Link All New Sub-Accounts</button>`;
+  const preview = newAccounts.slice(0, 6).map((a) => `• ${a.platform} — ${a.handle} (${a.type || 'Account'})`).join('<br>');
+  const more = newAccounts.length > 6 ? `<br><em>+ ${newAccounts.length - 6} more…</em>` : '';
+  el.innerHTML = `<strong>${newAccounts.length} new target(s) found.</strong><br>${preview}${more}
+    <button class="refresh-btn" style="margin-top:0.75rem;" onclick="linkNewSubAccounts()"><i class="fas fa-link"></i> Link New Targets &amp; Choose Automation</button>`;
 }
 
 window.linkNewSubAccounts = async function() {
   if (!currentAccountId) return;
   const res = await ipcRenderer.invoke('link-discovered-sub-accounts', currentAccountId);
   if (res.success) {
-    showToast(res.linked ? `Linked ${res.linked} sub-account(s).` : 'No new sub-accounts to link.', 'success');
+    showToast(res.linked ? `Linked ${res.linked} new target(s). Update automation checkboxes and save.` : 'No new targets to link.', 'success');
     hideSubAccountsBanner();
-    loadAccounts();
+    await loadAccounts();
+    await loadAutomationTargets();
   } else {
     showToast(res.error || 'Link failed', 'error');
   }

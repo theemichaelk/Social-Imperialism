@@ -74,7 +74,12 @@ async function refreshAccountProfile(store, accountId, keys) {
   try {
     const discovered = await discoverForLinkedAccount(account, keys, accounts);
     groups = discovered.groups;
-    accounts[idx].groups = groups;
+    const rootIdx = accounts.findIndex((a) => (
+      (account.connectionId && a.connectionId === account.connectionId && !a.parentAccountId)
+      || a.id === accountId
+    ));
+    const storeIdx = rootIdx >= 0 ? rootIdx : idx;
+    accounts[storeIdx].groups = groups;
     accounts[idx].subAccountsRefreshedAt = new Date().toISOString();
     warnings = discovered.warnings || [];
     if (warnings.length) accounts[idx].discoveryWarnings = warnings;

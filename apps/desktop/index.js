@@ -1197,31 +1197,51 @@ ipcMain.handle('refresh-account-profile', async (event, accountId) => {
 
 ipcMain.handle('use-selected-accounts', async (event, selectedAccounts) => {
   const globalKeys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+  if (!Array.isArray(selectedAccounts) || !selectedAccounts.length) {
+    return { success: false, error: 'No accounts selected', linked: 0 };
+  }
 
-  const loginEmail = selectedAccounts[0]?.loginEmail || selectedAccounts[0]?.email || null;
+  const loginEmail = (selectedAccounts[0]?.loginEmail || selectedAccounts[0]?.email || 'oauth').trim().toLowerCase();
   const connectionId = selectedAccounts[0]?.connectionId
-    || integrations.makeConnectionId?.(selectedAccounts[0]?.platform || 'unknown', loginEmail || 'oauth')
+    || integrations.makeConnectionId?.(selectedAccounts[0]?.platform || 'unknown', loginEmail)
     || `conn_${Date.now()}`;
+  const sharedTokens = selectedAccounts.find((a) => a.encryptedTokens || a.oauthTokens)?.encryptedTokens
+    || (selectedAccounts.find((a) => a.oauthTokens)?.oauthTokens
+      ? Buffer.from(JSON.stringify(selectedAccounts.find((a) => a.oauthTokens).oauthTokens)).toString('base64')
+      : null);
 
-  const { linked } = await integrations.linkAllDiscoveredAccounts({
+  const { linked, profileAccountId } = await integrations.linkAllDiscoveredAccounts({
     store,
     integrations,
     keys: globalKeys,
-    discovered: selectedAccounts.map((a) => ({ ...a, connectionId: a.connectionId || connectionId })),
+    discovered: selectedAccounts.map((a) => ({
+      ...a,
+      loginEmail: a.loginEmail || loginEmail,
+      connectionId: a.connectionId || connectionId,
+      encryptedTokens: a.encryptedTokens || sharedTokens,
+    })),
     meta: {
       loginEmail,
       connectionId,
-      sharedTokens: selectedAccounts[0]?.encryptedTokens || null,
+      sharedTokens,
     },
   });
 
-  return { success: true, linked: linked.length };
+  return { success: true, linked: linked.length, profileAccountId };
 });
 
 ipcMain.handle('link-account', async (event, payload) => {
-  const credentials = typeof payload === 'string' ? { platform: payload } : payload;
+  const creds = typeof payload === 'string' ? { platform: payload } : (payload || {});
   const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-  return integrations.discoverAccounts(credentials, keys, (url) => shell.openExternal(url));
+  const credentials = {
+    platform: creds.platform,
+    email: creds.email,
+    username: creds.username,
+    password: creds.password || '',
+    useCredentials: creds.method !== 'oauth',
+    connectionId: creds.connectionId,
+  };
+  return integrations.discoverAccounts(credentials, keys, (url) => openOAuthUrl(url));
 });
 ipcMain.handle('get-linked-accounts_OLD1', (event) => {
   // Try to get active campaign id first

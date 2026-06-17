@@ -15,6 +15,9 @@ const { spacingForFrequency } = require('./humanBehavior');
 
 const GROUP_TYPES = new Set(['Group', 'Server', 'Subreddit', 'Community']);
 const ROOT_ACCOUNT_TYPES = new Set(['Profile', 'Bot', 'Business', 'Channel']);
+const AUTOMATION_TARGET_TYPES = new Set([
+  'Profile', 'Page', 'Channel', 'Group', 'Server', 'Subreddit', 'Community', 'Board', 'Bot', 'Business',
+]);
 
 function defaultAccountSettings(overrides = {}) {
   return {
@@ -124,17 +127,23 @@ function recordAccountAction(store, accountId) {
   saveLinkedAccounts(store, null, accounts);
 }
 
+function targetFromDiscovered(item, source = 'discovered') {
+  return {
+    id: String(item.id),
+    name: item.handle || item.name,
+    type: item.type || 'Profile',
+    platform: item.platform,
+    subreddit: item.subreddit || null,
+    privacy: item.privacy || null,
+    source,
+    linked: false,
+  };
+}
+
 function groupsFromDiscovered(discovered) {
   return (discovered || [])
     .filter((a) => GROUP_TYPES.has(a.type))
-    .map((g) => ({
-      id: String(g.id),
-      name: g.handle || g.name,
-      type: g.type,
-      platform: g.platform,
-      subreddit: g.subreddit || null,
-      privacy: g.privacy || null,
-    }));
+    .map((g) => targetFromDiscovered(g, 'group'));
 }
 
 function subAccountsFromDiscovered(discovered, parentAccountId) {
@@ -249,44 +258,82 @@ function findNewSubAccounts(existingAccounts, discovered) {
 
 const SUB_ACCOUNT_TYPES = new Set(['Page', 'Channel', 'Board', 'Category', 'StreamKey', ...GROUP_TYPES]);
 
-function getAccountGroups(account, allAccounts = []) {
-  const base = [];
-  if (account.groups?.length) base.push(...account.groups);
-  if (GROUP_TYPES.has(account.type)) {
-    base.push({
-      id: String(account.id),
-      name: account.handle,
-      type: account.type,
-      platform: account.platform,
-      subreddit: account.subreddit || null,
-    });
+function targetFromLinkedAccount(acc, source = 'account') {
+  return {
+    id: String(acc.id),
+    name: acc.handle,
+    type: acc.type || 'Profile',
+    platform: acc.platform,
+    subreddit: acc.subreddit || null,
+    privacy: acc.privacy || null,
+    parentAccountId: acc.parentAccountId || null,
+    source,
+    linked: true,
+    automationEnabled: acc.settings?.automationEnabled !== false,
+  };
+}
+
+function relatedConnectionAccounts(account, allAccounts = []) {
+  const connectionId = account.connectionId;
+  const isRoot = !account.parentAccountId || ROOT_ACCOUNT_TYPES.has(account.type);
+
+  return (allAccounts || []).filter((a) => {
+    if (a.id === account.id) return false;
+    if (a.parentAccountId === account.id) return true;
+    if (connectionId && a.connectionId === connectionId) {
+      if (isRoot) return true;
+      if (account.parentAccountId && a.parentAccountId === account.parentAccountId) return true;
+    }
+    return false;
+  });
+}
+
+function getAutomationTargets(account, allAccounts = []) {
+  if (!account) return [];
+
+  const targets = [];
+  const pushTarget = (t) => {
+    const key = `${t.source || 'account'}:${t.id}`;
+    if (!targets.some((x) => `${x.source || 'account'}:${x.id}` === key)) {
+      targets.push(t);
+    }
+  };
+
+  if (AUTOMATION_TARGET_TYPES.has(account.type) || GROUP_TYPES.has(account.type) || !account.type) {
+    pushTarget(targetFromLinkedAccount(account));
   }
 
-  const siblings = (allAccounts || []).filter((a) => {
-    if (a.id === account.id) return false;
-    const sameConnection = account.connectionId && a.connectionId === account.connectionId;
-    const isChild = a.parentAccountId === account.id;
-    return (sameConnection || isChild) && SUB_ACCOUNT_TYPES.has(a.type);
+  const related = relatedConnectionAccounts(account, allAccounts);
+  const linkedGroupIds = new Set(
+    related.filter((a) => GROUP_TYPES.has(a.type)).map((a) => String(a.id)),
+  );
+
+  related.forEach((a) => {
+    if (AUTOMATION_TARGET_TYPES.has(a.type) || GROUP_TYPES.has(a.type)) {
+      pushTarget(targetFromLinkedAccount(a));
+    }
   });
 
-  siblings.forEach((a) => {
-    base.push({
-      id: String(a.id),
-      name: a.handle,
-      type: a.type,
-      platform: a.platform,
-      subreddit: a.subreddit || null,
-      privacy: a.privacy || null,
+  (account.groups || []).forEach((g) => {
+    if (linkedGroupIds.has(String(g.id))) return;
+    pushTarget({
+      id: String(g.id),
+      name: g.name || g.handle,
+      type: g.type || 'Group',
+      platform: g.platform || account.platform,
+      subreddit: g.subreddit || null,
+      privacy: g.privacy || null,
+      source: 'group',
+      linked: true,
+      automationEnabled: (account.settings?.activeGroupIds || []).includes(String(g.id)),
     });
   });
 
-  const seen = new Set();
-  return base.filter((g) => {
-    const key = String(g.id);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  return targets;
+}
+
+function getAccountGroups(account, allAccounts = []) {
+  return getAutomationTargets(account, allAccounts).filter((t) => GROUP_TYPES.has(t.type));
 }
 
 function getChildAccounts(accounts, parentAccountId) {
@@ -322,6 +369,8 @@ async function linkAllDiscoveredAccounts({
   let profileAccountId = parentAccountId;
   let youtubePrimaryId = null;
   const linked = [];
+  const allConnectionGroups = groupsFromDiscovered(discovered);
+  const hasRootType = discovered.some((a) => ROOT_ACCOUNT_TYPES.has(a.type));
 
   for (const acc of discovered) {
     const newId = acc.id ? String(acc.id) : `acc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -331,6 +380,9 @@ async function linkAllDiscoveredAccounts({
       || (acc.accessToken ? Buffer.from(JSON.stringify({ access_token: acc.accessToken })).toString('base64') : null)
       || sharedTokens;
     let isRoot = ROOT_ACCOUNT_TYPES.has(acc.type) || (!acc.type && !GROUP_TYPES.has(acc.type));
+    if (!hasRootType && !profileAccountId && linked.length === 0 && !GROUP_TYPES.has(acc.type)) {
+      isRoot = true;
+    }
     if (acc.platform === 'YouTube' && acc.type === 'Channel' && youtubePrimaryId) {
       isRoot = false;
     }
@@ -359,11 +411,16 @@ async function linkAllDiscoveredAccounts({
       parentAccountId: isRoot ? null : (profileAccountId || parentAccountId),
       orgUrn: acc.orgUrn || null,
       subreddit: acc.subreddit || null,
-      groups: groupsFromDiscovered([acc]),
+      groups: isRoot ? allConnectionGroups : groupsFromDiscovered([acc]),
       status: 'connected',
       profile: generatedProfile,
       linkedAt: new Date().toISOString(),
-      settings: defaultAccountSettings({ frequency: 'auto', autoReply: false, automationEnabled: true }),
+      settings: defaultAccountSettings({
+        frequency: 'auto',
+        autoReply: false,
+        automationEnabled: true,
+        activeGroupIds: isRoot ? allConnectionGroups.map((g) => String(g.id)) : [],
+      }),
     };
 
     if (encryptedPassword && isRoot) {
@@ -390,8 +447,63 @@ async function linkAllDiscoveredAccounts({
     linked.push(entry);
   }
 
-  if (linked.length) saveLinkedAccounts(store, null, accounts);
+  if (linked.length) {
+    const rootEntry = linked.find((a) => !a.parentAccountId && ROOT_ACCOUNT_TYPES.has(a.type))
+      || linked.find((a) => !a.parentAccountId)
+      || linked[0];
+    if (rootEntry) {
+      const rootIdx = accounts.findIndex((a) => a.id === rootEntry.id);
+      if (rootIdx >= 0) {
+        const allGroups = groupsFromDiscovered(discovered);
+        accounts[rootIdx].groups = allGroups;
+        accounts[rootIdx].settings = mergeAccountSettings(accounts[rootIdx].settings, {
+          activeGroupIds: allGroups.map((g) => String(g.id)),
+        });
+      }
+    }
+    saveLinkedAccounts(store, null, accounts);
+  }
   return { linked, accounts, profileAccountId };
+}
+
+function saveAutomationTargetSelection(store, parentAccountId, { enabledAccountIds = [], enabledGroupIds = [] } = {}) {
+  const accounts = getLinkedAccounts(store);
+  const parent = findAccountById(accounts, parentAccountId);
+  if (!parent) return { success: false, error: 'Account not found' };
+
+  const enabledAccounts = new Set((enabledAccountIds || []).map(String));
+  const enabledGroups = (enabledGroupIds || []).map(String);
+  const connectionId = parent.connectionId;
+
+  accounts.forEach((a, idx) => {
+    const inScope = a.id === parentAccountId
+      || a.parentAccountId === parentAccountId
+      || (connectionId && a.connectionId === connectionId);
+
+    if (!inScope) return;
+
+    if (AUTOMATION_TARGET_TYPES.has(a.type) || ROOT_ACCOUNT_TYPES.has(a.type) || !a.type) {
+      accounts[idx].settings = mergeAccountSettings(a.settings, {
+        automationEnabled: enabledAccounts.has(String(a.id)),
+      });
+    }
+  });
+
+  const parentIdx = accounts.findIndex((a) => a.id === parentAccountId);
+  if (parentIdx >= 0) {
+    accounts[parentIdx].settings = mergeAccountSettings(accounts[parentIdx].settings, {
+      activeGroupIds: enabledGroups,
+    });
+    if (accounts[parentIdx].groups?.length) {
+      accounts[parentIdx].groups = accounts[parentIdx].groups.map((g) => ({
+        ...g,
+        automationEnabled: enabledGroups.includes(String(g.id)),
+      }));
+    }
+  }
+
+  saveLinkedAccounts(store, null, accounts);
+  return { success: true, savedAccounts: enabledAccounts.size, savedGroups: enabledGroups.length };
 }
 
 function groupAccountsByConnection(accounts) {
@@ -418,10 +530,14 @@ module.exports = {
   discoverForLinkedAccount,
   findNewSubAccounts,
   getAccountGroups,
+  getAutomationTargets,
   getChildAccounts,
   filterAutomationEnabled,
   GROUP_TYPES,
+  AUTOMATION_TARGET_TYPES,
   accountAlreadyLinked,
   linkAllDiscoveredAccounts,
   groupAccountsByConnection,
+  saveAutomationTargetSelection,
+  relatedConnectionAccounts,
 };

@@ -11,7 +11,9 @@ const {
   discoverForLinkedAccount,
   findNewSubAccounts,
   getAccountGroups,
+  getAutomationTargets,
   getChildAccounts,
+  saveAutomationTargetSelection,
 } = require('./accountAutomation');
 const { waitBeforeAction, humanizeContent } = require('./humanBehavior');
 const { makeConnectionId } = require('./credentialAuth');
@@ -29,6 +31,8 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
     'get-automation-targets',
     'save-account-automation-settings',
     'save-bulk-account-automation',
+    'get-account-automation-targets',
+    'save-automation-target-selection',
     'publish-to-group',
   ];
 
@@ -159,6 +163,30 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
     const account = findAccountById(accounts, accountId);
     if (!account) return { success: false, error: 'Account not found', groups: [] };
     return { success: true, groups: getAccountGroups(account, accounts), account };
+  });
+
+  ipcMain.handle('get-account-automation-targets', (event, accountId) => {
+    const accounts = getLinkedAccounts(store);
+    const account = findAccountById(accounts, accountId);
+    if (!account) return { success: false, error: 'Account not found', targets: [] };
+    const targets = getAutomationTargets(account, accounts);
+    const activeGroupIds = account.settings?.activeGroupIds || [];
+    return {
+      success: true,
+      targets: targets.map((t) => ({
+        ...t,
+        automationEnabled: t.source === 'group'
+          ? activeGroupIds.includes(String(t.id))
+          : t.automationEnabled !== false,
+      })),
+      account,
+    };
+  });
+
+  ipcMain.handle('save-automation-target-selection', (event, payload) => {
+    const { accountId, enabledAccountIds, enabledGroupIds } = payload || {};
+    if (!accountId) return { success: false, error: 'accountId required' };
+    return saveAutomationTargetSelection(store, accountId, { enabledAccountIds, enabledGroupIds });
   });
 
   ipcMain.handle('get-account-children', (event, accountId) => {
