@@ -1,0 +1,133 @@
+/* Inline Grok + Infographic — woven into each page's workflow, not sidebar nav or floating FAB */
+.grok-integrate-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 0 0 1rem;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.9));
+  border: 1px solid #475569;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+.grok-integrate-bar.compact {
+  margin: 0;
+  padding: 4px 8px;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+.grok-integrate-bar.compact .grok-integrate-label {
+  font-size: 0.65rem;
+}
+.grok-integrate-bar.compact .grok-integrate-btn {
+  padding: 3px 7px;
+  font-size: 0.65rem;
+}
+.grok-integrate-bar.compact .grok-integrate-status {
+  font-size: 0.6rem;
+  padding: 2px 6px;
+}
+.grok-integrate-bar .grok-integrate-label {
+  color: #a78bfa;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 4px;
+}
+.grok-integrate-bar .grok-integrate-hint {
+  color: #64748b;
+  font-size: 0.7rem;
+  flex: 1;
+  min-width: 140px;
+}
+.grok-integrate-btn {
+  background: #1e293b;
+  border: 1px solid #475569;
+  color: #e2e8f0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.grok-integrate-btn:hover { background: #334155; color: #fff; }
+.grok-integrate-btn.primary {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  border: none;
+  color: #fff;
+}
+.grok-integrate-btn.grok { border-color: #7c3aed; color: #c4b5fd; }
+.grok-integrate-status {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+}
+.grok-integrate-status.ok { color: #6ee7b7; border-color: #10b981; }
+.grok-integrate-status.warn { color: #fbbf24; border-color: #f59e0b; }
+.grok-integrate-preview {
+  width: 100%;
+  margin-top: 6px;
+  display: none;
+}
+.grok-integrate-preview.open {
+  display: block;
+  border-top: 1px solid #334155;
+  padding-top: 8px;
+}
+.grok-integrate-preview img,
+.grok-integrate-preview video {
+  max-height: 100px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+}
+.grok-integrate-preview .preview-text {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  max-height: 60px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.grok-integrate-btn.connect {
+  border-color: #38bdf8;
+  color: #7dd3fc;
+}
+.grok-integrate-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.grok-integrate-toasts {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 360px;
+  pointer-events: none;
+}
+.grok-integrate-toast {
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+.grok-integrate-toast.info { background: #1e293b; border: 1px solid #38bdf8; color: #f8fafc; }
+.grok-integrate-toast.success { background: #064e3b; border: 1px solid #10b981; color: #d1fae5; }
+.grok-integrate-toast.error { background: #450a0a; border: 1px solid #ef4444; color: #fecaca; }

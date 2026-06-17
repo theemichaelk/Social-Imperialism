@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - Content Calendar</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+
+.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
+.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
+.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: center; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
+.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
+.nav-link i { width: 20px; text-align: center; }
+.nav-link:hover { background-color: #1e293b; color: white; }
+.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+
+.main-content { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at top right, #1e293b, #0f172a); overflow: hidden; }
+.header { padding: 1.25rem 2rem; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: rgba(15,23,42,0.8); backdrop-filter: blur(10px); }
+h1 { margin: 0; color: #f1f5f9; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
+.primary-btn { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 10px rgba(37,99,235,0.3); transition: all 0.2s; text-decoration: none; font-size: 0.9rem; }
+.primary-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37,99,235,0.4); }
+.secondary-btn { background: transparent; border: 1px solid #475569; color: #f8fafc; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; }
+.secondary-btn:hover { background: #1e293b; }
+
+.month-controls { display: flex; align-items: center; gap: 15px; }
+.month-btn { background: transparent; border: 1px solid #475569; color: #cbd5e1; width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; }
+.month-btn:hover { background: #334155; color: white; border-color: #94a3b8; }
+.current-month { font-size: 1.2rem; font-weight: 600; color: #f8fafc; min-width: 150px; text-align: center; }
+
+#apiStatusBar { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 2rem 0.75rem; font-size: 0.75rem; }
+.api-pill { padding: 4px 10px; border-radius: 12px; border: 1px solid #475569; }
+.api-pill.ok { border-color: #10b981; color: #34d399; }
+.api-pill.miss { border-color: #ef4444; color: #f87171; }
+.api-pill.warn { border-color: #f59e0b; color: #fbbf24; }
+
+#toastContainer { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+.toast { padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 380px; }
+.toast.info { background: #1e293b; border: 1px solid #38bdf8; color: #f8fafc; }
+.toast.success { background: #064e3b; border: 1px solid #10b981; color: #d1fae5; }
+.toast.error { background: #450a0a; border: 1px solid #ef4444; color: #fecaca; }
+
+.calendar-wrapper { flex: 1; padding: 1rem 2rem 1.5rem; overflow-y: auto; display: flex; flex-direction: column; }
+.calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 10px; }
+.day-header { text-align: center; font-weight: bold; color: #94a3b8; padding: 10px 0; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; flex: 1; grid-auto-rows: minmax(130px, 1fr); }
+.calendar-day { background: rgba(30, 41, 59, 0.6); border-radius: 8px; border: 1px solid #334155; padding: 10px; position: relative; display: flex; flex-direction: column; transition: border-color 0.2s; }
+.calendar-day.drag-over { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-style: dashed; border-width: 2px; }
+.calendar-day.today { border-color: #38bdf8; background: rgba(15, 23, 42, 0.8); }
+.calendar-day.today .date-number { background: #38bdf8; color: #0f172a; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.calendar-day.empty { background: transparent; border: 1px dashed rgba(51, 65, 85, 0.3); pointer-events: none; }
+.date-number { font-weight: 600; color: #94a3b8; margin-bottom: 10px; font-size: 0.9rem; align-self: flex-end; }
+.post-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.post-container::-webkit-scrollbar { width: 4px; }
+.post-container::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+.post-item { background: #1e293b; border-left: 3px solid #64748b; padding: 8px; border-radius: 6px; font-size: 0.75rem; cursor: grab; color: #e2e8f0; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid #334155; border-left-width: 3px; }
+.post-item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.3); background: #334155; }
+.post-item.dragging { opacity: 0.5; }
+.post-item.failed { border-left-color: #ef4444; }
+.post-item.due { border-left-color: #f59e0b; }
+.post-item.twitter { border-left-color: #1DA1F2; }
+.post-item.linkedin { border-left-color: #0A66C2; }
+.post-item.facebook { border-left-color: #1877F2; }
+.post-item.instagram { border-left-color: #E1306C; }
+.post-time { font-size: 0.7rem; color: #94a3b8; display: flex; align-items: center; justify-content: space-between; }
+.post-content-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(2,6,23,0.8); backdrop-filter: blur(5px); z-index: 100; display: none; justify-content: center; align-items: center; }
+.modal-content { background: #0f172a; border: 1px solid #334155; padding: 25px; border-radius: 12px; width: 500px; max-width: 95vw; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #1e293b; }
+.modal-title { font-size: 1.2rem; margin: 0; color: #f8fafc; display: flex; align-items: center; gap: 10px; }
+.close-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem; }
+.close-btn:hover { color: #ef4444; }
+.input-field { width: 100%; padding: 0.75rem; margin-bottom: 1rem; background: rgba(15, 23, 42, 0.8); border: 1px solid #475569; color: #f8fafc; border-radius: 6px; font-family: inherit; box-sizing: border-box; }
+.textarea-field { width: 100%; padding: 1rem; margin-bottom: 1rem; background: rgba(15, 23, 42, 0.8); border: 1px solid #475569; color: #f8fafc; border-radius: 8px; font-family: inherit; box-sizing: border-box; resize: vertical; min-height: 100px; }
+.post-details-box { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5; color: #cbd5e1; border: 1px solid #334155; }
+.post-media-preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: 6px; margin-top: 10px; display: none; border: 1px solid #475569; }
+.modal-actions { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.btn-danger { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+
+.calendar-layout { display: grid; grid-template-columns: 1fr 280px; gap: 1rem; flex: 1; min-height: 0; }
+.calendar-side-panel { background: rgba(15,23,42,0.7); border: 1px solid #334155; border-radius: 10px; padding: 1rem; overflow-y: auto; max-height: 100%; }
+.side-panel-title { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 0.75rem; }
+.platform-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; background: #1e293b; border: 1px solid #475569; margin: 2px; cursor: pointer; }
+.platform-chip.active { border-color: #38bdf8; color: #38bdf8; }
+.upcoming-item { padding: 8px; background: #1e293b; border-radius: 6px; margin-bottom: 6px; font-size: 0.75rem; border-left: 3px solid #64748b; cursor: pointer; }
+.upcoming-item:hover { background: #334155; }
+.best-time-card { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 0.75rem; }
+.best-time-card strong { color: #38bdf8; }
+
+.view-toggle { display: flex; gap: 4px; background: rgba(15,23,42,0.8); border: 1px solid #475569; border-radius: 6px; padding: 3px; }
+.view-toggle button { background: transparent; border: none; color: #94a3b8; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600; }
+.view-toggle button.active { background: #38bdf8; color: #0f172a; }
+.view-toggle button:hover:not(.active) { color: #f8fafc; }
+
+.week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; flex: 1; grid-auto-rows: minmax(200px, 1fr); }
+.week-day { background: rgba(30, 41, 59, 0.6); border-radius: 8px; border: 1px solid #334155; padding: 10px; display: flex; flex-direction: column; min-height: 200px; }
+.week-day.today { border-color: #38bdf8; }
+.week-day.drag-over { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-style: dashed; border-width: 2px; }
+.week-day-header { font-weight: 600; color: #94a3b8; font-size: 0.8rem; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #334155; }
+.week-day-header .day-num { color: #f8fafc; font-size: 1.1rem; }
+
+.list-view { display: flex; flex-direction: column; gap: 6px; }
+.list-post-row { display: grid; grid-template-columns: 110px 70px 90px 1fr 60px; gap: 10px; align-items: center; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 10px 12px; font-size: 0.8rem; cursor: pointer; border-left: 3px solid #64748b; }
+.list-post-row:hover { background: #334155; }
+.list-post-row.due { border-left-color: #f59e0b; }
+.list-post-row.failed { border-left-color: #ef4444; }
+.list-post-row .list-platform { font-weight: 600; font-size: 0.75rem; }
+.list-post-row .list-content { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #cbd5e1; }
+.list-empty { color: #64748b; text-align: center; padding: 2rem; font-size: 0.85rem; }
+
+.engagement-chart-wrap { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px; margin-bottom: 1rem; }
+.engagement-chart-wrap canvas { width: 100% !important; height: 130px !important; }
+
+.bg-run-panel { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px; margin-bottom: 1rem; font-size: 0.75rem; }
+.bg-run-status { padding: 6px 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.7rem; }
+.bg-run-status.active { background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #6ee7b7; }
+.bg-run-status.paused { background: rgba(100,116,139,0.15); border: 1px solid #475569; color: #94a3b8; }
+.bg-run-item { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.bg-run-item button { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.7rem; padding: 0; }
+.bg-run-form input, .bg-run-form select { width: 100%; margin-bottom: 6px; padding: 5px 6px; background: #0f172a; border: 1px solid #475569; color: #f8fafc; border-radius: 4px; font-size: 0.7rem; box-sizing: border-box; }
+.bg-run-form label { display: block; color: #64748b; font-size: 0.65rem; margin-bottom: 2px; }
+</style>
+  <link rel="stylesheet" href="sidebar-nav.css">
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('calendar', async () => {
+      if (typeof loadPostsFromStore === 'function') await loadPostsFromStore();
+      if (typeof showToast === 'function') showToast('Campaign switched — calendar reloaded', 'success');
+    });
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+
+<div class="main-content">
+  <div class="header">
+    <h1><i class="fas fa-calendar-alt" style="color:#38bdf8;"></i> Content Calendar</h1>
+    <div class="view-toggle" id="viewToggle">
+      <button type="button" data-view="month" class="active"><i class="fas fa-calendar"></i> Month</button>
+      <button type="button" data-view="week"><i class="fas fa-calendar-week"></i> Week</button>
+      <button type="button" data-view="list"><i class="fas fa-list"></i> List</button>
+    </div>
+    <div class="month-controls">
+      <button class="month-btn" id="prevMonthBtn"><i class="fas fa-chevron-left"></i></button>
+      <div class="current-month" id="monthDisplay">Loading...</div>
+      <button class="month-btn" id="nextMonthBtn"><i class="fas fa-chevron-right"></i></button>
+      <button class="month-btn" id="todayBtn" title="Go to today"><i class="fas fa-dot-circle"></i></button>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <select id="platformFilter" class="input-field" style="width:auto; margin:0; padding:0.4rem 0.6rem; font-size:0.85rem;">
+        <option value="all">All Platforms</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Instagram">Instagram</option>
+        <option value="Twitter">X (Twitter)</option>
+        <option value="LinkedIn">LinkedIn</option>
+        <option value="Reddit">Reddit</option>
+      </select>
+      <select id="timezoneSelect" class="input-field" style="width:auto; margin:0; padding:0.4rem 0.6rem; font-size:0.85rem;">
+        <option value="local">Local Timezone</option>
+        <option value="America/New_York">EST (New York)</option>
+        <option value="America/Los_Angeles">PST (Los Angeles)</option>
+        <option value="Europe/London">GMT (London)</option>
+        <option value="Asia/Tokyo">JST (Tokyo)</option>
+        <option value="UTC">UTC</option>
+      </select>
+      <button class="secondary-btn" id="suggestTimesBtn"><i class="fas fa-magic"></i> Suggest Best Times</button>
+      <button class="secondary-btn" id="refreshBtn"><i class="fas fa-sync"></i> Refresh</button>
+      <button class="secondary-btn" id="publishDueBtn"><i class="fas fa-bolt"></i> Publish Due Now</button>
+      <a href="content-hub.html" class="primary-btn"><i class="fas fa-plus"></i> Schedule Post</a>
+    </div>
+  </div>
+
+  <div id="apiStatusBar"></div>
+  <div id="toastContainer"></div>
+
+  <div class="calendar-wrapper">
+    <div class="calendar-layout">
+      <div id="calendarMainArea">
+        <div id="monthViewWrap">
+          <div class="calendar-header">
+            <div class="day-header">Sun</div><div class="day-header">Mon</div><div class="day-header">Tue</div>
+            <div class="day-header">Wed</div><div class="day-header">Thu</div><div class="day-header">Fri</div><div class="day-header">Sat</div>
+          </div>
+          <div class="calendar-grid" id="calendarDays"></div>
+        </div>
+        <div id="weekViewWrap" style="display:none;">
+          <div class="week-grid" id="weekDays"></div>
+        </div>
+        <div id="listViewWrap" style="display:none;">
+          <div class="list-view" id="listContainer"></div>
+        </div>
+      </div>
+      <div class="calendar-side-panel">
+        <div class="side-panel-title">Background Run Schedule</div>
+        <div class="bg-run-panel" id="bgRunPanel">
+          <label style="display:flex;align-items:center;gap:6px;color:#cbd5e1;margin-bottom:6px;cursor:pointer;">
+            <input type="checkbox" id="bgRunEnabled" style="width:auto;"> Enable scheduled background runs
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;color:#94a3b8;font-size:0.68rem;margin-bottom:8px;cursor:pointer;">
+            <input type="checkbox" id="bgRunAutoStart" style="width:auto;" checked> Auto-start worker in run windows
+          </label>
+          <div id="bgRunStatus" class="bg-run-status paused">Loading schedule status…</div>
+          <div class="bg-run-form">
+            <label>Run at (date &amp; time)</label>
+            <input type="datetime-local" id="bgRunAt">
+            <label>Duration (minutes)</label>
+            <input type="number" id="bgRunDuration" value="60" min="15" max="1440">
+            <label>Label (optional)</label>
+            <input type="text" id="bgRunLabel" placeholder="e.g. Overnight automation">
+            <button class="secondary-btn" style="width:100%;justify-content:center;margin-top:4px;padding:5px;font-size:0.7rem;" id="bgRunAddBtn"><i class="fas fa-play-circle"></i> Schedule Background Run</button>
+          </div>
+          <div id="bgRunUpcoming" style="margin-top:8px;max-height:120px;overflow-y:auto;"></div>
+          <div id="bgRunWeekly" style="margin-top:6px;color:#64748b;font-size:0.65rem;"></div>
+          <p style="margin:8px 0 0;color:#64748b;font-size:0.62rem;line-height:1.35;">Keep the app open (minimized is fine) during scheduled windows. Weekly windows run Mon–Fri 9 AM–6 PM by default.</p>
+        </div>
+        <div class="side-panel-title">Engagement by Hour</div>
+        <div class="engagement-chart-wrap">
+          <canvas id="engagementChart"></canvas>
+        </div>
+        <div class="side-panel-title">Upcoming by Platform</div>
+        <div id="platformChips" style="margin-bottom:0.75rem;"></div>
+        <div id="upcomingList" style="margin-bottom:1.25rem; max-height:200px; overflow-y:auto;"></div>
+        <div class="side-panel-title">Best Times to Post</div>
+        <div id="bestTimesPanel" style="font-size:0.75rem;color:#64748b;">Click "Suggest Best Times" to analyze engagement patterns.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="postModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Scheduled Post</h3>
+      <button class="close-btn" id="closeModalBtn"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#94a3b8; font-size:0.85rem;">
+      <span id="modalDate"></span>
+      <span id="modalTime"></span>
+    </div>
+    <label style="color:#94a3b8;font-size:0.85rem;">Content</label>
+    <textarea class="textarea-field" id="modalContentEdit"></textarea>
+    <label style="color:#94a3b8;font-size:0.85rem;">Reschedule</label>
+    <input type="datetime-local" class="input-field" id="modalRescheduleTime" style="margin-bottom:0.5rem;">
+    <img id="modalMedia" class="post-media-preview" src="" alt="Media Preview">
+    <div class="modal-actions">
+      <button class="btn-danger" id="deletePostBtn"><i class="fas fa-trash"></i> Delete</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="secondary-btn" id="saveEditBtn"><i class="fas fa-save"></i> Save Changes</button>
+        <button class="primary-btn" id="publishNowBtn"><i class="fas fa-paper-plane"></i> Publish Now</button>
+        <button class="secondary-btn" id="closeModalBtn2">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const { ipcRenderer } = require('electron');
+
+let currentDate = new Date();
+let scheduledPosts = [];
+let draggingPostId = null;
+let currentViewingPostId = null;
+let displayTimeZone = 'local';
+let platformFilter = 'all';
+let calendarViewMode = 'month';
+let engagementChartInstance = null;
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  if (!c) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+function getDisplayDate(iso) {
+  const d = new Date(iso);
+  if (displayTimeZone === 'local') return d;
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: displayTimeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
+  } catch (e) {
+    return d;
+  }
+}
+
+function formatDateTime(iso) {
+  const d = new Date(iso);
+  const opts = displayTimeZone === 'local' ? {} : { timeZone: displayTimeZone };
+  return {
+    date: d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', ...opts }),
+    time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', ...opts }),
+  };
+}
+
+function toDatetimeLocalValue(iso) {
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function loadApiStatus() {
+  const bar = document.getElementById('apiStatusBar');
+  if (!bar) return;
+
+  const renderPills = (status) => {
+    const now = Date.now();
+    const dueNow = status.dueNow ?? scheduledPosts.filter((p) => new Date(p.timestamp).getTime() <= now).length;
+    const upcoming = status.upcoming ?? scheduledPosts.filter((p) => new Date(p.timestamp).getTime() > now).length;
+    const count = status.scheduledCount ?? scheduledPosts.length;
+    const pills = [
+      `<span class="api-pill ok">${count} scheduled</span>`,
+      dueNow > 0 ? `<span class="api-pill warn">${dueNow} due now</span>` : '',
+      `<span class="api-pill ok">${upcoming} upcoming</span>`,
+    ];
+    if (status.apiMetrics) {
+      Object.entries(status.apiMetrics).forEach(([name, st]) => {
+        const ok = st === 'Connected';
+        pills.push(`<span class="api-pill ${ok ? 'ok' : 'miss'}">${ok ? '✓' : '✗'} ${escapeHtml(name)}</span>`);
+      });
+    }
+    bar.innerHTML = pills.filter(Boolean).join('');
+  };
+
+  try {
+    const status = await ipcRenderer.invoke('get-calendar-status');
+    renderPills(status);
+  } catch (e) {
+    const msg = String(e?.message || e);
+    if (msg.includes('No handler registered')) {
+      try {
+        const stats = await ipcRenderer.invoke('get-dashboard-stats');
+        renderPills({
+          scheduledCount: scheduledPosts.length,
+          apiMetrics: stats.apiMetrics,
+        });
+        return;
+      } catch (e2) {
+        renderPills({ scheduledCount: scheduledPosts.length });
+        return;
+      }
+    }
+    bar.innerHTML = `<span class="api-pill miss">Status error: ${escapeHtml(msg)}</span>`;
+  }
+}
+
+async function processDuePostsSafe() {
+  try {
+    return await ipcRenderer.invoke('process-due-scheduled-posts');
+  } catch (err) {
+    const msg = String(err?.message || err);
+    if (msg.includes('No handler registered')) {
+      console.warn('process-due-scheduled-posts not available — restart the app to load latest main process');
+      return null;
+    }
+    throw err;
+  }
+}
+
+async function loadPostsFromStore() {
+  try {
+    const dueResult = await processDuePostsSafe();
+    if (dueResult?.published > 0) {
+      showToast(`Auto-published ${dueResult.published} due post(s)`, 'success');
+    }
+    scheduledPosts = await ipcRenderer.invoke('get-scheduled-posts') || [];
+    renderCurrentView();
+    await renderUpcomingPanel();
+    await loadApiStatus();
+  } catch (err) {
+    console.error('Failed to load scheduled posts', err);
+    scheduledPosts = [];
+    showToast('Failed to load calendar: ' + err.message, 'error');
+  }
+}
+
+function setCalendarView(mode) {
+  calendarViewMode = mode;
+  document.querySelectorAll('#viewToggle button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === mode);
+  });
+  document.getElementById('monthViewWrap').style.display = mode === 'month' ? '' : 'none';
+  document.getElementById('weekViewWrap').style.display = mode === 'week' ? '' : 'none';
+  document.getElementById('listViewWrap').style.display = mode === 'list' ? '' : 'none';
+  const monthControls = document.querySelector('.month-controls');
+  if (monthControls) monthControls.style.opacity = mode === 'list' ? '0.35' : '1';
+  ipcRenderer.invoke('save-calendar-settings', { timezone: displayTimeZone, platformFilter, viewMode: mode }).catch(() => {});
+  renderCurrentView();
+}
+
+function changeMonth(delta) {
+  if (calendarViewMode === 'list') return;
+  if (calendarViewMode === 'week') {
+    currentDate.setDate(currentDate.getDate() + delta * 7);
+  } else {
+    currentDate.setMonth(currentDate.getMonth() + delta);
+  }
+  renderCurrentView();
+}
+
+function goToToday() {
+  currentDate = new Date();
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (calendarViewMode === 'week') renderWeekView();
+  else if (calendarViewMode === 'list') renderListView();
+  else renderCalendar();
+}
+
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() - day);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function formatPeriodLabel() {
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  if (calendarViewMode === 'list') {
+    const count = getFilteredPosts().length;
+    return `${count} scheduled post${count === 1 ? '' : 's'}`;
+  }
+  if (calendarViewMode === 'week') {
+    const start = getWeekStart(currentDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const sameMonth = start.getMonth() === end.getMonth();
+    const startStr = `${monthNames[start.getMonth()]} ${start.getDate()}`;
+    const endStr = sameMonth ? `${end.getDate()}, ${end.getFullYear()}` : `${monthNames[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+    return `${startStr} – ${endStr}`;
+  }
+  return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+}
+
+function renderCalendar() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  document.getElementById('monthDisplay').textContent = formatPeriodLabel();
+
+  const container = document.getElementById('calendarDays');
+  container.innerHTML = '';
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+  for (let i = 0; i < firstDay; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'calendar-day empty';
+    container.appendChild(cell);
+  }
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const isToday = isCurrentMonth && i === today.getDate();
+    const cell = document.createElement('div');
+    cell.className = 'calendar-day' + (isToday ? ' today' : '');
+    cell.dataset.date = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    cell.addEventListener('dragover', handleDragOver);
+    cell.addEventListener('dragleave', handleDragLeave);
+    cell.addEventListener('drop', handleDrop);
+    cell.innerHTML = `<span class="date-number">${i}</span><div class="post-container" id="container-${cell.dataset.date}"></div>`;
+    container.appendChild(cell);
+  }
+
+  renderPostsIntoContainers('container-');
+}
+
+function renderWeekView() {
+  document.getElementById('monthDisplay').textContent = formatPeriodLabel();
+  const container = document.getElementById('weekDays');
+  container.innerHTML = '';
+  const start = getWeekStart(currentDate);
+  const today = new Date();
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  for (let i = 0; i < 7; i++) {
+    const dayDate = new Date(start);
+    dayDate.setDate(start.getDate() + i);
+    const dateString = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+    const isToday = dayDate.toDateString() === today.toDateString();
+    const cell = document.createElement('div');
+    cell.className = 'week-day' + (isToday ? ' today' : '');
+    cell.dataset.date = dateString;
+    cell.addEventListener('dragover', handleDragOver);
+    cell.addEventListener('dragleave', handleDragLeave);
+    cell.addEventListener('drop', handleDrop);
+    cell.innerHTML = `
+      <div class="week-day-header">${dayNames[i]}<br><span class="day-num">${dayDate.getDate()}</span></div>
+      <div class="post-container" id="week-container-${dateString}"></div>`;
+    container.appendChild(cell);
+  }
+  renderPostsIntoContainers('week-container-');
+}
+
+function renderListView() {
+  document.getElementById('monthDisplay').textContent = formatPeriodLabel();
+  const container = document.getElementById('listContainer');
+  const now = Date.now();
+  const posts = [...getFilteredPosts()].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  if (!posts.length) {
+    container.innerHTML = '<div class="list-empty">No scheduled posts match the current filter.</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="list-post-row" style="cursor:default;font-size:0.7rem;color:#64748b;border:none;background:transparent;padding:4px 12px;">
+      <span>Date</span><span>Time</span><span>Platform</span><span>Content</span><span>Status</span>
+    </div>
+    ${posts.map((post) => {
+      const { date, time } = formatDateTime(post.timestamp);
+      const isDue = new Date(post.timestamp).getTime() <= now;
+      const status = post.status === 'failed' ? 'Failed' : (isDue ? 'Due' : 'Scheduled');
+      const rowClass = post.status === 'failed' ? 'failed' : (isDue ? 'due' : '');
+      return `<div class="list-post-row ${rowClass}" data-id="${post.id}" style="border-left-color:${getPlatformColor(post.platform)}">
+        <span style="color:#94a3b8;">${escapeHtml(date)}</span>
+        <span style="color:#e2e8f0;">${escapeHtml(time)}</span>
+        <span class="list-platform" style="color:${getPlatformColor(post.platform)}">${escapeHtml(post.platform)}</span>
+        <span class="list-content">${escapeHtml(post.content || 'Media post')}</span>
+        <span style="font-size:0.7rem;color:${isDue ? '#fbbf24' : '#64748b'};">${status}</span>
+      </div>`;
+    }).join('')}`;
+
+  container.querySelectorAll('.list-post-row[data-id]').forEach((row) => {
+    row.addEventListener('click', () => openPostModal(row.dataset.id));
+  });
+}
+
+function renderEngagementChart(analysis) {
+  const canvas = document.getElementById('engagementChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const hours = analysis?.hourlyEngagement?.length === 24
+    ? analysis.hourlyEngagement
+    : Array.from({ length: 24 }, (_, h) => {
+        const match = (analysis?.hourlyEngagement || analysis?.topHours || []).find((x) => x.hour === h);
+        return { hour: h, engagement: match?.engagement || 0, posts: match?.posts || 0, avg: match?.avg || 0 };
+      });
+
+  const labels = hours.map((h) => {
+    const ampm = h.hour >= 12 ? 'PM' : 'AM';
+    const h12 = h.hour % 12 || 12;
+    return `${h12}${ampm}`;
+  });
+  const data = hours.map((h) => Math.round(h.avg || (h.posts ? h.engagement / h.posts : h.engagement)));
+
+  if (engagementChartInstance) {
+    engagementChartInstance.destroy();
+    engagementChartInstance = null;
+  }
+
+  engagementChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Avg Engagement',
+        data,
+        backgroundColor: 'rgba(56, 189, 248, 0.55)',
+        borderColor: '#38bdf8',
+        borderWidth: 1,
+        borderRadius: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const h = hours[ctx.dataIndex];
+              return `Avg: ${ctx.raw} · ${h.posts || 0} post(s)`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#64748b', font: { size: 8 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+          grid: { display: false },
+        },
+        y: {
+          ticks: { color: '#64748b', font: { size: 9 }, precision: 0 },
+          grid: { color: 'rgba(51,65,85,0.4)' },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+function getPlatformIcon(platform) {
+  const p = (platform || '').toLowerCase();
+  if (p.includes('twitter') || p === 'x') return 'fab fa-twitter';
+  if (p.includes('linkedin')) return 'fab fa-linkedin';
+  if (p.includes('facebook')) return 'fab fa-facebook';
+  if (p.includes('instagram')) return 'fab fa-instagram';
+  if (p.includes('youtube')) return 'fab fa-youtube';
+  if (p.includes('tiktok')) return 'fab fa-tiktok';
+  return 'fas fa-share-alt';
+}
+
+function getPlatformColor(platform) {
+  const p = (platform || '').toLowerCase();
+  if (p.includes('twitter') || p === 'x') return '#1DA1F2';
+  if (p.includes('linkedin')) return '#0A66C2';
+  if (p.includes('facebook')) return '#1877F2';
+  if (p.includes('instagram')) return '#E1306C';
+  return '#38bdf8';
+}
+
+function normalizePlatformFilter(platform) {
+  const p = (platform || '').toLowerCase();
+  if (p.includes('twitter') || p === 'x') return 'Twitter';
+  if (p.includes('facebook')) return 'Facebook';
+  if (p.includes('instagram')) return 'Instagram';
+  if (p.includes('linkedin')) return 'LinkedIn';
+  if (p.includes('reddit')) return 'Reddit';
+  return platform || 'Unknown';
+}
+
+function getFilteredPosts() {
+  if (platformFilter === 'all') return scheduledPosts;
+  return scheduledPosts.filter((p) => normalizePlatformFilter(p.platform) === platformFilter);
+}
+
+async function renderUpcomingPanel() {
+  const listEl = document.getElementById('upcomingList');
+  const chipsEl = document.getElementById('platformChips');
+  if (!listEl) return;
+
+  try {
+    const byPlatform = await ipcRenderer.invoke('get-upcoming-by-platform', 14);
+    const platforms = Object.keys(byPlatform);
+    if (chipsEl) {
+      chipsEl.innerHTML = ['all', ...platforms].map((p) => {
+        const label = p === 'all' ? 'All' : p;
+        const active = (platformFilter === 'all' && p === 'all') || platformFilter === p ? ' active' : '';
+        return `<span class="platform-chip${active}" data-platform="${p}">${label}</span>`;
+      }).join('');
+      chipsEl.querySelectorAll('.platform-chip').forEach((chip) => {
+        chip.addEventListener('click', async () => {
+          platformFilter = chip.dataset.platform;
+          await ipcRenderer.invoke('save-calendar-settings', { timezone: displayTimeZone, platformFilter, viewMode: calendarViewMode });
+          renderCurrentView();
+          renderUpcomingPanel();
+        });
+      });
+    }
+
+    const posts = platformFilter === 'all'
+      ? Object.values(byPlatform).flat()
+      : (byPlatform[platformFilter] || []);
+    posts.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    if (!posts.length) {
+      listEl.innerHTML = '<span style="color:#64748b;">No upcoming posts in next 14 days.</span>';
+      return;
+    }
+
+    listEl.innerHTML = posts.slice(0, 12).map((p) => {
+      const { date, time } = formatDateTime(p.timestamp);
+      return `<div class="upcoming-item" data-id="${p.id}" style="border-left-color:${getPlatformColor(p.platform)}">
+        <div style="color:${getPlatformColor(p.platform)};font-weight:600;">${escapeHtml(p.platform)} · ${time}</div>
+        <div style="color:#94a3b8;font-size:0.65rem;">${date}</div>
+        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${escapeHtml(p.content || 'Media post')}</div>
+      </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('.upcoming-item').forEach((el) => {
+      el.addEventListener('click', () => openPostModal(el.dataset.id));
+    });
+  } catch (e) {
+    listEl.innerHTML = `<span style="color:#ef4444;">${escapeHtml(e.message)}</span>`;
+  }
+}
+
+function renderPostsIntoContainers(containerPrefix) {
+  const now = Date.now();
+  const postsToRender = getFilteredPosts();
+  const isMonth = containerPrefix === 'container-';
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth() + 1;
+  const weekStart = getWeekStart(currentDate);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  postsToRender.forEach(post => {
+    try {
+      const dateObj = new Date(post.timestamp);
+      if (Number.isNaN(dateObj.getTime())) return;
+
+      if (isMonth) {
+        const postYear = dateObj.getFullYear();
+        const postMonth = dateObj.getMonth() + 1;
+        if (postYear !== year || postMonth !== month) return;
+      } else if (containerPrefix === 'week-container-') {
+        if (dateObj < weekStart || dateObj >= weekEnd) return;
+      }
+
+      const dateString = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+      const container = document.getElementById(containerPrefix + dateString);
+      if (!container) return;
+
+      const { time } = formatDateTime(post.timestamp);
+      const icon = getPlatformIcon(post.platform);
+      const classStr = (post.platform || '').toLowerCase().replace(/\s/g, '');
+      const isDue = new Date(post.timestamp).getTime() <= now;
+      const extraClass = post.status === 'failed' ? ' failed' : (isDue ? ' due' : '');
+
+      const el = document.createElement('div');
+      el.className = `post-item ${classStr}${extraClass}`;
+      el.draggable = true;
+      el.dataset.id = post.id;
+      el.innerHTML = `
+        <div class="post-time"><span style="color:${getPlatformColor(post.platform)}"><i class="${icon}"></i></span> ${time}${isDue ? ' <i class="fas fa-bolt" title="Due"></i>' : ''}</div>
+        <div class="post-content-preview">${escapeHtml(post.content || 'Media post')}</div>`;
+      el.addEventListener('dragstart', handleDragStart);
+      el.addEventListener('dragend', handleDragEnd);
+      el.addEventListener('click', () => openPostModal(post.id));
+      container.appendChild(el);
+    } catch (e) {
+      console.error('Render post error', post, e);
+    }
+  });
+}
+
+function handleDragStart(e) {
+  draggingPostId = this.dataset.id;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', this.dataset.id);
+}
+
+function handleDragEnd() {
+  this.classList.remove('dragging');
+  draggingPostId = null;
+  document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('drag-over'));
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  if (draggingPostId) {
+    this.classList.add('drag-over');
+    e.dataTransfer.dropEffect = 'move';
+  }
+  return false;
+}
+
+function handleDragLeave() {
+  this.classList.remove('drag-over');
+}
+
+async function handleDrop(e) {
+  e.stopPropagation();
+  this.classList.remove('drag-over');
+  const targetDateStr = this.dataset.date;
+  if (!targetDateStr || !draggingPostId) return false;
+
+  const post = scheduledPosts.find(p => p.id === draggingPostId);
+  if (!post) return false;
+
+  const oldDate = new Date(post.timestamp);
+  const [tYear, tMonth, tDate] = targetDateStr.split('-');
+  oldDate.setFullYear(parseInt(tYear, 10));
+  oldDate.setMonth(parseInt(tMonth, 10) - 1);
+  oldDate.setDate(parseInt(tDate, 10));
+
+  try {
+    const res = await ipcRenderer.invoke('update-scheduled-post', { id: draggingPostId, updates: { timestamp: oldDate.toISOString() } });
+    if (!res.success) throw new Error(res.error || 'Update failed');
+    await loadPostsFromStore();
+    showToast('Post rescheduled via drag & drop', 'success');
+  } catch (err) {
+    showToast('Reschedule failed: ' + err.message, 'error');
+  }
+  return false;
+}
+
+function openPostModal(id) {
+  const post = scheduledPosts.find(p => p.id === id);
+  if (!post) return;
+  currentViewingPostId = id;
+
+  const { date, time } = formatDateTime(post.timestamp);
+  document.getElementById('modalTitle').innerHTML = `<i class="${getPlatformIcon(post.platform)}" style="color:${getPlatformColor(post.platform)};"></i> ${escapeHtml(post.platform)} — Scheduled`;
+  document.getElementById('modalDate').innerHTML = `<i class="fas fa-calendar-day"></i> ${date}`;
+  document.getElementById('modalTime').innerHTML = `<i class="fas fa-clock"></i> ${time}`;
+  document.getElementById('modalContentEdit').value = post.content || '';
+  document.getElementById('modalRescheduleTime').value = toDatetimeLocalValue(post.timestamp);
+
+  const mediaEl = document.getElementById('modalMedia');
+  if (post.mediaUrl || post.hasMedia) {
+    mediaEl.src = post.mediaUrl || '';
+    mediaEl.style.display = post.mediaUrl ? 'block' : 'none';
+  } else {
+    mediaEl.style.display = 'none';
+    mediaEl.src = '';
+  }
+
+  document.getElementById('postModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('postModal').style.display = 'none';
+  currentViewingPostId = null;
+}
+
+async function saveModalEdits() {
+  if (!currentViewingPostId) return;
+  const content = document.getElementById('modalContentEdit').value.trim();
+  const reschedule = document.getElementById('modalRescheduleTime').value;
+  const updates = { content };
+  if (reschedule) updates.scheduleTime = new Date(reschedule).toISOString();
+
+  try {
+    const res = await ipcRenderer.invoke('update-scheduled-post', { id: currentViewingPostId, updates });
+    if (!res.success) throw new Error(res.error || 'Save failed');
+    await loadPostsFromStore();
+    showToast('Scheduled post updated', 'success');
+    closeModal();
+  } catch (e) {
+    showToast('Save failed: ' + e.message, 'error');
+  }
+}
+
+async function deleteCurrentPost() {
+  if (!currentViewingPostId) return;
+  if (!confirm('Delete this scheduled post?')) return;
+  try {
+    const res = await ipcRenderer.invoke('delete-scheduled-post', currentViewingPostId);
+    if (!res.success) throw new Error(res.error || 'Delete failed');
+    closeModal();
+    await loadPostsFromStore();
+    showToast('Scheduled post deleted', 'success');
+  } catch (e) {
+    showToast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+async function publishCurrentPostNow() {
+  if (!currentViewingPostId) return;
+  const btn = document.getElementById('publishNowBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing...'; }
+  try {
+    const content = document.getElementById('modalContentEdit').value.trim();
+    if (content) await ipcRenderer.invoke('update-scheduled-post', { id: currentViewingPostId, updates: { content } });
+    const result = await ipcRenderer.invoke('publish-scheduled-post-now', currentViewingPostId);
+    if (!result.success) throw new Error(result.error || 'Publish failed');
+    closeModal();
+    await loadPostsFromStore();
+    showToast(result.message || 'Published now via platform API', 'success');
+  } catch (e) {
+    showToast('Publish failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Publish Now'; }
+  }
+}
+
+async function publishAllDue() {
+  showToast('Processing due scheduled posts...', 'info');
+  try {
+    const result = await processDuePostsSafe();
+    if (!result) {
+      showToast('Restart the app to enable Publish Due (main process update required)', 'error');
+      return;
+    }
+    await loadPostsFromStore();
+    if (result.published > 0) {
+      showToast(`Published ${result.published} due post(s)${result.failed ? `, ${result.failed} failed` : ''}`, result.failed ? 'error' : 'success');
+    } else {
+      showToast('No due posts to publish right now', 'info');
+    }
+  } catch (e) {
+    showToast('Publish due failed: ' + e.message, 'error');
+  }
+}
+
+async function suggestBestTimes() {
+  showToast('Analyzing engagement patterns from post history...', 'info');
+  const panel = document.getElementById('bestTimesPanel');
+  try {
+    const analysis = await ipcRenderer.invoke('get-best-post-times');
+    if (!panel) return;
+
+    const suggestions = (analysis.suggestions || []).map((s) => `
+      <div class="best-time-card">
+        <strong>${escapeHtml(s.label)}</strong> <span style="color:#10b981;">Score ${s.score}</span>
+        <div style="color:#94a3b8;margin-top:4px;">${escapeHtml(s.reason)}</div>
+        <button class="secondary-btn" style="margin-top:6px;padding:4px 8px;font-size:0.65rem;" onclick="applySuggestedTime('${s.day}', ${s.hour})">Schedule at this time</button>
+      </div>`).join('');
+
+    const platformTimes = (analysis.platformBestTimes || []).map((p) =>
+      `<div style="font-size:0.7rem;color:#64748b;margin-top:4px;">${escapeHtml(p.platform)}: best around ${escapeHtml(p.bestHourLabel)} (${p.posts} posts)</div>`
+    ).join('');
+
+    panel.innerHTML = `
+      <div style="color:#94a3b8;margin-bottom:8px;">${analysis.dataPoints} data points · ${escapeHtml(analysis.timezoneNote || '')}</div>
+      ${suggestions || '<span>No suggestions yet — publish posts to build patterns.</span>'}
+      ${platformTimes ? `<div style="margin-top:10px;border-top:1px solid #334155;padding-top:8px;"><strong style="color:#e2e8f0;font-size:0.75rem;">Per Platform</strong>${platformTimes}</div>` : ''}`;
+
+    renderEngagementChart(analysis);
+    showToast('Best times analysis complete', 'success');
+  } catch (e) {
+    if (panel) panel.innerHTML = `<span style="color:#ef4444;">${escapeHtml(e.message)}</span>`;
+    showToast('Suggest times failed: ' + e.message, 'error');
+  }
+}
+
+window.applySuggestedTime = function(dayName, hour) {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const target = new Date();
+  const currentDay = target.getDay();
+  const wantDay = days.indexOf(dayName);
+  if (wantDay >= 0) {
+    let diff = wantDay - currentDay;
+    if (diff <= 0) diff += 7;
+    target.setDate(target.getDate() + diff);
+  }
+  target.setHours(hour, 0, 0, 0);
+  window.location.href = `content-hub.html?schedule=${encodeURIComponent(target.toISOString())}`;
+};
+
+const BG_RUN_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+let bgRunSaveTimer = null;
+
+function toDatetimeLocalValue(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderBackgroundRunStatus(status) {
+  const el = document.getElementById('bgRunStatus');
+  if (!el || !status) return;
+
+  const enabled = status.settings?.enabled;
+  if (!enabled) {
+    el.className = 'bg-run-status paused';
+    el.innerHTML = '<i class="fas fa-clock"></i> Schedule off — worker runs anytime when started manually';
+  } else if (status.inWindow) {
+    el.className = 'bg-run-status active';
+    const workerNote = status.workerFlag
+      ? ' · Worker running'
+      : (status.settings?.autoStartWorker ? ' · Worker will auto-start' : '');
+    el.innerHTML = `<i class="fas fa-play-circle"></i> In run window: ${escapeHtml(status.reason)}${workerNote}`;
+  } else {
+    el.className = 'bg-run-status paused';
+    const next = status.nextWindow
+      ? `Next: ${formatDateTime(status.nextWindow.atIso)} (${escapeHtml(status.nextWindow.label)})`
+      : 'No upcoming windows';
+    el.innerHTML = `<i class="fas fa-pause-circle"></i> Paused — ${escapeHtml(status.reason)}<br><span style="opacity:0.85">${next}</span>`;
+  }
+
+  const upcomingEl = document.getElementById('bgRunUpcoming');
+  if (upcomingEl) {
+    const runs = status.upcomingRuns || [];
+    if (!runs.length) {
+      upcomingEl.innerHTML = '<div style="color:#64748b;font-size:0.65rem;">No one-off runs scheduled. Add a date/time above.</div>';
+    } else {
+      upcomingEl.innerHTML = runs.map((run) => {
+        const at = formatDateTime(run.runAt);
+        const dur = run.durationMinutes || 60;
+        return `<div class="bg-run-item">
+          <div>
+            <strong style="color:#e2e8f0;">${escapeHtml(run.label || 'Background run')}</strong>
+            <div style="color:#94a3b8;font-size:0.65rem;">${at} · ${dur} min · ${escapeHtml(run.status || 'queued')}</div>
+          </div>
+          <button type="button" data-bg-run-id="${escapeHtml(run.id)}" class="bg-run-delete-btn" title="Cancel"><i class="fas fa-times"></i></button>
+        </div>`;
+      }).join('');
+      upcomingEl.querySelectorAll('.bg-run-delete-btn').forEach((btn) => {
+        btn.addEventListener('click', () => deleteBackgroundRun(btn.dataset.bgRunId));
+      });
+    }
+  }
+
+  const weeklyEl = document.getElementById('bgRunWeekly');
+  if (weeklyEl) {
+    const windows = status.weeklyWindows || [];
+    if (!windows.length) {
+      weeklyEl.textContent = '';
+    } else {
+      weeklyEl.innerHTML = '<strong style="color:#94a3b8;">Weekly windows:</strong> ' +
+        windows.map((w) => {
+          const days = (w.days || []).map((d) => BG_RUN_DAY_NAMES[d]).join(', ');
+          const start = `${String(w.startHour || 0).padStart(2, '0')}:${String(w.startMinute || 0).padStart(2, '0')}`;
+          const end = `${String(w.endHour || 0).padStart(2, '0')}:${String(w.endMinute || 0).padStart(2, '0')}`;
+          return `${escapeHtml(w.label || 'Window')}: ${days} ${start}–${end}`;
+        }).join(' · ');
+    }
+  }
+}
+
+async function loadBackgroundRunSettings() {
+  const settings = await ipcRenderer.invoke('get-background-run-settings');
+  const enabledCb = document.getElementById('bgRunEnabled');
+  const autoStartCb = document.getElementById('bgRunAutoStart');
+  if (enabledCb) enabledCb.checked = !!settings.enabled;
+  if (autoStartCb) autoStartCb.checked = settings.autoStartWorker !== false;
+  return settings;
+}
+
+async function refreshBackgroundRunStatus() {
+  try {
+    const status = await ipcRenderer.invoke('get-background-run-status');
+    renderBackgroundRunStatus(status);
+    return status;
+  } catch (e) {
+    const el = document.getElementById('bgRunStatus');
+    if (el) {
+      el.className = 'bg-run-status paused';
+      el.textContent = 'Could not load schedule status';
+    }
+    return null;
+  }
+}
+
+function scheduleSaveBackgroundRunSettings() {
+  clearTimeout(bgRunSaveTimer);
+  bgRunSaveTimer = setTimeout(() => saveBackgroundRunSettings(false), 400);
+}
+
+async function saveBackgroundRunSettings(showFeedback = true) {
+  try {
+    const payload = {
+      enabled: document.getElementById('bgRunEnabled')?.checked || false,
+      autoStartWorker: document.getElementById('bgRunAutoStart')?.checked !== false,
+    };
+    await ipcRenderer.invoke('save-background-run-settings', payload);
+    await refreshBackgroundRunStatus();
+    if (showFeedback) showToast('Background run schedule saved', 'success');
+  } catch (e) {
+    showToast('Failed to save schedule: ' + e.message, 'error');
+  }
+}
+
+async function addBackgroundRun() {
+  const runAtInput = document.getElementById('bgRunAt');
+  const runAtVal = runAtInput?.value;
+  if (!runAtVal) {
+    showToast('Pick a date and time for the background run', 'error');
+    return;
+  }
+  const runDate = new Date(runAtVal);
+  if (Number.isNaN(runDate.getTime())) {
+    showToast('Invalid date/time', 'error');
+    return;
+  }
+  if (runDate.getTime() < Date.now() - 60000) {
+    showToast('Scheduled time must be in the future', 'error');
+    return;
+  }
+
+  const durationMinutes = parseInt(document.getElementById('bgRunDuration')?.value, 10) || 60;
+  const label = document.getElementById('bgRunLabel')?.value?.trim() || '';
+  const btn = document.getElementById('bgRunAddBtn');
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await ipcRenderer.invoke('add-background-run-slot', {
+      runAt: runDate.toISOString(),
+      durationMinutes,
+      label: label || undefined,
+    });
+    if (!res.success) throw new Error(res.error || 'Failed to schedule');
+
+    const enabledCb = document.getElementById('bgRunEnabled');
+    if (enabledCb && !enabledCb.checked) {
+      enabledCb.checked = true;
+      await saveBackgroundRunSettings(false);
+    }
+
+    const labelInput = document.getElementById('bgRunLabel');
+    if (labelInput) labelInput.value = '';
+
+    const nextDefault = new Date(runDate.getTime() + durationMinutes * 60000 + 30 * 60000);
+    if (runAtInput) runAtInput.value = toDatetimeLocalValue(nextDefault);
+
+    showToast(`Scheduled: ${res.run.label}`, 'success');
+    await refreshBackgroundRunStatus();
+  } catch (e) {
+    showToast('Schedule failed: ' + e.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function deleteBackgroundRun(id) {
+  if (!id || !confirm('Cancel this scheduled background run?')) return;
+  try {
+    const res = await ipcRenderer.invoke('delete-background-run-slot', id);
+    if (!res.success) throw new Error(res.error || 'Delete failed');
+    showToast('Background run cancelled', 'info');
+    await refreshBackgroundRunStatus();
+  } catch (e) {
+    showToast('Cancel failed: ' + e.message, 'error');
+  }
+}
+
+function initBackgroundRunPanel() {
+  const bgRunAt = document.getElementById('bgRunAt');
+  if (bgRunAt) {
+    const defaultRun = new Date();
+    defaultRun.setMinutes(defaultRun.getMinutes() + 30, 0, 0);
+    bgRunAt.min = toDatetimeLocalValue(new Date());
+    bgRunAt.value = toDatetimeLocalValue(defaultRun);
+  }
+  document.getElementById('bgRunEnabled')?.addEventListener('change', () => saveBackgroundRunSettings(true));
+  document.getElementById('bgRunAutoStart')?.addEventListener('change', scheduleSaveBackgroundRunSettings);
+  document.getElementById('bgRunAddBtn')?.addEventListener('click', addBackgroundRun);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadPostsFromStore();
+
+  document.getElementById('prevMonthBtn')?.addEventListener('click', () => changeMonth(-1));
+  document.getElementById('nextMonthBtn')?.addEventListener('click', () => changeMonth(1));
+  document.getElementById('todayBtn')?.addEventListener('click', goToToday);
+  document.getElementById('refreshBtn')?.addEventListener('click', loadPostsFromStore);
+  document.getElementById('publishDueBtn')?.addEventListener('click', publishAllDue);
+  document.getElementById('suggestTimesBtn')?.addEventListener('click', suggestBestTimes);
+  document.getElementById('closeModalBtn')?.addEventListener('click', closeModal);
+  document.getElementById('closeModalBtn2')?.addEventListener('click', closeModal);
+  document.getElementById('saveEditBtn')?.addEventListener('click', saveModalEdits);
+  document.getElementById('publishNowBtn')?.addEventListener('click', publishCurrentPostNow);
+  document.getElementById('deletePostBtn')?.addEventListener('click', deleteCurrentPost);
+
+  document.getElementById('timezoneSelect')?.addEventListener('change', async (e) => {
+    displayTimeZone = e.target.value;
+    await ipcRenderer.invoke('save-calendar-settings', { timezone: displayTimeZone, platformFilter, viewMode: calendarViewMode });
+    renderCurrentView();
+    showToast('Timezone display updated', 'info');
+  });
+
+  document.getElementById('platformFilter')?.addEventListener('change', async (e) => {
+    platformFilter = e.target.value;
+    await ipcRenderer.invoke('save-calendar-settings', { timezone: displayTimeZone, platformFilter, viewMode: calendarViewMode });
+    renderCurrentView();
+    renderUpcomingPanel();
+  });
+
+  document.querySelectorAll('#viewToggle button').forEach((btn) => {
+    btn.addEventListener('click', () => setCalendarView(btn.dataset.view));
+  });
+
+  try {
+    const calSettings = await ipcRenderer.invoke('get-calendar-settings');
+    if (calSettings.timezone) {
+      displayTimeZone = calSettings.timezone;
+      const tzSel = document.getElementById('timezoneSelect');
+      if (tzSel) tzSel.value = calSettings.timezone;
+    }
+    if (calSettings.platformFilter) {
+      platformFilter = calSettings.platformFilter;
+      const pf = document.getElementById('platformFilter');
+      if (pf) pf.value = calSettings.platformFilter;
+    }
+    if (calSettings.viewMode && ['month', 'week', 'list'].includes(calSettings.viewMode)) {
+      setCalendarView(calSettings.viewMode);
+    }
+  } catch (e) {}
+
+  initBackgroundRunPanel();
+  await loadBackgroundRunSettings();
+  await refreshBackgroundRunStatus();
+  setInterval(refreshBackgroundRunStatus, 30000);
+
+  suggestBestTimes();
+  setInterval(() => loadPostsFromStore(), 60000);
+});
+</script>
+</body>
+</html>

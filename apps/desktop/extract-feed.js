@@ -1,0 +1,10 @@
+const fs = require('fs');
+const dh = fs.readFileSync('dashboard.html', 'utf8');
+const start = dh.indexOf('<div class="feed-section">');
+const end = dh.indexOf('<!-- Modal for Topic Analysis -->');
+const feedHtml = dh.substring(start, end);
+const jsStart = dh.indexOf('async function loadFeed()');
+const jsEnd = dh.indexOf("document.getElementById('savedProfilesDropdown')");
+const feedJs = dh.substring(jsStart, jsEnd);
+fs.writeFileSync('extracted.html', feedHtml, 'utf8');
+fs.writeFileSync('extracted.js', feedJs, 'utf8');

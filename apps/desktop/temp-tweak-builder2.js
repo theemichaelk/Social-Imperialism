@@ -1,0 +1,739 @@
+const fs = require('fs');
+const content = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Automations Builder - Social Imperialism</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { margin: 0; font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; overflow: hidden; display: flex; height: 100vh; }
+    
+    /* Sidebar */
+    .sidebar { width: 260px; background-color: #020617; border-right: 1px solid #1e293b; display: flex; flex-direction: column; height: 100vh; z-index: 10; }
+    .sidebar-header { padding: 20px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; }
+    .sidebar-header h2 { margin: 0; font-size: 1.1rem; color: #38bdf8; display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; }
+    .sidebar-header h2:hover { color: #f8fafc; }
+    
+    .node-palette { padding: 15px; flex-grow: 1; overflow-y: auto; }
+    .node-category { font-size: 0.75rem; text-transform: uppercase; color: #64748b; margin-bottom: 10px; font-weight: 700; letter-spacing: 0.1em; border-bottom: 1px solid #1e293b; padding-bottom: 5px; }
+    
+    .palette-item { background-color: #0f172a; padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; cursor: grab; display: flex; align-items: center; gap: 12px; font-size: 0.85rem; border: 1px solid #334155; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .palette-item:hover { border-color: #38bdf8; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(56,189,248,0.15); background-color: #1e293b; }
+    
+    .palette-item.trigger { border-left: 4px solid #10b981; }
+    .palette-item.action { border-left: 4px solid #38bdf8; }
+    .palette-item.condition { border-left: 4px solid #f59e0b; }
+    .palette-item.delay { border-left: 4px solid #a78bfa; }
+    .palette-item.integration { border-left: 4px solid #ec4899; }
+    
+    /* Main Canvas Area */
+    .main-area { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+    
+    .topbar { height: 60px; background-color: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 10; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    
+    .template-selector { display: flex; gap: 10px; align-items: center; }
+    .template-btn { background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .template-btn:hover { background: #334155; color: #f8fafc; }
+    
+    .canvas-container { flex-grow: 1; position: relative; background-color: #0f172a; background-image: radial-gradient(circle at 2px 2px, rgba(51, 65, 85, 0.4) 1px, transparent 0); background-size: 24px 24px; overflow: auto; }
+    #canvas { width: 4000px; height: 4000px; position: relative; transform-origin: top left; }
+    
+    /* Nodes on Canvas */
+    .flow-node { position: absolute; width: 220px; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); border-radius: 10px; border: 1px solid #334155; box-shadow: 0 8px 16px rgba(0,0,0,0.4); cursor: grab; z-index: 5; user-select: none; transition: box-shadow 0.2s, border-color 0.2s; }
+    .flow-node:hover { box-shadow: 0 12px 24px rgba(0,0,0,0.5); }
+    .flow-node.active { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3), 0 12px 24px rgba(0,0,0,0.5); z-index: 10; }
+    
+    .flow-node-header { padding: 12px 15px; border-bottom: 1px solid #334155; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+    .flow-node.trigger .flow-node-header { background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(30, 41, 59, 0) 100%); color: #10b981; border-top: 2px solid #10b981; }
+    .flow-node.action .flow-node-header { background: linear-gradient(90deg, rgba(56, 189, 248, 0.15) 0%, rgba(30, 41, 59, 0) 100%); color: #38bdf8; border-top: 2px solid #38bdf8; }
+    .flow-node.condition .flow-node-header { background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, rgba(30, 41, 59, 0) 100%); color: #f59e0b; border-top: 2px solid #f59e0b; }
+    .flow-node.delay .flow-node-header { background: linear-gradient(90deg, rgba(167, 139, 250, 0.15) 0%, rgba(30, 41, 59, 0) 100%); color: #a78bfa; border-top: 2px solid #a78bfa; }
+    .flow-node.integration .flow-node-header { background: linear-gradient(90deg, rgba(236, 72, 153, 0.15) 0%, rgba(30, 41, 59, 0) 100%); color: #ec4899; border-top: 2px solid #ec4899; }
+    
+    .flow-node-body { padding: 15px; font-size: 0.8rem; color: #94a3b8; line-height: 1.4; }
+    
+    .flow-node-ports { position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; }
+    
+    .port { position: absolute; width: 14px; height: 14px; background: #334155; border: 2px solid #0f172a; border-radius: 50%; pointer-events: auto; cursor: crosshair; z-index: 6; transition: all 0.2s; }
+    .port:hover { background: #38bdf8; transform: scale(1.3); box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+    .port.in { top: -8px; left: 50%; transform: translateX(-50%); }
+    .port.out { bottom: -8px; left: 50%; transform: translateX(-50%); }
+    .port.out-true { bottom: -8px; left: 25%; transform: translateX(-50%); border-color: #10b981; }
+    .port.out-false { bottom: -8px; left: 75%; transform: translateX(-50%); border-color: #ef4444; }
+    
+    /* Connections */
+    #svg-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+    path.connection { fill: none; stroke: #475569; stroke-width: 3; stroke-linecap: round; transition: stroke 0.3s; }
+    path.connection.active { stroke: #38bdf8; filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.5)); stroke-dasharray: 8 6; animation: dash 30s linear infinite; }
+    path.connection.true-path { stroke: #10b981; }
+    path.connection.false-path { stroke: #ef4444; }
+    @keyframes dash { to { stroke-dashoffset: -200; } }
+    
+    /* Properties Panel */
+    .properties-panel { position: absolute; right: -350px; top: 60px; width: 340px; height: calc(100vh - 60px); background-color: #020617; border-left: 1px solid #1e293b; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 20; display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5); }
+    .properties-panel.open { right: 0; }
+    
+    .props-header { padding: 20px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5); }
+    .props-body { padding: 20px; flex-grow: 1; overflow-y: auto; }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 0.8rem; color: #cbd5e1; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #334155; color: #f8fafc; border-radius: 6px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 0.9rem; transition: border-color 0.2s; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    
+    .help-text { font-size: 0.75rem; color: #64748b; margin-top: 5px; line-height: 1.4; }
+    
+    /* Buttons */
+    .btn { padding: 10px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 8px; justify-content: center; }
+    .btn-primary { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4); }
+    .btn-secondary { background-color: transparent; border: 1px solid #475569; color: #f8fafc; }
+    .btn-secondary:hover { background-color: #1e293b; border-color: #94a3b8; }
+    .btn-danger { background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; }
+    .btn-danger:hover { background-color: rgba(239, 68, 68, 0.2); border-color: #ef4444; }
+    
+    /* Zoom Controls */
+    .zoom-controls { position: absolute; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(5px); padding: 10px; border-radius: 8px; border: 1px solid #334155; z-index: 15; }
+    .zoom-btn { background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem; width: 30px; height: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .zoom-btn:hover { background: #334155; color: #f8fafc; }
+    
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(2, 6, 23, 0.8); backdrop-filter: blur(5px); z-index: 100; display: none; justify-content: center; align-items: center; }
+    .modal-content { background: #0f172a; border: 1px solid #334155; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    .modal-title { font-size: 1.2rem; margin: 0 0 20px 0; color: #f8fafc; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <!-- Left Sidebar (Palette) -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2 onclick="window.location.href='index.html'"><i class="fas fa-arrow-left" style="font-size:0.9rem;"></i> Exit Builder</h2>
+    </div>
+    
+    <div class="node-palette">
+      <div class="node-category">Triggers</div>
+      <div class="palette-item trigger" draggable="true" data-type="trigger" data-title="Keyword Match">
+        <i class="fas fa-search"></i> Keyword Match
+      </div>
+      <div class="palette-item trigger" draggable="true" data-type="trigger" data-title="New Follower">
+        <i class="fas fa-user-plus"></i> New Follower
+      </div>
+      <div class="palette-item trigger" draggable="true" data-type="trigger" data-title="Scheduled Time">
+        <i class="fas fa-calendar-check"></i> Scheduled Time
+      </div>
+      
+      <div class="node-category" style="margin-top:25px;">Integrations</div>
+      <div class="palette-item integration" draggable="true" data-type="integration" data-title="RSS Feed Monitor">
+        <i class="fas fa-rss"></i> RSS Feed Monitor
+      </div>
+      <div class="palette-item integration" draggable="true" data-type="integration" data-title="Incoming Webhook">
+        <i class="fas fa-link"></i> Incoming Webhook
+      </div>
+      
+      <div class="node-category" style="margin-top:25px;">Logic & Conditionals</div>
+      <div class="palette-item condition" draggable="true" data-type="condition" data-title="AI Sentiment Split">
+        <i class="fas fa-brain"></i> AI Sentiment Split
+      </div>
+      <div class="palette-item condition" draggable="true" data-type="condition" data-title="IF/ELSE Logic">
+        <i class="fas fa-code-branch"></i> IF / ELSE Match
+      </div>
+      <div class="palette-item delay" draggable="true" data-type="delay" data-title="Wait (Jitter)">
+        <i class="fas fa-clock"></i> Wait (Jitter)
+      </div>
+      
+      <div class="node-category" style="margin-top:25px;">Actions</div>
+      <div class="palette-item action" draggable="true" data-type="action" data-title="Auto-Like Post">
+        <i class="fas fa-heart"></i> Auto-Like Post
+      </div>
+      <div class="palette-item action" draggable="true" data-type="action" data-title="AI Draft Reply">
+        <i class="fas fa-robot"></i> AI Draft Reply
+      </div>
+      <div class="palette-item action" draggable="true" data-type="action" data-title="Publish Content">
+        <i class="fas fa-paper-plane"></i> Publish Content
+      </div>
+      <div class="palette-item action" draggable="true" data-type="action" data-title="Send Alert">
+        <i class="fas fa-bell"></i> Send Alert
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Canvas -->
+  <div class="main-area">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:20px;">
+        <h3 style="margin:0; font-size:1.1rem; font-weight:600; letter-spacing:0.5px;">Campaign Pipeline <span style="font-size:0.8rem; color:#64748b; font-weight:400;">/ <span id="pipeline-status">Draft</span></span></h3>
+        <div class="template-selector">
+          <button class="template-btn" onclick="openTemplateModal()"><i class="fas fa-folder-open"></i> Load Template</button>
+          <button class="template-btn" onclick="openSaveModal()"><i class="fas fa-save"></i> Save As Template</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <button class="btn btn-secondary" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
+        <button class="btn btn-primary" onclick="deployPipeline()"><i class="fas fa-rocket"></i> Deploy Flow</button>
+      </div>
+    </div>
+    
+    <div class="canvas-container" id="canvasContainer" ondragover="allowDrop(event)" ondrop="drop(event)">
+      <div id="canvas">
+        <svg id="svg-canvas"></svg>
+        <!-- Nodes injected here -->
+      </div>
+    </div>
+    
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="setZoom(0.1)" title="Zoom In"><i class="fas fa-plus"></i></button>
+      <button class="zoom-btn" onclick="resetZoom()" title="Reset Zoom"><i class="fas fa-compress"></i></button>
+      <button class="zoom-btn" onclick="setZoom(-0.1)" title="Zoom Out"><i class="fas fa-minus"></i></button>
+    </div>
+    
+    <!-- Properties Panel -->
+    <div class="properties-panel" id="propPanel">
+      <div class="props-header">
+        <h3 style="margin:0; font-size:1.05rem;" id="propTitle">Node Settings</h3>
+        <button style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;" onclick="closeProps()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="props-body" id="propBody">
+        <!-- Dynamic form based on selected node -->
+      </div>
+      <div style="padding: 20px; border-top: 1px solid #1e293b; background: rgba(15,23,42,0.5);">
+        <button class="btn btn-danger" style="width: 100%;" onclick="deleteSelectedNode()"><i class="fas fa-trash-alt"></i> Delete Node</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Template Modal -->
+  <div class="modal-overlay" id="loadModal">
+    <div class="modal-content">
+      <h3 class="modal-title">Load Template</h3>
+      <div class="form-group">
+        <label>Select Template</label>
+        <select id="templateSelect">
+          <option value="engagement">Auto-Engagement Flow</option>
+          <option value="rss">RSS to Social Publisher</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('loadModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="loadSelectedTemplate()">Load</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Template Modal -->
+  <div class="modal-overlay" id="saveModal">
+    <div class="modal-content">
+      <h3 class="modal-title">Save Custom Template</h3>
+      <div class="form-group">
+        <label>Template Name</label>
+        <input type="text" id="saveTemplateName" placeholder="e.g. My Custom Growth Loop">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('saveModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveCustomTemplate()">Save</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Advanced Visual Builder Logic
+  const canvas = document.getElementById('canvas');
+  const svgCanvas = document.getElementById('svg-canvas');
+  const propPanel = document.getElementById('propPanel');
+  const container = document.getElementById('canvasContainer');
+  
+  let nodes = {};
+  let connections = [];
+  let nodeIdCounter = 1;
+  let activeNode = null;
+  let draggingNode = null;
+  let isConnecting = false;
+  let connectionStartData = null; // {nodeId, portType}
+  let tempPath = null;
+  let currentZoom = 1;
+  
+  // Center Canvas initially
+  container.scrollLeft = 1000;
+  container.scrollTop = 1000;
+  
+  function setZoom(delta) {
+    currentZoom += delta;
+    if(currentZoom < 0.5) currentZoom = 0.5;
+    if(currentZoom > 1.5) currentZoom = 1.5;
+    canvas.style.transform = 'scale(' + currentZoom + ')';
+  }
+  
+  function resetZoom() {
+    currentZoom = 1;
+    canvas.style.transform = 'scale(1)';
+  }
+  
+  // Drag and Drop from Palette
+  document.querySelectorAll('.palette-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', JSON.stringify({
+        type: item.dataset.type,
+        title: item.dataset.title,
+        icon: item.querySelector('i').className
+      }));
+    });
+  });
+  
+  function allowDrop(e) { e.preventDefault(); }
+  
+  function drop(e) {
+    e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+    const containerRect = container.getBoundingClientRect();
+    
+    // Adjust for scroll and zoom
+    const x = (e.clientX - containerRect.left + container.scrollLeft) / currentZoom - 110;
+    const y = (e.clientY - containerRect.top + container.scrollTop) / currentZoom - 40;
+    
+    createNode(data.type, data.title, data.icon, x, y);
+  }
+  
+  function createNode(type, title, icon, x, y, id = null, config = {}) {
+    const nodeId = id || 'node_' + nodeIdCounter++;
+    
+    const nodeEl = document.createElement('div');
+    nodeEl.className = "flow-node " + type;
+    nodeEl.id = nodeId;
+    nodeEl.style.left = x + "px";
+    nodeEl.style.top = y + "px";
+    
+    let desc = "Configure properties";
+    if(type === 'trigger') desc = "Listens for events to start the flow";
+    if(type === 'action') desc = "Executes an action/API call";
+    if(type === 'delay') desc = "Pauses flow execution";
+    if(type === 'condition') desc = "Splits logic (True/False)";
+    if(type === 'integration') desc = "Listens to external source";
+    
+    let portsHTML = '';
+    if(type !== 'trigger' && type !== 'integration') portsHTML += '<div class="port in" data-port="in"></div>';
+    
+    if(type === 'condition') {
+        portsHTML += '<div class="port out out-true" data-port="out-true" title="True Match"></div>';
+        portsHTML += '<div class="port out out-false" data-port="out-false" title="False Match"></div>';
+    } else if (type !== 'action' || title.includes('Publish') || title.includes('Reply')) {
+        portsHTML += '<div class="port out" data-port="out"></div>';
+    }
+    
+    nodeEl.innerHTML = '<div class="flow-node-header"><i class="' + icon + '"></i> ' + title + '</div>' +
+      '<div class="flow-node-body">' + desc + '</div>' +
+      '<div class="flow-node-ports">' + portsHTML + '</div>';
+    
+    canvas.appendChild(nodeEl);
+    
+    nodes[nodeId] = { id: nodeId, type, title, x, y, config: config, el: nodeEl, icon: icon };
+    
+    // Interactions
+    nodeEl.addEventListener('mousedown', (e) => startNodeDrag(e, nodeId));
+    nodeEl.addEventListener('click', (e) => selectNode(nodeId, e));
+    
+    // Port Connections
+    nodeEl.querySelectorAll('.port').forEach(port => {
+      port.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        if(port.classList.contains('out') || port.classList.contains('out-true') || port.classList.contains('out-false')) {
+            const portType = port.dataset.port;
+            startConnection(nodeId, portType, e);
+        }
+      });
+      port.addEventListener('mouseup', (e) => {
+        e.stopPropagation();
+        if(port.classList.contains('in') && isConnecting && connectionStartData.nodeId !== nodeId) {
+          completeConnection(nodeId);
+        }
+      });
+    });
+    
+    return nodeId;
+  }
+  
+  let dragOffset = {x: 0, y: 0};
+  function startNodeDrag(e, id) {
+    if(e.target.classList.contains('port')) return;
+    draggingNode = id;
+    const rect = nodes[id].el.getBoundingClientRect();
+    
+    dragOffset.x = (e.clientX - rect.left) / currentZoom;
+    dragOffset.y = (e.clientY - rect.top) / currentZoom;
+    
+    document.addEventListener('mousemove', dragNode);
+    document.addEventListener('mouseup', stopNodeDrag);
+  }
+  
+  function dragNode(e) {
+    if(!draggingNode) return;
+    const containerRect = container.getBoundingClientRect();
+    
+    const x = (e.clientX - containerRect.left + container.scrollLeft) / currentZoom - dragOffset.x;
+    const y = (e.clientY - containerRect.top + container.scrollTop) / currentZoom - dragOffset.y;
+    
+    nodes[draggingNode].x = x;
+    nodes[draggingNode].y = y;
+    nodes[draggingNode].el.style.left = x + "px";
+    nodes[draggingNode].el.style.top = y + "px";
+    
+    updateConnections();
+  }
+  
+  function stopNodeDrag() {
+    draggingNode = null;
+    document.removeEventListener('mousemove', dragNode);
+    document.removeEventListener('mouseup', stopNodeDrag);
+  }
+  
+  function startConnection(startNodeId, portType, e) {
+    isConnecting = true;
+    connectionStartData = { nodeId: startNodeId, portType: portType };
+    
+    tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    tempPath.classList.add('connection');
+    if(portType === 'out-true') tempPath.classList.add('true-path');
+    if(portType === 'out-false') tempPath.classList.add('false-path');
+    
+    svgCanvas.appendChild(tempPath);
+    
+    document.addEventListener('mousemove', drawTempConnection);
+    document.addEventListener('mouseup', cancelConnection);
+  }
+  
+  function drawTempConnection(e) {
+    if(!isConnecting) return;
+    const containerRect = container.getBoundingClientRect();
+    
+    const startNode = nodes[connectionStartData.nodeId];
+    
+    let offsetX = 110;
+    if(connectionStartData.portType === 'out-true') offsetX = 55;
+    if(connectionStartData.portType === 'out-false') offsetX = 165;
+    
+    const startX = startNode.x + offsetX;
+    const startY = startNode.y + startNode.el.offsetHeight;
+    
+    const endX = (e.clientX - containerRect.left + container.scrollLeft) / currentZoom;
+    const endY = (e.clientY - containerRect.top + container.scrollTop) / currentZoom;
+    
+    const d = "M " + startX + " " + startY + " C " + startX + " " + (startY + 50) + ", " + endX + " " + (endY - 50) + ", " + endX + " " + endY;
+    tempPath.setAttribute('d', d);
+  }
+  
+  function completeConnection(endNodeId) {
+    if(!isConnecting || !connectionStartData) return;
+    
+    if(!connections.find(c => c.from === connectionStartData.nodeId && c.to === endNodeId && c.port === connectionStartData.portType)) {
+      connections.push({ from: connectionStartData.nodeId, to: endNodeId, port: connectionStartData.portType });
+      drawConnections();
+    }
+    
+    cleanupConnection();
+  }
+  
+  function cancelConnection() { cleanupConnection(); }
+  
+  function cleanupConnection() {
+    isConnecting = false;
+    connectionStartData = null;
+    if(tempPath) { tempPath.remove(); tempPath = null; }
+    document.removeEventListener('mousemove', drawTempConnection);
+    document.removeEventListener('mouseup', cancelConnection);
+  }
+  
+  function drawConnections() {
+    svgCanvas.innerHTML = ''; 
+    connections.forEach(conn => {
+      const fromNode = nodes[conn.from];
+      const toNode = nodes[conn.to];
+      if(!fromNode || !toNode) return;
+      
+      let offsetX = 110;
+      if(conn.port === 'out-true') offsetX = 55;
+      if(conn.port === 'out-false') offsetX = 165;
+      
+      const startX = fromNode.x + offsetX;
+      const startY = fromNode.y + fromNode.el.offsetHeight;
+      const endX = toNode.x + 110;
+      const endY = toNode.y;
+      
+      const d = "M " + startX + " " + startY + " C " + startX + " " + (startY + 50) + ", " + endX + " " + (endY - 50) + ", " + endX + " " + endY;
+      
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.classList.add('connection', 'active');
+      if(conn.port === 'out-true') path.classList.add('true-path');
+      if(conn.port === 'out-false') path.classList.add('false-path');
+      
+      svgCanvas.appendChild(path);
+    });
+  }
+  
+  function updateConnections() { if(connections.length > 0) drawConnections(); }
+  
+  // Properties Panel Enhancements
+  function selectNode(id, e) {
+    if(e) e.stopPropagation();
+    
+    document.querySelectorAll('.flow-node').forEach(n => n.classList.remove('active'));
+    nodes[id].el.classList.add('active');
+    activeNode = id;
+    
+    const node = nodes[id];
+    document.getElementById('propTitle').innerHTML = '<i class="'+node.el.querySelector('.flow-node-header i').className+'"></i> ' + node.title;
+    
+    let html = '';
+    if(node.type === 'trigger') {
+      html += '<div class="form-group"><label>Platform Scope</label><select id="cfg_platform" onchange="updateNodeConfig()"><option value="Any">All Linked Accounts</option><option value="Twitter">Twitter / X</option><option value="LinkedIn">LinkedIn</option></select></div>';
+      
+      if(node.title.includes('Keyword')) {
+          html += '<div class="form-group"><label>Keyword Rule</label><select id="cfg_match" onchange="updateNodeConfig()"><option value="Exact">Exact Phrase Match</option><option value="Semantic">AI Semantic Intent Match</option></select><div class="help-text">Semantic match uses AI to find contextual mentions even if exact words differ.</div></div>';
+      }
+    } 
+    else if(node.type === 'integration') {
+      if(node.title.includes('RSS')) {
+          html += '<div class="form-group"><label>RSS Feed URL</label><input type="text" id="cfg_rss" placeholder="https://blog.com/feed" value="'+(node.config.rss||'')+'" onchange="updateNodeConfig()"></div>';
+          html += '<div class="form-group"><label>Poll Frequency</label><select id="cfg_freq" onchange="updateNodeConfig()"><option value="15m">Every 15 Mins</option><option value="1h">Hourly</option></select></div>';
+      } else {
+          html += '<div class="form-group"><label>Webhook URL (Generated)</label><input type="text" readonly value="https://api.socialimperialism.local/hook/'+Math.random().toString(36).substring(7)+'"></div>';
+          html += '<div class="form-group"><label>Expected JSON Key</label><input type="text" id="cfg_key" placeholder="text, content, payload.message" value="'+(node.config.key||'')+'" onchange="updateNodeConfig()"></div>';
+      }
+    }
+    else if(node.type === 'delay') {
+      html += '<div class="form-group"><label>Base Delay (Minutes)</label><input type="number" id="cfg_delay" value="'+(node.config.delay||15)+'" onchange="updateNodeConfig()"></div>';
+      html += '<div class="form-group"><label>Randomize Jitter (+/- Mins)</label><input type="number" id="cfg_jitter" value="'+(node.config.jitter||5)+'" onchange="updateNodeConfig()"><div class="help-text">Jitter makes automation appear more human.</div></div>';
+    } 
+    else if(node.type === 'action') {
+      html += '<div class="form-group"><label>Execute As</label><select id="cfg_account" onchange="updateNodeConfig()"><option value="Auto">Auto (Campaign Default)</option></select></div>';
+      
+      if(node.title.includes('Reply') || node.title.includes('Publish')) {
+          html += '<div class="form-group"><label>Custom AI Override Prompt</label><textarea id="cfg_prompt" placeholder="Optional instructions for the AI for this specific reply action..." onchange="updateNodeConfig()">'+(node.config.prompt||'')+'</textarea></div>';
+      }
+    } 
+    else if(node.type === 'condition') {
+      if(node.title.includes('Sentiment')) {
+          html += '<div class="form-group"><label>Target Sentiment for TRUE path</label><select id="cfg_rule" onchange="updateNodeConfig()"><option value="Positive">Positive / Praising</option><option value="Negative">Negative / Complaining</option><option value="Question">Asking for Help/Recs</option></select></div>';
+      } else {
+          html += '<div class="form-group"><label>Condition Variable</label><input type="text" id="cfg_var" placeholder="Follower Count > 1000" onchange="updateNodeConfig()"></div>';
+      }
+    }
+    
+    document.getElementById('propBody').innerHTML = html;
+    
+    // Set selects to saved config values
+    if(node.config.platform) { const el = document.getElementById('cfg_platform'); if(el) el.value = node.config.platform; }
+    if(node.config.match) { const el = document.getElementById('cfg_match'); if(el) el.value = node.config.match; }
+    if(node.config.rule) { const el = document.getElementById('cfg_rule'); if(el) el.value = node.config.rule; }
+    
+    propPanel.classList.add('open');
+  }
+  
+  window.updateNodeConfig = function() {
+    if(!activeNode) return;
+    const node = nodes[activeNode];
+    
+    if(document.getElementById('cfg_platform')) node.config.platform = document.getElementById('cfg_platform').value;
+    if(document.getElementById('cfg_match')) node.config.match = document.getElementById('cfg_match').value;
+    if(document.getElementById('cfg_rss')) node.config.rss = document.getElementById('cfg_rss').value;
+    if(document.getElementById('cfg_freq')) node.config.freq = document.getElementById('cfg_freq').value;
+    if(document.getElementById('cfg_key')) node.config.key = document.getElementById('cfg_key').value;
+    if(document.getElementById('cfg_delay')) node.config.delay = document.getElementById('cfg_delay').value;
+    if(document.getElementById('cfg_jitter')) node.config.jitter = document.getElementById('cfg_jitter').value;
+    if(document.getElementById('cfg_prompt')) node.config.prompt = document.getElementById('cfg_prompt').value;
+    if(document.getElementById('cfg_rule')) node.config.rule = document.getElementById('cfg_rule').value;
+    
+    saveToLocalStorage(); // Auto-save on change
+  };
+  
+  window.closeProps = function() {
+    propPanel.classList.remove('open');
+    if(activeNode && nodes[activeNode]) nodes[activeNode].el.classList.remove('active');
+    activeNode = null;
+  };
+  
+  window.deleteSelectedNode = function() {
+    if(!activeNode) return;
+    nodes[activeNode].el.remove();
+    connections = connections.filter(c => c.from !== activeNode && c.to !== activeNode);
+    delete nodes[activeNode];
+    closeProps();
+    drawConnections();
+    saveToLocalStorage();
+  };
+  
+  window.clearCanvas = function() {
+    if(confirm("Clear the entire pipeline canvas?")) {
+      Object.values(nodes).forEach(n => n.el.remove());
+      nodes = {};
+      connections = [];
+      closeProps();
+      drawConnections();
+      localStorage.removeItem('currentBuilderFlow');
+      document.getElementById('pipeline-status').innerText = "Draft";
+      document.getElementById('pipeline-status').style.color = "#64748b";
+    }
+  };
+  
+  window.deployPipeline = function() {
+      document.getElementById('pipeline-status').innerText = "Active";
+      document.getElementById('pipeline-status').style.color = "#10b981";
+      saveToLocalStorage();
+      alert("Pipeline deployed successfully! The Automations Worker Engine will now execute this logic graph.");
+  };
+
+  // State Management (Saving & Loading)
+  function saveToLocalStorage() {
+      const data = {
+          nodes: Object.values(nodes).map(n => ({ id: n.id, type: n.type, title: n.title, icon: n.icon, x: n.x, y: n.y, config: n.config })),
+          edges: connections
+      };
+      localStorage.setItem('currentBuilderFlow', JSON.stringify(data));
+  }
+  
+  function loadFromLocalStorage() {
+      const saved = localStorage.getItem('currentBuilderFlow');
+      if(saved) {
+          try {
+              const data = JSON.parse(saved);
+              
+              Object.values(nodes).forEach(n => n.el.remove());
+              nodes = {}; connections = []; closeProps();
+              
+              data.nodes.forEach(n => {
+                  createNode(n.type, n.title, n.icon, n.x, n.y, n.id, n.config);
+              });
+              
+              connections = data.edges;
+              
+              const maxId = Math.max(...data.nodes.map(n => parseInt(n.id.replace('node_','')) || 0));
+              if(maxId && maxId >= nodeIdCounter) nodeIdCounter = maxId + 1;
+              
+              drawConnections();
+              return true;
+          } catch(e) {
+              console.error("Failed to load saved state", e);
+          }
+      }
+      return false;
+  }
+  
+  // Modals
+  window.openModal = function(id) { document.getElementById(id).style.display = 'flex'; };
+  window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
+  window.openTemplateModal = function() {
+      const select = document.getElementById('templateSelect');
+      // Append any custom templates found
+      const customTemplates = JSON.parse(localStorage.getItem('customTemplates') || '[]');
+      
+      // Reset options to defaults first
+      select.innerHTML = '<option value="engagement">Auto-Engagement Flow</option><option value="rss">RSS to Social Publisher</option>';
+      
+      customTemplates.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = 'custom_' + t.name;
+          opt.innerText = t.name + ' (Custom)';
+          select.appendChild(opt);
+      });
+      
+      openModal('loadModal');
+  };
+  
+  window.openSaveModal = function() { openModal('saveModal'); };
+  
+  window.saveCustomTemplate = function() {
+      const name = document.getElementById('saveTemplateName').value;
+      if(!name) { alert("Please enter a name"); return; }
+      
+      const data = {
+          name: name,
+          nodes: Object.values(nodes).map(n => ({ id: n.id, type: n.type, title: n.title, icon: n.icon, x: n.x, y: n.y, config: n.config })),
+          edges: connections
+      };
+      
+      const customTemplates = JSON.parse(localStorage.getItem('customTemplates') || '[]');
+      customTemplates.push(data);
+      localStorage.setItem('customTemplates', JSON.stringify(customTemplates));
+      
+      closeModal('saveModal');
+      alert("Custom Template Saved!");
+  };
+
+  // Templates
+  window.loadSelectedTemplate = function() {
+      const type = document.getElementById('templateSelect').value;
+      
+      if(!confirm("Loading a template will overwrite your current canvas. Continue?")) return;
+      Object.values(nodes).forEach(n => n.el.remove());
+      nodes = {}; connections = []; closeProps();
+      nodeIdCounter = 1;
+      
+      if(type.startsWith('custom_')) {
+          const name = type.replace('custom_', '');
+          const customTemplates = JSON.parse(localStorage.getItem('customTemplates') || '[]');
+          const t = customTemplates.find(ct => ct.name === name);
+          if(t) {
+              t.nodes.forEach(n => createNode(n.type, n.title, n.icon, n.x, n.y, n.id, n.config));
+              connections = t.edges;
+          }
+      } else {
+          const baseX = 1200; const baseY = 1200;
+          if(type === 'engagement') {
+              const n1 = createNode('trigger', 'Keyword Match', 'fas fa-search', baseX, baseY);
+              const n2 = createNode('condition', 'AI Sentiment Split', 'fas fa-brain', baseX, baseY+150);
+              const n3 = createNode('delay', 'Wait (Jitter)', 'fas fa-clock', baseX-150, baseY+350);
+              const n4 = createNode('action', 'AI Draft Reply', 'fas fa-robot', baseX-150, baseY+500);
+              const n5 = createNode('action', 'Send Alert', 'fas fa-bell', baseX+150, baseY+350);
+              
+              connections.push({from: n1, to: n2, port: 'out'});
+              connections.push({from: n2, to: n3, port: 'out-true'});
+              connections.push({from: n2, to: n5, port: 'out-false'});
+              connections.push({from: n3, to: n4, port: 'out'});
+          } else if (type === 'rss') {
+              const n1 = createNode('integration', 'RSS Feed Monitor', 'fas fa-rss', baseX, baseY);
+              const n2 = createNode('action', 'AI Draft Reply', 'fas fa-robot', baseX, baseY+200, null, {prompt: "Summarize the blog post article and write an engaging social media post to promote it."});
+              const n3 = createNode('action', 'Publish Content', 'fas fa-paper-plane', baseX, baseY+400);
+              
+              nodes[n2].title = "AI Summarize";
+              nodes[n2].el.querySelector('.flow-node-header').innerHTML = '<i class="fas fa-magic"></i> AI Summarize Content';
+              
+              connections.push({from: n1, to: n2, port: 'out'});
+              connections.push({from: n2, to: n3, port: 'out'});
+          }
+      }
+      
+      container.scrollLeft = 1000; container.scrollTop = 1000;
+      drawConnections();
+      saveToLocalStorage();
+      closeModal('loadModal');
+      document.getElementById('pipeline-status').innerText = "Draft";
+      document.getElementById('pipeline-status').style.color = "#64748b";
+  };
+
+  // Deselect on canvas click
+  container.addEventListener('click', (e) => {
+    if(e.target === container || e.target === canvas) closeProps();
+  });
+  
+  // Track dragging to auto-save
+  document.addEventListener('mouseup', () => {
+      if(draggingNode) { setTimeout(saveToLocalStorage, 50); }
+  });
+  
+  // Initial Load - Check local storage or load default
+  setTimeout(() => {
+      if(!loadFromLocalStorage()) {
+          document.getElementById('templateSelect').value = 'engagement';
+          loadSelectedTemplate();
+      }
+  }, 300);
+
+</script>
+</body>
+</html>`;
+
+fs.writeFileSync('automations.html', content);
+console.log("Visual Automations Builder state management and navigation patched.");

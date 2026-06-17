@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - LinkedIn Engagement CRM</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+
+/* Sidebar */
+.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
+.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
+.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
+.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+.nav-link:hover { background-color: #1e293b; color: white; transform: translateX(2px); }
+.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); transform: translateX(2px); }
+
+/* Main Content */
+.main-content { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at top right, #1e293b, #0f172a); overflow: hidden; }
+.header { padding: 1.5rem 2rem; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; background: rgba(15,23,42,0.8); backdrop-filter: blur(10px); }
+h1 { margin: 0; color: #f1f5f9; font-size: 1.6rem; display: flex; align-items: center; gap: 10px; }
+.subtitle { color: #94a3b8; font-size: 0.95rem; margin-top: 5px; }
+
+.container { flex: 1; padding: 2rem; overflow-y: auto; display: grid; grid-template-columns: 350px 1fr; gap: 2rem; align-items: start; }
+
+.panel { background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.2); backdrop-filter: blur(10px); }
+.panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #475569; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+.panel-title { margin: 0; font-size: 1.2rem; color: #e2e8f0; display: flex; align-items: center; gap: 10px; }
+
+.input-field { width: 100%; padding: 0.85rem; margin-bottom: 1rem; background: rgba(15, 23, 42, 0.8); border: 1px solid #475569; color: #f8fafc; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; transition: border-color 0.2s; }
+.input-field:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+.textarea-field { width: 100%; padding: 1rem; margin-bottom: 1rem; background: rgba(15, 23, 42, 0.8); border: 1px solid #475569; color: #f8fafc; border-radius: 8px; resize: vertical; min-height: 120px; box-sizing: border-box; font-size: 0.95rem; line-height: 1.5; transition: border-color 0.2s; }
+.textarea-field:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+.primary-btn { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 10px rgba(37,99,235,0.3); transition: all 0.2s; font-size: 0.95rem; justify-content: center; }
+.primary-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37,99,235,0.4); }
+
+.secondary-btn { background: transparent; color: #cbd5e1; border: 1px solid #475569; padding: 0.75rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; font-size: 0.95rem; justify-content: center; }
+.secondary-btn:hover { background: #1e293b; color: white; border-color: #94a3b8; }
+
+/* Engagement List Styles */
+.list-item { background: #1e293b; border: 1px solid #475569; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; cursor: pointer; }
+.list-item:hover { border-color: #38bdf8; transform: translateX(2px); background: #334155; }
+.list-item.selected { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-left: 4px solid #38bdf8; }
+.list-info h4 { margin: 0 0 0.4rem 0; color: #f8fafc; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+.list-info p { margin: 0; color: #94a3b8; font-size: 0.85rem; }
+
+.badge { display: inline-block; padding: 0.25rem 0.6rem; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; border-radius: 999px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* AI Generator Styles */
+.ai-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; background: rgba(15, 23, 42, 0.4); padding: 1.5rem; border-radius: 8px; border: 1px solid #334155; }
+.control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.control-label { color: #cbd5e1; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+
+.comment-card { background: #0f172a; border: 1px solid #334155; border-left: 4px solid #10b981; padding: 1.5rem; border-radius: 8px; font-size: 1rem; line-height: 1.6; color: #e2e8f0; margin-bottom: 1.5rem; display: none; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); }
+
+.feed-item { background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+.feed-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+.author-info { display: flex; gap: 1rem; align-items: center; }
+.author-avatar { width: 48px; height: 48px; border-radius: 50%; background: #334155; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: #94a3b8; border: 2px solid #475569; }
+.author-details h4 { margin: 0 0 0.2rem 0; color: #f8fafc; font-size: 1.05rem; }
+.author-details p { margin: 0; color: #94a3b8; font-size: 0.85rem; }
+.feed-content { color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; }
+</style>
+  <link rel="stylesheet" href="sidebar-nav.css">
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('engagement', () => location.reload());
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+
+
+
+<div class="main-content">
+  <div class="header">
+    <div>
+      <h1><i class="fab fa-linkedin" style="color:#0A66C2;"></i> LinkedIn Engagement & CRM</h1>
+      <div class="subtitle">Build custom engagement lists, generate comments with AI, and engage directly with your audience.</div>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <span style="background: rgba(10, 102, 194, 0.1); color: #0A66C2; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; border: 1px solid rgba(10, 102, 194, 0.3); font-size: 0.9rem;"><i class="fas fa-check-circle"></i> API Compliant</span>
+    </div>
+  </div>
+  
+  <div class="container">
+    <!-- Left Column: Engagement Lists -->
+    <div class="panel" style="height: calc(100vh - 180px); display: flex; flex-direction: column;">
+      <div class="panel-header">
+        <h3 class="panel-title"><i class="fas fa-list-ul"></i> Engagement Lists</h3>
+        <button class="primary-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="toggleAddList()"><i class="fas fa-plus"></i> New List</button>
+      </div>
+      
+      
+      <div id="addListForm" style="display:none; background: rgba(15,23,42,0.8); padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #475569;">
+        <input type="text" id="listName" class="input-field" placeholder="List Name (e.g. B2B Founders)">
+        <textarea id="profileUrls" class="input-field" placeholder="Paste LinkedIn Profile URLs to track (one per line)..." style="height: 80px; resize: vertical;"></textarea>
+        <select id="listType" class="input-field">
+          <option value="Top Creators">Top Creators</option>
+          <option value="Prospects">Prospects</option>
+          <option value="Founders">MNC Founders</option>
+          <option value="Niche">Niche Creators</option>
+        </select>
+        <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top: 0.5rem;">
+          <button class="secondary-btn" onclick="toggleAddList()">Cancel</button>
+          <button class="primary-btn" onclick="saveList()">Save List</button>
+        </div>
+      </div>
+      
+      <div id="listsContainer" style="overflow-y: auto; flex: 1; padding-right: 0.5rem;">
+        <div style="text-align:center; color:#64748b; padding:1rem;">Loading engagement lists...</div>
+      </div>
+    </div>
+    
+    <!-- Right Column: AI Comment Generation & Feed -->
+    <div class="panel" id="aiPanel" style="height: calc(100vh - 180px); overflow-y: auto;">
+      <div class="panel-header" style="position: sticky; top: -1.5rem; background: rgba(30, 41, 59, 0.95); margin: -1.5rem -1.5rem 1.5rem -1.5rem; padding: 1.5rem; z-index: 10;">
+        <h3 class="panel-title" id="feedTitle"><i class="fas fa-stream"></i> Select a List</h3>
+        <span id="feedMeta" style="color: #94a3b8; font-size: 0.9rem;">—</span>
+      </div>
+      <div id="feedContainer">
+        <div style="text-align:center; color:#64748b; padding:2rem;">Select an engagement list to load live LinkedIn posts.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer, shell } = require('electron');
+
+let allLists = [];
+let selectedListId = null;
+let currentPosts = [];
+let activePostIndex = null;
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadLists() {
+  const container = document.getElementById('listsContainer');
+  try {
+    allLists = await ipcRenderer.invoke('get-engagement-lists');
+    container.innerHTML = '';
+
+    const systemLists = allLists.filter(l => l.isSystem);
+    const customLists = allLists.filter(l => !l.isSystem);
+
+    if (systemLists.length) {
+      const section = document.createElement('div');
+      section.style.cssText = 'margin-bottom:1rem; border-bottom:1px solid #334155; padding-bottom:1rem;';
+      section.innerHTML = '<h4 style="color:#38bdf8; margin-top:0; margin-bottom:10px; font-size:0.95rem;"><i class="fas fa-trophy" style="color:#f59e0b;"></i> Top Supporters (from your engagement history)</h4>';
+      systemLists.forEach(list => section.appendChild(renderListItem(list, true)));
+      container.appendChild(section);
+    }
+
+    const customHeader = document.createElement('h4');
+    customHeader.style.cssText = 'color:#94a3b8; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;';
+    customHeader.textContent = 'Custom CRM Lists';
+    container.appendChild(customHeader);
+
+    if (customLists.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:#64748b; font-size:0.85rem; padding:0.5rem 0 1rem;';
+      empty.textContent = 'No custom lists yet. Click "New List" and paste LinkedIn profile URLs.';
+      container.appendChild(empty);
+    } else {
+      customLists.forEach(list => container.appendChild(renderListItem(list, false)));
+    }
+
+    if (!selectedListId && allLists.length > 0) {
+      selectListById(allLists[0].id);
+    }
+  } catch (e) {
+    container.innerHTML = `<div style="color:#ef4444; padding:1rem;">Failed to load lists: ${e.message}</div>`;
+  }
+}
+
+function renderListItem(list, isSystem) {
+  const div = document.createElement('div');
+  div.className = 'list-item' + (selectedListId === list.id ? ' selected' : '');
+  if (isSystem) div.style.cssText = 'border-left:4px solid #f59e0b; background:rgba(245,158,11,0.05);';
+  div.dataset.listId = list.id;
+
+  const count = list.profileUrls?.length || list.supporterCount || 0;
+  const badgeStyle = isSystem ? 'background:rgba(245,158,11,0.2); color:#f59e0b; border-color:#f59e0b;' : '';
+  const autoTag = list.autoEngage ? ' <span style="color:#10b981; font-size:0.7rem;">• Auto-Engage ON</span>' : '';
+
+  div.innerHTML = `
+    <div class="list-info">
+      <h4>${escapeHtml(list.name)} <span class="badge" style="${badgeStyle}">${escapeHtml(list.type || 'Custom')}</span></h4>
+      <p><i class="fas fa-user-tie"></i> ${count} ${isSystem ? 'supporters' : 'profiles tracking'}${autoTag}</p>
+    </div>
+    <i class="fas fa-chevron-right" style="color:#64748b;"></i>
+  `;
+  div.onclick = () => selectListById(list.id);
+  return div;
+}
+
+async function selectListById(listId) {
+  selectedListId = listId;
+  document.querySelectorAll('.list-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.listId === listId);
+  });
+
+  const list = allLists.find(l => l.id === listId);
+  document.getElementById('feedTitle').innerHTML = `<i class="fas fa-stream"></i> ${escapeHtml(list?.name || 'Feed')}`;
+  document.getElementById('feedMeta').textContent = 'Loading live posts...';
+
+  const feed = document.getElementById('feedContainer');
+  feed.innerHTML = '<div style="text-align:center; color:#38bdf8; padding:2rem;"><i class="fas fa-spinner fa-spin"></i> Fetching live LinkedIn posts...</div>';
+
+  const result = await ipcRenderer.invoke('get-engagement-list-feed', listId);
+  currentPosts = result.posts || [];
+
+  if (result.error && currentPosts.length === 0) {
+    feed.innerHTML = `<div style="padding:2rem; color:#f59e0b; text-align:center;">${escapeHtml(result.error)}</div>`;
+    document.getElementById('feedMeta').textContent = '0 posts';
+    return;
+  }
+
+  document.getElementById('feedMeta').textContent = `${currentPosts.length} live post${currentPosts.length === 1 ? '' : 's'}`;
+  renderFeed();
+}
+
+function renderFeed() {
+  const feed = document.getElementById('feedContainer');
+  if (!currentPosts.length) {
+    feed.innerHTML = '<div style="padding:2rem; text-align:center; color:#94a3b8;">No live posts found for this list. Add LinkedIn profile URLs and ensure SERP_API_KEY or LinkedIn OAuth is configured in Settings.</div>';
+    return;
+  }
+
+  feed.innerHTML = '';
+  currentPosts.forEach((post, idx) => {
+    const item = document.createElement('div');
+    item.className = 'feed-item';
+    item.dataset.postIndex = idx;
+    item.innerHTML = `
+      <div class="feed-header">
+        <div class="author-info">
+          <div class="author-avatar"><i class="fab fa-linkedin"></i></div>
+          <div class="author-details">
+            <h4>${escapeHtml(post.author)}</h4>
+            <p>${escapeHtml(post.authorTitle || 'LinkedIn')}</p>
+            <p style="font-size:0.75rem; margin-top:2px;"><i class="fas fa-clock"></i> ${escapeHtml(post.time)}</p>
+          </div>
+        </div>
+        ${post.url ? `<a href="#" class="view-li-link" style="color:#38bdf8; text-decoration:none; font-size:0.85rem;"><i class="fas fa-external-link-alt"></i> View on LinkedIn</a>` : ''}
+      </div>
+      <div class="feed-content post-context">${escapeHtml(post.content).replace(/\n/g, '<br>')}</div>
+      <div style="border-top:1px solid #334155; padding-top:1.5rem;">
+        <h4 style="margin:0 0 1rem; color:#f1f5f9;"><i class="fas fa-robot" style="color:#10b981;"></i> Generate AI Comment</h4>
+        <div style="display:flex; gap:10px; margin-bottom:1.5rem;">
+          <button class="secondary-btn like-btn" style="flex:1; border-color:#38bdf8; color:#38bdf8;"><i class="far fa-thumbs-up"></i> Quick Like</button>
+          <button class="secondary-btn auto-btn" style="flex:1; border-color:#10b981; color:#10b981;"><i class="fas fa-robot"></i> Auto-Engage (List)</button>
+        </div>
+        <div class="ai-controls">
+          <div class="control-group">
+            <label class="control-label"><i class="fas fa-theater-masks"></i> Set the Tone</label>
+            <select class="comment-tone input-field" style="margin-bottom:0;">
+              <option value="Professional">Professional</option>
+              <option value="Funny">Funny</option>
+              <option value="Excited">Excited</option>
+              <option value="Candid">Candid</option>
+              <option value="Less Excited">Less Excited</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label class="control-label"><i class="fas fa-bullhorn"></i> Comment Type</label>
+            <select class="comment-type input-field" style="margin-bottom:0;">
+              <option value="Agree">Agree</option>
+              <option value="Insight">Add Personal Insight</option>
+              <option value="Question">Ask a Thoughtful Question</option>
+              <option value="Sales">LinkedIn Sales Conversion Framework</option>
+              <option value="Counter">Respectful Counter-Argument</option>
+            </select>
+          </div>
+        </div>
+        <div class="control-group" style="margin-bottom:1.5rem;">
+          <label class="control-label"><i class="fas fa-pencil-alt"></i> Custom Instructions (Optional)</label>
+          <input type="text" class="custom-instructions input-field" placeholder="e.g. Mention how automation helps with focus" style="margin-bottom:0;">
+        </div>
+        <button class="primary-btn gen-btn" style="width:100%; margin-bottom:1.5rem; font-size:1.05rem; padding:1rem;"><i class="fas fa-magic"></i> Generate AI Comment</button>
+        <div class="comment-result comment-card"></div>
+        <div class="comment-actions" style="display:none; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.8); padding:1rem; border-radius:8px; border:1px solid #334155;">
+          <button class="secondary-btn regen-btn" style="padding:0.5rem 1rem;"><i class="fas fa-sync"></i> Regenerate</button>
+          <button class="primary-btn post-btn" style="background:#0A66C2;"><i class="fas fa-paper-plane"></i> Post Direct to LinkedIn</button>
+        </div>
+      </div>
+    `;
+
+    if (post.url) {
+      item.querySelector('.view-li-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        shell.openExternal(post.url);
+      });
+    }
+
+    item.querySelector('.like-btn').addEventListener('click', (e) => manualLike(e.target, post));
+    item.querySelector('.auto-btn').addEventListener('click', (e) => toggleAutoEngage(e.target));
+    item.querySelector('.gen-btn').addEventListener('click', () => generateComment(idx));
+    item.querySelector('.regen-btn').addEventListener('click', () => generateComment(idx));
+    item.querySelector('.post-btn').addEventListener('click', () => postComment(idx));
+
+    feed.appendChild(item);
+  });
+}
+
+async function manualLike(btn, post) {
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Liking...';
+  btn.disabled = true;
+  try {
+    const result = await ipcRenderer.invoke('engage-post', {
+      action: 'like',
+      platform: 'LinkedIn',
+      urn: post.urn,
+      url: post.url,
+      externalId: post.urn || post.externalId,
+      author: post.author,
+      postContent: post.content,
+    });
+    if (result && result.success === false) throw new Error(result.error);
+    btn.innerHTML = '<i class="fas fa-thumbs-up"></i> Liked';
+    btn.style.background = 'rgba(56, 189, 248, 0.2)';
+  } catch (e) {
+    btn.innerHTML = '<i class="far fa-thumbs-up"></i> Quick Like';
+    btn.disabled = false;
+    alert('Like failed: ' + e.message + (post.url ? '\n\nOpen the post on LinkedIn to like manually.' : ''));
+  }
+}
+
+async function toggleAutoEngage(btn) {
+  if (!selectedListId) return;
+  const list = allLists.find(l => l.id === selectedListId);
+  const enabling = !list?.autoEngage;
+  try {
+    const res = await ipcRenderer.invoke('toggle-engagement-list-auto', { listId: selectedListId, enabled: enabling });
+    if (!res.success) throw new Error(res.error);
+    if (list) list.autoEngage = res.autoEngage;
+    btn.innerHTML = res.autoEngage
+      ? '<i class="fas fa-robot"></i> Auto-Engage Active'
+      : '<i class="fas fa-robot"></i> Auto-Engage (List)';
+    btn.style.background = res.autoEngage ? 'rgba(16, 185, 129, 0.2)' : 'transparent';
+    await loadLists();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+function toggleAddList() {
+  const form = document.getElementById('addListForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveList() {
+  const name = document.getElementById('listName').value.trim();
+  const urls = document.getElementById('profileUrls').value;
+  const type = document.getElementById('listType').value;
+  if (!name) return alert('List name is required');
+
+  const profileUrls = urls.split('\n').map(u => u.trim()).filter(Boolean);
+  if (profileUrls.length === 0) return alert('Add at least one LinkedIn profile URL (one per line).');
+
+  const res = await ipcRenderer.invoke('save-engagement-list', { name, type, profileUrls });
+  document.getElementById('listName').value = '';
+  document.getElementById('profileUrls').value = '';
+  toggleAddList();
+  await loadLists();
+  if (res.list) selectListById(res.list.id);
+}
+
+async function generateComment(postIndex) {
+  activePostIndex = postIndex;
+  const post = currentPosts[postIndex];
+  const item = document.querySelector(`[data-post-index="${postIndex}"]`);
+  const tone = item.querySelector('.comment-tone').value;
+  const type = item.querySelector('.comment-type').value;
+  const context = post.content;
+  const custom = item.querySelector('.custom-instructions').value;
+
+  const resBox = item.querySelector('.comment-result');
+  const actionBox = item.querySelector('.comment-actions');
+
+  resBox.style.display = 'block';
+  resBox.innerHTML = '<div style="display:flex; align-items:center; gap:10px;"><i class="fas fa-spinner fa-spin" style="color:#38bdf8;"></i> Generating tailored LinkedIn comment...</div>';
+  actionBox.style.display = 'none';
+
+  const prompt = `Acting as a LinkedIn engagement expert, write a comment replying to this post: "${context}".
+  The tone MUST be: ${tone}.
+  The comment framework MUST be: ${type}.
+  Additional custom instructions: ${custom || 'None'}.
+  Keep it under 300 characters, human, and compliant with LinkedIn norms. Return only the comment text.`;
+
+  try {
+    const reply = await ipcRenderer.invoke('generate-ai', prompt);
+    resBox.innerHTML = '<div style="font-weight:600; margin-bottom:8px; color:#38bdf8;"><i class="fas fa-robot"></i> AI Generated Draft:</div>' + escapeHtml(reply).replace(/\n/g, '<br>');
+    resBox.dataset.draft = reply;
+    actionBox.style.display = 'flex';
+    const list = allLists.find(l => l.id === selectedListId);
+    await ipcRenderer.invoke('save-ai-reply', {
+      originalPost: context,
+      replyContent: reply,
+      platform: 'LinkedIn',
+      status: 'draft',
+      source: 'engagement',
+      replyMode: 'manual',
+      intent: 'brand',
+      author: post.author || null,
+      url: post.url || null,
+      externalId: post.urn || post.externalId || null,
+      listId: selectedListId || null,
+      listName: list?.name || null,
+    });
+  } catch (err) {
+    resBox.innerHTML = '<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i> Error: ' + escapeHtml(err.message) + '</span>';
+  }
+}
+
+async function postComment(postIndex) {
+  const post = currentPosts[postIndex];
+  const item = document.querySelector(`[data-post-index="${postIndex}"]`);
+  const resBox = item.querySelector('.comment-result');
+  const btn = item.querySelector('.post-btn');
+  const comment = resBox.dataset.draft || resBox.innerText.replace('AI Generated Draft:', '').trim();
+
+  if (!comment) return alert('Generate a comment first.');
+
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+  btn.disabled = true;
+
+  try {
+    const list = allLists.find(l => l.id === selectedListId);
+    const result = await ipcRenderer.invoke('post-linkedin-comment', {
+      comment,
+      urn: post.urn,
+      url: post.url,
+      externalId: post.externalId,
+      author: post.author,
+      postContent: post.content,
+      listId: selectedListId || null,
+      listName: list?.name || null,
+    });
+    if (!result.success) throw new Error(result.error);
+
+    btn.innerHTML = '<i class="fas fa-check"></i> Posted Successfully';
+    btn.style.background = '#10b981';
+    await loadLists();
+  } catch (e) {
+    alert('Post failed: ' + e.message + (post.url ? '\n\nYour draft was kept — you can copy it and post manually on LinkedIn.' : ''));
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Direct to LinkedIn';
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadLists);
+</script>
+</body>
+</html>

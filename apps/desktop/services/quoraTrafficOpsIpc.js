@@ -1,0 +1,124 @@
+const quoraTrafficOps = require('./quoraTrafficOps');
+
+function registerQuoraTrafficOpsHandlers({
+  ipcMain,
+  store,
+  resolveKeys,
+  generateAI,
+  generateAIWithModel,
+  getCampaign,
+  getLinkedAccounts,
+}) {
+  const channels = [
+    'get-quora-traffic-status',
+    'get-quora-traffic-settings',
+    'save-quora-traffic-settings',
+    'scrape-quora-questions',
+    'generate-quora-answer',
+    'publish-quora-answer',
+    'fetch-youtube-transcript',
+    'save-quora-traffic-answer',
+    'delete-quora-traffic-answer',
+  ];
+
+  channels.forEach((ch) => {
+    try { ipcMain.removeHandler(ch); } catch (e) { /* not registered */ }
+  });
+
+  const campaignId = () => store.getItem('activeCampaignId') || 'default';
+  const keys = () => resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+
+  const deps = () => ({
+    generateAI,
+    generateAIWithModel: generateAIWithModel || ((p, m) => generateAI(p)),
+    campaign: getCampaign(),
+    linkedAccounts: getLinkedAccounts ? getLinkedAccounts() : [],
+    store,
+    campaignId: campaignId(),
+  });
+
+  ipcMain.handle('get-quora-traffic-status', () => {
+    const cid = campaignId();
+    return quoraTrafficOps.getStatus(store, cid, keys(), deps().linkedAccounts);
+  });
+
+  ipcMain.handle('get-quora-traffic-settings', () => ({
+    settings: quoraTrafficOps.loadSettings(store, campaignId()),
+    frameworks: quoraTrafficOps.PROMPT_FRAMEWORKS,
+  }));
+
+  ipcMain.handle('save-quora-traffic-settings', (event, partial) => {
+    const saved = quoraTrafficOps.saveSettings(store, campaignId(), partial || {});
+    return { success: true, settings: saved };
+  });
+
+  ipcMain.handle('scrape-quora-questions', async (event, { keyword, limit, enrich }) => {
+    try {
+      if (!keyword?.trim()) return { success: false, error: 'Keyword required' };
+      const questions = await quoraTrafficOps.scrapeQuestions(keyword.trim(), keys(), { limit: limit || 25, enrich });
+      const settings = quoraTrafficOps.loadSettings(store, campaignId());
+      settings.lastScrape = { keyword, at: new Date().toISOString(), count: questions.length };
+      settings.cachedQuestions = questions;
+      quoraTrafficOps.saveSettings(store, campaignId(), settings);
+      return { success: true, questions, count: questions.length };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('generate-quora-answer', async (event, payload) => {
+    try {
+      const settings = quoraTrafficOps.loadSettings(store, campaignId());
+      const result = await quoraTrafficOps.generateAnswer(
+        { ...deps(), settings },
+        { ...payload, settings },
+      );
+      settings.answers = [result.answer, ...settings.answers];
+      quoraTrafficOps.saveSettings(store, campaignId(), settings);
+      return result;
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('publish-quora-answer', async (event, { answer, automated }) => {
+    try {
+      const d = deps();
+      return await quoraTrafficOps.publishAnswer(d, {
+        answer,
+        automated,
+        store,
+        campaignId: campaignId(),
+      });
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('fetch-youtube-transcript', async (event, { url }) => {
+    try {
+      const data = await quoraTrafficOps.fetchYouTubeTranscript(url);
+      return { success: true, ...data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('save-quora-traffic-answer', (event, answer) => {
+    const settings = quoraTrafficOps.loadSettings(store, campaignId());
+    const idx = settings.answers.findIndex((a) => a.id === answer.id);
+    if (idx >= 0) settings.answers[idx] = { ...settings.answers[idx], ...answer };
+    else settings.answers.unshift(answer);
+    quoraTrafficOps.saveSettings(store, campaignId(), settings);
+    return { success: true };
+  });
+
+  ipcMain.handle('delete-quora-traffic-answer', (event, id) => {
+    const settings = quoraTrafficOps.loadSettings(store, campaignId());
+    settings.answers = settings.answers.filter((a) => a.id !== id);
+    quoraTrafficOps.saveSettings(store, campaignId(), settings);
+    return { success: true };
+  });
+}
+
+module.exports = { registerQuoraTrafficOpsHandlers };

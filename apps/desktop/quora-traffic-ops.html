@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - Quora</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="sidebar-nav.css">
+<style>
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+.main-content { flex: 1; overflow-y: auto; padding: 2rem; background: radial-gradient(circle at top right, #1e293b, #0f172a); }
+.container { max-width: 1180px; margin: 0 auto; }
+.hero { background: linear-gradient(135deg, rgba(185,28,28,0.12), rgba(56,189,248,0.1)); border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; }
+.hero h1 { margin: 0 0 0.5rem; font-size: 1.55rem; display: flex; align-items: center; gap: 10px; }
+.hero p { margin: 0 0 1rem; color: #94a3b8; font-size: 0.9rem; max-width: 780px; }
+.feature-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.feature-pill { font-size: 0.68rem; padding: 4px 10px; border-radius: 14px; background: rgba(15,23,42,0.85); border: 1px solid #475569; color: #cbd5e1; }
+.status-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; }
+.status-chip { font-size: 0.72rem; padding: 5px 10px; border-radius: 6px; border: 1px solid #334155; background: rgba(30,41,59,0.7); }
+.status-chip.ok { border-color: #10b981; color: #6ee7b7; }
+.status-chip.warn { border-color: #f59e0b; color: #fcd34d; }
+.status-chip.bad { border-color: #ef4444; color: #fca5a5; }
+.mode-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: rgba(30,41,59,0.75); border: 1px solid #334155; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+.mode-bar h3 { margin: 0; font-size: 0.95rem; color: #e2e8f0; }
+.mode-toggle { display: flex; border: 1px solid #475569; border-radius: 8px; overflow: hidden; }
+.mode-btn { padding: 0.5rem 1.1rem; border: none; background: transparent; color: #94a3b8; cursor: pointer; font-weight: 600; font-size: 0.82rem; font-family: inherit; }
+.mode-btn.active { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; }
+.mode-desc { font-size: 0.78rem; color: #64748b; max-width: 420px; margin: 0; }
+.auto-thresholds { display: none; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.75rem; }
+.auto-thresholds.visible { display: flex; }
+.auto-thresholds label { font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 3px; }
+.auto-thresholds input[type="number"] { width: 110px; padding: 0.45rem; background: #0f172a; border: 1px solid #475569; border-radius: 6px; color: #f8fafc; }
+.step-nav { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.step-pill { padding: 0.55rem 1.1rem; border-radius: 20px; border: 1px solid #475569; font-size: 0.82rem; color: #94a3b8; cursor: pointer; transition: all 0.15s; }
+.step-pill:hover { border-color: #64748b; color: #e2e8f0; }
+.step-pill.active { border-color: #38bdf8; color: #38bdf8; background: rgba(56,189,248,0.1); }
+.panel { display: none; background: rgba(15,23,42,0.65); border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; }
+.panel.active { display: block; }
+.panel h2 { margin: 0 0 0.35rem; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+.panel .lead { color: #94a3b8; font-size: 0.85rem; margin: 0 0 1rem; }
+label { display: block; color: #94a3b8; font-size: 0.75rem; margin-bottom: 4px; }
+input, select, textarea { width: 100%; background: #0f172a; border: 1px solid #475569; color: #f8fafc; border-radius: 6px; padding: 0.6rem; font-family: inherit; font-size: 0.85rem; }
+textarea { min-height: 80px; resize: vertical; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+.btn { border: 1px solid #475569; background: #1e293b; color: #f8fafc; padding: 0.55rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.82rem; font-family: inherit; }
+.btn.primary { background: linear-gradient(135deg, #0ea5e9, #2563eb); border: none; }
+.btn.success { border-color: #10b981; color: #6ee7b7; }
+.btn.danger { border-color: #ef4444; color: #fca5a5; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.scrape-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.scrape-row .kw-wrap { flex: 1; min-width: 200px; }
+.questions-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 1rem; }
+.questions-table th { text-align: left; color: #94a3b8; font-weight: 600; padding: 8px; border-bottom: 1px solid #334155; }
+.questions-table td { padding: 8px; border-bottom: 1px solid rgba(51,65,85,0.5); vertical-align: top; }
+.questions-table tr { cursor: pointer; transition: background 0.15s; }
+.questions-table tr:hover { background: rgba(56,189,248,0.06); }
+.questions-table tr.selected { background: rgba(56,189,248,0.12); }
+.questions-table .metric { color: #38bdf8; font-weight: 600; white-space: nowrap; }
+.questions-table .q-title { color: #e2e8f0; max-width: 420px; }
+.badge-est { font-size: 0.62rem; color: #64748b; margin-left: 4px; }
+.layout-2col { display: grid; grid-template-columns: 280px 1fr; gap: 1rem; }
+@media (max-width: 900px) { .layout-2col { grid-template-columns: 1fr; } }
+.side-card { background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }
+.side-card h4 { margin: 0 0 0.75rem; font-size: 0.85rem; color: #e2e8f0; }
+.angle-item { padding: 8px; border: 1px solid #334155; border-radius: 6px; margin-bottom: 6px; cursor: pointer; font-size: 0.8rem; }
+.angle-item.active { border-color: #38bdf8; background: rgba(56,189,248,0.08); }
+.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+.mode-card { border: 1px solid #334155; border-radius: 8px; padding: 0.85rem; cursor: pointer; font-size: 0.8rem; }
+.mode-card.active { border-color: #38bdf8; background: rgba(56,189,248,0.08); }
+.mode-card h5 { margin: 0 0 4px; font-size: 0.85rem; }
+.mode-card p { margin: 0; color: #64748b; font-size: 0.72rem; }
+.framework-list { display: flex; flex-direction: column; gap: 6px; }
+.framework-opt { padding: 8px; border: 1px solid #334155; border-radius: 6px; cursor: pointer; font-size: 0.78rem; }
+.framework-opt.active { border-color: #a78bfa; background: rgba(167,139,250,0.08); }
+.framework-opt .fw-name { font-weight: 600; color: #e2e8f0; }
+.framework-opt .fw-desc { color: #64748b; margin-top: 2px; }
+.answer-editor { min-height: 280px; font-size: 0.85rem; line-height: 1.5; }
+.draft-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }
+.draft-card .meta { font-size: 0.72rem; color: #64748b; margin-bottom: 0.5rem; }
+.draft-card .preview { font-size: 0.8rem; color: #cbd5e1; max-height: 80px; overflow: hidden; }
+.draft-card .actions { display: flex; gap: 6px; margin-top: 0.75rem; flex-wrap: wrap; }
+.status-draft { color: #fcd34d; }
+.status-published { color: #6ee7b7; }
+.pub-log { font-size: 0.78rem; color: #94a3b8; max-height: 200px; overflow-y: auto; }
+.pub-log-item { padding: 6px 0; border-bottom: 1px solid rgba(51,65,85,0.4); }
+.doc-item { font-size: 0.78rem; padding: 6px; border: 1px solid #334155; border-radius: 6px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+#toastContainer { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; }
+.toast { padding: 0.75rem 1.25rem; border-radius: 8px; margin-top: 6px; font-size: 0.85rem; background: #1e293b; border: 1px solid #38bdf8; }
+.empty-msg { color: #64748b; font-size: 0.85rem; padding: 1.5rem; text-align: center; }
+</style>
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('quora-traffic', () => location.reload());
+  } catch (e) { console.warn(e.message); }
+})();
+</script>
+
+<div class="main-content">
+  <div class="container">
+    <div class="hero">
+      <h1><i class="fab fa-quora" style="color:#b91c1c;"></i> Quora</h1>
+      <p>Research high-traffic questions, generate contextual answers in your voice, and publish to Quora — all from one dashboard. Real view and upvote data before you write.</p>
+      <div class="feature-grid">
+        <span class="feature-pill">✓ Views, upvotes &amp; answer count upfront</span>
+        <span class="feature-pill">✓ Brand angles + natural CTAs</span>
+        <span class="feature-pill">✓ Website &amp; YouTube embed modes</span>
+        <span class="feature-pill">✓ 4 proven answer frameworks</span>
+        <span class="feature-pill">✓ One-click publish via linked Quora session</span>
+      </div>
+    </div>
+
+    <div class="status-bar" id="statusBar"></div>
+
+    <div class="mode-bar">
+      <div>
+        <h3>Workflow mode</h3>
+        <p class="mode-desc" id="modeDesc">Manual — review and edit every answer before publishing.</p>
+        <div class="auto-thresholds" id="autoThresholds">
+          <div>
+            <label>Min views</label>
+            <input type="number" id="minViews" value="5000" min="0">
+          </div>
+          <div>
+            <label>Min upvotes</label>
+            <input type="number" id="minUpvotes" value="100" min="0">
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:0.8rem;color:#cbd5e1;">
+            <input type="checkbox" id="autoPublish" style="width:auto;"> Auto-publish after generate (when thresholds met)
+          </label>
+        </div>
+      </div>
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active" id="btnManual" data-mode="manual">Manual</button>
+        <button type="button" class="mode-btn" id="btnAutomated" data-mode="automated">Automated</button>
+      </div>
+    </div>
+
+    <div class="step-nav" id="stepNav">
+      <span class="step-pill active" data-step="research">01 Research</span>
+      <span class="step-pill" data-step="generate">02 Generate</span>
+      <span class="step-pill" data-step="publish">03 Publish</span>
+    </div>
+
+    <!-- RESEARCH -->
+    <div class="panel active" id="panel-research">
+      <h2><span style="color:#38bdf8;">01</span> Find questions with real traffic</h2>
+      <p class="lead">Type a keyword. See view count, upvotes, and existing answers before spending a minute writing.</p>
+      <div class="scrape-row">
+        <div class="kw-wrap">
+          <label>Keyword</label>
+          <input type="text" id="scrapeKeyword" placeholder="e.g. affiliate marketing">
+        </div>
+        <button class="btn primary" id="btnScrape"><i class="fas fa-search"></i> Scrape Quora</button>
+      </div>
+      <div id="scrapeStatus" style="font-size:0.78rem;color:#64748b;margin-top:0.5rem;"></div>
+      <table class="questions-table" id="questionsTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>Views</th>
+            <th>Upvotes</th>
+            <th>Answers</th>
+          </tr>
+        </thead>
+        <tbody id="questionsBody"></tbody>
+      </table>
+      <div id="questionsEmpty" class="empty-msg">Enter a keyword and scrape to see high-traffic questions.</div>
+      <div class="btn-row">
+        <button class="btn primary" id="btnToGenerate" disabled>Use selected question → Generate</button>
+      </div>
+    </div>
+
+    <!-- GENERATE -->
+    <div class="panel" id="panel-generate">
+      <h2><span style="color:#38bdf8;">02</span> Generate an answer that sounds like you</h2>
+      <p class="lead">Set your angle once. Pick a framework. AI reads existing answers and writes something better with your CTA inside.</p>
+      <div class="layout-2col">
+        <div>
+          <div class="side-card">
+            <h4><i class="fas fa-bullseye"></i> Angle Manager</h4>
+            <div id="angleList"></div>
+            <button class="btn" id="btnAddAngle" style="width:100%;margin-top:6px;font-size:0.75rem;">+ Add angle</button>
+          </div>
+          <div class="side-card" id="angleEditor">
+            <h4>Edit angle</h4>
+            <label>Name</label>
+            <input type="text" id="angleName">
+            <label>Brand positioning</label>
+            <textarea id="angleBrand" rows="2"></textarea>
+            <label>Target keywords</label>
+            <input type="text" id="angleKeywords">
+            <label>CTA text</label>
+            <input type="text" id="angleCta">
+            <label>CTA URL</label>
+            <input type="text" id="angleCtaUrl">
+            <label>Product context</label>
+            <textarea id="angleProduct" rows="2"></textarea>
+            <button class="btn primary" id="btnSaveAngle" style="width:100%;margin-top:8px;">Save angle</button>
+          </div>
+          <div class="side-card">
+            <h4><i class="fas fa-file-alt"></i> Documents</h4>
+            <div id="docList"></div>
+            <label style="margin-top:8px;">Add document</label>
+            <input type="text" id="docName" placeholder="Doc name">
+            <textarea id="docContent" rows="3" placeholder="Paste product docs, blog excerpts…"></textarea>
+            <button class="btn" id="btnAddDoc" style="width:100%;margin-top:6px;font-size:0.75rem;">Add document</button>
+          </div>
+        </div>
+        <div>
+          <div id="selectedQuestionBox" class="side-card" style="border-color:#38bdf8;">
+            <h4>Selected question</h4>
+            <div id="selectedQuestionText" style="font-size:0.85rem;color:#e2e8f0;">No question selected — go to Research and pick one.</div>
+          </div>
+
+          <label>Promotion mode</label>
+          <div class="mode-cards">
+            <div class="mode-card active" data-gen-mode="website" id="cardWebsite">
+              <h5><i class="fas fa-globe"></i> Website Mode</h5>
+              <p>Position your product or blog as the solution. CTA link placed naturally.</p>
+            </div>
+            <div class="mode-card" data-gen-mode="youtube" id="cardYoutube">
+              <h5><i class="fab fa-youtube" style="color:#ef4444;"></i> YouTube Mode</h5>
+              <p>Transcript + embed. Quora auto-embeds your video in the answer.</p>
+            </div>
+          </div>
+
+          <div id="youtubeBlock" style="display:none;">
+            <label>YouTube video URL</label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=…">
+              <button class="btn" id="btnFetchTranscript">Fetch transcript</button>
+            </div>
+            <div id="transcriptStatus" style="font-size:0.72rem;color:#64748b;margin-top:4px;"></div>
+          </div>
+
+          <label style="margin-top:1rem;">Answer framework</label>
+          <div class="framework-list" id="frameworkList"></div>
+
+          <label style="margin-top:1rem;">AI model</label>
+          <select id="aiModel">
+            <option value="openai/gpt-4o-mini">GPT-4o Mini (fast)</option>
+            <option value="openai/gpt-4o">GPT-4o</option>
+            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+            <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+          </select>
+
+          <div class="btn-row">
+            <button class="btn primary" id="btnGenerate"><i class="fas fa-wand-magic-sparkles"></i> Generate answer</button>
+          </div>
+
+          <label style="margin-top:1rem;">Answer editor</label>
+          <textarea class="answer-editor" id="answerEditor" placeholder="Generated answer appears here. Edit before publishing."></textarea>
+          <div class="btn-row">
+            <button class="btn" id="btnSaveDraft">Save draft</button>
+            <button class="btn success" id="btnPublishNow"><i class="fas fa-paper-plane"></i> Publish to Quora</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PUBLISH -->
+    <div class="panel" id="panel-publish">
+      <h2><span style="color:#38bdf8;">03</span> Publish &amp; track</h2>
+      <p class="lead">Review drafts, publish with one click via your linked Quora session (Puppeteer). No tab switching.</p>
+      <div class="layout-2col">
+        <div>
+          <h4 style="margin:0 0 0.75rem;font-size:0.9rem;">Drafts <span id="draftCount" style="color:#38bdf8;"></span></h4>
+          <div id="draftList"></div>
+        </div>
+        <div>
+          <h4 style="margin:0 0 0.75rem;font-size:0.9rem;">Published log</h4>
+          <div class="pub-log" id="publishedLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toastContainer"></div>
+
+<script>
+const { ipcRenderer, shell } = require('electron');
+
+let settings = {};
+let frameworks = [];
+let status = {};
+let questions = [];
+let selectedQuestion = null;
+let selectedFrameworkId = 'problem-insight';
+let genMode = 'website';
+let currentAnswer = null;
+let editingAngleId = null;
+let youtubeTranscript = '';
+
+function showToast(msg) {
+  const c = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function formatNum(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return String(n || 0);
+}
+
+function setStep(step) {
+  document.querySelectorAll('.step-pill').forEach((p) => p.classList.toggle('active', p.dataset.step === step));
+  document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.id === `panel-${step}`));
+}
+
+function renderStatus() {
+  const chips = [
+    { ok: status.hasSerpApi, label: status.hasSerpApi ? 'SerpAPI connected' : 'SerpAPI missing (Settings)' },
+    { ok: status.hasOpenRouter, label: status.hasOpenRouter ? 'OpenRouter connected' : 'OpenRouter missing (Settings)' },
+    { ok: status.quoraLinked, label: status.quoraLinked ? 'Quora account linked' : 'Link Quora in Account Hub' },
+    { ok: status.sessionValid, label: status.sessionValid ? 'Quora session active' : 'Quora session not saved' },
+    { ok: true, label: `${status.draftCount || 0} drafts · ${status.publishedCount || 0} published` },
+  ];
+  document.getElementById('statusBar').innerHTML = chips.map((c) => {
+    const cls = c.ok ? 'ok' : (c.label.includes('missing') || c.label.includes('Link') ? 'bad' : 'warn');
+    return `<span class="status-chip ${cls}">${escapeHtml(c.label)}</span>`;
+  }).join('');
+}
+
+function applyModeUI() {
+  const mode = settings.mode || 'manual';
+  document.getElementById('btnManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('btnAutomated').classList.toggle('active', mode === 'automated');
+  document.getElementById('autoThresholds').classList.toggle('visible', mode === 'automated');
+  document.getElementById('modeDesc').textContent = mode === 'automated'
+    ? 'Automated — generates and can auto-publish when questions meet your view/upvote thresholds.'
+    : 'Manual — review and edit every answer before publishing.';
+  document.getElementById('minViews').value = settings.minViews ?? 5000;
+  document.getElementById('minUpvotes').value = settings.minUpvotes ?? 100;
+  document.getElementById('autoPublish').checked = !!settings.autoPublish;
+}
+
+async function saveModeSettings() {
+  const partial = {
+    mode: settings.mode,
+    minViews: parseInt(document.getElementById('minViews').value, 10) || 5000,
+    minUpvotes: parseInt(document.getElementById('minUpvotes').value, 10) || 100,
+    autoPublish: document.getElementById('autoPublish').checked,
+    model: document.getElementById('aiModel').value,
+  };
+  const res = await ipcRenderer.invoke('save-quora-traffic-settings', partial);
+  if (res?.settings) settings = res.settings;
+}
+
+function renderQuestions() {
+  const tbody = document.getElementById('questionsBody');
+  const table = document.getElementById('questionsTable');
+  const empty = document.getElementById('questionsEmpty');
+  if (!questions.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = settings.lastScrape
+      ? `No results for "${settings.lastScrape.keyword}". Try another keyword or add SerpAPI key in Settings.`
+      : 'Enter a keyword and scrape to see high-traffic questions.';
+    return;
+  }
+  empty.style.display = 'none';
+  table.style.display = 'table';
+  tbody.innerHTML = questions.map((q) => {
+    const est = q.metricsSource === 'estimated' ? '<span class="badge-est">est</span>' : '';
+    const sel = selectedQuestion?.id === q.id ? 'selected' : '';
+    return `<tr class="${sel}" data-id="${escapeHtml(q.id)}">
+      <td class="q-title">${escapeHtml(q.question)}</td>
+      <td class="metric">${escapeHtml(q.viewsLabel || formatNum(q.views))}${est}</td>
+      <td class="metric">▲ ${escapeHtml(q.upvotesLabel || formatNum(q.upvotes))}${est}</td>
+      <td class="metric">✎ ${q.answerCount || 0}</td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('tr').forEach((tr) => {
+    tr.onclick = () => {
+      selectedQuestion = questions.find((q) => q.id === tr.dataset.id);
+      renderQuestions();
+      document.getElementById('btnToGenerate').disabled = !selectedQuestion;
+      updateSelectedQuestionBox();
+    };
+  });
+}
+
+function updateSelectedQuestionBox() {
+  const el = document.getElementById('selectedQuestionText');
+  if (!selectedQuestion) {
+    el.innerHTML = 'No question selected — go to Research and pick one.';
+    return;
+  }
+  el.innerHTML = `<strong>${escapeHtml(selectedQuestion.question)}</strong><br>
+    <span style="color:#64748b;font-size:0.75rem;">${formatNum(selectedQuestion.views)} views · ▲ ${formatNum(selectedQuestion.upvotes)} · ${selectedQuestion.answerCount} answers</span>`;
+}
+
+function getActiveAngle() {
+  return settings.angles?.find((a) => a.id === (editingAngleId || settings.activeAngleId)) || settings.angles?.[0];
+}
+
+function renderAngles() {
+  const list = document.getElementById('angleList');
+  list.innerHTML = (settings.angles || []).map((a) =>
+    `<div class="angle-item ${a.id === (editingAngleId || settings.activeAngleId) ? 'active' : ''}" data-id="${escapeHtml(a.id)}">${escapeHtml(a.name)}</div>`
+  ).join('');
+  list.querySelectorAll('.angle-item').forEach((el) => {
+    el.onclick = () => {
+      editingAngleId = el.dataset.id;
+      settings.activeAngleId = editingAngleId;
+      loadAngleForm();
+      renderAngles();
+    };
+  });
+  loadAngleForm();
+}
+
+function loadAngleForm() {
+  const a = getActiveAngle();
+  if (!a) return;
+  editingAngleId = a.id;
+  document.getElementById('angleName').value = a.name || '';
+  document.getElementById('angleBrand').value = a.brandPositioning || '';
+  document.getElementById('angleKeywords').value = a.keywords || '';
+  document.getElementById('angleCta').value = a.cta || '';
+  document.getElementById('angleCtaUrl').value = a.ctaUrl || '';
+  document.getElementById('angleProduct').value = a.productContext || '';
+}
+
+function renderFrameworks() {
+  document.getElementById('frameworkList').innerHTML = frameworks.map((f) =>
+    `<div class="framework-opt ${f.id === selectedFrameworkId ? 'active' : ''}" data-id="${escapeHtml(f.id)}">
+      <div class="fw-name">${escapeHtml(f.name)}</div>
+      <div class="fw-desc">${escapeHtml(f.description)}</div>
+    </div>`
+  ).join('');
+  document.getElementById('frameworkList').querySelectorAll('.framework-opt').forEach((el) => {
+    el.onclick = () => {
+      selectedFrameworkId = el.dataset.id;
+      renderFrameworks();
+    };
+  });
+}
+
+function renderDocs() {
+  const list = document.getElementById('docList');
+  const docs = settings.documents || [];
+  list.innerHTML = docs.length ? docs.map((d, i) =>
+    `<div class="doc-item"><span>${escapeHtml(d.name)}</span><button class="btn danger" data-idx="${i}" style="padding:2px 8px;font-size:0.7rem;">×</button></div>`
+  ).join('') : '<span style="font-size:0.75rem;color:#64748b;">No documents yet</span>';
+  list.querySelectorAll('button[data-idx]').forEach((btn) => {
+    btn.onclick = async () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      settings.documents.splice(idx, 1);
+      await ipcRenderer.invoke('save-quora-traffic-settings', { documents: settings.documents });
+      renderDocs();
+    };
+  });
+}
+
+function renderDrafts() {
+  const drafts = (settings.answers || []).filter((a) => a.status !== 'published');
+  document.getElementById('draftCount').textContent = `(${drafts.length})`;
+  const el = document.getElementById('draftList');
+  if (!drafts.length) {
+    el.innerHTML = '<div class="empty-msg">No drafts yet. Generate an answer in step 02.</div>';
+    return;
+  }
+  el.innerHTML = drafts.map((a) => `
+    <div class="draft-card" data-id="${escapeHtml(a.id)}">
+      <div class="meta"><span class="status-draft">draft</span> · ${escapeHtml(a.mode || 'website')} · ${escapeHtml(a.question?.slice(0, 60) || '')}…</div>
+      <div class="preview">${escapeHtml((a.content || '').replace(/<[^>]+>/g, ' ').slice(0, 200))}</div>
+      <div class="actions">
+        <button class="btn" data-action="edit">Edit</button>
+        <button class="btn success" data-action="publish">Publish</button>
+        <button class="btn danger" data-action="delete">Delete</button>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('.draft-card').forEach((card) => {
+    const id = card.dataset.id;
+    const answer = drafts.find((a) => a.id === id);
+    card.querySelector('[data-action="edit"]').onclick = () => {
+      currentAnswer = answer;
+      document.getElementById('answerEditor').value = (answer.content || '').replace(/<[^>]+>/g, '\n');
+      setStep('generate');
+    };
+    card.querySelector('[data-action="publish"]').onclick = () => publishAnswer(answer);
+    card.querySelector('[data-action="delete"]').onclick = async () => {
+      await ipcRenderer.invoke('delete-quora-traffic-answer', id);
+      await refreshSettings();
+      renderDrafts();
+      showToast('Draft deleted');
+    };
+  });
+}
+
+function renderPublishedLog() {
+  const log = settings.publishedLog || [];
+  const el = document.getElementById('publishedLog');
+  if (!log.length) {
+    el.innerHTML = '<div class="empty-msg" style="padding:1rem;">Nothing published yet.</div>';
+    return;
+  }
+  el.innerHTML = log.map((e) => `
+    <div class="pub-log-item">
+      <span class="status-published">✓</span> ${escapeHtml(e.question?.slice(0, 70) || 'Question')}
+      <br><span style="color:#64748b;">${e.publishedAt ? new Date(e.publishedAt).toLocaleString() : ''} · ${e.mode || 'website'}${e.automated ? ' · automated' : ' · manual'}</span>
+    </div>`).join('');
+}
+
+async function refreshSettings() {
+  const res = await ipcRenderer.invoke('get-quora-traffic-settings');
+  settings = res.settings || {};
+  frameworks = res.frameworks || [];
+  questions = settings.cachedQuestions || [];
+  if (settings.model) document.getElementById('aiModel').value = settings.model;
+  applyModeUI();
+  renderAngles();
+  renderDocs();
+  renderQuestions();
+  renderDrafts();
+  renderPublishedLog();
+}
+
+async function refreshStatus() {
+  status = await ipcRenderer.invoke('get-quora-traffic-status');
+  renderStatus();
+}
+
+function meetsThresholds(q) {
+  const minV = parseInt(document.getElementById('minViews').value, 10) || settings.minViews || 0;
+  const minU = parseInt(document.getElementById('minUpvotes').value, 10) || settings.minUpvotes || 0;
+  return (q.views || 0) >= minV && (q.upvotes || 0) >= minU;
+}
+
+async function publishAnswer(answer) {
+  if (!answer?.content && !document.getElementById('answerEditor').value.trim()) {
+    showToast('No answer content to publish');
+    return;
+  }
+  const payload = {
+    ...answer,
+    content: answer?.content || document.getElementById('answerEditor').value,
+  };
+  const automated = settings.mode === 'automated';
+  showToast('Publishing to Quora…');
+  const res = await ipcRenderer.invoke('publish-quora-answer', { answer: payload, automated });
+  if (res?.success || res?.livePosted) {
+    showToast('Published to Quora!');
+    await refreshSettings();
+    await refreshStatus();
+    renderDrafts();
+    renderPublishedLog();
+    currentAnswer = null;
+    document.getElementById('answerEditor').value = '';
+  } else {
+    showToast(res?.error || res?.message || 'Publish failed — link Quora in Account Hub');
+  }
+}
+
+async function maybeAutoPublish(answer) {
+  if (settings.mode !== 'automated' || !settings.autoPublish) return;
+  const q = selectedQuestion || { views: answer.views, upvotes: answer.upvotes };
+  if (!meetsThresholds(q)) {
+    showToast('Draft saved — below auto-publish thresholds');
+    return;
+  }
+  await publishAnswer(answer);
+}
+
+// Event bindings
+document.getElementById('stepNav').querySelectorAll('.step-pill').forEach((p) => {
+  p.onclick = () => setStep(p.dataset.step);
+});
+
+document.getElementById('btnManual').onclick = async () => {
+  settings.mode = 'manual';
+  applyModeUI();
+  await saveModeSettings();
+};
+document.getElementById('btnAutomated').onclick = async () => {
+  settings.mode = 'automated';
+  applyModeUI();
+  await saveModeSettings();
+};
+['minViews', 'minUpvotes', 'autoPublish', 'aiModel'].forEach((id) => {
+  document.getElementById(id).addEventListener('change', () => saveModeSettings());
+});
+
+document.getElementById('btnScrape').onclick = async () => {
+  const keyword = document.getElementById('scrapeKeyword').value.trim();
+  if (!keyword) { showToast('Enter a keyword'); return; }
+  document.getElementById('scrapeStatus').textContent = 'Scraping Quora… (may take a minute with live metrics)';
+  document.getElementById('btnScrape').disabled = true;
+  const res = await ipcRenderer.invoke('scrape-quora-questions', { keyword, limit: 25, enrich: true });
+  document.getElementById('btnScrape').disabled = false;
+  if (res?.success) {
+    questions = res.questions || [];
+    await refreshSettings();
+    document.getElementById('scrapeStatus').textContent = `${res.count} questions found for "${keyword}"`;
+    showToast(`Found ${res.count} questions`);
+  } else {
+    document.getElementById('scrapeStatus').textContent = res?.error || 'Scrape failed';
+    showToast(res?.error || 'Scrape failed');
+  }
+};
+
+document.getElementById('btnToGenerate').onclick = () => {
+  if (!selectedQuestion) return;
+  updateSelectedQuestionBox();
+  setStep('generate');
+};
+
+document.getElementById('cardWebsite').onclick = () => {
+  genMode = 'website';
+  document.getElementById('cardWebsite').classList.add('active');
+  document.getElementById('cardYoutube').classList.remove('active');
+  document.getElementById('youtubeBlock').style.display = 'none';
+};
+document.getElementById('cardYoutube').onclick = () => {
+  genMode = 'youtube';
+  document.getElementById('cardYoutube').classList.add('active');
+  document.getElementById('cardWebsite').classList.remove('active');
+  document.getElementById('youtubeBlock').style.display = 'block';
+};
+
+document.getElementById('btnFetchTranscript').onclick = async () => {
+  const url = document.getElementById('youtubeUrl').value.trim();
+  if (!url) return;
+  document.getElementById('transcriptStatus').textContent = 'Fetching transcript…';
+  const res = await ipcRenderer.invoke('fetch-youtube-transcript', { url });
+  if (res?.success) {
+    youtubeTranscript = res.transcript || '';
+    document.getElementById('transcriptStatus').textContent = res.transcript
+      ? `Transcript loaded (${res.transcript.length} chars) — ${res.source}`
+      : (res.note || 'No captions — AI will use URL only');
+  } else {
+    document.getElementById('transcriptStatus').textContent = res?.error || 'Failed';
+  }
+};
+
+document.getElementById('btnSaveAngle').onclick = async () => {
+  const a = getActiveAngle();
+  if (!a) return;
+  a.name = document.getElementById('angleName').value.trim() || a.name;
+  a.brandPositioning = document.getElementById('angleBrand').value;
+  a.keywords = document.getElementById('angleKeywords').value;
+  a.cta = document.getElementById('angleCta').value;
+  a.ctaUrl = document.getElementById('angleCtaUrl').value;
+  a.productContext = document.getElementById('angleProduct').value;
+  settings.activeAngleId = a.id;
+  await ipcRenderer.invoke('save-quora-traffic-settings', { angles: settings.angles, activeAngleId: a.id });
+  await refreshSettings();
+  showToast('Angle saved');
+};
+
+document.getElementById('btnAddAngle').onclick = async () => {
+  const id = `angle_${Date.now()}`;
+  settings.angles.push({
+    id,
+    name: 'New Angle',
+    brandPositioning: '',
+    keywords: '',
+    cta: '',
+    ctaUrl: '',
+    productContext: '',
+  });
+  editingAngleId = id;
+  settings.activeAngleId = id;
+  await ipcRenderer.invoke('save-quora-traffic-settings', { angles: settings.angles, activeAngleId: id });
+  await refreshSettings();
+};
+
+document.getElementById('btnAddDoc').onclick = async () => {
+  const name = document.getElementById('docName').value.trim();
+  const content = document.getElementById('docContent').value.trim();
+  if (!name || !content) { showToast('Name and content required'); return; }
+  settings.documents = settings.documents || [];
+  settings.documents.push({ id: `doc_${Date.now()}`, name, content });
+  await ipcRenderer.invoke('save-quora-traffic-settings', { documents: settings.documents });
+  document.getElementById('docName').value = '';
+  document.getElementById('docContent').value = '';
+  await refreshSettings();
+};
+
+document.getElementById('btnGenerate').onclick = async () => {
+  if (!selectedQuestion) { showToast('Select a question in Research first'); setStep('research'); return; }
+  document.getElementById('btnGenerate').disabled = true;
+  showToast('Generating answer…');
+  const res = await ipcRenderer.invoke('generate-quora-answer', {
+    question: selectedQuestion,
+    mode: genMode,
+    frameworkId: selectedFrameworkId,
+    youtubeUrl: genMode === 'youtube' ? document.getElementById('youtubeUrl').value.trim() : null,
+    angleId: settings.activeAngleId,
+    model: document.getElementById('aiModel').value,
+  });
+  document.getElementById('btnGenerate').disabled = false;
+  if (res?.success && res.answer) {
+    currentAnswer = res.answer;
+    document.getElementById('answerEditor').value = (res.answer.content || '').replace(/<[^>]+>/g, '\n');
+    await refreshSettings();
+    showToast('Answer generated');
+    await maybeAutoPublish(res.answer);
+  } else {
+    showToast(res?.error || 'Generation failed');
+  }
+};
+
+document.getElementById('btnSaveDraft').onclick = async () => {
+  const content = document.getElementById('answerEditor').value.trim();
+  if (!content) { showToast('Nothing to save'); return; }
+  const answer = {
+    ...(currentAnswer || {}),
+    id: currentAnswer?.id || `qa_${Date.now()}`,
+    content,
+    question: selectedQuestion?.question || currentAnswer?.question,
+    questionUrl: selectedQuestion?.url || currentAnswer?.questionUrl,
+    questionId: selectedQuestion?.id || currentAnswer?.questionId,
+    mode: genMode,
+    status: 'draft',
+    updatedAt: new Date().toISOString(),
+  };
+  await ipcRenderer.invoke('save-quora-traffic-answer', answer);
+  currentAnswer = answer;
+  await refreshSettings();
+  showToast('Draft saved');
+};
+
+document.getElementById('btnPublishNow').onclick = async () => {
+  const content = document.getElementById('answerEditor').value.trim();
+  if (!content) { showToast('Write or generate an answer first'); return; }
+  const answer = {
+    ...(currentAnswer || {}),
+    id: currentAnswer?.id || `qa_${Date.now()}`,
+    content,
+    question: selectedQuestion?.question || currentAnswer?.question,
+    questionUrl: selectedQuestion?.url || currentAnswer?.questionUrl,
+    mode: genMode,
+    status: 'draft',
+  };
+  await publishAnswer(answer);
+};
+
+// Init
+(async () => {
+  await refreshStatus();
+  await refreshSettings();
+  renderFrameworks();
+  if (settings.lastScrape?.keyword) {
+    document.getElementById('scrapeKeyword').value = settings.lastScrape.keyword;
+  }
+  document.getElementById('btnToGenerate').disabled = !selectedQuestion;
+})();
+</script>
+</body>
+</html>

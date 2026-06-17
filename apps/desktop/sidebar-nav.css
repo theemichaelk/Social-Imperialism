@@ -1,0 +1,200 @@
+/* Shared app navigation sidebar — include on all main sections */
+
+body.app-shell {
+  display: flex !important;
+  flex-direction: row;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+}
+
+body.app-shell .main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.app-sidebar,
+.sidebar.app-sidebar {
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+  height: 100vh;
+  background-color: #020617;
+  color: white;
+  padding: 1.25rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #1e293b;
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 100;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.sidebar-title-container {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  padding: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  height: 44px;
+  width: 44px;
+  min-width: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: #38bdf8;
+  text-align: left;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.campaign-switcher-box {
+  padding: 0 0.25rem 0.85rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.campaign-switcher-box select {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  padding: 0.55rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.sidebar-nav-links {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.nav-link {
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.nav-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-link i {
+  width: 18px;
+  min-width: 18px;
+  text-align: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.nav-link:hover {
+  background-color: #1e293b;
+  color: white;
+}
+
+.nav-link.active {
+  background-color: #38bdf8;
+  color: #020617;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.nav-section {
+  margin-bottom: 0.35rem;
+}
+
+.nav-section-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.55px;
+  color: #475569;
+  font-weight: 700;
+  padding: 0.55rem 0.75rem 0.25rem;
+  user-select: none;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 0.75rem 0.25rem 0.25rem;
+  border-top: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.sidebar-footer-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  color: #64748b;
+  text-decoration: none;
+  padding: 0.35rem 0.75rem;
+}
+
+.sidebar-footer-link:hover { color: #94a3b8; }
+
+/* Visual Builder: nav + node palette side by side */
+body.has-builder-palette {
+  display: flex !important;
+  flex-direction: row;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.has-builder-palette .app-sidebar {
+  height: 100vh;
+}
+
+.builder-palette {
+  width: 240px;
+  min-width: 240px;
+  background-color: #020617;
+  border-right: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  z-index: 10;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+body.has-builder-palette .main-area {
+  flex: 1;
+  min-width: 0;
+}

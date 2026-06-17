@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - Auto-Rules</title>
+<style>
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+  background-color: #0f172a; 
+  color: #f8fafc; 
+  margin: 0; 
+  padding: 0; 
+  display: flex; 
+  height: 100vh;
+  background: radial-gradient(circle at top right, #1e293b, #0f172a);
+}
+
+
+
+
+
+
+
+
+.main-content { flex: 1; padding: 3rem; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; }
+
+.container { 
+  width: 100%;
+  max-width: 800px; 
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 2.5rem; 
+  border-radius: 12px; 
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); 
+  border: 1px solid #334155;
+}
+
+h1 { margin-top: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); margin-bottom: 0.5rem; letter-spacing: 0.5px; } 
+p.subtitle { color: #94a3b8; margin-top: 0; margin-bottom: 2rem; font-size: 1.05rem; } 
+
+.keyword-box { 
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid #475569; 
+  border-radius: 8px; 
+  padding: 1.5rem; 
+  margin-bottom: 1.5rem; 
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+} 
+
+.keyword-box:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.keyword-box::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: #38bdf8;
+  opacity: 0.5;
+}
+
+.keyword-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; } 
+.keyword-title { font-weight: 600; font-size: 1.2rem; color: #e2e8f0; display: flex; align-items: center; gap: 0.75rem; } 
+.platform-toggles { display: flex; gap: 1.5rem; } 
+.platform-toggle { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; color: #cbd5e1; cursor: pointer; } 
+
+input[type="checkbox"] {
+  accent-color: #38bdf8;
+  width: 16px; height: 16px;
+  cursor: pointer;
+}
+
+.btn-remove { background-color: transparent; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; } 
+.btn-remove:hover { background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444; } 
+
+.add-keyword-section { display: flex; gap: 1rem; margin-bottom: 2.5rem; background: rgba(30, 41, 59, 0.4); padding: 1rem; border-radius: 8px; border: 1px dashed #475569; } 
+input[type="text"] { flex-grow: 1; padding: 0.85rem; border: 1px solid #475569; border-radius: 6px; font-family: inherit; background: rgba(15, 23, 42, 0.8); color: #f8fafc; font-size: 1rem; transition: all 0.3s; } 
+input[type="text"]:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+
+button { font-family: inherit; transition: all 0.2s; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+button.primary { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 6px; font-weight: 600; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); } 
+button.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5); } 
+button.secondary { background-color: transparent; color: #f1f5f9; border: 1px solid #475569; padding: 0.8rem 1.5rem; border-radius: 6px; font-weight: 600; } 
+button.secondary:hover { background-color: #1e293b; border-color: #94a3b8; } 
+
+.footer { display: flex; justify-content: space-between; margin-top: 2.5rem; border-top: 1px solid #334155; padding-top: 2rem; } 
+.ai-badge { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
+.manual-badge { background: rgba(71, 85, 105, 0.3); border: 1px solid #64748b; color: #cbd5e1; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* AI Loading State */
+.loading-text { color: #38bdf8; font-style: italic; animation: pulse 1.5s infinite; font-size: 1.1rem; }
+@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; text-shadow: 0 0 10px rgba(56,189,248,0.5); } 100% { opacity: 0.6; } }
+
+.status-panel { background: rgba(15,23,42,0.6); border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+.status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-top: 0.75rem; }
+.status-item { text-align: center; }
+.status-value { font-size: 1.4rem; font-weight: 700; color: #38bdf8; }
+.status-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.api-dots { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.8rem; }
+.api-dot.on { color: #10b981; }
+.api-dot.off { color: #ef4444; }
+.worker-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+.worker-badge.running { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid #10b981; }
+.worker-badge.stopped { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid #475569; }
+.task-log { max-height: 120px; overflow-y: auto; font-size: 0.8rem; color: #94a3b8; margin-top: 0.75rem; }
+.task-log div { padding: 4px 0; border-bottom: 1px solid #1e293b; }
+.status-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid #334155; padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; z-index: 200; display: none; }
+.status-toast.show { display: block; }
+.status-toast.success { border-color: #10b981; color: #6ee7b7; }
+.status-toast.error { border-color: #ef4444; color: #fca5a5; }
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1rem; }
+
+.automation-connection { margin-bottom: 1rem; border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
+.automation-connection-header { background: rgba(15,23,42,0.8); padding: 0.75rem 1rem; color: #e2e8f0; font-weight: 600; font-size: 0.9rem; border-bottom: 1px solid #334155; }
+.automation-account-row { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid #1e293b; align-items: start; }
+.monitor-list { max-height: 200px; overflow-y: auto; margin-top: 0.75rem; }
+.monitor-item { padding: 0.5rem 0.75rem; border: 1px solid #334155; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.automation-account-row:last-child { border-bottom: none; }
+.automation-account-meta { font-size: 0.8rem; color: #94a3b8; }
+.automation-account-meta strong { color: #e2e8f0; display: block; margin-bottom: 2px; }
+.automation-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; font-size: 0.75rem; }
+.automation-fields label { display: flex; flex-direction: column; gap: 3px; color: #64748b; }
+.automation-fields input, .automation-fields select { background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.35rem 0.4rem; border-radius: 4px; font-size: 0.75rem; }
+.automation-fields input[type="checkbox"] { width: auto; accent-color: #38bdf8; }
+
+
+/* Sidebar Standardized Styles */
+
+
+
+
+
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+
+
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+
+/* Sidebar Standardized Styles */
+.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
+.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
+.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
+.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+.nav-link:hover { background-color: #1e293b; color: white; transform: translateX(2px); }
+.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); transform: translateX(2px); }
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+</style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="sidebar-nav.css">
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('rules', () => location.reload());
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+
+
+
+<div class="main-content">
+  
+  <div class="container">
+    <h1><i class="fas fa-cogs"></i> Auto-Rules Engine</h1>
+    <p class="subtitle">Configure global automation rules and background worker settings.</p>
+
+    <div class="status-panel" id="liveStatusPanel">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <strong style="color:#e2e8f0;">Live Engine Status</strong>
+        <span class="worker-badge stopped" id="workerBadge"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Worker Idle</span>
+      </div>
+      <div class="status-grid">
+        <div class="status-item"><div class="status-value" id="statKeywords">0</div><div class="status-label">Keywords</div></div>
+        <div class="status-item"><div class="status-value" id="statAccounts">0</div><div class="status-label">Linked Accounts</div></div>
+        <div class="status-item"><div class="status-value" id="statDrafts">0</div><div class="status-label">AI Drafts</div></div>
+        <div class="status-item"><div class="status-value" id="statMonitors">0</div><div class="status-label">Monitors</div></div>
+      </div>
+      <div class="api-dots" id="apiDots"></div>
+      <div class="task-log" id="taskLog"><div>Loading worker activity...</div></div>
+      <div class="action-row">
+        <button class="secondary" onclick="runRulesNow()"><i class="fas fa-bolt"></i> Run Now</button>
+        <button class="secondary" onclick="toggleWorker()" id="workerToggleBtn"><i class="fas fa-play"></i> Start Worker</button>
+      </div>
+    </div>
+    
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Per-Account Automation</label>
+      <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+        <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:0.75rem; margin-top:0;">Configure each profile, page, group, and sub-account separately. Connect accounts in <a href="account-hub.html" style="color:#38bdf8;">Linked Accounts</a> first — multiple logins of the same platform are grouped by email.</p>
+        <div id="automationAccountsList" style="max-height:420px; overflow-y:auto;">
+            <p style="color:#64748b; font-style:italic; margin:0;">Loading accounts...</p>
+        </div>
+        <button class="secondary" style="margin-top:0.75rem; width:100%;" onclick="savePerAccountAutomation()"><i class="fas fa-save"></i> Save Per-Account Automation</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Global Auto-Reply Settings</label>
+      <div style="display: flex; align-items: center; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="autoReplyEnabled" checked>
+          Enable AI Drafts for New Mentions & Keywords
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Automation Actions (Where Allowed)</label>
+      <div style="display: flex; align-items: center; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="autoLike">
+          Auto-Like Positive Matches
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="autoShare">
+          Auto-Share / Retweet
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="autoFollow">
+          Auto-Follow Author
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Rule: Negative Sentiment</label>
+      <div style="display: flex; align-items: center; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="autoReplyNegative">
+          Auto-Draft Apology
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-left: 1rem;">
+          <input type="checkbox" id="alertNegative" checked>
+          Send Alert Via Inbox
+        </label>
+      </div>
+    </div>
+
+    
+    <!-- NEW MODERATION & CRISIS MANAGEMENT SECTION -->
+    <div style="margin-bottom: 1.5rem; background: rgba(220, 38, 38, 0.05); border: 1px solid #ef4444; border-radius: 8px; padding: 1.5rem;">
+      <h3 style="color: #ef4444; margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-shield-alt"></i> Moderation, Spam & Crisis Management
+      </h3>
+      <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1rem;">Proactively filter bots, spam, toxic content, and escalate crisis events before they spread.</p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; color: #cbd5e1;">
+              <input type="checkbox" id="modSpamBot" checked style="margin-top: 3px;">
+              <div>
+                  <strong style="color: #f8fafc;">Spam & Bot Filtering</strong>
+                  <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">Proactively hide/remove known bot replies, scam links, and spam comments in real-time.</div>
+              </div>
+            </label>
+          </div>
+          
+          <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; color: #cbd5e1;">
+              <input type="checkbox" id="modOffensive" checked style="margin-top: 3px;">
+              <div>
+                  <strong style="color: #f8fafc;">Offensive Content Removal</strong>
+                  <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">AI auto-flags and removes toxic language, hate speech, and NSFW content.</div>
+              </div>
+            </label>
+          </div>
+          
+          <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; color: #cbd5e1;">
+              <input type="checkbox" id="modEscalation" checked style="margin-top: 3px;">
+              <div>
+                  <strong style="color: #f8fafc;">Crisis Escalation Protocols</strong>
+                  <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">Identify high-risk messages (legal threats, viral complaints) and escalate instantly to your internal team inbox/SMS.</div>
+              </div>
+            </label>
+          </div>
+          
+          <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; color: #cbd5e1;">
+              <input type="checkbox" id="modCommunity" checked style="margin-top: 3px;">
+              <div>
+                  <strong style="color: #f8fafc;">Community Mgmt (Trust & Loyalty)</strong>
+                  <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">Route positive/neutral questions to the AI Reply queue for timely, on-brand responses.</div>
+              </div>
+            </label>
+          </div>
+      </div>
+      
+      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #475569;">
+          <label style="color: #e2e8f0; font-size: 0.9rem; font-weight: bold; margin-bottom: 0.5rem; display: block;">Industry Routing Precision</label>
+          <select id="industryRouting" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 4px; font-size: 0.9rem;">
+            <option value="general">General / Default Routing</option>
+            <option value="ecommerce">Ecommerce (Returns, Shipping, Restocks)</option>
+            <option value="finance">Finance (High-security, Compliance, Fraud alerts)</option>
+            <option value="automotive">Automotive (Service, Recalls, Sales inquiries)</option>
+          </select>
+          <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem;">The AI will load specialized lexicons for faster ticket resolution and smarter escalation.</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Cron / Scheduler Settings</label>
+      <div style="display: flex; flex-direction: column; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="color: #cbd5e1; font-size: 0.9rem;">Be-First monitor check frequency:</span>
+          <select id="beFirstMonitorFrequency" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.4rem; border-radius: 4px;">
+            <option value="5m">Every 5 minutes</option>
+            <option value="10m">Every 10 minutes</option>
+            <option value="15m">Every 15 minutes</option>
+            <option value="30m">Every 30 minutes</option>
+            <option value="hourly">Every hour</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="realtime">Near real-time (continuous)</option>
+          </select>
+        </div>
+        
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="beFirstDelay" checked>
+          <strong>"Be First" Delay Jitter:</strong> Add random human-like delay (2-45s) to avoid bot detection when replying early.
+        </label>
+
+        <div id="bgRunRulesStatus" style="padding:0.75rem;border-radius:6px;border:1px solid #334155;background:rgba(15,23,42,0.6);font-size:0.85rem;color:#94a3b8;">
+          Loading background run schedule…
+        </div>
+        <p style="margin:0;color:#64748b;font-size:0.8rem;">Keep the app open (minimized is fine) during scheduled windows — automation auto-starts and pauses outside your set times.</p>
+        <a href="calendar.html" class="secondary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;width:fit-content;">
+          <i class="fas fa-calendar-alt"></i> Open Calendar to schedule run windows
+        </a>
+      </div>
+    </div>
+
+    
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Be-First Monitors</label>
+      <p style="color:#94a3b8;font-size:0.85rem;margin:0 0 0.75rem;">Watch keywords, pages, or accounts — when they post, you get alerted to reply first.</p>
+      <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 0.75rem;">
+          <input type="checkbox" id="realTimeMonitoringEnabled" checked>
+          Enable Be-First monitoring
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:0.5rem;align-items:end;">
+          <input type="text" id="watchTerm" placeholder="Keyword, @handle, or page name" style="margin:0;">
+          <select id="watchType" style="margin:0;">
+            <option value="keyword">Keyword</option>
+            <option value="account">Account / @handle</option>
+            <option value="page">Page / Community</option>
+            <option value="post">Specific post</option>
+          </select>
+          <select id="watchPlatform" style="margin:0;">
+            <option value="All">All Platforms</option>
+            <option value="Twitter">Twitter</option>
+            <option value="Reddit">Reddit</option>
+            <option value="LinkedIn">LinkedIn</option>
+          </select>
+          <button type="button" class="secondary" id="addWatchBtn" style="padding:0.6rem 0.9rem;">+ Watch</button>
+        </div>
+        <div class="monitor-list" id="rulesMonitorList"></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">One-Click Auto Search & Multi-Platform Tracking</label>
+      <div style="display: flex; flex-direction: column; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="checkbox" id="oneClickAutoSearchEnabled" checked>
+          Enable Scheduled Auto Search (all platforms)
+        </label>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+          <span style="color: #cbd5e1; font-size: 0.9rem;">Auto Search frequency:</span>
+          <select id="autoSearchFrequency" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.4rem; border-radius: 4px;">
+            <option value="5m">Every 5 minutes</option>
+            <option value="10m">Every 10 minutes</option>
+            <option value="15m">Every 15 minutes</option>
+            <option value="30m">Every 30 minutes</option>
+            <option value="hourly">Every hour</option>
+            <option value="daily" selected>Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <div style="color: #94a3b8; font-size: 0.85rem;">Full platform scan runs on this schedule while the worker is active.</div>
+      </div>
+    </div>
+
+    <!-- NEW FACEBOOK FANPAGE AUTOMATION SECTION -->
+    <div style="margin-bottom: 1.5rem; background: rgba(59, 130, 246, 0.05); border: 1px solid #3b82f6; border-radius: 8px; padding: 1.5rem;">
+      <h3 style="color: #60a5fa; margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fab fa-facebook"></i> Facebook Fanpage Automation & Fan Growth
+      </h3>
+      <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1rem;">Automatically post curated content (from RSS/library) to unlimited fanpages, and proactively engage in relevant groups to acquire highly targeted "REAL" fans.</p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; color: #cbd5e1;">
+              <input type="checkbox" id="fbAutoPost" checked style="margin-top: 3px;">
+              <div>
+                  <strong style="color: #f8fafc;">Auto-Post Curated Content</strong>
+                  <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">Automatically draft and publish content from RSS feeds and your content library across linked Fanpages.</div>
+              </div>
+            </label>
+          </div>
+          
+          <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; color: #cbd5e1;">
+              <input type="checkbox" id="fbTargetedFan" checked style="margin-top: 3px;">
+              <div>
+                  <strong style="color: #f8fafc;">Targeted Fan Acquisition</strong>
+                  <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">Find relevant users/posts in niche groups. Auto-engage (like/comment) to draw them back to your fanpage and convert to followers.</div>
+              </div>
+            </label>
+          </div>
+          
+          <div style="background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569; grid-column: span 2;">
+            <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; color: #cbd5e1;">
+              <input type="checkbox" id="fbHandsFree" checked style="margin-top: 3px; accent-color: #3b82f6;">
+              <div>
+                  <strong style="color: #60a5fa;">Hands-Free Mode Enabled</strong>
+                  <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">The AI will continuously balance posting content and outbound engagement (comments/likes) while tracking page growth metrics in analytics without human intervention.</div>
+              </div>
+            </label>
+          </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Autonomous vs Approval Mode (Project Default)</label>
+      <select id="autoReplyMode" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 4px; font-size: 0.9rem;">
+        <option value="auto_post_all">Auto Post All Replies / Comments</option>
+        <option value="manual_approval">Require Manual Approval for Everything</option>
+        <option value="mentions_only" selected>Only Auto Post for Mentions/DMs (Require Approval for Keywords)</option>
+      </select>
+      <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem;">Project-wide default. Override per platform below — e.g. auto on X for mentions, manual on Reddit for keyword hits.</div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Per-Platform Approval Overrides</label>
+      <div id="platformReplyModesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569; max-height: 320px; overflow-y: auto;">
+        <p style="color:#64748b; font-style:italic; margin:0; grid-column:1/-1;">Loading platforms...</p>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem; background: rgba(245, 158, 11, 0.05); border: 1px solid #f59e0b; border-radius: 8px; padding: 1.25rem;">
+      <h3 style="color: #fbbf24; margin-top: 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-shield-virus"></i> Spam Prevention &amp; Response Diversity
+      </h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
+        <label style="display: flex; flex-direction: column; gap: 4px; color: #cbd5e1; font-size: 0.85rem;">
+          Max replies per account / hour
+          <input type="number" id="rateLimitPerAccount" min="0" max="60" value="10" style="background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:0.5rem;border-radius:4px;">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; color: #cbd5e1; font-size: 0.85rem;">
+          Global publish delay min (sec)
+          <input type="number" id="publishDelayMin" min="1" max="300" value="2" style="background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:0.5rem;border-radius:4px;">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; color: #cbd5e1; font-size: 0.85rem;">
+          Global publish delay max (sec)
+          <input type="number" id="publishDelayMax" min="2" max="600" value="45" style="background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:0.5rem;border-radius:4px;">
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: center;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #cbd5e1; font-size: 0.85rem;">
+            <input type="checkbox" id="diversifyResponses" checked>
+            Diversify responses (avoid repeat patterns)
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #cbd5e1; font-size: 0.85rem;">
+            <input type="checkbox" id="fastApprovalNotify" checked>
+            Fast notifications when manual approval required
+          </label>
+        </div>
+      </div>
+      <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.75rem;">Per-account delay overrides are in Per-Account Automation above. Rate limits apply before auto-posting.</div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Global Custom Prompt (brand voice &amp; key messages)</label>
+      <p style="color:#94a3b8;font-size:0.85rem;margin:0 0 0.75rem;">Each AI reply is tailored to the post. This prompt applies to all replies unless a keyword or per-post override is set.</p>
+      <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+        <textarea class="textarea-field" id="customRulePrompt" style="min-height: 90px; flex:1; width: 100%; box-sizing: border-box; padding: 0.75rem; border-radius: 6px; background: rgba(15,23,42,0.8); border: 1px solid #475569; color: #f8fafc; font-family: inherit; font-size: 0.9rem;" placeholder="Always naturally mention our brand and domain. Be helpful first, promotional second..."></textarea>
+        <button type="button" class="secondary" id="aiFillCustomPromptBtn" style="white-space:nowrap;padding:0.6rem 0.9rem;font-size:0.8rem;"><i class="fas fa-magic"></i> AI Auto-Fill</button>
+      </div>
+      <p id="aiFillCustomPromptStatus" style="font-size:0.78rem;color:#64748b;margin:0.5rem 0 0;"></p>
+    </div>
+
+    <div class="footer">
+      <button class="secondary" onclick="window.location.href='dashboard.html'">Back</button>
+      <button class="primary" onclick="saveAutoRulesPage()"><i class="fas fa-save"></i> Save &amp; Start Worker</button>
+    </div>
+  </div>
+</div>
+<div class="status-toast" id="statusToast"></div>
+<script>
+
+const { ipcRenderer } = require('electron');
+const platformCatalog = require('./services/platformCatalog');
+
+const REPLY_MODE_OPTIONS = [
+  { value: 'inherit', label: 'Use project default' },
+  { value: 'auto_post_all', label: 'Auto post all' },
+  { value: 'manual_approval', label: 'Manual approval' },
+  { value: 'mentions_only', label: 'Mentions/DMs only' },
+];
+
+function showToast(msg, type) {
+  const el = document.getElementById('statusToast');
+  el.textContent = msg;
+  el.className = 'status-toast show ' + (type || 'info');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
+function collectPlatformReplyModes() {
+  const modes = {};
+  document.querySelectorAll('.platform-reply-mode').forEach((sel) => {
+    const platform = sel.dataset.platform;
+    const val = sel.value;
+    if (platform && val && val !== 'inherit') modes[platform] = val;
+  });
+  return modes;
+}
+
+function renderPlatformReplyModes(savedModes = {}) {
+  const grid = document.getElementById('platformReplyModesGrid');
+  if (!grid) return;
+  grid.innerHTML = platformCatalog.ALL_PLATFORMS.map((p) => {
+    const display = platformCatalog.getPlatformDisplayName(p);
+    const icon = platformCatalog.platformIconHtml(p);
+    const opts = REPLY_MODE_OPTIONS.map((o) => {
+      const selected = (savedModes[p] || 'inherit') === o.value ? 'selected' : '';
+      return `<option value="${o.value}" ${selected}>${o.label}</option>`;
+    }).join('');
+    return `<label style="display:flex;flex-direction:column;gap:4px;font-size:0.75rem;color:#94a3b8;">
+      <span>${icon}${display}</span>
+      <select class="platform-reply-mode" data-platform="${p}" style="background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:0.35rem;border-radius:4px;font-size:0.75rem;">${opts}</select>
+    </label>`;
+  }).join('');
+}
+
+function collectSettings() {
+  return {
+    autoReplyEnabled: document.getElementById('autoReplyEnabled').checked,
+    autoReplyNegative: document.getElementById('autoReplyNegative').checked,
+    alertNegative: document.getElementById('alertNegative').checked,
+    customRulePrompt: document.getElementById('customRulePrompt').value,
+    autoReplyMode: document.getElementById('autoReplyMode')?.value || 'mentions_only',
+    platformReplyModes: collectPlatformReplyModes(),
+    rateLimitPerAccount: parseInt(document.getElementById('rateLimitPerAccount')?.value, 10) || 10,
+    publishDelayMin: parseInt(document.getElementById('publishDelayMin')?.value, 10) || 2,
+    publishDelayMax: parseInt(document.getElementById('publishDelayMax')?.value, 10) || 45,
+    diversifyResponses: document.getElementById('diversifyResponses')?.checked !== false,
+    fastApprovalNotify: document.getElementById('fastApprovalNotify')?.checked !== false,
+    autoLike: document.getElementById('autoLike').checked,
+    autoShare: document.getElementById('autoShare').checked,
+    autoFollow: document.getElementById('autoFollow').checked,
+    frequency: document.getElementById('beFirstMonitorFrequency')?.value || '10m',
+    beFirstMonitorFrequency: document.getElementById('beFirstMonitorFrequency')?.value || '10m',
+    autoSearchFrequency: document.getElementById('autoSearchFrequency')?.value || 'daily',
+    beFirstDelay: document.getElementById('beFirstDelay').checked,
+    activeAccountIds: Array.from(document.querySelectorAll('.automation-account-cb:checked')).map(cb => cb.value),
+    modSpamBot: document.getElementById('modSpamBot').checked,
+    modOffensive: document.getElementById('modOffensive').checked,
+    modEscalation: document.getElementById('modEscalation').checked,
+    modCommunity: document.getElementById('modCommunity').checked,
+    industryRouting: document.getElementById('industryRouting').value,
+    fbAutoPost: document.getElementById('fbAutoPost').checked,
+    fbTargetedFan: document.getElementById('fbTargetedFan').checked,
+    fbHandsFree: document.getElementById('fbHandsFree').checked,
+    realTimeMonitoringEnabled: document.getElementById('realTimeMonitoringEnabled')?.checked ?? true,
+    oneClickAutoSearchEnabled: document.getElementById('oneClickAutoSearchEnabled')?.checked ?? true,
+    enabled: true,
+  };
+}
+
+function applySettingsToForm(settings) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.checked = !!val; };
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+  set('autoReplyEnabled', settings.autoReplyEnabled !== false);
+  set('autoReplyNegative', settings.autoReplyNegative);
+  set('alertNegative', settings.alertNegative !== false);
+  setVal('customRulePrompt', settings.customRulePrompt || '');
+  setVal('autoReplyMode', settings.autoReplyMode || 'mentions_only');
+  renderPlatformReplyModes(settings.platformReplyModes || {});
+  setVal('rateLimitPerAccount', settings.rateLimitPerAccount ?? 10);
+  setVal('publishDelayMin', settings.publishDelayMin ?? 2);
+  setVal('publishDelayMax', settings.publishDelayMax ?? 45);
+  set('diversifyResponses', settings.diversifyResponses !== false);
+  set('fastApprovalNotify', settings.fastApprovalNotify !== false);
+  set('autoLike', settings.autoLike);
+  set('autoShare', settings.autoShare);
+  set('autoFollow', settings.autoFollow);
+  setVal('beFirstMonitorFrequency', settings.beFirstMonitorFrequency || settings.frequency || '10m');
+  setVal('autoSearchFrequency', settings.autoSearchFrequency || 'daily');
+  set('beFirstDelay', settings.beFirstDelay !== false);
+  set('modSpamBot', settings.modSpamBot !== false);
+  set('modOffensive', settings.modOffensive !== false);
+  set('modEscalation', settings.modEscalation !== false);
+  set('modCommunity', settings.modCommunity !== false);
+  setVal('industryRouting', settings.industryRouting || 'general');
+  set('fbAutoPost', settings.fbAutoPost !== false);
+  set('fbTargetedFan', settings.fbTargetedFan !== false);
+  set('fbHandsFree', settings.fbHandsFree !== false);
+  set('realTimeMonitoringEnabled', settings.realTimeMonitoringEnabled !== false);
+  set('oneClickAutoSearchEnabled', settings.oneClickAutoSearchEnabled !== false);
+}
+
+function escapeHtmlRules(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function loadRulesMonitors() {
+  const el = document.getElementById('rulesMonitorList');
+  if (!el) return;
+  const mons = await ipcRenderer.invoke('get-watched-monitors').catch(() => []);
+  if (!mons.length) {
+    el.innerHTML = '<div style="color:#64748b;font-size:0.85rem;">No monitors yet — add a keyword, @account, or page above.</div>';
+    return;
+  }
+  el.innerHTML = mons.map((m, i) => `
+    <div class="monitor-item">
+      <span>${escapeHtmlRules(m.type || m.target || 'keyword')}: <strong>${escapeHtmlRules(m.term)}</strong> on ${escapeHtmlRules(m.platform || 'All')}</span>
+      <button type="button" class="secondary" style="padding:0.2rem 0.5rem;font-size:0.7rem;" data-i="${i}">Remove</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('button[data-i]').forEach((btn) => {
+    btn.onclick = async () => {
+      const list = await ipcRenderer.invoke('get-watched-monitors');
+      list.splice(parseInt(btn.dataset.i, 10), 1);
+      await ipcRenderer.invoke('save-watched-monitors', list);
+      loadRulesMonitors();
+      refreshLiveStatus();
+    };
+  });
+}
+
+document.getElementById('addWatchBtn')?.addEventListener('click', async () => {
+  const term = document.getElementById('watchTerm')?.value?.trim();
+  if (!term) {
+    showToast('Enter a keyword, @handle, or page to watch.', 'error');
+    return;
+  }
+  const mons = await ipcRenderer.invoke('get-watched-monitors').catch(() => []);
+  mons.push({
+    term,
+    platform: document.getElementById('watchPlatform')?.value || 'All',
+    type: document.getElementById('watchType')?.value || 'keyword',
+    target: document.getElementById('watchType')?.value || 'keyword',
+    added: new Date().toISOString(),
+  });
+  await ipcRenderer.invoke('save-watched-monitors', mons);
+  const watchInput = document.getElementById('watchTerm');
+  if (watchInput) watchInput.value = '';
+  loadRulesMonitors();
+  refreshLiveStatus();
+  showToast('Be-First monitor added.', 'success');
+});
+
+document.getElementById('aiFillCustomPromptBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('aiFillCustomPromptBtn');
+  const status = document.getElementById('aiFillCustomPromptStatus');
+  const ta = document.getElementById('customRulePrompt');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…'; }
+  if (status) status.textContent = 'AI is building your global brand voice prompt…';
+  try {
+    const res = await ipcRenderer.invoke('generate-global-custom-prompt');
+    if (res.success && res.prompt && ta) {
+      ta.value = res.prompt;
+      if (status) status.textContent = 'Prompt ready — review and save rules.';
+    } else if (status) {
+      status.textContent = 'Failed: ' + (res.error || 'Configure AI keys in Settings.');
+    }
+  } catch (e) {
+    if (status) status.textContent = 'Error: ' + e.message;
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic"></i> AI Auto-Fill'; }
+});
+
+window.saveAutoRulesPage = async function() {
+  await ipcRenderer.invoke('save-bulk-account-automation', collectPerAccountAutomation());
+  const settings = collectSettings();
+  await ipcRenderer.invoke('save-auto-search-settings', {
+    dailyEnabled: settings.oneClickAutoSearchEnabled !== false,
+    frequency: settings.autoSearchFrequency || 'daily',
+    beFirstMonitorFrequency: settings.beFirstMonitorFrequency || '10m',
+  });
+  const result = await ipcRenderer.invoke('save-auto-rules', settings);
+  if (result.success) {
+    showToast('Rules saved — background worker is running with live APIs.', 'success');
+    refreshLiveStatus();
+  } else {
+    showToast('Failed to save rules.', 'error');
+  }
+};
+
+window.runRulesNow = async function() {
+  showToast('Running auto-rules cycle against live feeds...', 'info');
+  await ipcRenderer.invoke('save-auto-rules', collectSettings());
+  const result = await ipcRenderer.invoke('run-auto-rules-now');
+  if (result.success) {
+    const msg = result.skipped
+      ? 'Rules disabled or no matches this cycle.'
+      : `Cycle complete: ${result.monitorCount} monitor + ${result.discoveryCount} keyword matches.`;
+    showToast(msg, 'success');
+    refreshLiveStatus();
+  } else {
+    showToast('Run failed.', 'error');
+  }
+};
+
+window.toggleWorker = async function() {
+  const status = await ipcRenderer.invoke('get-worker-status');
+  if (status.isRunning) {
+    await ipcRenderer.invoke('stop-worker');
+    showToast('Worker stopped.', 'info');
+  } else {
+    await ipcRenderer.invoke('save-auto-rules', { ...collectSettings(), enabled: true });
+    await ipcRenderer.invoke('start-worker');
+    showToast('Worker started with current rules.', 'success');
+  }
+  refreshLiveStatus();
+};
+
+function collectPerAccountAutomation() {
+  const updates = [];
+  document.querySelectorAll('.automation-account-row').forEach(row => {
+    const id = row.dataset.accountId;
+    if (!id) return;
+    updates.push({
+      accountId: id,
+      settings: {
+        automationEnabled: row.querySelector('.acc-enabled')?.checked !== false,
+        frequency: row.querySelector('.acc-frequency')?.value || 'auto',
+        autoReply: !!row.querySelector('.acc-autoreply')?.checked,
+        postToGroups: row.querySelector('.acc-groups')?.checked !== false,
+        humanDelayMin: parseInt(row.querySelector('.acc-delay-min')?.value, 10) || 30,
+        humanDelayMax: parseInt(row.querySelector('.acc-delay-max')?.value, 10) || 120,
+        humanizeContent: row.querySelector('.acc-humanize')?.checked !== false,
+      },
+    });
+  });
+  return updates;
+}
+
+window.savePerAccountAutomation = async function() {
+  const updates = collectPerAccountAutomation();
+  const res = await ipcRenderer.invoke('save-bulk-account-automation', updates);
+  if (res.success) {
+    showToast(`Saved automation for ${res.saved} account(s).`, 'success');
+  } else {
+    showToast(res.error || 'Save failed', 'error');
+  }
+};
+
+async function loadAutomationAccounts(activeIds) {
+  const data = await ipcRenderer.invoke('get-automation-targets');
+  const accounts = data.accounts || [];
+  const container = document.getElementById('automationAccountsList');
+  container.innerHTML = '';
+  if (!accounts.length) {
+    container.innerHTML = '<p style="color:#64748b; font-style:italic; margin:0;">No accounts linked yet. Connect via email/password in Linked Accounts.</p>';
+    return;
+  }
+
+  const byConnection = new Map();
+  accounts.forEach(acc => {
+    const key = acc.connectionId || acc.loginEmail || 'ungrouped';
+    if (!byConnection.has(key)) {
+      byConnection.set(key, { loginEmail: acc.loginEmail, platform: acc.platform, items: [] });
+    }
+    byConnection.get(key).items.push(acc);
+  });
+
+  byConnection.forEach(group => {
+    const block = document.createElement('div');
+    block.className = 'automation-connection';
+    const headerLabel = group.loginEmail
+      ? `${group.platform} — ${group.loginEmail}`
+      : `${group.platform} connection`;
+    block.innerHTML = `<div class="automation-connection-header"><i class="fas fa-link"></i> ${headerLabel}</div>`;
+
+    group.items.forEach(acc => {
+      const s = acc.settings || {};
+      const enabled = activeIds.length ? activeIds.includes(acc.id) : (s.automationEnabled !== false);
+      const row = document.createElement('div');
+      row.className = 'automation-account-row';
+      row.dataset.accountId = acc.id;
+      row.innerHTML = `
+        <div class="automation-account-meta">
+          <strong>${acc.handle}</strong>
+          ${acc.type || 'Profile'} · ${acc.platform}
+        </div>
+        <div class="automation-fields">
+          <label><input type="checkbox" class="acc-enabled automation-account-cb" value="${acc.id}" ${enabled ? 'checked' : ''}> Enabled</label>
+          <label>Freq<select class="acc-frequency"><option value="auto" ${s.frequency==='auto'?'selected':''}>Auto</option><option value="realtime" ${s.frequency==='realtime'?'selected':''}>Realtime</option><option value="hourly" ${s.frequency==='hourly'?'selected':''}>Hourly</option><option value="daily" ${s.frequency==='daily'?'selected':''}>Daily</option><option value="manual" ${s.frequency==='manual'?'selected':''}>Manual</option></select></label>
+          <label><input type="checkbox" class="acc-autoreply" ${s.autoReply?'checked':''}> Auto-reply</label>
+          <label><input type="checkbox" class="acc-groups" ${s.postToGroups!==false?'checked':''}> Groups</label>
+          <label>Min s<input type="number" class="acc-delay-min" min="5" max="600" value="${s.humanDelayMin??30}"></label>
+          <label>Max s<input type="number" class="acc-delay-max" min="10" max="900" value="${s.humanDelayMax??120}"></label>
+          <label><input type="checkbox" class="acc-humanize" ${s.humanizeContent!==false?'checked':''}> Humanize</label>
+        </div>`;
+      block.appendChild(row);
+    });
+    container.appendChild(block);
+  });
+}
+
+async function refreshBackgroundRunRulesStatus() {
+  const el = document.getElementById('bgRunRulesStatus');
+  if (!el) return;
+  try {
+    const bg = await ipcRenderer.invoke('get-background-run-status');
+    if (!bg.settings?.enabled) {
+      el.style.borderColor = '#475569';
+      el.style.color = '#94a3b8';
+      el.innerHTML = '<i class="fas fa-clock"></i> Background schedule is <strong>off</strong> — worker runs anytime when you start it manually.';
+      return;
+    }
+    if (bg.inWindow) {
+      el.style.borderColor = '#10b981';
+      el.style.color = '#6ee7b7';
+      const worker = bg.workerFlag ? 'Worker is running.' : (bg.settings.autoStartWorker ? 'Worker will auto-start.' : 'Start worker manually.');
+      el.innerHTML = `<i class="fas fa-play-circle"></i> <strong>In run window</strong> — ${bg.reason}. ${worker}`;
+    } else {
+      el.style.borderColor = '#f59e0b';
+      el.style.color = '#fbbf24';
+      const next = bg.nextWindow
+        ? `Next window: ${new Date(bg.nextWindow.atIso).toLocaleString()} (${bg.nextWindow.label})`
+        : 'No upcoming windows configured.';
+      el.innerHTML = `<i class="fas fa-pause-circle"></i> <strong>Outside run window</strong> — automation paused. ${next}`;
+    }
+  } catch (e) {
+    el.textContent = 'Could not load background schedule status.';
+  }
+}
+
+async function refreshLiveStatus() {
+  const status = await ipcRenderer.invoke('get-auto-rules-status');
+  document.getElementById('statKeywords').textContent = status.keywordCount;
+  document.getElementById('statAccounts').textContent = status.accountCount;
+  document.getElementById('statDrafts').textContent = status.draftCount;
+  document.getElementById('statMonitors').textContent = status.monitorsCount;
+
+  const badge = document.getElementById('workerBadge');
+  const toggleBtn = document.getElementById('workerToggleBtn');
+  if (status.workerRunning) {
+    badge.className = 'worker-badge running';
+    badge.innerHTML = '<i class="fas fa-circle" style="font-size:0.5rem;"></i> Worker Running';
+    toggleBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Worker';
+  } else {
+    badge.className = 'worker-badge stopped';
+    badge.innerHTML = '<i class="fas fa-circle" style="font-size:0.5rem;"></i> Worker Idle';
+    toggleBtn.innerHTML = '<i class="fas fa-play"></i> Start Worker';
+  }
+
+  const api = status.apiStatus || {};
+  const dot = (on, label) => `<span class="api-dot ${on ? 'on' : 'off'}"><i class="fas fa-circle" style="font-size:0.45rem;"></i> ${label}</span>`;
+  document.getElementById('apiDots').innerHTML = [
+    dot(api.reddit, 'Reddit'),
+    dot(api.twitter, 'Twitter'),
+    dot(api.linkedin, 'LinkedIn'),
+    dot(api.meta, 'Meta/FB'),
+    dot(api.serp, 'SerpAPI'),
+    dot(api.ai, 'AI'),
+    dot(api.slack || api.discord, 'Alerts'),
+  ].join('');
+
+  const log = document.getElementById('taskLog');
+  if (status.recentTasks?.length) {
+    log.innerHTML = status.recentTasks.map(t =>
+      `<div><span style="color:#64748b;">${t.time}</span> — ${t.action} <span style="color:#38bdf8;">(${t.platform})</span></div>`
+    ).join('');
+  } else {
+    log.innerHTML = '<div>No worker activity yet — save rules and run a cycle.</div>';
+  }
+
+  await refreshBackgroundRunRulesStatus();
+}
+
+async function initAutoRulesPage() {
+  const settings = await ipcRenderer.invoke('get-auto-rules');
+  const searchSettings = await ipcRenderer.invoke('get-auto-search-settings').catch(() => ({}));
+  applySettingsToForm({
+    ...settings,
+    autoSearchFrequency: settings.autoSearchFrequency || searchSettings.frequency || 'daily',
+    beFirstMonitorFrequency: settings.beFirstMonitorFrequency || searchSettings.beFirstMonitorFrequency || settings.frequency || '10m',
+  });
+  await loadAutomationAccounts(settings.activeAccountIds || []);
+  await loadRulesMonitors();
+  await refreshLiveStatus();
+  setInterval(refreshLiveStatus, 12000);
+}
+
+document.addEventListener('DOMContentLoaded', initAutoRulesPage);
+
+</script>
+    </body>
+</html>

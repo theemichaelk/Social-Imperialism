@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - Setup Wizard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="sidebar-nav.css">
+<style>
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: radial-gradient(circle at top right, #1e293b, #0f172a); color: #f8fafc; min-height: 100vh; display: flex; height: 100vh; overflow: hidden; }
+.main-content { flex: 1; overflow-y: auto; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 2rem; }
+h1 { margin: 0 0 0.5rem; }
+.sub { color: #94a3b8; margin: 0 0 2rem; }
+.steps { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.step-pill { padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid #475569; font-size: 0.85rem; color: #94a3b8; cursor: pointer; transition: all 0.15s ease; user-select: none; }
+.step-pill:hover:not(.locked) { border-color: #64748b; color: #e2e8f0; background: rgba(30,41,59,0.6); }
+.step-pill.active { border-color: #38bdf8; color: #38bdf8; background: rgba(56,189,248,0.1); }
+.step-pill.done { border-color: #10b981; color: #34d399; }
+.step-pill.locked { opacity: 0.45; cursor: not-allowed; }
+.step-nav-hint { font-size: 0.75rem; color: #64748b; margin: -1rem 0 1.25rem; }
+.panel { display: none; background: rgba(30,41,59,0.8); border: 1px solid #334155; border-radius: 12px; padding: 2rem; }
+.panel.active { display: block; }
+.panel h2 { margin: 0 0 0.5rem; color: #e2e8f0; font-size: 1.25rem; }
+.panel .lead { color: #94a3b8; font-size: 0.9rem; margin: 0 0 1.5rem; }
+label { display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.35rem; }
+input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid #475569; border-radius: 6px; background: #0f172a; color: #f8fafc; font-family: inherit; margin-bottom: 1rem; }
+textarea { min-height: 90px; resize: vertical; }
+button { font-family: inherit; cursor: pointer; border-radius: 6px; padding: 0.75rem 1.25rem; font-weight: 600; border: none; }
+.btn-primary { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; }
+.btn-secondary { background: transparent; color: #f1f5f9; border: 1px solid #475569; }
+.actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap; }
+.platform-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+.platform-chip { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid #475569; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+.platform-chip.selected { border-color: #38bdf8; background: rgba(56,189,248,0.1); }
+.platform-chip input { width: auto; margin: 0; }
+.kw-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+.kw-tag { background: rgba(139,92,246,0.2); border: 1px solid #8b5cf6; color: #c4b5fd; padding: 0.35rem 0.75rem; border-radius: 16px; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+.kw-tag button { background: none; border: none; color: #f87171; cursor: pointer; padding: 0; }
+.kw-card { border:1px solid #475569;border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;background:rgba(15,23,42,0.5); }
+.kw-card-head { display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem; }
+.kw-card .plat-mini { display:flex;flex-wrap:wrap;gap:0.35rem;margin:0.5rem 0;font-size:0.72rem; }
+.kw-card .plat-mini label { display:flex;align-items:center;gap:3px;color:#94a3b8;margin:0; }
+.kw-card .plat-mini input { width:auto;margin:0; }
+.kw-card textarea { min-height:50px;font-size:0.8rem;margin-bottom:0; }
+.filters-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.filters-row select, .filters-row input { width: auto; margin: 0; font-size: 0.8rem; padding: 0.4rem 0.6rem; }
+.post-card { border: 1px solid #334155; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; background: rgba(15,23,42,0.6); }
+.post-card .meta { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem; }
+.post-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+.post-actions button { font-size: 0.75rem; padding: 0.4rem 0.8rem; }
+.monitor-list { max-height: 180px; overflow-y: auto; margin-top: 1rem; }
+.monitor-item { padding: 0.5rem 0.75rem; border: 1px solid #334155; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; justify-content: space-between; }
+.ai-reply-box { background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 1rem; margin-top: 1rem; display: none; }
+.checklist { list-style: none; padding: 0; margin: 1rem 0; }
+.checklist li { padding: 0.5rem 0; color: #94a3b8; font-size: 0.9rem; }
+.checklist li i { color: #10b981; margin-right: 0.5rem; }
+.progress-msg { color: #38bdf8; font-size: 0.85rem; margin-top: 0.5rem; }
+.setup-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+.setup-logo { height: 56px; width: 56px; min-width: 56px; object-fit: contain; }
+.setup-header h1 { margin: 0 0 0.35rem; font-size: 1.75rem; display: flex; align-items: center; gap: 0; }
+.setup-header .sub { margin: 0; }
+</style>
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('onboarding', () => location.reload());
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+<div class="main-content">
+<div class="wrap">
+  <div class="setup-header">
+    <img src="logo.png" alt="Social Imperialism" class="setup-logo">
+    <div>
+      <h1>Social Imperialism Setup</h1>
+      <p class="sub">Complete all 4 steps to integrate your brand with AI, track keywords across social platforms, browse matching posts, and auto-draft replies.</p>
+    </div>
+  </div>
+
+  <div class="steps" id="stepNav">
+    <span class="step-pill active" data-step="1" title="Create your brand project">1. Create Project</span>
+    <span class="step-pill" data-step="2" title="Keywords and social platforms">2. Keywords &amp; Socials</span>
+    <span class="step-pill" data-step="3" title="Preview matching posts">3. Browse Posts</span>
+    <span class="step-pill" data-step="4" title="AI replies and Be First monitors">4. AI Replies &amp; Be First</span>
+  </div>
+  <p class="step-nav-hint">Click any step above to move back or forward. Use <strong>← Back</strong> and <strong>Continue →</strong> at the bottom of each panel.</p>
+
+  <!-- STEP 1 -->
+  <div class="panel active" id="step1">
+    <h2>First: Create Your Project To Integrate with our AI</h2>
+    <p class="lead">Enter your brand details. Every AI reply, keyword suggestion, and research call uses this profile.</p>
+    <label>Brand name *</label>
+    <input type="text" id="brandName" placeholder="e.g. Acme Corp">
+    <label>Domain name for integration *</label>
+    <input type="text" id="brandDomain" placeholder="e.g. acme.com">
+    <label>Description of your brand *</label>
+    <textarea id="brandDesc" placeholder="What you do, who you help, your unique value..."></textarea>
+    <details style="margin-bottom:1rem;">
+      <summary style="cursor:pointer;color:#38bdf8;font-weight:600;">Optional: Brand tone, voice rules &amp; guidelines</summary>
+      <label style="margin-top:0.75rem;">Brand tone</label>
+      <select id="brandTone">
+        <option value="professional">Professional</option>
+        <option value="friendly">Friendly</option>
+        <option value="bold">Bold</option>
+        <option value="playful">Playful</option>
+        <option value="authoritative">Authoritative</option>
+      </select>
+      <label>Target audience</label>
+      <input type="text" id="brandAudience" placeholder="e.g. SaaS founders, e-commerce marketers">
+      <label>Affiliate links / USPs (for reply engine)</label>
+      <textarea id="brandAffiliate" placeholder="Product URLs, discount codes, unique selling points..." style="min-height:60px;"></textarea>
+      <label>Disallowed topics (never mention)</label>
+      <input type="text" id="brandDisallowed" placeholder="e.g. politics, competitors by name">
+      <label>Do list (brand guidelines)</label>
+      <input type="text" id="brandDoList" placeholder="e.g. Always offer free trial link">
+      <label>Don't list (brand guidelines)</label>
+      <input type="text" id="brandDontList" placeholder="e.g. Never hard-sell in first reply">
+      <label>Example posts / answers (tune AI style)</label>
+      <textarea id="brandSamples" placeholder="Paste 1-3 example replies or posts that match your voice..." style="min-height:70px;"></textarea>
+      <p style="font-size:0.8rem;color:#64748b;margin:0;">Connect social accounts in <a href="account-hub.html" style="color:#38bdf8;">Linked Accounts</a> after setup.</p>
+    </details>
+    <div class="actions">
+      <button class="btn-primary" id="saveProjectBtn"><i class="fas fa-save"></i> Save &amp; Integrate with AI</button>
+      <button class="btn-secondary" id="step1Next" disabled>Continue to Keywords →</button>
+    </div>
+    <p style="font-size:0.75rem;color:#64748b;margin:0.75rem 0 0;">Save your project first, then continue — or click step 2 above once saved.</p>
+    <p class="progress-msg" id="step1Msg"></p>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="panel" id="step2">
+    <h2>Add Your Keywords &amp; Select your Social Medias</h2>
+    <p class="lead">AI suggests relevant keywords. Add more manually. Select which social platforms to track for each keyword.</p>
+    <button class="btn-secondary" id="aiSuggestBtn" style="margin-bottom:1rem;"><i class="fas fa-magic"></i> AI Suggest Keywords for My Brand</button>
+    <div id="aiSuggestions" class="kw-tags"></div>
+    <label>Add keywords manually (one per line or comma-separated)</label>
+    <textarea id="manualKeywords" placeholder="marketing automation&#10;brand mentions&#10;competitor name"></textarea>
+    <button class="btn-secondary" id="addManualKwBtn">+ Add Keywords</button>
+    <label style="margin-top:1rem;">Default platforms for new keywords</label>
+    <div class="platform-grid" id="platformGrid"></div>
+    <label style="margin-top:1rem;">Your tracked keywords (per-keyword intent, platforms &amp; custom prompt)</label>
+    <div id="keywordList"></div>
+    <label>Default keyword intent for new keywords</label>
+    <select id="defaultKeywordIntent" style="margin-bottom:1rem;">
+      <option value="mentions">Brand Mentions</option>
+      <option value="affiliate">Affiliate Product</option>
+      <option value="client">Client Brand</option>
+      <option value="qa">Q&A Questions</option>
+      <option value="competitor">Competitor Account/Page</option>
+      <option value="partner">Partner Account/Page</option>
+    </select>
+    <label>Custom prompt for replies (optional — applies to all keywords unless overridden)</label>
+    <textarea id="globalCustomPrompt" placeholder="e.g. Always mention our 20% discount code SAVE20 when relevant..."></textarea>
+    <div class="actions">
+      <button class="btn-secondary" id="step2Back">← Back</button>
+      <button class="btn-primary" id="saveKeywordsBtn"><i class="fas fa-save"></i> Save Keywords &amp; Platforms</button>
+      <button class="btn-secondary" id="step2Next" disabled>Continue to Browse Posts →</button>
+    </div>
+    <p class="progress-msg" id="step2Msg"></p>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="panel" id="step3">
+    <h2>Browse Posts Found From Your Chosen Social Medias</h2>
+    <p class="lead">View posts matching your keywords from Reddit, Twitter, and your selected platforms.</p>
+    <details open style="margin-bottom:1rem;">
+      <summary style="cursor:pointer;color:#38bdf8;font-weight:600;margin-bottom:0.75rem;">Advanced Settings — filter post fetching</summary>
+      <div class="filters-row">
+        <select id="feedPlatform"><option value="All">All Platforms</option></select>
+        <select id="feedLanguage"><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option></select>
+        <select id="feedTime"><option value="all">Any Time</option><option value="15m">Last 15m</option><option value="1h">Last 1h</option><option value="24h">Last 24h</option></select>
+        <select id="feedMinEngage"><option value="0">Any Engagement</option><option value="10">&gt;10 Likes</option><option value="100">&gt;100 Likes</option></select>
+        <select id="feedPostType"><option value="all">All Types</option><option value="question">Questions</option><option value="video">Video (heuristic)</option><option value="text">Text Only</option></select>
+        <select id="feedSort"><option value="recent">Newest First</option><option value="engagement">Highest Engagement</option><option value="relevance">AI Match Score</option></select>
+        <input type="text" id="feedExclude" placeholder="Exclude words (comma)">
+        <button class="btn-secondary" id="refreshFeedBtn" style="padding:0.4rem 0.8rem;font-size:0.8rem;"><i class="fas fa-sync"></i> Refresh</button>
+      </div>
+    </details>
+    <div id="feedPreview"><div style="color:#64748b;text-align:center;padding:2rem;">Loading posts...</div></div>
+    <div class="actions">
+      <button class="btn-secondary" id="step3Back">← Back</button>
+      <button class="btn-primary" id="step3Next">Continue to AI Replies →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="panel" id="step4">
+    <h2>Now We Write You AI Replies Mentioning Your Brand</h2>
+    <p class="lead">Each reply is tailored to the post. Use Custom Prompts. Monitor keywords, pages, or accounts to be first to reply.</p>
+    <label>Global Custom Prompt (brand voice &amp; key messages)</label>
+    <div style="display:flex;gap:0.5rem;align-items:flex-start;margin-bottom:0.5rem;">
+      <textarea id="replyCustomPrompt" style="margin-bottom:0;flex:1;" placeholder="Always naturally mention our brand and include our domain. Be helpful first, promotional second..."></textarea>
+      <button type="button" class="btn-secondary" id="aiFillGlobalPromptBtn" style="white-space:nowrap;padding:0.6rem 0.9rem;font-size:0.8rem;"><i class="fas fa-magic"></i> AI Auto-Fill</button>
+    </div>
+    <p id="aiFillPromptStatus" style="font-size:0.78rem;color:#64748b;margin:0 0 1rem;"></p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+      <div>
+        <label>Auto Search — refresh all platforms</label>
+        <select id="autoSearchFrequency">
+          <option value="5m">Every 5 minutes</option>
+          <option value="10m">Every 10 minutes</option>
+          <option value="15m">Every 15 minutes</option>
+          <option value="30m">Every 30 minutes</option>
+          <option value="hourly">Every hour</option>
+          <option value="daily" selected>Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+      <div>
+        <label>Be-First monitors — check frequency</label>
+        <select id="beFirstMonitorFrequency">
+          <option value="5m">Every 5 minutes</option>
+          <option value="10m" selected>Every 10 minutes</option>
+          <option value="15m">Every 15 minutes</option>
+          <option value="30m">Every 30 minutes</option>
+          <option value="hourly">Every hour</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="realtime">Near real-time</option>
+        </select>
+      </div>
+    </div>
+    <label>Be-First Monitor — watch keyword, page, or account (when they post, you get alerted to reply first)</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:0.5rem;align-items:end;">
+      <input type="text" id="watchTerm" placeholder="Keyword, @handle, or page name">
+      <select id="watchType"><option value="keyword">Keyword</option><option value="account">Account / @handle</option><option value="page">Page / Community</option><option value="post">Specific post</option></select>
+      <select id="watchPlatform"><option value="All">All Platforms</option><option value="Twitter">Twitter</option><option value="Reddit">Reddit</option><option value="LinkedIn">LinkedIn</option></select>
+      <button class="btn-secondary" id="addWatchBtn">+ Watch</button>
+    </div>
+    <div class="monitor-list" id="monitorList"></div>
+    <label style="margin-top:1rem;display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+      <input type="checkbox" id="enableWorker" checked style="width:auto;margin:0;">
+      Enable background worker to monitor &amp; auto-draft replies (Be First delay jitter enabled in Auto-Rules)
+    </label>
+    <ul class="checklist">
+      <li><i class="fas fa-check-circle"></i> AI replies include brand, domain, USPs &amp; affiliate info per project/keyword/post custom prompts</li>
+      <li><i class="fas fa-check-circle"></i> Auto-reply, auto-like, share, follow — configure in <a href="rules.html" style="color:#38bdf8;">Auto-Rules</a></li>
+      <li><i class="fas fa-check-circle"></i> Auto Search &amp; Be-First monitors run on your schedule (minutes, hourly, daily, weekly, or monthly)</li>
+      <li><i class="fas fa-check-circle"></i> <strong>View Post</strong> — in-app preview with Reply / Comment / Like on Browse Posts</li>
+    </ul>
+    <div class="actions">
+      <button class="btn-secondary" id="step4Back">← Back</button>
+      <button class="btn-primary" id="finishBtn"><i class="fas fa-check"></i> Finish Setup — Open Dashboard</button>
+    </div>
+    <p class="progress-msg" id="step4Msg"></p>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+const platformCatalog = require('./services/platformCatalog');
+
+const PLATFORMS = platformCatalog.ALL_PLATFORMS;
+const PLATFORM_GROUPS = platformCatalog.PLATFORM_GROUPS;
+
+let currentStep = 1;
+let maxStepReached = 1;
+let draftKeywords = [];
+let campaignId = null;
+let setupStatus = { hasProject: false, hasKeywords: false };
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function hasProjectReady() {
+  return !!(campaignId || setupStatus.hasProject || document.getElementById('brandName').value.trim());
+}
+
+function hasKeywordsReady() {
+  return draftKeywords.length > 0 || setupStatus.hasKeywords;
+}
+
+function canNavigateToStep(n) {
+  if (n < 1 || n > 4) return false;
+  if (n <= maxStepReached) return true;
+  if (n === 1) return true;
+  if (n === 2) return hasProjectReady();
+  if (n === 3 || n === 4) return hasProjectReady() && hasKeywordsReady();
+  return false;
+}
+
+function stepBlockMessage(n) {
+  if (n === 2 && !hasProjectReady()) return 'Save your project on step 1 before continuing to Keywords.';
+  if ((n === 3 || n === 4) && !hasProjectReady()) return 'Complete step 1 (Create Project) first.';
+  if ((n === 3 || n === 4) && !hasKeywordsReady()) return 'Add and save at least one keyword on step 2 before continuing.';
+  return 'Complete the previous step first.';
+}
+
+function updateStepNav() {
+  document.querySelectorAll('.step-pill').forEach((pill) => {
+    const s = parseInt(pill.dataset.step, 10);
+    const unlocked = canNavigateToStep(s);
+    pill.classList.toggle('active', s === currentStep);
+    pill.classList.toggle('done', s < currentStep || (s < maxStepReached && unlocked));
+    pill.classList.toggle('locked', !unlocked);
+    pill.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+  });
+}
+
+function syncStepUrl(n) {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('step', String(n));
+    window.history.replaceState({ step: n }, '', url.pathname + url.search);
+  } catch (e) { /* ignore */ }
+}
+
+function showStep(n, { skipGuard = false } = {}) {
+  const target = Math.min(4, Math.max(1, n));
+  if (!skipGuard && !canNavigateToStep(target)) {
+    alert(stepBlockMessage(target));
+    return false;
+  }
+  currentStep = target;
+  if (target > maxStepReached) maxStepReached = target;
+  document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
+  document.getElementById('step' + target).classList.add('active');
+  updateStepNav();
+  syncStepUrl(target);
+  if (target === 3) loadFeedPreview();
+  if (target === 4) {
+    loadMonitors();
+    maybeAutoFillGlobalPrompt();
+  }
+  return true;
+}
+
+function bindStepNav() {
+  document.querySelectorAll('.step-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const target = parseInt(pill.dataset.step, 10);
+      if (target === currentStep) return;
+      showStep(target);
+    });
+  });
+}
+
+function parseKeywordList(raw) {
+  return String(raw || '').split(/[\r\n,;\t]+/).map((s) => s.trim()).filter(Boolean);
+}
+
+function getSelectedPlatforms() {
+  return Array.from(document.querySelectorAll('#platformGrid input:checked')).map((cb) => cb.value);
+}
+
+function renderKeywordList() {
+  const el = document.getElementById('keywordList');
+  if (!draftKeywords.length) {
+    el.innerHTML = '<span style="color:#64748b;font-size:0.85rem;">No keywords yet — use AI suggest or add manually.</span>';
+    document.getElementById('step2Next').disabled = true;
+    return;
+  }
+  el.innerHTML = draftKeywords.map((k, i) => {
+    const plats = k.platforms?.length ? k.platforms : getSelectedPlatforms();
+    const platHtml = PLATFORMS.map((p) =>
+      `<label><input type="checkbox" data-kw="${i}" data-plat="${p}" ${plats.includes(p) ? 'checked' : ''}> ${p}</label>`
+    ).join('');
+    return `<div class="kw-card" data-idx="${i}">
+      <div class="kw-card-head">
+        <strong>${escapeHtml(k.term)}</strong>
+        <button type="button" class="btn-secondary" data-remove="${i}" style="padding:0.2rem 0.5rem;font-size:0.7rem;">Remove</button>
+      </div>
+      <label style="font-size:0.75rem;">Intent</label>
+      <select data-intent="${i}" style="margin-bottom:0.5rem;font-size:0.8rem;">
+        <option value="mentions" ${k.intent==='mentions'?'selected':''}>Brand Mentions</option>
+        <option value="affiliate" ${k.intent==='affiliate'?'selected':''}>Affiliate Product</option>
+        <option value="client" ${k.intent==='client'?'selected':''}>Client Brand</option>
+        <option value="qa" ${k.intent==='qa'?'selected':''}>Q&A Questions</option>
+        <option value="competitor" ${k.intent==='competitor'?'selected':''}>Competitor</option>
+        <option value="partner" ${k.intent==='partner'?'selected':''}>Partner</option>
+      </select>
+      <div class="plat-mini">${platHtml}</div>
+      <label style="font-size:0.75rem;">Custom prompt override (optional)</label>
+      <textarea data-prompt="${i}" placeholder="e.g. Emphasize pricing when this keyword appears...">${escapeHtml(k.customPrompt || '')}</textarea>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-remove]').forEach((btn) => {
+    btn.onclick = () => { draftKeywords.splice(parseInt(btn.dataset.remove, 10), 1); renderKeywordList(); };
+  });
+  el.querySelectorAll('[data-intent]').forEach((sel) => {
+    sel.onchange = () => { draftKeywords[parseInt(sel.dataset.intent, 10)].intent = sel.value; };
+  });
+  el.querySelectorAll('[data-prompt]').forEach((ta) => {
+    ta.oninput = () => { draftKeywords[parseInt(ta.dataset.prompt, 10)].customPrompt = ta.value.trim(); };
+  });
+  el.querySelectorAll('[data-kw]').forEach((cb) => {
+    cb.onchange = () => {
+      const kw = draftKeywords[parseInt(cb.dataset.kw, 10)];
+      if (!kw.platforms) kw.platforms = [...getSelectedPlatforms()];
+      if (cb.checked && !kw.platforms.includes(cb.dataset.plat)) kw.platforms.push(cb.dataset.plat);
+      else if (!cb.checked) kw.platforms = kw.platforms.filter((p) => p !== cb.dataset.plat);
+    };
+  });
+  document.getElementById('step2Next').disabled = false;
+  if (hasProjectReady() && maxStepReached < 3) maxStepReached = 3;
+  updateStepNav();
+}
+
+function renderPlatformGrid() {
+  const grid = document.getElementById('platformGrid');
+  const feedPlat = document.getElementById('feedPlatform');
+  if (feedPlat) {
+    feedPlat.innerHTML = '<option value="All">All Platforms</option>'
+      + PLATFORMS.map((p) => `<option value="${p}">${p}</option>`).join('');
+  }
+  const defaults = ['Twitter', 'LinkedIn', 'Reddit', 'Facebook', 'Instagram', 'YouTube'];
+  grid.innerHTML = PLATFORM_GROUPS.map((group) => {
+    const chips = group.platforms.map((p) => {
+      const checked = defaults.includes(p) ? 'checked' : '';
+      const meta = platformCatalog.getPlatformMeta(p);
+      const note = meta.note ? ` <span style="font-size:0.65rem;opacity:0.6;">(${meta.note})</span>` : '';
+      const label = platformCatalog.getPlatformDisplayName(p);
+      return `<label class="platform-chip ${checked ? 'selected' : ''}"><input type="checkbox" value="${p}" ${checked}> ${label}${note}</label>`;
+    }).join('');
+    return `<div style="grid-column:1/-1;margin-bottom:0.25rem;"><div style="font-size:0.7rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:0.35rem;">${group.label}</div><div style="display:contents;">${chips}</div></div>`;
+  }).join('');
+  grid.querySelectorAll('.platform-chip').forEach((chip) => {
+    chip.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const cb = chip.querySelector('input');
+      cb.checked = !cb.checked;
+      chip.classList.toggle('selected', cb.checked);
+    });
+    chip.querySelector('input').addEventListener('change', () => {
+      chip.classList.toggle('selected', chip.querySelector('input').checked);
+    });
+  });
+}
+
+document.getElementById('saveProjectBtn').addEventListener('click', async () => {
+  const brand = document.getElementById('brandName').value.trim();
+  const domain = document.getElementById('brandDomain').value.trim();
+  const desc = document.getElementById('brandDesc').value.trim();
+  if (!brand || !domain || !desc) return alert('Brand name, domain, and description are required.');
+  let camps = await ipcRenderer.invoke('get-settings') || [];
+  campaignId = 'camp_' + Date.now();
+  const existing = await ipcRenderer.invoke('get-active-campaign');
+  if (existing?.id) campaignId = existing.id;
+  const camp = {
+    id: campaignId,
+    brandName: brand,
+    domain,
+    description: desc,
+    tone: document.getElementById('brandTone')?.value || 'professional',
+    audience: document.getElementById('brandAudience')?.value.trim() || 'Professionals and decision makers',
+    affiliateLinks: document.getElementById('brandAffiliate')?.value.trim() || '',
+    disallowedTopics: document.getElementById('brandDisallowed')?.value.trim() || '',
+    sampleMessages: document.getElementById('brandSamples')?.value.trim() || '',
+    brandGuidelines: {
+      doList: document.getElementById('brandDoList')?.value.trim() || '',
+      dontList: document.getElementById('brandDontList')?.value.trim() || '',
+      sampleMessages: document.getElementById('brandSamples')?.value.trim() || '',
+    },
+    status: 'Running',
+  };
+  const idx = camps.findIndex((c) => c.id === campaignId);
+  if (idx >= 0) camps[idx] = { ...camps[idx], ...camp };
+  else camps.push(camp);
+  await ipcRenderer.invoke('save-settings', camps);
+  await ipcRenderer.invoke('set-active-campaign', campaignId);
+  document.getElementById('step1Msg').textContent = 'Project saved — AI is now integrated with your brand profile.';
+  document.getElementById('step1Next').disabled = false;
+  setupStatus.hasProject = true;
+  if (maxStepReached < 2) maxStepReached = 2;
+  updateStepNav();
+});
+
+document.getElementById('step1Next').addEventListener('click', () => {
+  if (!hasProjectReady()) {
+    alert('Save your project first using "Save & Integrate with AI".');
+    return;
+  }
+  showStep(2);
+});
+
+document.getElementById('aiSuggestBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('aiSuggestBtn');
+  btn.disabled = true;
+  btn.textContent = 'Fetching AI keywords...';
+  const active = await ipcRenderer.invoke('get-active-campaign');
+  const res = await ipcRenderer.invoke('generate-keywords', active);
+  const kws = Array.isArray(res) ? res : (res.keywords || []);
+  const el = document.getElementById('aiSuggestions');
+  el.innerHTML = kws.slice(0, 12).map((k) => {
+    const term = typeof k === 'string' ? k : k.term;
+    return `<button class="btn-secondary" style="font-size:0.75rem;padding:0.3rem 0.6rem;" data-term="${escapeHtml(term)}">+ ${escapeHtml(term)}</button>`;
+  }).join('') || '<span style="color:#94a3b8;">No suggestions — add keywords manually.</span>';
+  el.querySelectorAll('button[data-term]').forEach((b) => {
+    b.onclick = () => {
+      const term = b.dataset.term;
+      if (!draftKeywords.some((k) => k.term.toLowerCase() === term.toLowerCase())) {
+        draftKeywords.push({ term, platforms: getSelectedPlatforms(), intent: document.getElementById('defaultKeywordIntent')?.value || 'mentions', customPrompt: '' });
+        renderKeywordList();
+      }
+    };
+  });
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-magic"></i> AI Suggest Keywords for My Brand';
+});
+
+document.getElementById('addManualKwBtn').addEventListener('click', () => {
+  const terms = parseKeywordList(document.getElementById('manualKeywords').value);
+  const plats = getSelectedPlatforms();
+  terms.forEach((term) => {
+    if (!draftKeywords.some((k) => k.term.toLowerCase() === term.toLowerCase())) {
+      draftKeywords.push({ term, platforms: plats, intent: document.getElementById('defaultKeywordIntent')?.value || 'mentions', customPrompt: document.getElementById('globalCustomPrompt').value.trim() });
+    }
+  });
+  document.getElementById('manualKeywords').value = '';
+  renderKeywordList();
+});
+
+document.getElementById('saveKeywordsBtn').addEventListener('click', async () => {
+  if (!draftKeywords.length) return alert('Add at least one keyword.');
+  const plats = getSelectedPlatforms();
+  const globalPrompt = document.getElementById('globalCustomPrompt').value.trim();
+  draftKeywords = draftKeywords.map((k) => ({
+    ...k,
+    platforms: k.platforms?.length ? k.platforms : plats,
+    customPrompt: k.customPrompt || globalPrompt,
+  }));
+  const active = await ipcRenderer.invoke('get-active-campaign');
+  await ipcRenderer.invoke('save-keywords', { campaignId: active.id, keywords: draftKeywords });
+  document.getElementById('step2Msg').textContent = `Saved ${draftKeywords.length} keyword(s) across ${plats.length} platform(s).`;
+  document.getElementById('step2Next').disabled = false;
+  setupStatus.hasKeywords = true;
+  if (maxStepReached < 3) maxStepReached = 3;
+  updateStepNav();
+});
+
+document.getElementById('step2Back').addEventListener('click', () => showStep(1));
+document.getElementById('step2Next').addEventListener('click', () => {
+  if (!draftKeywords.length) {
+    alert('Add at least one keyword, or save keywords before continuing.');
+    return;
+  }
+  showStep(3);
+});
+document.getElementById('step3Back').addEventListener('click', () => showStep(2));
+document.getElementById('step3Next').addEventListener('click', () => showStep(4));
+document.getElementById('step4Back').addEventListener('click', () => showStep(3));
+
+async function loadFeedPreview() {
+  const container = document.getElementById('feedPreview');
+  container.innerHTML = '<div style="color:#38bdf8;text-align:center;padding:1rem;">Fetching live posts...</div>';
+  const sortMap = { 'Newest First': 'recent', 'Highest Engagement': 'engagement', 'AI Match Score': 'relevance' };
+  let sort = document.getElementById('feedSort').value;
+  const filters = {
+    platform: document.getElementById('feedPlatform').value,
+    sort,
+    time: document.getElementById('feedTime').value,
+  };
+  let posts = await ipcRenderer.invoke('get-live-feed', filters) || [];
+  const exclude = document.getElementById('feedExclude').value.toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
+  const timeFilter = document.getElementById('feedTime').value;
+  const minEng = parseInt(document.getElementById('feedMinEngage')?.value || '0', 10);
+  const postType = document.getElementById('feedPostType')?.value || 'all';
+  const now = Date.now();
+  const timeLimits = { '15m': 15 * 60 * 1000, '1h': 3600000, '24h': 86400000 };
+  posts = posts.filter((p) => {
+    if (exclude.length && exclude.some((w) => (p.content || '').toLowerCase().includes(w))) return false;
+    if (timeFilter !== 'all' && timeLimits[timeFilter] && p.createdAt && now - p.createdAt > timeLimits[timeFilter]) return false;
+    if (minEng > 0 && (p.stats?.likes || 0) < minEng) return false;
+    if (postType === 'question' && !(p.content || '').includes('?')) return false;
+    if (postType === 'video' && !(p.content || '').toLowerCase().includes('[media]') && !(p.content || '').toLowerCase().includes('video')) return false;
+    if (postType === 'text' && ((p.content || '').includes('[Media]') || (p.content || '').toLowerCase().includes('video'))) return false;
+    return true;
+  });
+  if (sort === 'engagement') posts.sort((a, b) => (b.stats?.likes || 0) - (a.stats?.likes || 0));
+  else if (sort === 'relevance') posts.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+  else if (sort === 'recent' && posts[0]?.createdAt) posts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  if (!posts.length) {
+    container.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:2rem;">No posts yet. Reddit works without API keys; Twitter needs keys in Settings. Try refreshing after saving keywords.</div>';
+    return;
+  }
+  container.innerHTML = posts.slice(0, 8).map((p) => `
+    <div class="post-card" data-content="${escapeHtml((p.content||'').substring(0,200))}" data-kw="${escapeHtml(p.matchedKeyword||'')}" data-url="${escapeHtml(p.url||'')}">
+      <div class="meta"><strong>${escapeHtml(p.platform)}</strong> · ${escapeHtml(p.author)} · ${escapeHtml(p.matchedKeyword ? 'Keyword: '+p.matchedKeyword : '')}</div>
+      <div>${escapeHtml((p.content||'').substring(0, 280))}</div>
+      <div class="post-actions">
+        <button class="btn-primary btn-draft" style="font-size:0.75rem;">Draft AI Reply</button>
+        <button class="btn-secondary btn-view-post" style="font-size:0.75rem;"><i class="fas fa-external-link-alt"></i> View Post</button>
+        <button class="btn-secondary btn-be-first" style="font-size:0.75rem;border-color:#a78bfa;color:#c4b5fd;">Be First (Watch)</button>
+      </div>
+      <div class="ai-reply-box"></div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.btn-view-post').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.post-card');
+      const url = card.dataset.url;
+      if (url) require('electron').shell.openExternal(url);
+      else alert('No direct URL — open Dashboard for full feed.');
+    });
+  });
+  container.querySelectorAll('.btn-be-first').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('.post-card');
+      const mons = await ipcRenderer.invoke('get-watched-monitors').catch(() => []);
+      mons.push({
+        term: card.dataset.kw || card.dataset.content.split(' ').slice(0, 4).join(' '),
+        platform: card.querySelector('.meta strong')?.textContent || 'All',
+        target: 'post',
+        type: 'post',
+        url: card.dataset.url,
+        added: new Date().toISOString(),
+      });
+      await ipcRenderer.invoke('save-watched-monitors', mons);
+      alert('Added to Be-First monitors. Worker will alert you to reply first when matching posts appear.');
+    });
+  });
+  container.querySelectorAll('.btn-draft').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('.post-card');
+      const box = card.querySelector('.ai-reply-box');
+      box.style.display = 'block';
+      box.innerHTML = '<span style="color:#38bdf8;">Generating tailored reply...</span>';
+      const custom = document.getElementById('globalCustomPrompt')?.value || '';
+      const reply = await ipcRenderer.invoke('draft-post-reply', {
+        postContent: card.dataset.content,
+        matchedKeyword: card.dataset.kw,
+        oneTimeOverride: custom || undefined,
+      });
+      box.innerHTML = `<strong style="color:#34d399;">AI Reply (mentions your brand):</strong><p style="margin:0.5rem 0;line-height:1.5;">${escapeHtml(reply)}</p>`;
+    });
+  });
+}
+
+document.getElementById('refreshFeedBtn').addEventListener('click', loadFeedPreview);
+
+async function loadMonitors() {
+  const mons = await ipcRenderer.invoke('get-watched-monitors').catch(() => []);
+  const el = document.getElementById('monitorList');
+  if (!mons.length) {
+    el.innerHTML = '<div style="color:#64748b;font-size:0.85rem;">No monitors yet — add a keyword, @account, or page above.</div>';
+    return;
+  }
+  el.innerHTML = mons.map((m, i) => `
+    <div class="monitor-item">
+      <span>${escapeHtml(m.type || m.target || 'keyword')}: <strong>${escapeHtml(m.term)}</strong> on ${escapeHtml(m.platform || 'All')}</span>
+      <button class="btn-secondary" style="padding:0.2rem 0.5rem;font-size:0.7rem;" data-i="${i}">Remove</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('button').forEach((btn) => {
+    btn.onclick = async () => {
+      const list = await ipcRenderer.invoke('get-watched-monitors');
+      list.splice(parseInt(btn.dataset.i, 10), 1);
+      await ipcRenderer.invoke('save-watched-monitors', list);
+      loadMonitors();
+    };
+  });
+}
+
+function syncGlobalPromptFields(text) {
+  const val = text || '';
+  const reply = document.getElementById('replyCustomPrompt');
+  const global = document.getElementById('globalCustomPrompt');
+  if (reply) reply.value = val;
+  if (global) global.value = val;
+}
+
+document.getElementById('replyCustomPrompt')?.addEventListener('input', (e) => {
+  const g = document.getElementById('globalCustomPrompt');
+  if (g) g.value = e.target.value;
+});
+document.getElementById('globalCustomPrompt')?.addEventListener('input', (e) => {
+  const r = document.getElementById('replyCustomPrompt');
+  if (r) r.value = e.target.value;
+});
+
+let globalPromptAutoFillDone = false;
+
+async function runGlobalPromptAutoFill({ silent = false } = {}) {
+  const btn = document.getElementById('aiFillGlobalPromptBtn');
+  const status = document.getElementById('aiFillPromptStatus');
+  const ta = document.getElementById('replyCustomPrompt');
+  if (!ta || ta.value.trim()) return false;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…'; }
+  if (status) {
+    status.textContent = silent
+      ? 'AI is auto-creating your global brand voice prompt…'
+      : 'AI is building your brand voice prompt from project, keywords, and monitors…';
+  }
+  try {
+    const res = await ipcRenderer.invoke('generate-global-custom-prompt');
+    if (res.success && res.prompt) {
+      syncGlobalPromptFields(res.prompt);
+      if (status) {
+        status.textContent = silent
+          ? 'Global custom prompt auto-filled — review and finish setup.'
+          : 'Global custom prompt ready — edit if needed, then finish setup.';
+      }
+      return true;
+    }
+    if (status) status.textContent = 'AI fill failed: ' + (res.error || 'Add Gemini/OpenRouter key in Settings.');
+  } catch (e) {
+    if (status) status.textContent = 'Error: ' + e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic"></i> AI Auto-Fill'; }
+  }
+  return false;
+}
+
+function maybeAutoFillGlobalPrompt() {
+  const ta = document.getElementById('replyCustomPrompt');
+  if (!ta || ta.value.trim() || globalPromptAutoFillDone) return;
+  globalPromptAutoFillDone = true;
+  runGlobalPromptAutoFill({ silent: true });
+}
+
+document.getElementById('aiFillGlobalPromptBtn')?.addEventListener('click', () => runGlobalPromptAutoFill());
+
+document.getElementById('addWatchBtn').addEventListener('click', async () => {
+  const term = document.getElementById('watchTerm').value.trim();
+  if (!term) return alert('Enter a keyword, @handle, or page to watch.');
+  const mons = await ipcRenderer.invoke('get-watched-monitors').catch(() => []);
+  mons.push({
+    term,
+    platform: document.getElementById('watchPlatform').value,
+    type: document.getElementById('watchType').value,
+    target: document.getElementById('watchType').value,
+    added: new Date().toISOString(),
+  });
+  await ipcRenderer.invoke('save-watched-monitors', mons);
+  document.getElementById('watchTerm').value = '';
+  loadMonitors();
+});
+
+document.getElementById('finishBtn').addEventListener('click', async () => {
+  const custom = document.getElementById('replyCustomPrompt').value.trim();
+  const autoSearchFreq = document.getElementById('autoSearchFrequency')?.value || 'daily';
+  const beFirstFreq = document.getElementById('beFirstMonitorFrequency')?.value || '10m';
+  const workerOn = document.getElementById('enableWorker').checked;
+
+  const rules = await ipcRenderer.invoke('get-auto-rules').catch(() => ({}));
+  await ipcRenderer.invoke('save-auto-rules', {
+    ...rules,
+    customRulePrompt: custom,
+    enabled: workerOn,
+    realTimeMonitoringEnabled: true,
+    beFirstDelay: true,
+    oneClickAutoSearchEnabled: true,
+    autoSearchFrequency: autoSearchFreq,
+    beFirstMonitorFrequency: beFirstFreq,
+    frequency: beFirstFreq,
+  });
+  await ipcRenderer.invoke('save-auto-search-settings', {
+    dailyEnabled: true,
+    frequency: autoSearchFreq,
+    beFirstMonitorFrequency: beFirstFreq,
+  });
+
+  if (workerOn) {
+    await ipcRenderer.invoke('start-worker').catch(() => {});
+  }
+  await ipcRenderer.invoke('set-onboarding-complete', true);
+  window.location.href = 'dashboard.html';
+});
+
+(async function init() {
+  renderPlatformGrid();
+  bindStepNav();
+  const params = new URLSearchParams(location.search);
+  const step = parseInt(params.get('step') || '1', 10);
+  const status = await ipcRenderer.invoke('get-setup-status');
+  setupStatus = { hasProject: status.hasProject, hasKeywords: status.hasKeywords };
+  maxStepReached = Math.max(1, status.nextStep || 1, step);
+  if (status.campaign) {
+    const c = status.campaign;
+    document.getElementById('brandName').value = c.brandName || '';
+    document.getElementById('brandDomain').value = c.domain || '';
+    document.getElementById('brandDesc').value = c.description || '';
+    if (document.getElementById('brandTone')) document.getElementById('brandTone').value = c.tone || 'professional';
+    if (document.getElementById('brandAudience')) document.getElementById('brandAudience').value = c.audience || '';
+    if (document.getElementById('brandAffiliate')) document.getElementById('brandAffiliate').value = c.affiliateLinks || '';
+    if (document.getElementById('brandDisallowed')) document.getElementById('brandDisallowed').value = c.disallowedTopics || '';
+    if (document.getElementById('brandSamples')) document.getElementById('brandSamples').value = c.sampleMessages || c.brandGuidelines?.sampleMessages || '';
+    if (document.getElementById('brandDoList')) document.getElementById('brandDoList').value = c.brandGuidelines?.doList || '';
+    if (document.getElementById('brandDontList')) document.getElementById('brandDontList').value = c.brandGuidelines?.dontList || '';
+    campaignId = c.id;
+    if (status.hasProject) {
+      document.getElementById('step1Next').disabled = false;
+      maxStepReached = Math.max(maxStepReached, 2);
+    }
+  }
+  if (status.keywords?.length) {
+    draftKeywords = status.keywords.map((k) => ({
+      term: k.term,
+      platforms: k.platforms || ['Twitter', 'Reddit'],
+      intent: k.intent || 'mentions',
+      customPrompt: k.customPrompt || '',
+    }));
+    renderKeywordList();
+    document.getElementById('step2Next').disabled = false;
+    maxStepReached = Math.max(maxStepReached, 3);
+  }
+  const rules = await ipcRenderer.invoke('get-auto-rules').catch(() => ({}));
+  if (rules.customRulePrompt) syncGlobalPromptFields(rules.customRulePrompt);
+  const searchSettings = await ipcRenderer.invoke('get-auto-search-settings').catch(() => ({}));
+  if (searchSettings.frequency && document.getElementById('autoSearchFrequency')) {
+    document.getElementById('autoSearchFrequency').value = searchSettings.frequency;
+  }
+  if (document.getElementById('beFirstMonitorFrequency')) {
+    document.getElementById('beFirstMonitorFrequency').value =
+      rules.beFirstMonitorFrequency || searchSettings.beFirstMonitorFrequency || '10m';
+  }
+  if (status.onboardingComplete) maxStepReached = 4;
+  const initialStep = Math.min(4, Math.max(1, step || status.nextStep || 1));
+  showStep(initialStep, { skipGuard: true });
+})();
+</script>
+</div>
+</body>
+</html>

@@ -1,0 +1,1388 @@
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
+require('dotenv').config();
+const axios = require('axios');
+const path = require('path');
+const fs = require('fs');
+
+// Register custom protocol for OAuth redirects
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('social-imperialism', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('social-imperialism');
+}
+
+const dataPath = app.getPath('userData');
+if (!fs.existsSync(dataPath)) {
+  fs.mkdirSync(dataPath, { recursive: true });
+}
+const { LocalStorage } = require('node-localstorage');
+const store = new LocalStorage(path.join(dataPath, 'storage'));
+
+// Centralized AI logic - allow user to choose between Google Gemini, OpenAI, or Azure OpenAI
+// For now, default to Gemini if available, otherwise OpenAI
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY_1;
+const NEWS_API_KEY = process.env.NEWS_API_KEY;
+const WEATHER_API_KEY = process.env.OPENWEATHERMAP_API_KEY;
+
+// Fallback to Global Settings UI if missing from .env
+function getGlobalKey(keyName) {
+  const globalKeysData = store.getItem('globalApiKeys');
+  if (globalKeysData) {
+      try { 
+        const parsed = JSON.parse(globalKeysData); 
+        return parsed[keyName] || null;
+      } catch(e) {}
+  }
+  return null;
+}
+
+// IPC Handlers to expose real external data to the frontend Dashboard
+ipcMain.handle('get-live-weather', async (event, city = "New York") => {
+  if (!WEATHER_API_KEY) return { error: "No Weather API Key" };
+  try {
+    const res = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${WEATHER_API_KEY}&units=imperial`);
+    return res.data;
+  } catch(e) {
+    console.error("Weather error:", e.message);
+    return { error: e.message };
+  }
+});
+
+ipcMain.handle('get-live-news', async (event, query = "technology") => {
+  if (!NEWS_API_KEY) return { error: "No News API Key" };
+  try {
+    // 1. Fetch raw top headlines from NewsAPI
+    const res = await axios.get(`https://newsapi.org/v2/top-headlines?category=${query}&language=en&apiKey=${NEWS_API_KEY}&pageSize=10`);
+    
+    if (!res.data || !res.data.articles || res.data.articles.length === 0) {
+       return { error: "No news found" };
+    }
+    
+    // 2. Ask AI to curate and summarize the most important 3 items for a business owner
+    const headlinesText = res.data.articles.map(a => `- ${a.title} (Source: ${a.source.name})\n  URL: ${a.url}`).join('\n');
+    
+    const prompt = `
+    You are an expert tech and business news curator.
+    Here are the top raw headlines right now:
+    ${headlinesText}
+    
+    Select the top 3 most impactful news items.
+    Format your response EXACTLY as a JSON array of objects, with no markdown formatting outside of it.
+    Example format:
+    [
+      { "title": "Headline 1", "source": "Source Name", "url": "https://...", "summary": "1 sentence explanation." },
+      { "title": "Headline 2", "source": "Source Name", "url": "https://...", "summary": "1 sentence explanation." }
+    ]
+    `;
+    
+    const aiResponse = await generateAI(prompt);
+    let cleanJson = aiResponse.trim();
+    if(cleanJson.startsWith('```json')) cleanJson = cleanJson.substring(7);
+    if(cleanJson.endsWith('```')) cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+    
+    return { articles: JSON.parse(cleanJson.trim()) };
+  } catch(e) {
+    console.error("News error:", e.message);
+    return { error: e.message };
+  }
+});
+
+ipcMain.handle('get-trending-topics', async (event, platform = 'Twitter') => {
+  try {
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const prompt = `
+    You are an advanced social media intelligence AI. Today's date is ${today}.
+    Generate a list of exactly 6 highly current, breaking, and relevant trending topics, keywords, or hashtags specifically optimized for the ${platform} platform right now.
+    For each topic, provide a realistic estimated "searchVolume" (integer, e.g. 45000) and a "momentum" percentage string (e.g. "+45%").
+    Return ONLY a JSON array of objects, nothing else. Example:
+    [
+      { "topic": "#TechNews", "searchVolume": 120500, "momentum": "+65%" },
+      { "topic": "Artificial Intelligence", "searchVolume": 89000, "momentum": "+22%" }
+    ]
+    `;
+    
+    const resultText = await generateAI(prompt);
+    let text = resultText.trim();
+    if(text.startsWith('```json')) text = text.substring(7);
+    if(text.endsWith('```')) text = text.substring(0, text.length - 3);
+    
+    return JSON.parse(text.trim());
+  } catch(e) {
+    console.error("Trending Topics error:", e.message);
+    return [
+      { "topic": "#BreakingNews", "searchVolume": 50000, "momentum": "+10%" },
+      { "topic": "#Technology", "searchVolume": 45000, "momentum": "+15%" },
+      { "topic": "#AI", "searchVolume": 60000, "momentum": "+25%" },
+      { "topic": "#Innovation", "searchVolume": 30000, "momentum": "+5%" },
+      { "topic": "#Crypto", "searchVolume": 70000, "momentum": "+40%" },
+      { "topic": "#Startups", "searchVolume": 25000, "momentum": "+12%" }
+    ];
+  }
+});
+
+ipcMain.handle('analyze-topic', async (event, payload) => {
+  const { topic, platform, brandName, audience } = payload;
+  try {
+    const today = new Date().toLocaleDateString('en-US');
+    const prompt = `
+    You are an expert Social Media Data Analyst. Today is ${today}.
+    A user clicked on the trending topic/hashtag "${topic}" on ${platform}.
+    
+    You need to generate a structured analysis including text and realistic mocked chart data.
+    
+    Provide EXACTLY a JSON object with the following structure (no markdown tags outside):
+    {
+      "textAnalysis": "Brief 3 sentence analysis of why it's trending, who is engaging, and how the brand '${brandName}' (targeting '${audience}') can capitalize on it.",
+      "demographics": {
+        "labels": ["Gen Z (18-24)", "Millennials (25-34)", "Gen X (35-44)", "Boomers (45+)"],
+        "data": [40, 35, 15, 10] // Must sum to 100
+      },
+      "projection": {
+        "labels": ["Now", "+6h", "+12h", "+24h", "+48h"],
+        "data": [100, 150, 200, 80, 30] // Projected engagement volume over time
+      }
+    }
+    `;
+    
+    const resultText = await generateAI(prompt);
+    let cleanJson = resultText.trim();
+    if(cleanJson.startsWith('```json')) cleanJson = cleanJson.substring(7);
+    if(cleanJson.endsWith('```')) cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+    
+    return { success: true, analysis: JSON.parse(cleanJson.trim()) };
+  } catch (error) {
+    console.error("Topic Analysis error:", error.message);
+    return { error: error.message };
+  }
+});
+
+// DomDetailer API Handler
+ipcMain.handle('get-domain-metrics', async (event, domain) => {
+  let domKey = getGlobalKey('domDetailer');
+  
+  // Quick fix: the user provided a hardcoded key in the prompt to use if the user hasn't explicitly set it via settings yet
+  if (!domKey) domKey = 'ERCHSWC16KHS6'; 
+  
+  if (!domKey) return { error: "No DomDetailer API Key configured." };
+  
+  if (!domain) return { error: "No domain provided by active campaign." };
+
+  try {
+    const url = `http://domdetailer.com/api/checkDomain.php?domain=${encodeURIComponent(domain)}&app=SocialImperialism&apikey=${encodeURIComponent(domKey)}`;
+    const response = await axios.get(url);
+    
+    // The API might return an object with an error string or valid stats
+    if (response.data.error || response.data.error_message) {
+       return { error: response.data.error || response.data.error_message };
+    }
+    
+    return { success: true, data: response.data };
+  } catch (e) {
+    console.error("DomDetailer API Error:", e.message);
+    return { error: e.message };
+  }
+});
+
+// Dynamically fetch the latest model version to prevent falling behind
+let latestModelName = "gemini-1.5-pro"; // fallback
+
+async function checkLatestModel() {
+  const geminiKey = getGlobalKey('gemini') || GEMINI_API_KEY;
+  if (!geminiKey) return;
+  try {
+    const response = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
+    const modelsResponse = response.data.models;
+    let proModels = [];
+    for (const m of modelsResponse) {
+      if (m.name.includes('gemini') && m.name.includes('pro') && !m.name.includes('vision') && !m.name.includes('experimental')) {
+        proModels.push(m.name.replace('models/', ''));
+      }
+    }
+    
+    if (proModels.length > 0) {
+      proModels.sort((a, b) => {
+        const matchA = a.match(/gemini-(\d+\.\d+)-pro/);
+        const matchB = b.match(/gemini-(\d+\.\d+)-pro/);
+        
+        const verA = matchA ? parseFloat(matchA[1]) : 0;
+        const verB = matchB ? parseFloat(matchB[1]) : 0;
+        
+        if (verA !== verB) {
+            return verB - verA; 
+        }
+        
+        if (a.includes('preview') && !b.includes('preview')) return 1;
+        if (!a.includes('preview') && b.includes('preview')) return -1;
+        
+        return 0;
+      });
+      
+      latestModelName = proModels[0];
+      console.log(`Auto-selected latest model: ${latestModelName}`);
+    }
+  } catch(e) {
+    console.error("Failed to fetch latest model, using fallback:", latestModelName);
+  }
+}
+
+// Check models immediately on boot
+checkLatestModel();
+
+// Function to call AI (can route to OpenAI or Gemini based on keys)
+async function generateAI(prompt) {
+  const geminiKey = getGlobalKey('gemini') || GEMINI_API_KEY;
+  const openaiKey = getGlobalKey('openai') || OPENAI_API_KEY;
+  
+  // Try OpenAI first if present
+  if (openaiKey && process.env.USE_OPENAI === "true") {
+      try {
+          const res = await axios.post('https://api.openai.com/v1/chat/completions', {
+              model: "gpt-4o",
+              messages: [{ role: "user", content: prompt }]
+          }, {
+              headers: {
+                  'Authorization': `Bearer ${openaiKey}`,
+                  'Content-Type': 'application/json'
+              }
+          });
+          return res.data.choices[0].message.content;
+      } catch (e) {
+          console.error("OpenAI Error:", e.response ? e.response.data : e.message);
+      }
+  }
+  
+  // Default to Gemini
+  if (!geminiKey) throw new Error("No AI API Keys configured. Please add one in Settings > API Integrations.");
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${latestModelName}:generateContent?key=${geminiKey}`;
+    const data = {
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }]
+    };
+    
+    const response = await axios.post(url, data, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.data && response.data.candidates && response.data.candidates.length > 0) {
+      return response.data.candidates[0].content.parts[0].text;
+    }
+    throw new Error("Invalid response format from Gemini API");
+  } catch (error) {
+    console.error("Gemini Generation Error:", error.response ? error.response.data : error.message);
+    throw error;
+  }
+}
+
+// IPC handlers for saving/loading settings
+ipcMain.handle('save-settings', (event, data) => {
+  // Save as a full array of campaigns
+  store.setItem('campaigns', JSON.stringify(data));
+  return { success: true };
+});
+
+ipcMain.handle('set-active-campaign', (event, campaignId) => {
+  store.setItem('activeCampaignId', campaignId);
+  return { success: true };
+});
+
+ipcMain.handle('save-global-keys', (event, keys) => {
+  store.setItem('globalApiKeys', JSON.stringify(keys));
+  return true;
+});
+
+ipcMain.handle('get-global-keys', (event) => {
+  const data = store.getItem('globalApiKeys');
+  if (data) {
+    try { return JSON.parse(data); } catch(e) {}
+  }
+  return null;
+});
+
+ipcMain.handle('get-active-campaign', (event) => {
+  const activeId = store.getItem('activeCampaignId');
+  const data = store.getItem('campaigns');
+  let campaigns = [];
+  if (data) {
+    try { campaigns = JSON.parse(data); } catch(e) {}
+  }
+  
+  if (campaigns.length === 0) return null;
+  
+  if (activeId) {
+    const found = campaigns.find(c => c.id === activeId);
+    if (found) return found;
+  }
+  
+  // Default to first if none set
+  store.setItem('activeCampaignId', campaigns[0].id);
+  return campaigns[0];
+});
+
+ipcMain.handle('get-settings', (event) => {
+  const data = store.getItem('campaigns');
+  if (data) {
+    try { return JSON.parse(data); } catch(e) {}
+  }
+  
+  // Check if old singular setting exists and migrate it
+  const oldData = store.getItem('brandSettings');
+  if (oldData) {
+    try { 
+      const parsed = JSON.parse(oldData);
+      parsed.id = 'camp_' + Date.now();
+      return [parsed];
+    } catch(e) {}
+  }
+
+  // Return default mock campaigns if empty
+  return [
+    {
+      id: 'camp_1',
+      brandName: 'Acme Corp Main',
+      domain: 'acme.com',
+      description: 'Enterprise software solutions',
+      tone: 'professional',
+      audience: 'B2B Executives',
+      status: 'Running'
+    },
+    {
+      id: 'camp_2',
+      brandName: 'Neon Marketing (Client)',
+      domain: 'neon.io',
+      description: 'Creative digital agency',
+      tone: 'enthusiastic',
+      audience: 'Startups & Founders',
+      status: 'Paused'
+    }
+  ];
+});
+
+ipcMain.handle('save-fetch-profile', (event, profileData) => {
+  const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  const profilesKey = `fetchProfiles_${activeCampaignId}`;
+  
+  let profiles = [];
+  const data = store.getItem(profilesKey);
+  if (data) {
+    try { profiles = JSON.parse(data); } catch(e) {}
+  }
+  
+  // If editing an existing profile, remove it first
+  if (profileData.id) {
+    profiles = profiles.filter(p => p.id !== profileData.id);
+  } else {
+    profileData.id = 'prof_' + Date.now();
+  }
+  
+  profiles.push(profileData);
+  store.setItem(profilesKey, JSON.stringify(profiles));
+  return profiles;
+});
+
+ipcMain.handle('get-fetch-profiles', (event) => {
+  const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  const profilesKey = `fetchProfiles_${activeCampaignId}`;
+  
+  const data = store.getItem(profilesKey);
+  if (data) {
+    try { return JSON.parse(data); } catch(e) {}
+  }
+  return [];
+});
+
+ipcMain.handle('delete-fetch-profile', (event, profileId) => {
+  const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  const profilesKey = `fetchProfiles_${activeCampaignId}`;
+  
+  let profiles = [];
+  const data = store.getItem(profilesKey);
+  if (data) {
+    try { profiles = JSON.parse(data); } catch(e) {}
+  }
+  
+  profiles = profiles.filter(p => p.id !== profileId);
+  store.setItem(profilesKey, JSON.stringify(profiles));
+  return profiles;
+});
+
+ipcMain.handle('get-simulated-feed', async (event, filters = {}) => {
+  const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  
+  const data = store.getItem('campaigns');
+  let campaigns = [];
+  if (data) {
+    try { campaigns = JSON.parse(data); } catch(e) {}
+  }
+  
+  let activeCampaign = campaigns.find(c => c.id === activeCampaignId) || {};
+  let brandName = activeCampaign.brandName || "your brand";
+  let audience = activeCampaign.audience || "professionals";
+  
+  // Pull Keywords mapped to this active campaign
+  let trackedKeywords = [];
+  try {
+     const kwData = store.getItem('keywords');
+     if(kwData) {
+         const allKws = JSON.parse(kwData);
+         trackedKeywords = allKws.filter(k => k.campaignId === activeCampaignId).map(k => k.term);
+     }
+  } catch(e) {}
+  
+  const keywordsString = trackedKeywords.length > 0 ? trackedKeywords.join(", ") : "general industry terms";
+
+  // Process Advanced Filters if they exist
+  const langInstructions = filters && filters.language && filters.language !== 'en' ? `The posts MUST be written in language code: ${filters.language}.` : "The posts should be in English.";
+  const locInstructions = filters && filters.location && filters.location !== 'global' ? `The posts MUST imply they are originating from the region: ${filters.location}.` : "The posts can originate globally.";
+  
+  // Refined Platform logic incorporating keyword specific platforms
+  let platformInstructions = "Mix the platforms based on the keywords.";
+  if (filters && filters.platform && filters.platform !== 'All') {
+      platformInstructions = `The posts MUST all be strictly from the ${filters.platform} platform.`;
+  } else {
+      // Pull specific platforms selected for the keywords
+      let platformsAllowed = new Set();
+      try {
+          const kwData = JSON.parse(store.getItem('keywords') || '[]');
+          kwData.filter(k => k.campaignId === activeCampaignId).forEach(kw => {
+              if (kw.platforms) kw.platforms.forEach(p => platformsAllowed.add(p));
+          });
+      } catch(e) {}
+      
+      if (platformsAllowed.size > 0) {
+          platformInstructions = `The posts MUST only originate from these platforms: ${Array.from(platformsAllowed).join(', ')}.`;
+      }
+  }
+
+  try {
+    const globalKeysData = store.getItem('globalApiKeys');
+    let globalKeys = {};
+    if (globalKeysData) {
+        try { globalKeys = JSON.parse(globalKeysData); } catch(e) {}
+    }
+
+    // --- REAL FEED DATA FETCHING STUB ---
+    // If we have real keys, we intercept the AI generation here and pull real data.
+    let realPostsFetched = [];
+    
+    // Example: Fetch from Reddit API if key exists and platform is allowed
+    if (globalKeys.rdId && (filters.platform === 'All' || filters.platform === 'Reddit') && trackedKeywords.length > 0) {
+        try {
+            console.log("Fetching REAL Reddit posts for keywords: ", keywordsString);
+            const query = trackedKeywords[0]; // grab the first keyword for the query
+            const rdRes = await axios.get(`https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&limit=3&sort=new`, {
+                headers: { 'User-Agent': 'SocialImperialism/1.0' }
+            });
+            
+            if (rdRes.data && rdRes.data.data && rdRes.data.data.children) {
+                rdRes.data.data.children.forEach(child => {
+                    const post = child.data;
+                    realPostsFetched.push({
+                        platform: 'Reddit',
+                        author: `u/${post.author}`,
+                        time: new Date(post.created_utc * 1000).toLocaleTimeString(),
+                        matchScore: Math.floor(Math.random() * 20) + 80, // Mocking score for now
+                        matchedKeyword: query,
+                        content: post.title + (post.selftext ? '\n\n' + post.selftext.substring(0, 200) + '...' : '')
+                    });
+                });
+            }
+        } catch(e) {
+            console.error("Reddit fetch failed: ", e.message);
+        }
+    }
+    
+    // Example: Fetch from Twitter API if key exists and platform is allowed
+    if (globalKeys.twId && (filters.platform === 'All' || filters.platform === 'Twitter')) {
+        console.log("Would fetch REAL Twitter posts for keywords: ", keywordsString);
+        // Note: Twitter v2 search requires a Bearer Token (App-only auth) which is usually the secret or generated via OAuth
+        // If we had the Bearer:
+        // const twRes = await axios.get(`https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(trackedKeywords[0])}`, { headers: { Authorization: `Bearer ${globalKeys.twSecret}` }});
+    }
+    
+    // If we successfully fetched real posts, return them directly! 
+    // We can skip the AI hallucination step entirely.
+    if (realPostsFetched.length > 0) {
+        // We'll return the real posts. We can also still ask the AI to score them or generate a few more to blend them, 
+        // but returning the real ones here fulfills the requirement perfectly.
+        return realPostsFetched;
+    }
+
+    // For prototype purposes, if no keys or the real fetch failed, we fall back to AI simulated feed generation
+    const prompt = `
+    You are generating a highly realistic "Live Intelligence Feed" for the brand "${brandName}" targeting "${audience}".
+    Crucially, you must scan for and base these posts around the following tracked keywords: [${keywordsString}].
+    ${langInstructions}
+    ${locInstructions}
+    ${platformInstructions}
+    Generate exactly 4 mock social media posts that this brand should engage with. 
+    They should sound like real people or target customers asking questions, complaining about competitors, or seeking advice where "${brandName}" could jump in and offer a solution.
+    Make sure the posts mention or heavily imply the tracked keywords.
+    
+    Format EXACTLY as a JSON array of objects with no markdown outside:
+    [
+      { "platform": "Twitter", "author": "@User123", "time": "2 mins ago", "matchScore": 95, "matchedKeyword": "one of the tracked keywords", "content": "Just asked a question about..." },
+      { "platform": "LinkedIn", "author": "John Doe - CEO", "time": "15 mins ago", "matchScore": 88, "matchedKeyword": "another keyword", "content": "Looking for recommendations on..." }
+    ]
+    `;
+    const aiResp = await generateAI(prompt);
+    let cleanJson = aiResp.trim();
+    if(cleanJson.startsWith('```json')) cleanJson = cleanJson.substring(7);
+    if(cleanJson.endsWith('```')) cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+    return JSON.parse(cleanJson.trim());
+  } catch (error) {
+      console.error("AI Simulated Feed error:", error.message);
+      // Fallback
+      return [
+        {
+          platform: 'Twitter',
+          author: '@TechInnovator99',
+          time: 'Just now',
+          matchScore: 99,
+          content: `Anyone else struggling to keep their ${brandName} engagement up while targeting ${audience}? Need better tools for 2026.`,
+        },
+        {
+          platform: 'LinkedIn',
+          author: 'Marcus Vance - VP Growth',
+          time: '4 mins ago',
+          matchScore: 92,
+          content: `Just read an interesting case study on automated workflows. Does anyone have experience using platforms similar to ${brandName} to automate their outbound?`
+        },
+        {
+          platform: 'Reddit',
+          author: 'u/GrowthHacker_23',
+          time: '18 mins ago',
+          matchScore: 88,
+          content: `What is the best way to handle replies at scale? I've been looking into ${brandName} but want to know if there's a better way to reach ${audience}.`
+        },
+        {
+          platform: 'Twitter',
+          author: '@SocialMediaMgr',
+          time: '1 hour ago',
+          matchScore: 81,
+          content: `I'm exhausted from manually typing out responses. If only there was a tool that understood my tone of voice and could draft them for me...`
+        }
+      ];
+  }
+});
+
+ipcMain.handle('generate-keywords', async (event, brandData) => {
+  const prompt = `
+  You are an expert SEO and Social Media strategist.
+  Given the following brand profile:
+  Name: ${brandData.brandName}
+  Description: ${brandData.description}
+  Audience: ${brandData.audience}
+  
+  Suggest exactly 5 highly targeted keywords or phrases to track on social media to find potential customers.
+  Return ONLY a JSON array of strings. Example: ["marketing automation", "b2b sales", "agency scaling", "lead gen", "workflow tools"].
+  `;
+  try {
+    const text = await generateAI(prompt);
+    let cleanJson = text.trim();
+    if(cleanJson.startsWith('```json')) cleanJson = cleanJson.substring(7);
+    if(cleanJson.endsWith('```')) cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+    return JSON.parse(cleanJson.trim());
+  } catch (error) {
+    console.error("AI Error:", error);
+    return ['social media automation', 'marketing tools', 'growth hacking'];
+  }
+});
+
+ipcMain.handle('draft-post-reply', async (event, payload) => {
+  const { postContent, matchedKeyword, oneTimeOverride } = payload;
+  try {
+    const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+    const data = store.getItem('campaigns');
+    let campaigns = [];
+    if (data) {
+      try { campaigns = JSON.parse(data); } catch(e) {}
+    }
+    
+    let settings = campaigns.find(c => c.id === activeCampaignId) || {};
+    
+    let customPromptString = "";
+    if (matchedKeyword) {
+      let trackedKeywords = [];
+      try {
+         const kwData = store.getItem('keywords');
+         if(kwData) {
+             const allKws = JSON.parse(kwData);
+             trackedKeywords = allKws.filter(k => k.campaignId === activeCampaignId);
+         }
+      } catch(e) {}
+      
+      const keywordObj = trackedKeywords.find(k => k.term.toLowerCase() === matchedKeyword.toLowerCase());
+      if (keywordObj && keywordObj.customPrompt && keywordObj.customPrompt.trim() !== '') {
+         customPromptString = `\nCRITICAL OVERRIDE FOR KEYWORD '${matchedKeyword}':\n${keywordObj.customPrompt}\nYou MUST follow the instructions above when writing this specific reply.\n`;
+      }
+    }
+    
+    let userOverrideString = "";
+    if (oneTimeOverride && oneTimeOverride.trim() !== '') {
+        userOverrideString = `\nIMMEDIATE USER OVERRIDE INSTRUCTION (HIGHEST PRIORITY):\n${oneTimeOverride}\n\nYou MUST prioritize this instruction above all other prompts for this specific reply.\n`;
+    }
+    
+    const aiBrainSystemPrompt = `
+You are the AI Brain for 'Social Imperialism', an advanced social media management and automation platform.
+Your goal is to provide highly engaging, well-researched replies for social media posts.
+
+Here is the Brand Profile you must perfectly emulate:
+Brand Name: ${settings.brandName || 'Unknown'}
+Website: ${settings.domain || 'Unknown'}
+Description: ${settings.description || 'General Business'}
+Target Audience: ${settings.audience || 'Everyone'}
+Tone of Voice: ${settings.tone || 'Professional & Authoritative'}
+Affiliate Links/USPs: ${settings.affiliateLinks || 'None provided.'}
+
+Keep replies natural, concise, and optimized for engagement matching this brand's exact tone.
+CRITICAL SAFETY FILTERS:
+- NO NSFW, violent, or hateful content.
+- DO NOT generate spam or deceptive content.
+- ALWAYS maintain a respectful and brand-safe tone.
+Do not include quotation marks around the reply. Just return the raw reply text.
+
+CRITICAL SAFETY FILTERS:
+- NO NSFW, violent, or hateful content.
+- DO NOT generate spam or deceptive content.
+- ALWAYS maintain a respectful and brand-safe tone.
+${customPromptString}
+${userOverrideString}
+`;
+    
+    const fullPrompt = aiBrainSystemPrompt + '\n\nUser requested reply for this post:\n' + postContent;
+    return await generateAI(fullPrompt);
+  } catch (error) {
+    console.error('AI Draft Error:', error);
+    return 'Error generating response: ' + error.message;
+  }
+});
+
+// Generic AI generation handler for Custom Prompts & replies
+ipcMain.handle('generate-ai', async (event, userPrompt) => {
+  try {
+    const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+    const data = store.getItem('campaigns');
+    let campaigns = [];
+    if (data) {
+      try { campaigns = JSON.parse(data); } catch(e) {}
+    }
+    
+    let settings = campaigns.find(c => c.id === activeCampaignId) || {};
+    
+    // We define the AI Brain dynamically based on stored user settings!
+    const aiBrainSystemPrompt = `
+You are the AI Brain for 'Social Imperialism', an advanced social media management and automation platform.
+Your goal is to provide highly engaging, well-researched replies for social media posts.
+
+Here is the Brand Profile you must perfectly emulate:
+Brand Name: ${settings.brandName || 'Unknown'}
+Website: ${settings.domain || 'Unknown'}
+Description: ${settings.description || 'General Business'}
+Target Audience: ${settings.audience || 'Everyone'}
+Tone of Voice: ${settings.tone || 'Professional & Authoritative'}
+
+Keep replies natural, concise, and optimized for engagement matching this brand's exact tone.
+CRITICAL SAFETY FILTERS:
+- NO NSFW, violent, or hateful content.
+- DO NOT generate spam or deceptive content.
+- ALWAYS maintain a respectful and brand-safe tone.
+Do not include quotation marks around the reply. Just return the raw reply text.
+
+CRITICAL SAFETY FILTERS:
+- NO NSFW, violent, or hateful content.
+- DO NOT generate spam or deceptive content.
+- ALWAYS maintain a respectful and brand-safe tone.
+`;
+    
+    const fullPrompt = aiBrainSystemPrompt + '\n\nUser requested reply for this post:\n' + userPrompt;
+    return await generateAI(fullPrompt);
+  } catch (error) {
+    console.error('AI Error:', error);
+    return 'Error generating response: ' + error.message;
+  }
+});
+
+// Keywords CRUD Logic (Per-Campaign & Per-Platform)
+ipcMain.handle('save-keywords', (event, payload) => {
+  // payload is { campaignId, keywords: [{term, platforms: []}, ...] }
+  let allKeywords = [];
+  const data = store.getItem('keywords');
+  if (data) {
+    try { allKeywords = JSON.parse(data); } catch(e) {}
+  }
+  
+  // Remove old keywords for this campaign
+  allKeywords = allKeywords.filter(k => k.campaignId !== payload.campaignId);
+  
+  // Add new keywords
+  payload.keywords.forEach(kw => {
+    allKeywords.push({
+      id: 'kw_' + Date.now() + Math.random().toString(36).substr(2, 5),
+      campaignId: payload.campaignId,
+      term: kw.term,
+      platforms: kw.platforms || ['Twitter', 'LinkedIn', 'Reddit'],
+      customPrompt: kw.customPrompt || ''
+    });
+  });
+  
+  store.setItem('keywords', JSON.stringify(allKeywords));
+  return allKeywords.filter(k => k.campaignId === payload.campaignId);
+});
+
+ipcMain.handle('get-keywords', (event, campaignId) => {
+  if(!campaignId) return [];
+  const data = store.getItem('keywords');
+  if (data) {
+    try { 
+        const parsed = JSON.parse(data); 
+        return parsed.filter(k => k.campaignId === campaignId);
+    } catch(e) {}
+  }
+  return [];
+});
+
+// IPC Handlers for Simulated Account Hub
+ipcMain.handle('get-linked-accounts', (event) => {
+  // Try to get active campaign id first
+  const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  
+  const data = store.getItem('linkedAccounts_' + activeCampaignId);
+  if (data) {
+    try { return JSON.parse(data); } catch(e) {}
+  }
+  return []; // return empty array if no accounts linked yet
+});
+
+ipcMain.handle('link-account', async (event, payload) => {
+  // Handle both old string format (platform name) or new object format (platform, username, password)
+  let platform = typeof payload === 'string' ? payload : payload.platform;
+  let username = typeof payload === 'object' && payload.username ? payload.username : null;
+  let password = typeof payload === 'object' && payload.password ? payload.password : null;
+  
+  // Try to get active campaign id first to isolate accounts per campaign
+  const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  
+  // Get Global API keys if user set them up in settings
+  const globalKeysData = store.getItem('globalApiKeys');
+  let globalKeys = {};
+  if (globalKeysData) {
+      try { globalKeys = JSON.parse(globalKeysData); } catch(e) {}
+  }
+  
+  // --- REAL OAUTH IMPLEMENTATION STUB ---
+  // In a fully deployed environment with valid developer keys, this section 
+  // will construct the platform-specific OAuth URL and use shell.openExternal()
+  // to open the user's default browser so they can log in securely.
+  
+  let authUrl = '';
+  if (platform === 'Twitter' || platform === 'X') {
+    if (!globalKeys.twId) console.log("Missing Twitter Client ID in Global Settings");
+    // authUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${globalKeys.twId || process.env.TWITTER_TSBRENTERPRISES_CLIENT_ID}&redirect_uri=social-imperialism://oauth-callback&scope=tweet.read%20tweet.write%20users.read%20offline.access&state=state123&code_challenge=challenge&code_challenge_method=plain`;
+    console.log("Would initiate Real Twitter OAuth flow here.");
+  } else if (platform === 'LinkedIn') {
+    if (!globalKeys.liId) console.log("Missing LinkedIn Client ID in Global Settings");
+    // authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${globalKeys.liId || process.env.LINKEDIN_CLIENT_ID}&redirect_uri=social-imperialism://oauth-callback&state=state123&scope=openid%20profile%20w_member_social`;
+    console.log("Would initiate Real LinkedIn OAuth flow here.");
+  } else if (platform === 'Facebook') {
+    if (!globalKeys.fbId) console.log("Missing Facebook App ID in Global Settings");
+    // authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${globalKeys.fbId || process.env.META_APP_ID}&redirect_uri=social-imperialism://oauth-callback&state=state123&scope=pages_manage_posts,pages_read_engagement`;
+    console.log("Would initiate Real Facebook OAuth flow here.");
+  } else if (platform === 'Instagram') {
+    if (!globalKeys.fbId) console.log("Missing Instagram App ID in Global Settings");
+    // authUrl = `https://api.instagram.com/oauth/authorize?client_id=${globalKeys.fbId || process.env.META_APP_ID}&redirect_uri=social-imperialism://oauth-callback&scope=instagram_basic,instagram_content_publish&response_type=code`;
+    console.log("Would initiate Real Instagram OAuth flow here.");
+  } else if (platform === 'YouTube') {
+    if (!globalKeys.ytId) console.log("Missing YouTube Client ID in Global Settings");
+    // authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${globalKeys.ytId || process.env.YOUTUBE_CLIENT_ID}&redirect_uri=social-imperialism://oauth-callback&response_type=code&scope=https://www.googleapis.com/auth/youtube.upload&access_type=offline`;
+    console.log("Would initiate Real YouTube OAuth flow here.");
+  } else if (platform === 'TikTok') {
+    if (!globalKeys.tkId) console.log("Missing TikTok Client Key in Global Settings");
+    // authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${globalKeys.tkId || process.env.TIKTOK_CLIENT_KEY}&scope=user.info.basic,video.publish&response_type=code&redirect_uri=social-imperialism://oauth-callback&state=state123`;
+    console.log("Would initiate Real TikTok OAuth flow here.");
+  } else if (platform === 'Pinterest') {
+    // authUrl = `https://www.pinterest.com/oauth/?client_id=${process.env.PINTEREST_APP_ID}&redirect_uri=social-imperialism://oauth-callback&response_type=code&scope=boards:read,boards:write,pins:read,pins:write`;
+    console.log("Would initiate Real Pinterest OAuth flow here.");
+  } else if (platform === 'Snapchat') {
+    // authUrl = `https://accounts.snapchat.com/accounts/oauth2/auth?client_id=${process.env.SNAPCHAT_CLIENT_ID}&redirect_uri=social-imperialism://oauth-callback&response_type=code&scope=https%3A%2F%2Fauth.snapchat.com%2Foauth2%2Fapi%2Fuser.display_name`;
+    console.log("Would initiate Real Snapchat OAuth flow here.");
+  } else if (platform === 'Threads') {
+    // authUrl = `https://threads.net/oauth/authorize?client_id=${process.env.META_APP_ID}&redirect_uri=social-imperialism://oauth-callback&scope=threads_basic,threads_content_publish&response_type=code`;
+    console.log("Would initiate Real Threads OAuth flow here.");
+  } else if (platform === 'Discord') {
+    // authUrl = `https://discord.com/oauth2/authorize?client_id=${process.env.DISCORD_APPLICATION_ID}&response_type=code&redirect_uri=social-imperialism://oauth-callback&scope=identify+guilds+bot+messages.read`;
+    console.log("Would initiate Real Discord OAuth flow here.");
+  } else if (platform === 'Reddit') {
+    if (!globalKeys.rdId) console.log("Missing Reddit Client ID in Global Settings");
+    // authUrl = `https://www.reddit.com/api/v1/authorize?client_id=${globalKeys.rdId || process.env.REDDIT_CLIENT_ID}&response_type=code&state=state123&redirect_uri=social-imperialism://oauth-callback&duration=permanent&scope=identity submit read`;
+    console.log("Would initiate Real Reddit OAuth flow here.");
+  } else if (platform === 'Telegram' || platform === 'WhatsApp') {
+    // Telegram and WhatsApp generally use Bot APIs or business manager instead of direct user OAuth for posting.
+    console.log(`Would initiate ${platform} Bot/Business API configuration here.`);
+  } else {
+    console.log(`Would initiate Real ${platform} OAuth flow here.`);
+  }
+
+  // If we had the real URL constructed with your keys:
+  // if(authUrl) { await shell.openExternal(authUrl); }
+
+  // ---------------------------------------
+  // For the sake of the local prototype continuing to function without the user 
+  // having actual Developer Client IDs, we fall back to the simulated delay 
+  // so the UI still demonstrates the connection success.
+  await new Promise(r => setTimeout(r, 1500));
+  
+  let accounts = [];
+  const data = store.getItem('linkedAccounts_' + activeCampaignId);
+  if(data) {
+    try { accounts = JSON.parse(data); } catch(e) {}
+  }
+  
+  // Create a mock account profile based on platform, saving the custom username
+  const newAccount = {
+    id: 'acc_' + Date.now(),
+    platform: platform,
+    handle: username || (platform === 'Twitter' ? '@Admin_Sigma' : (platform === 'LinkedIn' ? 'Sigma Exec' : '@SigmaBrands')),
+    password: password, // In a real app, never store plaintext passwords! But keeping for prototype requirement
+    status: 'connected',
+    profile: null // We will populate this right now via AI
+  };
+  
+  // Generate the AI Intelligence Profile for the newly linked account
+  try {
+    const today = new Date().toLocaleDateString('en-US');
+    const profilePrompt = `
+      You are an expert Social Media Intelligence AI. Today is ${today}.
+      A user just connected their ${platform} account with username "${newAccount.handle}".
+      
+      Generate a realistic, mock "Account Intelligence Profile" for this account.
+      Return EXACTLY a JSON object with this structure (no markdown tags outside):
+      {
+        "followers": "Integer number of followers (e.g., 14500)",
+        "likes": "Integer number of total likes (e.g., 89000)",
+        "bestTime": "String like 'Tuesday 2:00 PM EST'",
+        "topTrendingNiche": "String like '#TechStartups or AI Automation'",
+        "growthVelocity": "String like '+4.2% this week'",
+        "suggestedGroups": ["Group 1", "Community 2"]
+      }
+    `;
+    const aiResp = await generateAI(profilePrompt);
+    let cleanJson = aiResp.trim();
+    if(cleanJson.startsWith('```json')) cleanJson = cleanJson.substring(7);
+    if(cleanJson.endsWith('```')) cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+    newAccount.profile = JSON.parse(cleanJson.trim());
+  } catch (aiErr) {
+    console.error("Failed to generate AI Intelligence Profile during linking:", aiErr.message);
+    newAccount.profile = {
+      followers: 12500,
+      likes: 45000,
+      bestTime: 'Wednesday 1:00 PM EST',
+      topTrendingNiche: '#GrowthHacking',
+      growthVelocity: '+2.1% this week',
+      suggestedGroups: ['Marketing Pros', 'Startup Founders']
+    };
+  }
+  
+  accounts.push(newAccount);
+  store.setItem('linkedAccounts_' + activeCampaignId, JSON.stringify(accounts));
+  return newAccount;
+});
+
+ipcMain.handle('unlink-account', (event, accountId) => {
+  const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  let accounts = [];
+  const data = store.getItem('linkedAccounts_' + activeCampaignId);
+  if (data) {
+    try { accounts = JSON.parse(data); } catch(e) {}
+  }
+  
+  accounts = accounts.filter(a => a.id !== accountId);
+  store.setItem('linkedAccounts_' + activeCampaignId, JSON.stringify(accounts));
+  return { success: true };
+});
+
+ipcMain.handle('publish-post', async (event, postData) => {
+  const globalKeysData = store.getItem('globalApiKeys');
+  let globalKeys = {};
+  if (globalKeysData) {
+      try { globalKeys = JSON.parse(globalKeysData); } catch(e) {}
+  }
+
+  // --- REAL PUBLISHING API IMPLEMENTATION STUB ---
+  // In a fully deployed environment, this section uses the OAuth tokens 
+  // acquired during the link-account step to post directly to the platform API.
+  console.log(`Would initiate Real API Publish to ${postData.platform} here.`);
+  
+  if (postData.platform === 'Twitter' || postData.platform === 'X') {
+    if (!globalKeys.twId) console.log("Missing Twitter API Credentials");
+    // const client = new TwitterApi({ appKey: globalKeys.twId, appSecret: globalKeys.twSecret, accessToken: userToken, accessSecret: userSecret });
+    // await client.v2.tweet(postData.content);
+  } else if (postData.platform === 'LinkedIn') {
+    if (!globalKeys.liId) console.log("Missing LinkedIn API Credentials");
+    // axios.post('https://api.linkedin.com/v2/ugcPosts', { ... }, { headers: { 'Authorization': `Bearer ${userToken}` }});
+  } else if (postData.platform === 'Facebook' || postData.platform === 'Instagram') {
+    if (!globalKeys.fbId) console.log("Missing Meta API Credentials");
+    // axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, { message: postData.content, access_token: userToken });
+  }
+
+  // Simulate network delay for uploading media/text to social platforms
+  await new Promise(r => setTimeout(r, 2000));
+  
+  let history = [];
+  const data = store.getItem('postHistory');
+  if(data) {
+    try { history = JSON.parse(data); } catch(e) {}
+  }
+  
+  // Create dynamic stats for realism
+  const randomLikes = Math.floor(Math.random() * 50) + 5;
+  const randomShares = Math.floor(Math.random() * 15) + 1;
+  const randomViews = Math.floor(Math.random() * 500) + 100;
+  
+  const newPost = {
+    id: 'post_' + Date.now(),
+    accountId: postData.accountId,
+    content: postData.content,
+    hasMedia: postData.hasMedia,
+    timestamp: new Date().toISOString(),
+    stats: { likes: randomLikes, shares: randomShares, views: randomViews }
+  };
+  
+  history.unshift(newPost); // Add to top of history
+  store.setItem('postHistory', JSON.stringify(history));
+  return { success: true, post: newPost };
+});
+
+ipcMain.handle('get-post-history', (event, accountId) => {
+  const data = store.getItem('postHistory');
+  if(!data) return [];
+  
+  try { 
+    const history = JSON.parse(data);
+    if(accountId) {
+      return history.filter(p => p.accountId === accountId);
+    }
+    return history;
+  } catch(e) { return []; }
+});
+
+ipcMain.handle('get-dashboard-stats', (event) => {
+  // Aggregate stats across all linked accounts and post history
+  let totalPosts = 0;
+  let totalEngagement = 0;
+  let aiDrafts = 0; // We'll mock this or pull from a separate counter if we wanted
+  
+  const historyData = store.getItem('postHistory');
+  if (historyData) {
+    try {
+      const history = JSON.parse(historyData);
+      totalPosts = history.length;
+      history.forEach(post => {
+        totalEngagement += (post.stats.likes || 0) + (post.stats.shares || 0) + (post.stats.views || 0);
+      });
+    } catch(e) {}
+  }
+  
+  const aiDraftsData = store.getItem('aiDraftsCount');
+  if (aiDraftsData) {
+    try { aiDrafts = parseInt(aiDraftsData); } catch(e) {}
+  } else {
+    aiDrafts = 342; // default mock if not set
+  }
+
+  return {
+    totalPosts: totalPosts || 1248, // fallback to mock if empty
+    aiDrafts: aiDrafts,
+    totalEngagement: totalEngagement || 8912, // fallback to mock if empty
+    activeKeywords: 12
+  };
+});
+
+ipcMain.handle('get-all-post-history', (event) => {
+  const data = store.getItem('postHistory');
+  if(!data) return [];
+  try { return JSON.parse(data); } catch(e) { return []; }
+});
+
+ipcMain.handle('increment-ai-drafts', (event) => {
+  let count = 342;
+  const data = store.getItem('aiDraftsCount');
+  if (data) {
+    try { count = parseInt(data); } catch(e) {}
+  }
+  count++;
+  store.setItem('aiDraftsCount', count.toString());
+  return count;
+});
+
+ipcMain.handle('save-ai-reply', async (event, replyData) => {
+  const globalKeysData = store.getItem('globalApiKeys');
+  let globalKeys = {};
+  if (globalKeysData) {
+      try { globalKeys = JSON.parse(globalKeysData); } catch(e) {}
+  }
+
+  // --- REAL ENGAGEMENT API IMPLEMENTATION STUB ---
+  // In a fully deployed environment, this section uses the OAuth tokens 
+  // acquired during the link-account step to post a comment/reply directly 
+  // to the platform API based on the original post ID.
+  console.log(`Would initiate Real API Engagement (Reply) to ${replyData.platform} here.`);
+  
+  if (replyData.platform === 'Twitter' || replyData.platform === 'X') {
+    if (!globalKeys.twId) console.log("Missing Twitter API Credentials");
+    // const client = new TwitterApi({ appKey: globalKeys.twId, appSecret: globalKeys.twSecret, accessToken: userToken, accessSecret: userSecret });
+    // await client.v2.reply(replyData.replyContent, replyData.originalPostId);
+  } else if (replyData.platform === 'LinkedIn') {
+    if (!globalKeys.liId) console.log("Missing LinkedIn API Credentials");
+    // axios.post(`https://api.linkedin.com/v2/socialActions/${replyData.originalPostUrn}/comments`, { message: replyData.replyContent }, { headers: { 'Authorization': `Bearer ${userToken}` }});
+  } else if (replyData.platform === 'Reddit') {
+    if (!globalKeys.rdId) console.log("Missing Reddit API Credentials");
+    // axios.post('https://oauth.reddit.com/api/comment', { text: replyData.replyContent, thing_id: replyData.originalPostId }, { headers: { 'Authorization': `bearer ${userToken}` }});
+  }
+
+  // Simulate network delay for posting engagement to social platforms
+  await new Promise(r => setTimeout(r, 1000));
+
+  let replies = [];
+  const data = store.getItem('aiRepliesHistory');
+  if(data) {
+    try { replies = JSON.parse(data); } catch(e) {}
+  }
+  
+  const newReply = {
+    id: 'reply_' + Date.now(),
+    originalPost: replyData.originalPost,
+    replyContent: replyData.replyContent,
+    platform: replyData.platform || 'Unknown',
+    timestamp: new Date().toISOString(),
+    status: replyData.status || 'Draft'
+  };
+  
+  replies.unshift(newReply);
+  store.setItem('aiRepliesHistory', JSON.stringify(replies));
+  return newReply;
+});
+
+ipcMain.handle('get-ai-replies', (event) => {
+  const data = store.getItem('aiRepliesHistory');
+  if(!data) return [];
+  try { return JSON.parse(data); } catch(e) { return []; }
+});
+
+ipcMain.handle('engage-post', async (event, payload) => {
+  const globalKeysData = store.getItem('globalApiKeys');
+  let globalKeys = {};
+  if (globalKeysData) {
+      try { globalKeys = JSON.parse(globalKeysData); } catch(e) {}
+  }
+  
+  console.log(`Would initiate Real API Engagement (${payload.action}) to ${payload.platform} here.`);
+  
+  if (payload.platform === 'Twitter' || payload.platform === 'X') {
+    if (!globalKeys.twId) console.log("Missing Twitter API Credentials");
+    // const client = new TwitterApi({...});
+    // if(payload.action === 'like') await client.v2.like(userId, tweetId);
+    // if(payload.action === 'share') await client.v2.retweet(userId, tweetId);
+  } else if (payload.platform === 'Facebook' || payload.platform === 'Facebook Group') {
+    if (!globalKeys.fbId) console.log('Missing Facebook API Credentials');
+    if(payload.action === 'like') {
+      console.log('SUCCESS: Simulating Facebook Group POST LIKE -> Graph API Endpoint /v18.0/{post-id}/likes');
+    } else {
+      console.log('SUCCESS: Simulating Facebook Group POST SHARE -> Graph API Endpoint /v18.0/me/feed');
+    }
+  } else if (payload.platform === 'LinkedIn') {
+    if (!globalKeys.liId) console.log("Missing LinkedIn API Credentials");
+    // axios.post(`https://api.linkedin.com/v2/socialActions/${urn}/likes`, { actor: userUrn }, { headers: ... });
+  }
+
+  // Simulate network delay
+  await new Promise(r => setTimeout(r, 1000));
+  return { success: true };
+});
+
+// Generate Image using FAL AI API
+ipcMain.handle('generate-image', async (event, prompt) => {
+    const falKey = getGlobalKey('falKey');
+    if (!falKey) {
+        return { error: "No FAL API Key configured. Please add one in Settings > API Integrations." };
+    }
+    
+    try {
+        const url = 'https://queue.fal.run/fal-ai/flux/dev';
+        const response = await axios.post(url, {
+            prompt: prompt,
+            image_size: "landscape_4_3",
+            num_inference_steps: 28,
+            guidance_scale: 3.5,
+            num_images: 1,
+            enable_safety_checker: true
+        }, {
+            headers: {
+                'Authorization': `Key ${falKey}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        // This is a queue endpoint, so we normally have to poll the status URL
+        // To keep the prototype quick, we'll try the direct synchronous endpoint if queue fails or simulate
+        return { success: true, imageUrl: response.data.images ? response.data.images[0].url : "https://via.placeholder.com/800x600?text=FAL+AI+Image+Generated" };
+    } catch(e) {
+        console.error("FAL AI Error:", e.response ? e.response.data : e.message);
+        // Fallback for prototype if queue is complicated or token invalid
+        return { success: true, imageUrl: "https://via.placeholder.com/800x600?text=Mock+AI+Image+(FAL+Key+Invalid)" };
+    }
+});
+
+// Search Stock Photos (Pexels / Pixabay / Flickr)
+ipcMain.handle('search-stock-photo', async (event, query) => {
+    const pexelsKey = getGlobalKey('pexelsKey');
+    const pixabayKey = getGlobalKey('pixabayKey');
+    const flickrKey = getGlobalKey('flickrKey');
+    
+    // 1. Try Pexels
+    if (pexelsKey) {
+        try {
+            console.log("Searching Pexels for: ", query);
+            const response = await axios.get(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1`, {
+                headers: { 'Authorization': pexelsKey }
+            });
+            if (response.data && response.data.photos && response.data.photos.length > 0) {
+                return { success: true, imageUrl: response.data.photos[0].src.large, source: 'Pexels' };
+            }
+        } catch (e) {
+            console.error("Pexels API Error:", e.response ? e.response.data : e.message);
+        }
+    }
+    
+    // 2. Try Pixabay
+    if (pixabayKey) {
+        try {
+            console.log("Searching Pixabay for: ", query);
+            const response = await axios.get(`https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(query)}&image_type=photo&per_page=3`);
+            if (response.data && response.data.hits && response.data.hits.length > 0) {
+                return { success: true, imageUrl: response.data.hits[0].largeImageURL, source: 'Pixabay' };
+            }
+        } catch (e) {
+            console.error("Pixabay API Error:", e.message);
+        }
+    }
+    
+    // 3. Try Flickr
+    if (flickrKey) {
+        try {
+            console.log("Searching Flickr for: ", query);
+            const response = await axios.get(`https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=${flickrKey}&text=${encodeURIComponent(query)}&format=json&nojsoncallback=1&per_page=1&sort=relevance`);
+            if (response.data && response.data.photos && response.data.photos.photo.length > 0) {
+                const p = response.data.photos.photo[0];
+                const imgUrl = `https://live.staticflickr.com/${p.server}/${p.id}_${p.secret}_b.jpg`;
+                return { success: true, imageUrl: imgUrl, source: 'Flickr' };
+            }
+        } catch (e) {
+            console.error("Flickr API Error:", e.message);
+        }
+    }
+    
+    return { error: "No images found or no valid Stock Photo API Keys configured. Please check Settings > API Integrations." };
+});
+
+// Notifications Webhook Dispatcher
+async function sendNotification(title, message) {
+    const slack = getGlobalKey('slackWebhook');
+    const discord = getGlobalKey('discordWebhook');
+    
+    if (slack) {
+        try { await axios.post(slack, { text: `*${title}*\n${message}` }); } catch(e) { console.error("Slack hook failed"); }
+    }
+    
+    if (discord) {
+        try { await axios.post(discord, { content: `**${title}**\n${message}` }); } catch(e) { console.error("Discord hook failed"); }
+    }
+}
+
+// Unanswered Questions Tracker
+ipcMain.handle('get-unanswered-questions', async (event) => {
+    // We mock the detection of unanswered questions
+    // In a real app, this would query the social platform APIs for posts matching keywords with 0 comments/replies but high views
+    
+    const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+    const data = store.getItem('campaigns');
+    let campaigns = [];
+    if (data) {
+      try { campaigns = JSON.parse(data); } catch(e) {}
+    }
+    let settings = campaigns.find(c => c.id === activeCampaignId) || {};
+    
+    const questions = [
+        { id: 'q1', platform: 'Reddit', views: 4200, timeElapsed: '4h', content: `What is the best alternative to [Competitor] for ${settings.audience || 'startups'}?` },
+        { id: 'q2', platform: 'Twitter', views: 8900, timeElapsed: '2h', content: `I'm struggling with ${settings.description || 'marketing automation'}. Any tips from the community?` },
+        { id: 'q3', platform: 'LinkedIn', views: 1200, timeElapsed: '1d', content: `Can anyone recommend a good platform for tracking ROI on these campaigns?` }
+    ];
+    
+    // Auto-trigger a notification about these questions
+    sendNotification("Unanswered Questions Detected", `Found ${questions.length} high-value questions your brand can answer right now to capture leads.`);
+    
+    return questions;
+});
+
+// --- BACKGROUND WORKER LOGIC ---
+let isWorkerRunning = false;
+let workerTimeout = null;
+let currentWorkerStatusText = "Worker Idle";
+let currentWorkerSleepUntil = 0;
+
+ipcMain.handle('get-worker-status', async () => {
+    try {
+        const tasks = JSON.parse(store.getItem('workerTasks') || '[]');
+        
+        // Calculate status string
+        let statusString = "Worker Idle";
+        if (isWorkerRunning) {
+            const now = Date.now();
+            if (now < currentWorkerSleepUntil) {
+                const sleepSeconds = Math.ceil((currentWorkerSleepUntil - now) / 1000);
+                statusString = `● Sleeping for ${sleepSeconds}s (Spam Prevention)`;
+            } else {
+                statusString = `● Scanning Network (${tasks.length} tasks generated)`;
+            }
+        }
+        
+        return { isRunning: isWorkerRunning, pendingTasks: tasks.length, statusString: statusString };
+    } catch (e) {
+        return { isRunning: isWorkerRunning, pendingTasks: 0, statusString: "Worker Error" };
+    }
+});
+
+async function workerLoop() {
+    if (!isWorkerRunning) return;
+    
+    try {
+        const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+        const data = store.getItem('campaigns');
+        let campaigns = [];
+        if (data) {
+            try { campaigns = JSON.parse(data); } catch(e) {}
+        }
+        
+        let campaign = campaigns.find(c => c.id === activeCampaignId);
+        
+        if(campaign && campaign.rules && campaign.rules.platformRules && campaign.rules.platformRules.length > 0) {
+            // Randomly generate a task based on active rules
+            if (Math.random() > 0.4) { // 60% chance to find something
+                // Enqueue a real simulated job for future extensibility
+                queueJob('FETCH_NEW_POSTS', { campaignId: activeCampaignId, platform: rule.platformTarget });
+                queueJob('GENERATE_AI_REPLIES', { campaignId: activeCampaignId, platform: rule.platformTarget });
+
+                const rule = campaign.rules.platformRules[Math.floor(Math.random() * campaign.rules.platformRules.length)];
+                
+                let history = [];
+                try { history = JSON.parse(store.getItem('aiRepliesHistory') || '[]'); } catch(e) {}
+                
+                const prompt = rule.platformPrompt ? rule.platformPrompt : `Mention we do exactly this for ${campaign.audience} at ${campaign.brandName}.`;
+
+                const newReply = {
+                    id: 'reply_' + Date.now(),
+                    originalPost: `[Auto-Discovery] ${rule.monitorAccount ? `Found new post from ${rule.monitorAccount}` : `Found a trending post`} on ${rule.platformTarget} mentioning keywords related to ${campaign.brandName}. User is asking about solutions in the ${campaign.audience} space.`,
+                    replyContent: `Hey! I noticed you were looking into ${campaign.brandName}. We actually specialize in solving exactly this for ${campaign.audience}. (Following Custom Prompt: ${prompt}) [Affiliate/USP info: ${campaign.affiliateLinks || 'none'}]`,
+                    platform: rule.platformTarget,
+                    timestamp: new Date().toISOString(),
+                    status: (rule.platformAction === 'auto' || rule.platformAction === 'follow' || rule.platformAction === 'share') ? 'Published' : 'Draft'
+                };
+                
+                history.unshift(newReply);
+                store.setItem('aiRepliesHistory', JSON.stringify(history));
+                
+                // Track worker activity
+                let tasks = [];
+                try { tasks = JSON.parse(store.getItem('workerTasks') || '[]'); } catch(e) {}
+                
+                let actionText = 'Drafted Reply';
+                if (rule.platformAction === 'auto') actionText = 'Auto-Replied';
+                if (rule.platformAction === 'follow') actionText = 'Followed & Replied';
+                if (rule.platformAction === 'share') actionText = 'Shared & Replied';
+                
+                tasks.push({
+                    time: new Date().toLocaleTimeString(),
+                    action: actionText,
+                    platform: rule.platformTarget
+                });
+                // Keep only last 10 tasks in memory for UI
+                if(tasks.length > 10) tasks = tasks.slice(tasks.length - 10);
+                store.setItem('workerTasks', JSON.stringify(tasks));
+                
+                // Increment counter
+                let count = 342;
+                const draftData = store.getItem('aiDraftsCount');
+                if (draftData) { try { count = parseInt(draftData); } catch(e) {} }
+                store.setItem('aiDraftsCount', (count + 1).toString());
+            }
+        }
+    } catch(e) {
+        console.error('Worker loop error:', e);
+    }
+    
+    if (isWorkerRunning) {
+        // Random human delay between 15 seconds and 45 seconds to prevent spam tracking
+        const delayMs = Math.floor(Math.random() * (45000 - 15000 + 1) + 15000);
+        currentWorkerSleepUntil = Date.now() + delayMs;
+        workerTimeout = setTimeout(workerLoop, delayMs);
+    }
+}
+
+ipcMain.handle('start-worker', async () => {
+    initJobQueueWorker();
+    setWorkerStatus(true);
+    if (isWorkerRunning) return { success: true };
+    
+    isWorkerRunning = true;
+    currentWorkerSleepUntil = 0; // Trigger immediately first time
+    workerLoop();
+    
+    return { success: true };
+});
+
+ipcMain.handle('stop-worker', async () => {
+    stopWorker();
+    setWorkerStatus(false);
+    isWorkerRunning = false;
+    currentWorkerSleepUntil = 0;
+    if (workerTimeout) {
+        clearTimeout(workerTimeout);
+        workerTimeout = null;
+    }
+    return { success: true };
+});
+
+ipcMain.handle('get-worker-tasks', async () => {
+    try {
+        return JSON.parse(store.getItem('workerTasks') || '[]');
+    } catch(e) {
+        return [];
+    }
+});
+
+function createWindow() {
+  const mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    icon: path.join(__dirname, 'icon.svg'),
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+  mainWindow.loadFile('login.html');
+}
+
+app.whenReady().then(createWindow);
+app.on('window-all-closed', function() {
+  if (process.platform !== 'darwin') app.quit();
+});
+

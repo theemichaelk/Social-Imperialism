@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - Keywords</title>
+<style>
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+  background-color: #0f172a; 
+  color: #f8fafc; 
+  margin: 0; 
+  padding: 0; 
+  display: flex; 
+  height: 100vh;
+  background: radial-gradient(circle at top right, #1e293b, #0f172a);
+}
+
+
+
+
+
+
+
+
+.main-content { flex: 1; padding: 3rem; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; }
+
+.container { 
+  width: 100%;
+  max-width: 800px; 
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 2.5rem; 
+  border-radius: 12px; 
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); 
+  border: 1px solid #334155;
+}
+
+h1 { margin-top: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); margin-bottom: 0.5rem; letter-spacing: 0.5px; } 
+p.subtitle { color: #94a3b8; margin-top: 0; margin-bottom: 2rem; font-size: 1.05rem; } 
+
+.keyword-box { 
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid #475569; 
+  border-radius: 8px; 
+  padding: 1.5rem; 
+  margin-bottom: 1.5rem; 
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+} 
+
+.keyword-box:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.keyword-box::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: #38bdf8;
+  opacity: 0.5;
+}
+
+.keyword-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; } 
+.keyword-title { font-weight: 600; font-size: 1.2rem; color: #e2e8f0; display: flex; align-items: center; gap: 0.75rem; } 
+.platform-toggles { display: flex; gap: 1.5rem; } 
+.platform-toggle { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; color: #cbd5e1; cursor: pointer; } 
+
+input[type="checkbox"] {
+  accent-color: #38bdf8;
+  width: 16px; height: 16px;
+  cursor: pointer;
+}
+
+.btn-remove { background-color: transparent; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; } 
+.btn-remove:hover { background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444; } 
+
+.add-keyword-section { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2.5rem; background: rgba(30, 41, 59, 0.4); padding: 1rem; border-radius: 8px; border: 1px dashed #475569; } 
+.add-keyword-input-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+.add-keyword-section textarea,
+.add-keyword-section input[type="text"] { width: 100%; box-sizing: border-box; padding: 0.85rem; border: 1px solid #475569; border-radius: 6px; font-family: inherit; background: rgba(15, 23, 42, 0.8); color: #f8fafc; font-size: 1rem; transition: all 0.3s; } 
+.add-keyword-section textarea { min-height: 110px; resize: vertical; line-height: 1.45; }
+.add-keyword-section textarea:focus,
+.add-keyword-section input[type="text"]:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+.add-keyword-hint { font-size: 0.8rem; color: #64748b; margin: 0; }
+.add-keyword-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+button { font-family: inherit; transition: all 0.2s; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+button.primary { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 6px; font-weight: 600; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); } 
+button.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5); } 
+button.secondary { background-color: transparent; color: #f1f5f9; border: 1px solid #475569; padding: 0.8rem 1.5rem; border-radius: 6px; font-weight: 600; } 
+button.secondary:hover { background-color: #1e293b; border-color: #94a3b8; } 
+
+.footer { display: flex; justify-content: space-between; margin-top: 2.5rem; border-top: 1px solid #334155; padding-top: 2rem; } 
+.ai-badge { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
+.manual-badge { background: rgba(71, 85, 105, 0.3); border: 1px solid #64748b; color: #cbd5e1; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* AI Loading State */
+.loading-text { color: #38bdf8; font-style: italic; animation: pulse 1.5s infinite; font-size: 1.1rem; }
+@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; text-shadow: 0 0 10px rgba(56,189,248,0.5); } 100% { opacity: 0.6; } }
+
+
+/* Sidebar Standardized Styles */
+
+
+
+
+
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+
+
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+
+/* Sidebar Standardized Styles */
+.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
+.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
+.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
+.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+.nav-link:hover { background-color: #1e293b; color: white; transform: translateX(2px); }
+.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); transform: translateX(2px); }
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+</style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="sidebar-nav.css">
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('keywords', () => location.reload());
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+
+
+
+<div class="main-content">
+  <div class="container">
+    <h1>Keyword Intelligence</h1>
+    <p class="subtitle" id="subtitle-text">Loading live keyword research...</p>
+    <div id="apiStatusBar" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:1.5rem; font-size:0.8rem;"></div>
+    
+    <div class="add-keyword-section">
+      <div class="add-keyword-input-wrap">
+        <textarea id="manualKeywordInput" rows="4" placeholder="Paste keywords here — one per line, or separated by commas, semicolons, or tabs..."></textarea>
+        <p class="add-keyword-hint">Paste multiple keywords at once. Use <strong>+ Add Keywords</strong> for a quick add, or <strong>+ Add &amp; Research</strong> to fetch live Reddit/Twitter/Serp metrics for each.</p>
+      </div>
+      <div class="add-keyword-actions">
+        <button class="secondary" id="addKeywordsOnlyBtn">+ Add Keywords</button>
+        <button class="secondary" id="addKeywordBtn">+ Add & Research</button>
+        <button class="secondary" id="regenerateBtn" style="border-color:#38bdf8; color:#38bdf8;">↻ Re-research from APIs</button>
+      </div>
+    </div>
+    
+    <div id="keywords-container">
+      <!-- AI Keywords injected here -->
+    </div>
+
+    <div class="keyword-box" id="quantumPagesPanel" style="margin-top:2rem; border-color:#a78bfa;">
+      <div class="keyword-header">
+        <div class="keyword-title"><i class="fas fa-file-alt" style="color:#a78bfa;"></i> Quantum Pages SEO</div>
+        <span class="ai-badge" style="border-color:#a78bfa; color:#c4b5fd; background:rgba(167,139,250,0.15);">19-Step Pipeline</span>
+      </div>
+      <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem;">Generate a full SEO article: competitor report → outline → entities → sections → meta → visuals → FAQs. Uses OpenRouter (Perplexity Sonar, GPT-4o-mini, Gemini Flash) + optional FAL featured image.</p>
+      <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
+        <input type="text" id="qpKeywordInput" placeholder="Target keyword for article..." style="flex:1; min-width:200px; padding:0.75rem; border-radius:6px; border:1px solid #475569; background:rgba(15,23,42,0.8); color:#f8fafc;">
+        <select id="qpKeywordPick" style="padding:0.75rem; border-radius:6px; border:1px solid #475569; background:rgba(15,23,42,0.8); color:#f8fafc;">
+          <option value="">Pick saved keyword...</option>
+        </select>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:1rem; font-size:0.85rem; color:#cbd5e1;">
+        <label><input type="checkbox" id="qpFeaturedImage" checked> Generate featured image (FAL)</label>
+        <label><input type="checkbox" id="qpInlineImages"> Insert inline image placeholders (AI)</label>
+        <label>Inline count: <input type="number" id="qpInlineCount" value="2" min="1" max="6" style="width:50px; background:#0f172a; border:1px solid #475569; color:#f8fafc; border-radius:4px; padding:0.2rem;"></label>
+      </div>
+      <div id="qpProgress" style="display:none; margin-bottom:1rem;">
+        <div style="background:#1e293b; border-radius:6px; height:8px; overflow:hidden;"><div id="qpProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#a78bfa,#38bdf8); transition:width 0.3s;"></div></div>
+        <p id="qpProgressLabel" style="font-size:0.8rem; color:#a78bfa; margin:0.5rem 0 0;">Starting...</p>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
+        <button class="primary" id="qpRunBtn" style="background:linear-gradient(135deg,#7c3aed,#2563eb);">Run Quantum Pages</button>
+        <button class="secondary" id="qpSaveBtn" disabled>Save to Content Hub</button>
+        <button class="secondary" id="qpExportBtn" disabled>Copy HTML</button>
+      </div>
+      <div id="qpOutputTabs" style="display:none; margin-top:1.25rem;">
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+          <button type="button" class="secondary qp-tab active" data-tab="article" style="padding:0.4rem 0.8rem; font-size:0.75rem;">Article</button>
+          <button type="button" class="secondary qp-tab" data-tab="report" style="padding:0.4rem 0.8rem; font-size:0.75rem;">SEO Report</button>
+          <button type="button" class="secondary qp-tab" data-tab="outline" style="padding:0.4rem 0.8rem; font-size:0.75rem;">Outline</button>
+          <button type="button" class="secondary qp-tab" data-tab="meta" style="padding:0.4rem 0.8rem; font-size:0.75rem;">Meta</button>
+        </div>
+        <pre id="qpOutput" style="max-height:320px; overflow:auto; background:rgba(15,23,42,0.9); border:1px solid #475569; border-radius:6px; padding:1rem; font-size:0.75rem; white-space:pre-wrap; word-break:break-word; color:#e2e8f0;"></pre>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <button class="secondary" id="backBtn">Abort Settings</button>
+      <button class="secondary" onclick="window.location.href='rules.html'" style="border-color:#10b981; color:#10b981; margin-right:auto;"><i class="fas fa-cogs"></i> Auto-Rules Setup</button>
+      <button class="primary" id="continueBtn">Initialize Feed</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+const platformCatalog = require('./services/platformCatalog');
+
+const PLATFORMS = platformCatalog.ALL_PLATFORMS;
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function parseKeywordList(raw) {
+  if (!raw || !String(raw).trim()) return [];
+  return String(raw)
+    .split(/[\r\n,;\t]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+function getExistingKeywordTerms() {
+  const terms = new Set();
+  document.querySelectorAll('.keyword-title[data-term]').forEach((el) => {
+    terms.add(el.getAttribute('data-term').toLowerCase());
+  });
+  return terms;
+}
+
+function filterNewKeywords(terms) {
+  const existing = getExistingKeywordTerms();
+  const newTerms = [];
+  const duplicates = [];
+  terms.forEach((term) => {
+    const key = term.toLowerCase();
+    if (existing.has(key)) duplicates.push(term);
+    else {
+      newTerms.push(term);
+      existing.add(key);
+    }
+  });
+  return { newTerms, duplicates };
+}
+
+function setKeywordInputBusy(busy, progressLabel) {
+  const input = document.getElementById('manualKeywordInput');
+  const addOnlyBtn = document.getElementById('addKeywordsOnlyBtn');
+  const addBtn = document.getElementById('addKeywordBtn');
+  const regenBtn = document.getElementById('regenerateBtn');
+  if (input) input.disabled = busy;
+  if (addOnlyBtn) addOnlyBtn.disabled = busy;
+  if (addBtn) {
+    addBtn.disabled = busy;
+    if (!busy) addBtn.textContent = '+ Add & Research';
+    else if (progressLabel) addBtn.textContent = progressLabel;
+  }
+  if (regenBtn) regenBtn.disabled = busy;
+}
+
+function metricsHtml(m) {
+  if (!m) return '';
+  const parts = [];
+  if (m.searchVolume != null) parts.push(`Trend: ${m.searchVolume}`);
+  if (m.momentum) parts.push(m.momentum);
+  if (m.redditPosts != null) parts.push(`Reddit: ${m.redditPosts} posts`);
+  if (m.twitterPosts != null) parts.push(`Twitter: ${m.twitterPosts} posts`);
+  if (m.liveSignals != null) parts.push(`${m.liveSignals} live signals`);
+  if (m.source) parts.push(`via ${m.source}`);
+  if (!parts.length) return '<span style="color:#64748b; font-size:0.8rem;">No live metrics yet — add SERP_API_KEY for trends</span>';
+  return `<div class="kw-metrics" style="font-size:0.8rem; color:#34d399; margin-top:0.5rem;">${escapeHtml(parts.join(' • '))}</div>`;
+}
+
+async function loadApiStatus() {
+  const bar = document.getElementById('apiStatusBar');
+  const status = await ipcRenderer.invoke('get-keyword-api-status');
+  const items = [
+    ['SerpAPI (Google trends/related)', status.serpApi],
+    ['Reddit public search', status.reddit],
+    ['Twitter search', status.twitter],
+    ['AI suggestions', status.ai],
+  ];
+  bar.innerHTML = items.map(([label, ok]) =>
+    `<span style="padding:4px 10px; border-radius:12px; border:1px solid ${ok ? '#10b981' : '#ef4444'}; color:${ok ? '#34d399' : '#f87171'};">${ok ? '✓' : '✗'} ${label}</span>`
+  ).join('');
+}
+
+document.getElementById('backBtn').addEventListener('click', () => { window.location.href = 'dashboard.html'; });
+
+document.getElementById('continueBtn').addEventListener('click', async () => {
+  const activeCampaign = await ipcRenderer.invoke('get-active-campaign');
+  if (!activeCampaign) { alert('No active campaign found.'); return; }
+
+  const keywordsData = [];
+  document.querySelectorAll('.keyword-box').forEach((box) => {
+    const term = box.querySelector('.keyword-title').getAttribute('data-term');
+    const customPrompt = box.querySelector('.custom-prompt-input').value.trim();
+    const intent = box.querySelector('.keyword-intent-select').value;
+    const platforms = [];
+    box.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => platforms.push(cb.value));
+    let metrics = null;
+    try { metrics = JSON.parse(box.dataset.metrics || 'null'); } catch (e) {}
+    keywordsData.push({ term, platforms, customPrompt, intent, metrics, id: box.dataset.kwId || null });
+  });
+
+  if (keywordsData.length === 0) {
+    alert('Add at least one keyword before initializing the feed.');
+    return;
+  }
+
+  await ipcRenderer.invoke('save-keywords', { campaignId: activeCampaign.id, keywords: keywordsData });
+  window.location.href = 'dashboard.html';
+});
+
+document.getElementById('addKeywordsOnlyBtn').addEventListener('click', () => {
+  const input = document.getElementById('manualKeywordInput');
+  const { newTerms, duplicates } = filterNewKeywords(parseKeywordList(input.value));
+  if (!newTerms.length) {
+    alert(duplicates.length ? 'All pasted keywords are already in this campaign.' : 'Enter at least one keyword to add.');
+    return;
+  }
+  newTerms.forEach((term) => addKeywordBox({ term }, false));
+  input.value = '';
+  if (duplicates.length) {
+    alert(`Added ${newTerms.length} keyword(s). Skipped ${duplicates.length} duplicate(s).`);
+  }
+});
+
+document.getElementById('addKeywordBtn').addEventListener('click', async () => {
+  const input = document.getElementById('manualKeywordInput');
+  const { newTerms, duplicates } = filterNewKeywords(parseKeywordList(input.value));
+  if (!newTerms.length) {
+    alert(duplicates.length ? 'All pasted keywords are already in this campaign.' : 'Enter at least one keyword to add.');
+    return;
+  }
+
+  setKeywordInputBusy(true);
+  let added = 0;
+  let researchFailed = 0;
+  try {
+    for (let i = 0; i < newTerms.length; i++) {
+      setKeywordInputBusy(true, `Researching ${i + 1}/${newTerms.length}...`);
+      const term = newTerms[i];
+      try {
+        const res = await ipcRenderer.invoke('research-keyword', term);
+        if (res.error) throw new Error(res.error);
+        addKeywordBox(res.keyword || { term }, false);
+      } catch (e) {
+        addKeywordBox({ term }, false);
+        researchFailed++;
+      }
+      added++;
+    }
+    input.value = '';
+    if (duplicates.length || researchFailed) {
+      let msg = `Added ${added} keyword(s).`;
+      if (duplicates.length) msg += ` Skipped ${duplicates.length} duplicate(s).`;
+      if (researchFailed) msg += ` ${researchFailed} could not be researched (added without live metrics).`;
+      alert(msg);
+    }
+  } finally {
+    setKeywordInputBusy(false);
+  }
+});
+
+document.getElementById('regenerateBtn').addEventListener('click', async () => {
+  const activeCampaign = await ipcRenderer.invoke('get-active-campaign');
+  if (!activeCampaign?.brandName) { alert('Set up a brand profile in Settings first.'); return; }
+  if (!confirm('Replace current keywords with fresh API research?')) return;
+  document.getElementById('keywords-container').innerHTML = '';
+  await generateFromApis(activeCampaign);
+});
+
+async function generateFromApis(activeCampaign) {
+  const title = document.getElementById('subtitle-text');
+  title.innerHTML = '<span class="loading-text">Fetching live keywords from SerpAPI, Reddit, Twitter...</span>';
+  const result = await ipcRenderer.invoke('generate-keywords', activeCampaign);
+  const keywords = Array.isArray(result) ? result : (result.keywords || []);
+  if (result.error && keywords.length === 0) {
+    title.innerHTML = `<span style="color:#ef4444;">${escapeHtml(result.error)}</span>`;
+    return;
+  }
+  keywords.forEach((kw) => addKeywordBox(typeof kw === 'string' ? { term: kw } : kw, true));
+  title.innerHTML = `Live research complete for <strong>[${escapeHtml(activeCampaign.brandName)}]</strong> — ${keywords.length} keywords with real platform signals.`;
+}
+
+async function loadKeywords() {
+  await loadApiStatus();
+  const activeCampaign = await ipcRenderer.invoke('get-active-campaign');
+  const title = document.getElementById('subtitle-text');
+
+  if (!activeCampaign?.brandName) {
+    title.textContent = 'No brand profile detected. Add keywords manually or configure your campaign in Settings.';
+    return;
+  }
+
+  try {
+    const savedKeywords = await ipcRenderer.invoke('get-keywords', activeCampaign.id);
+    if (savedKeywords?.length > 0) {
+      savedKeywords.forEach((kw) => addKeywordBox({
+        term: kw.term,
+        metrics: kw.metrics,
+        source: kw.metrics?.source,
+      }, false, kw.platforms, kw.customPrompt, kw.intent, kw.id));
+      title.innerHTML = `Loaded ${savedKeywords.length} saved keywords for <strong>[${escapeHtml(activeCampaign.brandName)}]</strong>. Click ↻ to refresh live research.`;
+    } else {
+      await generateFromApis(activeCampaign);
+    }
+  } catch (err) {
+    title.innerHTML = `<span style="color:#ef4444;">Failed to load keywords: ${escapeHtml(err.message)}</span>`;
+  }
+}
+
+function addKeywordBox(kwData, isResearch, savedPlatforms = null, savedPrompt = null, savedIntent = 'mentions', savedId = null) {
+  const keyword = typeof kwData === 'string' ? kwData : kwData.term;
+  if (!keyword) return;
+  const existing = Array.from(document.querySelectorAll('.keyword-title[data-term]'))
+    .some((el) => el.getAttribute('data-term').toLowerCase() === String(keyword).toLowerCase());
+  if (existing) return;
+  const metrics = typeof kwData === 'object' ? (kwData.metrics || {
+    searchVolume: kwData.searchVolume ?? null,
+    momentum: kwData.momentum ?? null,
+    redditPosts: kwData.redditPosts ?? null,
+    twitterPosts: kwData.twitterPosts ?? null,
+    liveSignals: kwData.liveSignals ?? null,
+    source: kwData.source ?? null,
+  }) : null;
+  const kwBox = document.createElement('div');
+  kwBox.className = 'keyword-box';
+  if (savedId) kwBox.dataset.kwId = savedId;
+  kwBox.dataset.metrics = JSON.stringify({
+    searchVolume: metrics?.searchVolume ?? null,
+    momentum: metrics?.momentum ?? null,
+    redditPosts: metrics?.redditPosts ?? null,
+    twitterPosts: metrics?.twitterPosts ?? null,
+    liveSignals: metrics?.liveSignals ?? null,
+    source: metrics?.source ?? null,
+  });
+
+  const badgeHtml = isResearch
+    ? '<span class="ai-badge">Live Research</span>'
+    : '<span class="manual-badge">Saved</span>';
+
+  const defaultPlats = savedPlatforms || ['Twitter', 'LinkedIn', 'Reddit'];
+  const platformHtml = platformCatalog.renderGroupedPlatformCheckboxes(defaultPlats);
+
+  kwBox.innerHTML = `
+    <div class="keyword-header">
+      <div class="keyword-title" data-term="${escapeHtml(keyword)}">${escapeHtml(keyword)} ${badgeHtml}</div>
+      <div style="display:flex; align-items:center; gap: 1rem;">
+          <select class="keyword-intent-select" style="background:rgba(15,23,42,0.8); border:1px solid #475569; color:#f8fafc; padding:0.4rem; border-radius:4px; font-size:0.8rem;">
+            <option value="mentions" ${savedIntent==='mentions'?'selected':''}>Brand Mentions</option>
+            <option value="affiliate" ${savedIntent==='affiliate'?'selected':''}>Affiliate Product</option>
+            <option value="client" ${savedIntent==='client'?'selected':''}>Client Brand</option>
+            <option value="qa" ${savedIntent==='qa'?'selected':''}>Q&A Questions</option>
+            <option value="competitor" ${savedIntent==='competitor'?'selected':''}>Competitor Account/Page</option>
+            <option value="partner" ${savedIntent==='partner'?'selected':''}>Partner Account/Page</option>
+          </select>
+          <button class="btn-refresh-metrics secondary" style="padding:0.4rem 0.8rem; font-size:0.75rem;">↻ Refresh metrics</button>
+          <button class="btn-remove">Remove</button>
+      </div>
+    </div>
+    ${metricsHtml(metrics)}
+    <div class="platform-toggles" style="margin-bottom: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
+      ${platformHtml}
+    </div>
+    <div style="margin-top: 1rem;">
+      <label style="display:block; font-size:0.85rem; color:#94a3b8; margin-bottom:0.5rem;">Custom AI Prompt Override (Optional)</label>
+      <textarea class="custom-prompt-input" placeholder="e.g. Always mention our 20% discount code when this keyword is triggered..." style="width:100%; box-sizing:border-box; padding:0.75rem; border-radius:6px; background:rgba(15,23,42,0.8); border:1px solid #475569; color:#f8fafc; font-family:inherit; font-size:0.9rem; resize:vertical; min-height:60px;">${savedPrompt || ''}</textarea>
+    </div>
+  `;
+  
+  kwBox.querySelector('.btn-remove').addEventListener('click', () => {
+    kwBox.style.opacity = '0.5';
+    setTimeout(() => kwBox.remove(), 300);
+  });
+
+  kwBox.querySelector('.btn-refresh-metrics').addEventListener('click', async (e) => {
+    e.target.textContent = '...';
+    const term = kwBox.querySelector('.keyword-title').getAttribute('data-term');
+    try {
+      const res = await ipcRenderer.invoke('research-keyword', term);
+      if (res.keyword) {
+        kwBox.dataset.metrics = JSON.stringify({
+          searchVolume: res.keyword.searchVolume,
+          momentum: res.keyword.momentum,
+          redditPosts: res.keyword.redditPosts,
+          twitterPosts: res.keyword.twitterPosts,
+          liveSignals: res.keyword.liveSignals,
+          source: res.keyword.source,
+        });
+        const old = kwBox.querySelector('.kw-metrics');
+        if (old) old.remove();
+        const div = document.createElement('div');
+        div.innerHTML = metricsHtml(res.keyword);
+        kwBox.querySelector('.platform-toggles').before(div.firstChild);
+      }
+    } catch (err) {
+      alert('Refresh failed: ' + err.message);
+    }
+    e.target.textContent = '↻ Refresh metrics';
+  });
+
+  document.getElementById('keywords-container').appendChild(kwBox);
+  refreshQuantumKeywordPick();
+}
+
+let lastQuantumResult = null;
+
+function refreshQuantumKeywordPick() {
+  const pick = document.getElementById('qpKeywordPick');
+  if (!pick) return;
+  const current = pick.value;
+  const terms = Array.from(document.querySelectorAll('.keyword-title[data-term]'))
+    .map((el) => el.getAttribute('data-term'))
+    .filter(Boolean);
+  pick.innerHTML = '<option value="">Pick saved keyword...</option>'
+    + terms.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  if (current && terms.includes(current)) pick.value = current;
+}
+
+function setQuantumProgress(pct, label) {
+  const panel = document.getElementById('qpProgress');
+  const bar = document.getElementById('qpProgressBar');
+  const lbl = document.getElementById('qpProgressLabel');
+  if (panel) panel.style.display = 'block';
+  if (bar) bar.style.width = `${pct}%`;
+  if (lbl) lbl.textContent = label || `${pct}%`;
+}
+
+function showQuantumTab(tab) {
+  document.querySelectorAll('.qp-tab').forEach((b) => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+    b.style.borderColor = b.dataset.tab === tab ? '#a78bfa' : '#475569';
+    b.style.color = b.dataset.tab === tab ? '#c4b5fd' : '#f1f5f9';
+  });
+  const out = document.getElementById('qpOutput');
+  if (!out || !lastQuantumResult) return;
+  if (tab === 'article') out.textContent = lastQuantumResult.html || '';
+  else if (tab === 'report') out.textContent = lastQuantumResult.report || '';
+  else if (tab === 'outline') out.textContent = lastQuantumResult.outline || '';
+  else if (tab === 'meta') {
+    out.textContent = `Title: ${lastQuantumResult.title || ''}\nMeta Title: ${lastQuantumResult.metaTitle || ''}\nMeta Description: ${lastQuantumResult.metaDescription || ''}\nImage Prompt: ${lastQuantumResult.imagePrompt || ''}`;
+  }
+}
+
+function initQuantumPages() {
+  const pick = document.getElementById('qpKeywordPick');
+  const input = document.getElementById('qpKeywordInput');
+  const runBtn = document.getElementById('qpRunBtn');
+  const saveBtn = document.getElementById('qpSaveBtn');
+  const exportBtn = document.getElementById('qpExportBtn');
+  if (!runBtn) return;
+
+  pick?.addEventListener('change', () => {
+    if (pick.value && input) input.value = pick.value;
+  });
+
+  document.querySelectorAll('.qp-tab').forEach((btn) => {
+    btn.addEventListener('click', () => showQuantumTab(btn.dataset.tab));
+  });
+
+  ipcRenderer.on('quantum-pages-progress', (_, data) => {
+    setQuantumProgress(data.progress || 0, data.label || 'Running...');
+  });
+
+  runBtn.addEventListener('click', async () => {
+    const keyword = (input?.value || pick?.value || '').trim();
+    if (!keyword) { alert('Enter or pick a keyword for Quantum Pages SEO.'); return; }
+    runBtn.disabled = true;
+    saveBtn.disabled = true;
+    exportBtn.disabled = true;
+    setQuantumProgress(0, 'Starting pipeline...');
+    document.getElementById('qpOutputTabs').style.display = 'none';
+    try {
+      const res = await ipcRenderer.invoke('run-quantum-pages-full', {
+        keyword,
+        includeInlineImages: document.getElementById('qpInlineImages')?.checked,
+        numberOfImages: parseInt(document.getElementById('qpInlineCount')?.value, 10) || 2,
+        generateFeaturedImage: document.getElementById('qpFeaturedImage')?.checked !== false,
+      });
+      if (!res.success) throw new Error(res.error || 'Pipeline failed');
+      lastQuantumResult = res;
+      document.getElementById('qpOutputTabs').style.display = 'block';
+      showQuantumTab('article');
+      saveBtn.disabled = false;
+      exportBtn.disabled = false;
+      setQuantumProgress(100, 'Complete — article ready');
+    } catch (e) {
+      alert('Quantum Pages failed: ' + e.message);
+      setQuantumProgress(0, 'Failed');
+    } finally {
+      runBtn.disabled = false;
+    }
+  });
+
+  saveBtn?.addEventListener('click', async () => {
+    if (!lastQuantumResult) return;
+    const res = await ipcRenderer.invoke('save-quantum-pages-article', {
+      keyword: input?.value || pick?.value,
+      title: lastQuantumResult.title,
+      html: lastQuantumResult.html,
+      metaTitle: lastQuantumResult.metaTitle,
+      metaDescription: lastQuantumResult.metaDescription,
+      featuredImageUrl: lastQuantumResult.featuredImageUrl,
+    });
+    if (res.success) {
+      alert('Article saved to Content Hub review queue.');
+      window.location.href = 'content-hub.html';
+    } else {
+      alert('Save failed: ' + (res.error || 'unknown'));
+    }
+  });
+
+  exportBtn?.addEventListener('click', async () => {
+    if (!lastQuantumResult?.html) return;
+    try {
+      await navigator.clipboard.writeText(lastQuantumResult.html);
+      alert('Article HTML copied to clipboard.');
+    } catch (e) {
+      alert('Copy failed — select from output panel manually.');
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadKeywords();
+  loadAutoRules();
+  initQuantumPages();
+});
+async function loadAutoRules() {
+  const settings = await ipcRenderer.invoke('get-auto-rules').catch(() => ({}));
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.checked = !!val; };
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+  set('autoReplyEnabled', settings.autoReplyEnabled);
+  set('autoReplyNegative', settings.autoReplyNegative);
+  set('alertNegative', settings.alertNegative !== false);
+  setVal('customRulePrompt', settings.customRulePrompt || '');
+  setVal('autoReplyMode', settings.autoReplyMode || 'mentions_only');
+  set('autoLike', settings.autoLike);
+  set('autoShare', settings.autoShare);
+  set('autoFollow', settings.autoFollow);
+  setVal('workerFrequency', settings.frequency || '15m');
+  set('beFirstDelay', settings.beFirstDelay !== false);
+}
+
+window.openAutoRulesModal = function() {
+  document.getElementById('autoRulesModal').style.display = 'flex';
+};
+window.closeAutoRulesModal = function() {
+  document.getElementById('autoRulesModal').style.display = 'none';
+};
+window.saveAutoRules = async function() {
+  const settings = {
+    autoReplyEnabled: document.getElementById('autoReplyEnabled').checked,
+    autoReplyNegative: document.getElementById('autoReplyNegative').checked,
+    alertNegative: document.getElementById('alertNegative').checked,
+    customRulePrompt: document.getElementById('customRulePrompt').value,
+    autoReplyMode: document.getElementById('autoReplyMode')?.value || 'mentions_only',
+    autoLike: document.getElementById('autoLike').checked,
+    autoShare: document.getElementById('autoShare').checked,
+    autoFollow: document.getElementById('autoFollow').checked,
+    frequency: document.getElementById('workerFrequency').value,
+    beFirstDelay: document.getElementById('beFirstDelay').checked,
+    enabled: true,
+  };
+  await ipcRenderer.invoke('save-auto-rules', settings);
+  alert('Auto-Rules saved to the app store (used by the background worker).');
+  closeAutoRulesModal();
+};
+</script>
+    <!-- Auto-Rules Modal -->
+    <div id="autoRulesModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); padding: 2rem; border-radius: 12px; width: 600x; max-width: 90%; border: 1px solid #334155;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #334155; padding-bottom: 1rem;">
+          <h2 style="margin: 0; color: #f1f5f9;"><i class="fas fa-cogs"></i> Auto-Rules Engine</h2>
+          <button onclick="closeAutoRulesModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&wimes;</button>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Global Auto-Reply Settings</label>
+          <div style="display: flex; align-items: center; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="autoReplyEnabled" checked>
+              Enable AI Drafts for New Mentions & Keywords
+            </label>
+          </div>
+        </div>
+
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Automation Actions (Where Allowed)</label>
+          <div style="display: flex; align-items: center; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="autoLike">
+              Auto-Like Positive Matches
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="autoShare">
+              Auto-Share / Retweet
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="autoFollow">
+              Auto-Follow Author
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Cron / Scheduler Settings</label>
+          <div style="display: flex; flex-direction: column; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="color: #cbd5e1; font-size: 0.9rem;">Refresh Frequency:</span>
+              <select id="workerFrequency" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.4rem; border-radius: 4px;">
+                <option value="daily">One-Click Auto Search (Daily)</option>
+                <option value="15m">Normal (Every 15 mins)</option>
+                <option value="10m">Fast (Every 10 mins)</option>
+                <option value="5m">Aggressive (Every 5 mins)</option>
+                <option value="realtime">Near Real-Time (Continuous)</option>
+              </select>
+            </div>
+            
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="beFirstDelay" checked>
+              <strong>"Be First" Delay Jitter:</strong> Add random human-like delay (2-45s) to avoid bot detection when replying early.
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Rule: Negative Sentiment</label>
+          <div style="display: flex; align-items: center; gap: 1rem; background: rgba(15,23,42,0.5); padding: 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="autoReplyNegative">
+              Auto-Draft Apology
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-left: 1rem;">
+              <input type="checkbox" id="alertNegative" checked>
+              Send Alert Via Inbox
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Autonomous vs Approval Mode</label>
+          <select id="autoReplyMode" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 4px; font-size: 0.9rem;">
+            <option value="auto_post_all">Auto Post All Replies / Comments</option>
+            <option value="manual_approval">Require Manual Approval for Everything</option>
+            <option value="mentions_only" selected>Only Auto Post for Mentions/DMs (Require Approval for Keywords)</option>
+          </select>
+          <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem;">Control how AI replies are sent out per project/platform.</div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="color: #38bdf8; font-weight: bold; margin-bottom: 0.5rem; display: block;">Custom AI Prompt Override (Optional)</label>
+          <textarea class="textarea-field" id="customRulePrompt" style="min-height: 60px; width: 100%; box-sizing: border-box; padding: 0.75rem; border-radius: 6px; background: rgba(15,23,42,0.8); border: 1px solid #475569; color: #f8fafc; font-family: inherit; font-size: 0.9rem;" placeholder="E.g., Always include a link to our help center when responding to technical questions..."></textarea>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+          <button class="secondary" onclick="closeAutoRulesModal()">Cancel</button>
+          <button class="primary" onclick="saveAutoRules()">Save Rule Engine</button>
+        </div>
+      </div>
+    </div>
+</body>
+</html>

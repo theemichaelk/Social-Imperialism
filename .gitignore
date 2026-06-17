@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+apps/desktop/.env
+apps/desktop/.test-*
+
+# Build output
+dist/
+out/
+release/
+
+# OS & editor
+.DS_Store
+Thumbs.db
+*.log
+
+# Electron / app data
+apps/desktop/storage/
+apps/desktop/prisma/dev.db
+apps/desktop/prisma/dev.db-journal
+
+# Temp / patch artifacts (regenerable)
+tmp/
+
+# Test credential artifacts (never commit)
+.test-*

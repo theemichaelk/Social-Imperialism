@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - SEO Research Tools</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="sidebar-nav.css">
+<style>
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0f1a; color: #f8fafc; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+.main-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: radial-gradient(ellipse 100% 60% at 100% 0%, rgba(56,189,248,0.07), transparent 50%), #0a0f1a; }
+.top-bar { padding: 1.25rem 1.5rem 0.75rem; border-bottom: 1px solid rgba(51,65,85,0.5); }
+.top-bar h1 { margin: 0; font-size: 1.35rem; letter-spacing: -0.02em; }
+.top-bar p { margin: 0.35rem 0 0; font-size: 0.82rem; color: #64748b; }
+.status-row { display: flex; gap: 0.5rem; margin-top: 0.65rem; flex-wrap: wrap; }
+.chip { font-size: 0.68rem; padding: 4px 10px; border-radius: 999px; border: 1px solid #334155; color: #94a3b8; }
+.chip.ok { border-color: #10b981; color: #6ee7b7; }
+.chip.warn { border-color: #f59e0b; color: #fcd34d; }
+.layout { flex: 1; display: grid; grid-template-columns: 240px 1fr; min-height: 0; }
+.tool-nav { border-right: 1px solid rgba(51,65,85,0.5); overflow-y: auto; padding: 0.75rem; }
+.tool-btn { display: block; width: 100%; text-align: left; padding: 0.65rem 0.75rem; margin-bottom: 4px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #94a3b8; cursor: pointer; font-family: inherit; font-size: 0.78rem; transition: all 0.15s; }
+.tool-btn:hover { background: rgba(56,189,248,0.06); color: #e2e8f0; }
+.tool-btn.active { border-color: rgba(56,189,248,0.4); background: rgba(56,189,248,0.1); color: #38bdf8; }
+.tool-btn strong { display: block; font-size: 0.8rem; color: inherit; }
+.tool-btn span { font-size: 0.68rem; color: #64748b; margin-top: 2px; display: block; }
+.tool-btn.active span { color: #7dd3fc; }
+.workspace { overflow-y: auto; padding: 1.25rem 1.5rem; }
+.panel { display: none; }
+.panel.active { display: block; }
+.panel h2 { margin: 0 0 0.35rem; font-size: 1.05rem; color: #e2e8f0; }
+.panel .lead { margin: 0 0 1rem; font-size: 0.82rem; color: #64748b; max-width: 640px; }
+label { display: block; font-size: 0.72rem; color: #94a3b8; margin-bottom: 4px; }
+input, textarea, select { width: 100%; background: #0f172a; border: 1px solid #475569; color: #f8fafc; border-radius: 6px; padding: 0.6rem; font-family: inherit; font-size: 0.85rem; }
+textarea { min-height: 120px; resize: vertical; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+.btn { border: 1px solid #475569; background: #1e293b; color: #f8fafc; padding: 0.55rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; font-family: inherit; }
+.btn.primary { background: linear-gradient(135deg, #0ea5e9, #2563eb); border: none; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.results { margin-top: 1.25rem; background: rgba(15,23,42,0.55); border: 1px solid #334155; border-radius: 10px; padding: 1rem; font-size: 0.8rem; }
+.results pre { white-space: pre-wrap; word-break: break-word; color: #cbd5e1; margin: 0; font-size: 0.75rem; }
+.results-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.results-table th { text-align: left; color: #64748b; padding: 6px 8px; border-bottom: 1px solid #334155; font-weight: 600; }
+.results-table td { padding: 8px; border-bottom: 1px solid rgba(51,65,85,0.4); vertical-align: top; color: #e2e8f0; }
+.results-table a { color: #38bdf8; text-decoration: none; }
+.kgr-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
+.kgr-badge.golden { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid #10b981; }
+.kgr-badge.good { background: rgba(56,189,248,0.12); color: #7dd3fc; border: 1px solid #38bdf8; }
+.kgr-badge.competitive { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid #f59e0b; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+.metric-box { background: rgba(30,41,59,0.5); border: 1px solid #334155; border-radius: 8px; padding: 0.85rem; text-align: center; }
+.metric-box .val { font-size: 1.4rem; font-weight: 700; color: #38bdf8; }
+.metric-box .lbl { font-size: 0.65rem; color: #64748b; text-transform: uppercase; margin-top: 4px; }
+.empty { color: #64748b; font-style: italic; padding: 1rem; text-align: center; }
+#toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.75rem 1.25rem; border-radius: 8px; background: #1e293b; border: 1px solid #38bdf8; font-size: 0.85rem; display: none; z-index: 999; }
+@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } .tool-nav { max-height: 180px; border-right: none; border-bottom: 1px solid #334155; } }
+</style>
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('seo-tools', () => location.reload());
+  } catch (e) { console.warn(e.message); }
+})();
+</script>
+
+<div class="main-content">
+  <div class="top-bar">
+    <h1><i class="fas fa-search-plus" style="color:#38bdf8;margin-right:8px;"></i>SEO Research Tools</h1>
+    <p>KGR, scrapers, autocomplete, indexing, Reddit &amp; Quora discovery — powered by SerpAPI + live platform APIs.</p>
+    <div class="status-row" id="apiStatusRow">
+      <span class="chip" id="serpStatusChip">SerpAPI: checking…</span>
+      <span class="chip ok">Reddit: public API</span>
+    </div>
+  </div>
+
+  <div class="layout">
+    <nav class="tool-nav" id="toolNav"></nav>
+    <div class="workspace" id="workspace"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const { ipcRenderer, shell } = require('electron');
+
+const TOOL_FORMS = {
+  kgr: { input: 'keyword', label: 'Target keyword', placeholder: 'e.g. social media automation', type: 'input' },
+  'reddit-topics': { input: 'keyword', label: 'Topic / keyword', placeholder: 'e.g. SaaS marketing', type: 'input' },
+  'quora-questions': { input: 'keyword', label: 'Niche keyword', placeholder: 'e.g. email marketing tips', type: 'input' },
+  'bulk-index-submit': { input: 'urls', label: 'URLs to index (one per line)', placeholder: 'https://yoursite.com/page-1\nhttps://yoursite.com/page-2', type: 'textarea' },
+  'bulk-index-check': { input: 'urls', label: 'URLs to check (one per line)', placeholder: 'https://yoursite.com/page-1', type: 'textarea' },
+  'google-scrape': { input: 'query', label: 'Google search query', placeholder: 'best crm for startups', type: 'input' },
+  'bing-scrape': { input: 'query', label: 'Bing search query', placeholder: 'best crm for startups', type: 'input' },
+  paa: { input: 'keyword', label: 'Seed keyword', placeholder: 'how to grow on linkedin', type: 'input' },
+  grouping: { input: 'keywords', label: 'Keywords (one per line)', placeholder: 'email marketing\nemail automation\nemail list building', type: 'textarea' },
+  'youtube-autocomplete': { input: 'seed', label: 'YouTube seed', placeholder: 'how to edit videos', type: 'input' },
+  'google-autocomplete': { input: 'seed', label: 'Google seed', placeholder: 'content marketing', type: 'input' },
+  'google-suggestions': { input: 'seed', label: 'Google seed', placeholder: 'content marketing', type: 'input' },
+};
+
+let activeTool = 'kgr';
+let toolsList = [];
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function buildPanels() {
+  const ws = document.getElementById('workspace');
+  ws.innerHTML = toolsList.map((t) => {
+    const form = TOOL_FORMS[t.id] || { input: 'keyword', label: 'Input', type: 'input' };
+    const field = form.type === 'textarea'
+      ? `<textarea id="input-${t.id}" placeholder="${form.placeholder || ''}"></textarea>`
+      : `<input type="text" id="input-${t.id}" placeholder="${form.placeholder || ''}">`;
+    return `<div class="panel" id="panel-${t.id}" data-tool="${t.id}">
+      <h2>${escapeHtml(t.name)}</h2>
+      <p class="lead">${escapeHtml(t.desc)}${t.needsSerp ? ' · Requires SerpAPI key.' : ''}</p>
+      <label>${escapeHtml(form.label)}</label>
+      ${field}
+      <div class="btn-row">
+        <button class="btn primary" onclick="runActiveTool('${t.id}')"><i class="fas fa-play"></i> Run</button>
+        <button class="btn" onclick="exportResults('${t.id}')"><i class="fas fa-download"></i> Export JSON</button>
+      </div>
+      <div class="results" id="results-${t.id}"><div class="empty">Run the tool to see results.</div></div>
+    </div>`;
+  }).join('');
+}
+
+function buildNav() {
+  const nav = document.getElementById('toolNav');
+  nav.innerHTML = toolsList.map((t) =>
+    `<button type="button" class="tool-btn${t.id === activeTool ? ' active' : ''}" data-id="${t.id}" onclick="selectTool('${t.id}')">
+      <strong>${escapeHtml(t.name)}</strong>
+      <span>${escapeHtml(t.desc)}</span>
+    </button>`
+  ).join('');
+}
+
+function selectTool(id) {
+  activeTool = id;
+  document.querySelectorAll('.tool-btn').forEach((b) => b.classList.toggle('active', b.dataset.id === id));
+  document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.dataset.tool === id));
+}
+
+function getPayload(toolId) {
+  const form = TOOL_FORMS[toolId];
+  const el = document.getElementById(`input-${toolId}`);
+  const val = el?.value?.trim() || '';
+  if (!val) throw new Error('Input required');
+  const payload = {};
+  payload[form?.input || 'keyword'] = val;
+  if (toolId === 'google-scrape' || toolId === 'bing-scrape') payload.num = 15;
+  return payload;
+}
+
+function renderResults(toolId, data) {
+  const box = document.getElementById(`results-${toolId}`);
+  if (!box) return;
+  box._lastData = data;
+
+  if (toolId === 'kgr') {
+    const cls = (data.rating || '').toLowerCase();
+    box.innerHTML = `
+      <div class="metric-grid">
+        <div class="metric-box"><div class="val">${data.allintitle ?? '—'}</div><div class="lbl">Allintitle</div></div>
+        <div class="metric-box"><div class="val">${data.searchVolume ?? '—'}</div><div class="lbl">Est. Volume</div></div>
+        <div class="metric-box"><div class="val">${data.kgr ?? '—'}</div><div class="lbl">KGR</div></div>
+      </div>
+      <span class="kgr-badge ${cls}">${escapeHtml(data.rating)}</span>
+      ${data.momentum ? `<span style="margin-left:8px;color:#64748b;font-size:0.75rem;">Trend ${escapeHtml(data.momentum)}</span>` : ''}
+      <p style="margin:1rem 0 0.5rem;font-size:0.75rem;color:#64748b;">KGR &lt; 0.25 = golden keyword opportunity</p>
+      ${(data.topResults || []).length ? `<table class="results-table"><tr><th>Title</th><th>URL</th></tr>
+        ${data.topResults.map((r) => `<tr><td>${escapeHtml(r.title)}</td><td><a href="#" data-href="${escapeHtml(r.link)}">${escapeHtml(r.link?.slice(0, 50))}…</a></td></tr>`).join('')}
+      </table>` : ''}`;
+    bindResultLinks(box);
+    return;
+  }
+
+  if (toolId === 'reddit-topics') {
+    const subs = (data.subreddits || []).map((s) =>
+      `<tr><td>${escapeHtml(s.subreddit)}</td><td>${s.posts}</td><td>${s.totalUps}</td></tr>`
+    ).join('');
+    const posts = (data.posts || []).slice(0, 15).map((p) =>
+      `<tr><td>${escapeHtml(p.subreddit)}</td><td>${escapeHtml(p.title)}</td><td>${p.ups}</td><td><a href="#" data-href="${escapeHtml(p.url)}">open</a></td></tr>`
+    ).join('');
+    box.innerHTML = `<p style="color:#94a3b8;margin:0 0 0.75rem;">${data.count || 0} posts found</p>
+      <strong style="font-size:0.75rem;color:#64748b;">TOP SUBREDDITS</strong>
+      <table class="results-table"><tr><th>Subreddit</th><th>Posts</th><th>Upvotes</th></tr>${subs || '<tr><td colspan="3">No results</td></tr>'}</table>
+      <strong style="font-size:0.75rem;color:#64748b;display:block;margin-top:1rem;">HOT POSTS</strong>
+      <table class="results-table"><tr><th>Sub</th><th>Title</th><th>Ups</th><th></th></tr>${posts}</table>`;
+    bindResultLinks(box);
+    return;
+  }
+
+  if (toolId === 'quora-questions' || toolId === 'paa') {
+    const rows = (data.questions || []).map((q) =>
+      `<tr><td>${escapeHtml(q.question)}</td><td>${escapeHtml((q.snippet || '').slice(0, 120))}</td><td>${q.link ? `<a href="#" data-href="${escapeHtml(q.link)}">open</a>` : '—'}</td></tr>`
+    ).join('');
+    box.innerHTML = `<p style="color:#94a3b8;">${data.count || 0} questions</p>
+      <table class="results-table"><tr><th>Question</th><th>Snippet</th><th></th></tr>${rows || '<tr><td colspan="3">No results</td></tr>'}</table>`;
+    bindResultLinks(box);
+    return;
+  }
+
+  if (toolId === 'bulk-index-check' || toolId === 'bulk-index-submit') {
+    const rows = (data.results || []).map((r) =>
+      `<tr><td style="word-break:break-all;">${escapeHtml(r.url)}</td><td>${r.indexed !== undefined ? (r.indexed ? '✓ Indexed' : '✗ Not found') : escapeHtml(r.status || '—')}</td><td>${escapeHtml(r.foundUrl || r.note || r.error || '')}</td></tr>`
+    ).join('');
+    box.innerHTML = `<p style="color:#94a3b8;">${data.note || `Checked ${data.checked || data.count || 0}${data.indexed !== undefined ? ` · ${data.indexed} indexed` : ''}`}</p>
+      <table class="results-table"><tr><th>URL</th><th>Status</th><th>Detail</th></tr>${rows}</table>`;
+    return;
+  }
+
+  if (toolId === 'google-scrape' || toolId === 'bing-scrape') {
+    const rows = (data.results || []).map((r) =>
+      `<tr><td>${r.position || '—'}</td><td>${escapeHtml(r.title)}</td><td><a href="#" data-href="${escapeHtml(r.link)}">${escapeHtml((r.displayed_link || r.link || '').slice(0, 40))}</a></td><td>${escapeHtml((r.snippet || '').slice(0, 100))}</td></tr>`
+    ).join('');
+    box.innerHTML = `<p style="color:#94a3b8;">${data.total ? `${data.total} total · ` : ''}${(data.results || []).length} results</p>
+      <table class="results-table"><tr><th>#</th><th>Title</th><th>Link</th><th>Snippet</th></tr>${rows}</table>`;
+    bindResultLinks(box);
+    return;
+  }
+
+  if (toolId === 'grouping') {
+    box.innerHTML = (data.groups || []).map((g) =>
+      `<div style="margin-bottom:0.75rem;padding:0.75rem;background:rgba(30,41,59,0.4);border-radius:8px;border:1px solid #334155;">
+        <strong style="color:#38bdf8;">${escapeHtml(g.theme)}</strong> <span style="color:#64748b;font-size:0.72rem;">(${g.count})</span>
+        <div style="margin-top:6px;color:#cbd5e1;font-size:0.78rem;">${g.terms.map(escapeHtml).join(' · ')}</div>
+      </div>`
+    ).join('') || '<div class="empty">No groups</div>';
+    return;
+  }
+
+  if (toolId === 'youtube-autocomplete' || toolId === 'google-autocomplete') {
+    const items = (data.suggestions || []).map((s, i) => `<li style="margin:4px 0;color:#e2e8f0;">${i + 1}. ${escapeHtml(s)}</li>`).join('');
+    box.innerHTML = `<p style="color:#64748b;font-size:0.75rem;">${escapeHtml(data.source || '')}</p><ul style="margin:0.5rem 0;padding-left:1.2rem;">${items}</ul>`;
+    return;
+  }
+
+  if (toolId === 'google-suggestions') {
+    const rows = (data.suggestions || []).map((s) =>
+      `<tr><td>${escapeHtml(s.query)}</td><td>${s.link ? `<a href="#" data-href="${escapeHtml(s.link)}">open</a>` : '—'}</td></tr>`
+    ).join('');
+    box.innerHTML = `<p style="color:#94a3b8;">${data.count || 0} related searches</p>
+      <table class="results-table"><tr><th>Query</th><th></th></tr>${rows}</table>`;
+    bindResultLinks(box);
+    return;
+  }
+
+  box.innerHTML = `<pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+}
+
+function bindResultLinks(container) {
+  container.querySelectorAll('a[data-href]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const u = a.getAttribute('data-href');
+      if (u) try { shell.openExternal(u); } catch (err) { window.open(u, '_blank'); }
+    });
+  });
+}
+
+window.runActiveTool = async function(toolId) {
+  const id = toolId || activeTool;
+  const box = document.getElementById(`results-${id}`);
+  try {
+    const payload = getPayload(id);
+    if (box) box.innerHTML = '<div class="empty">Running…</div>';
+    const res = await ipcRenderer.invoke('run-seo-tool', { toolId: id, payload });
+    if (!res.success) {
+      if (box) box.innerHTML = `<div style="color:#fca5a5;">${escapeHtml(res.error)}</div>`;
+      showToast(res.error || 'Tool failed');
+      return;
+    }
+    renderResults(id, res.data);
+    showToast('Done');
+  } catch (e) {
+    if (box) box.innerHTML = `<div style="color:#fca5a5;">${escapeHtml(e.message)}</div>`;
+    showToast(e.message);
+  }
+};
+
+window.exportResults = function(toolId) {
+  const box = document.getElementById(`results-${toolId}`);
+  if (!box?._lastData) return showToast('Run the tool first');
+  const blob = new Blob([JSON.stringify(box._lastData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `seo-${toolId}-${Date.now()}.json`;
+  a.click();
+};
+
+async function init() {
+  const meta = await ipcRenderer.invoke('get-seo-tools-list');
+  toolsList = meta.tools || [];
+  const chip = document.getElementById('serpStatusChip');
+  if (chip) {
+    chip.textContent = meta.hasSerpApi ? 'SerpAPI: connected' : 'SerpAPI: add key in Settings';
+    chip.className = 'chip ' + (meta.hasSerpApi ? 'ok' : 'warn');
+  }
+  buildPanels();
+  buildNav();
+  selectTool(activeTool);
+  const hash = location.hash.replace('#', '');
+  if (hash && toolsList.some((t) => t.id === hash)) selectTool(hash);
+}
+
+init();
+</script>
+</body>
+</html>

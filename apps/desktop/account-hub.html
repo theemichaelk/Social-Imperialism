@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - Account Hub</title>
+<style>
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+  background-color: #0f172a; 
+  color: #f8fafc; 
+  margin: 0; 
+  padding: 0; 
+  display: flex; 
+  height: 100vh;
+  background: radial-gradient(circle at top right, #1e293b, #0f172a);
+}
+
+
+
+
+
+
+
+
+.main-content { flex: 1; padding: 3rem; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; }
+
+.container { 
+  width: 100%;
+  max-width: 1200px; 
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 2.5rem; 
+  border-radius: 12px; 
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); 
+  border: 1px solid #334155;
+  display: flex;
+  gap: 2rem;
+}
+
+/* Left Sidebar within Hub - Connected Accounts */
+.accounts-sidebar {
+  width: 300px;
+  border-right: 1px solid #334155;
+  padding-right: 1.5rem;
+}
+
+.hub-title { font-size: 1.5rem; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); margin-top: 0; margin-bottom: 0.5rem; letter-spacing: 0.5px; } 
+.hub-subtitle { color: #94a3b8; margin-top: 0; margin-bottom: 2rem; font-size: 0.95rem; }
+
+.add-account-btn {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px dashed #475569;
+  color: #94a3b8;
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+.add-account-btn:hover { border-color: #38bdf8; color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
+
+.account-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.5rem;
+  border: 1px solid transparent;
+}
+.account-item:hover { background: rgba(30, 41, 59, 0.9); }
+.account-item.active { background: rgba(15, 23, 42, 0.8); border-color: #38bdf8; box-shadow: inset 4px 0 0 #38bdf8; }
+
+.acc-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
+.tw-icon { background: #000; color: white; border: 1px solid #333; }
+.ig-icon { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; }
+.li-icon { background: #0A66C2; color: white; }
+
+.acc-details h4 { margin: 0 0 0.25rem 0; font-size: 1rem; color: #e2e8f0; }
+.acc-details p { margin: 0; font-size: 0.8rem; color: #94a3b8; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 4px; box-shadow: 0 0 8px #10b981; }
+
+/* Right Content Area - Workspace */
+.workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #334155;
+}
+
+.workspace-title { font-size: 1.8rem; font-weight: bold; margin: 0; color: #f8fafc; }
+.workspace-handle { color: #94a3b8; font-size: 1.1rem; }
+
+/* Action Tabs */
+.action-tabs { display: flex; gap: 1rem; margin-bottom: 2rem; }
+.action-tab { padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; color: #94a3b8; border: 1px solid #334155; transition: all 0.2s; background: rgba(15, 23, 42, 0.5); }
+.action-tab:hover { background: rgba(30, 41, 59, 0.8); color: white; }
+.action-tab.active { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-color: #38bdf8; }
+
+/* Composer Area */
+.composer-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #475569;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+textarea { 
+  width: 100%; 
+  background: transparent; 
+  border: none; 
+  color: #f8fafc; 
+  font-family: inherit; 
+  font-size: 1.1rem; 
+  resize: none; 
+  outline: none;
+  min-height: 120px;
+}
+
+.media-upload {
+  border: 1px dashed #475569;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  color: #94a3b8;
+  margin: 1.5rem 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(15, 23, 42, 0.4);
+}
+.media-upload:hover { border-color: #38bdf8; color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
+
+.composer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #334155;
+  padding-top: 1rem;
+}
+
+.tools { display: flex; gap: 1rem; }
+.tool-btn { background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
+.tool-btn:hover { color: #38bdf8; }
+
+button.publish-btn { 
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: white; 
+  border: none; 
+  padding: 0.8rem 2rem; 
+  border-radius: 6px; 
+  font-weight: 600; 
+  cursor: pointer; 
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+} 
+button.publish-btn:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5); transform: translateY(-1px); } 
+
+/* Recent Activity Feed */
+.activity-header { font-size: 1.2rem; font-weight: bold; margin-bottom: 1rem; color: #e2e8f0; }
+.activity-item {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid #334155;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.activity-meta { color: #94a3b8; font-size: 0.85rem; }
+.activity-stats { display: flex; gap: 1rem; color: #34d399; font-size: 0.9rem; font-weight: bold; }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(2, 6, 23, 0.8);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+.modal-content {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  width: 400px;
+  padding: 2rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+.modal-overlay.active .modal-content {
+  transform: translateY(0);
+}
+.modal-header {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #f8fafc;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.platform-option {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.platform-option:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+.platform-option .icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+.modal-close {
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  border: 1px solid #475569;
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.modal-close:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.hidden { display: none; }
+
+.profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.profile-stat { background: rgba(15,23,42,0.5); border: 1px solid #334155; border-radius: 8px; padding: 1rem; text-align: center; }
+.profile-stat .val { font-size: 1.3rem; font-weight: 700; color: #38bdf8; }
+.profile-stat .lbl { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-top: 4px; }
+.api-status-bar { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.8rem; margin-bottom: 1rem; }
+.api-dot.on { color: #10b981; }
+.api-dot.off { color: #64748b; }
+.status-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid #334155; padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; z-index: 200; display: none; }
+.status-toast.show { display: block; }
+.status-toast.success { border-color: #10b981; color: #6ee7b7; }
+.status-toast.error { border-color: #ef4444; color: #fca5a5; }
+
+.groups-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; max-height: 280px; overflow-y: auto; }
+.group-item { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 1rem; background: rgba(15,23,42,0.5); border: 1px solid #334155; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.group-item:hover, .group-item.selected { border-color: #38bdf8; background: rgba(56,189,248,0.08); }
+.group-item input { accent-color: #38bdf8; }
+.group-meta { font-size: 0.75rem; color: #64748b; }
+.automation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.automation-field label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem; }
+.automation-field input, .automation-field select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; }
+.refresh-btn { background: transparent; border: 1px solid #475569; color: #94a3b8; padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.refresh-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+.sub-accounts-banner { background: rgba(56,189,248,0.08); border: 1px solid #38bdf8; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: #94a3b8; }
+.platform-option.disabled { opacity: 0.45; cursor: not-allowed; }
+.platform-option.ready { border-color: #10b981; }
+
+/* Sidebar Standardized Styles */
+
+
+
+
+
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+
+
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+
+/* Sidebar Standardized Styles */
+.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
+.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
+.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
+.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+.nav-link:hover { background-color: #1e293b; color: white; transform: translateX(2px); }
+.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); transform: translateX(2px); }
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+</style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="sidebar-nav.css">
+</head>
+<body>
+<!-- Connect Modal (OAuth + Email/Password) -->
+<div class="modal-overlay" id="connectModal">
+  <div class="modal-content" style="width: 440px;">
+    <div class="modal-header" id="connectModalHeader">Connect Platform</div>
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+      <button type="button" class="refresh-btn connect-mode-btn active" data-mode="credentials" style="flex:1;">Email &amp; Password</button>
+      <button type="button" class="refresh-btn connect-mode-btn" data-mode="oauth" style="flex:1;">OAuth</button>
+    </div>
+    <div id="credentialsConnectPanel">
+      <p id="credentialsConnectHint" style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem 0;">Enter your login email to label this connection. In the password field, paste your <strong>API access token</strong> (not your website login password for most platforms). All profiles, pages, groups, and communities are pulled automatically.</p>
+      <label style="display:block; color:#94a3b8; font-size:0.8rem; margin-bottom:4px;">Email</label>
+      <input type="email" id="connectEmail" placeholder="you@company.com" style="width:100%; box-sizing:border-box; padding:0.65rem; margin-bottom:0.75rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#f8fafc;">
+      <label style="display:block; color:#94a3b8; font-size:0.8rem; margin-bottom:4px;">Password <span style="color:#64748b;">(or paste API access token)</span></label>
+      <input type="password" id="connectPassword" placeholder="Password or access token" style="width:100%; box-sizing:border-box; padding:0.65rem; margin-bottom:0.75rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#f8fafc;">
+      <label style="display:block; color:#94a3b8; font-size:0.8rem; margin-bottom:4px;">Username <span style="color:#64748b;">(optional — Reddit, etc.)</span></label>
+      <input type="text" id="connectUsername" placeholder="@handle or u/username" style="width:100%; box-sizing:border-box; padding:0.65rem; margin-bottom:1rem; background:#0f172a; border:1px solid #475569; border-radius:6px; color:#f8fafc;">
+      <div style="display:flex; gap:1rem;">
+        <button class="modal-close" id="cancelConnectBtn" style="margin-top:0; flex:1;">Cancel</button>
+        <button id="startCredentialsBtn" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #2563eb); color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; padding:0.75rem;">Connect &amp; Pull All</button>
+      </div>
+    </div>
+    <div id="oauthConnectPanel" style="display:none;">
+      <p id="connectModalDesc" style="color:#94a3b8; font-size:0.9rem; text-align:center; margin:0 0 1.5rem 0;">
+        Opens your browser for OAuth. All discovered pages, groups, and sub-accounts will be linked automatically.
+      </p>
+      <div style="display:flex; gap:1rem;">
+        <button class="modal-close" id="cancelOAuthBtn" style="margin-top:0; flex:1;">Cancel</button>
+        <button id="startOAuthBtn" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #2563eb); color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; padding:0.75rem;">Authorize via OAuth</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+ <!-- Account Selection Modal (-->
+  <div class="modal-overlay" id="selectionModal">
+    <div class="modal-content" style="width: 400px;">
+      <div class="modal-header" id="selectionModalHeader">Select Accounts</div>
+      
+      <div style="margin-bottom: 1.5rem; color: #94a3b8; font-size: 0.9rem; text-align: center;">
+        Choose which profiles, pages, or groups to link to this campaign.
+      </div>
+      
+      <div id="accountSelectionList" style="max-height: 200px; overflow-y: auto; margin-bottom: 1.5rem; background: rgba(15,23,42,0.5); border: 1px solid #475569; border-radius: 6px; padding: 0x 0.5rem;">
+        <!-- Dynamically populated -->
+      </div>
+
+      <div style="display: flex; gap: 1rem;">
+        <button class="modal-close" id="cancelSelectionBtn" style="margin-top:0; flex:1;">Cancel</button>
+        <button id="saveSelectionBtn" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #2563eb); color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 15px rgba(37,99,235,0.3);">Link Selected</button>
+      </div>
+    </div>
+  </div>
+  <!-- Modal Overlay (Platform Selector) -->
+<div class="modal-overlay" id="addAccountModal">
+  <div class="modal-content">
+    <div class="modal-header">Connect a Platform</div>
+    <div class="platform-grid">
+      <div class="platform-option" data-platform="Twitter">
+        <div class="icon">𝕏</div>
+        Twitter / X
+      </div>
+      <div class="platform-option" data-platform="LinkedIn">
+        <div class="icon" style="color: #0A66C2;">in</div>
+        LinkedIn
+      </div>
+      <div class="platform-option" data-platform="Instagram">
+        <div class="icon" style="background: -webkit-linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Ig</div>
+        Instagram
+      </div>
+      <div class="platform-option" data-platform="Facebook">
+        <div class="icon" style="color: #1877F2;">Fb</div>
+        Facebook
+      </div>
+      <div class="platform-option" data-platform="TikTok">
+        <div class="icon" style="color: #fff; text-shadow: 2px 2px 0 #ff0050, -2px -2px 0 #00f2fe;">Tk</div>
+        TikTok
+      </div>
+      <div class="platform-option" data-platform="YouTube">
+        <div class="icon" style="color: #FF0000;">Yt</div>
+        YouTube
+      </div>
+      <div class="platform-option" data-platform="Pinterest">
+        <div class="icon" style="color: #E60023;">P</div>
+        Pinterest
+      </div>
+      <div class="platform-option" data-platform="Snapchat">
+        <div class="icon" style="color: #FFFC00; text-shadow: 1px 1px 0 #000;">Sc</div>
+        Snapchat
+      </div>
+      <div class="platform-option" data-platform="Threads">
+        <div class="icon">@</div>
+        Threads
+      </div>
+      <div class="platform-option" data-platform="Discord">
+        <div class="icon" style="color: #5865F2;">Dc</div>
+        Discord
+      </div>
+      <div class="platform-option" data-platform="Telegram">
+        <div class="icon" style="color: #26A5E4;">Tg</div>
+        Telegram
+      </div>
+      <div class="platform-option" data-platform="WhatsApp">
+        <div class="icon" style="color: #25D366;">Wa</div>
+        WhatsApp
+      </div>
+      <div class="platform-option" data-platform="Reddit">
+        <div class="icon" style="color: #FF4500;">Rd</div>
+        Reddit
+      </div>
+      <div class="platform-option" data-platform="Twitch">
+        <div class="icon" style="color: #9146FF;">Tw</div>
+        Twitch
+      </div>
+      <div class="platform-option" data-platform="Quora">
+        <div class="icon" style="color: #B92B27;">Q</div>
+        Quora
+      </div>
+    </div>
+    <button class="modal-close" id="closeModalBtn">Cancel</button>
+  </div>
+</div>
+
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('account-hub', () => {
+      if (typeof currentAccountId !== 'undefined') currentAccountId = null;
+      const ws = document.querySelector('.workspace');
+      if (ws) ws.style.display = 'none';
+      location.reload();
+    });
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+
+
+
+<div class="main-content">
+  <div class="container">
+    
+    <!-- Sidebar: Connected Accounts -->
+    <div class="accounts-sidebar">
+      <h2 class="hub-title">Connections</h2>
+      <p class="hub-subtitle">Manage & publish across networks.</p>
+      <div class="api-status-bar" id="hubApiStatus"></div>
+      
+      <button class="add-account-btn" id="addAccountBtn">+ Add Platform Link</button>
+      
+      <div id="accountsList">
+        <!-- Dynamically populated accounts -->
+      </div>
+    </div>
+
+    <!-- Workspace Area -->
+    <div class="workspace" style="display: none;">
+      
+      <div class="workspace-header">
+        <div style="display:flex; align-items:center; gap:1rem;">
+          <div class="acc-icon tw-icon" id="ws-icon" style="width: 56px; height: 56px; font-size: 1.8rem;">𝕏</div>
+          <div>
+            <h2 class="workspace-title" id="ws-title">Twitter (Main)</h2>
+            <div class="workspace-handle" id="ws-handle">@TechInnovator</div>
+          </div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:0.5rem;">
+          <button class="refresh-btn" id="refreshSubAccountsBtn" title="Re-discover pages, groups, servers, and subreddits"><i class="fas fa-sync"></i> Refresh Sub-Accounts</button>
+          <button id="disconnectBtn" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;">Disconnect</button>
+        </div>
+      </div>
+
+      <div id="subAccountsBanner" class="sub-accounts-banner hidden"></div>
+
+      <div id="intelligencePanel" style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h3 style="margin:0;color:#38bdf8;font-size:1.1rem;">Account Intelligence</h3>
+          <button class="refresh-btn" id="refreshProfileBtn" title="Pull live profile stats from platform API"><i class="fas fa-sync"></i> Refresh Profile</button>
+        </div>
+        <div class="profile-grid" id="profileGrid">
+          <div class="profile-stat"><div class="val">—</div><div class="lbl">Followers</div></div>
+          <div class="profile-stat"><div class="val">—</div><div class="lbl">Engagement</div></div>
+          <div class="profile-stat"><div class="val">—</div><div class="lbl">Growth</div></div>
+        </div>
+        <div id="profileExtra" style="color:#94a3b8;font-size:0.85rem;margin-bottom:0.5rem;"></div>
+        <div id="profileRefreshedAt" style="color:#64748b;font-size:0.75rem;"></div>
+      </div>
+
+      <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <h3 style="margin:0;color:#e2e8f0;font-size:1rem;">Groups &amp; Communities</h3>
+        </div>
+        <div class="groups-list" id="groupsList">
+          <div style="color:#64748b;font-style:italic;">Select an account to load groups.</div>
+        </div>
+      </div>
+
+      <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <h3 style="margin:0;color:#e2e8f0;font-size:1rem;">Pages &amp; Sub-Accounts</h3>
+        </div>
+        <div class="groups-list" id="childrenList" style="max-height:220px;">
+          <div style="color:#64748b;font-style:italic;">Select an account to load linked pages and channels.</div>
+        </div>
+      </div>
+
+      <div style="background:rgba(15,23,42,0.4);border:1px solid #334155;border-radius:12px;padding:1.25rem;">
+        <p style="color:#94a3b8;margin:0 0 1rem;font-size:0.9rem;">Compose posts, publish to groups, and track published activity in <strong style="color:#38bdf8;">Content Hub → Publish Wizard</strong>.</p>
+        <a href="content-hub.html#publish-wizard" style="display:inline-block;background:linear-gradient(135deg,#0ea5e9,#2563eb);color:white;padding:0.65rem 1.25rem;border-radius:6px;text-decoration:none;font-weight:600;font-size:0.85rem;">Open Publish Wizard →</a>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+<div class="status-toast" id="statusToast"></div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+ipcRenderer.on('oauth-browser-opened', (_event, { message }) => {
+  showToast(message || 'Complete sign-in in your browser, then return here.', 'info');
+});
+
+let currentAccountId = null;
+let currentAccount = null;
+let pendingPlatform = null;
+let pendingAccounts = [];
+let hubStatus = null;
+
+
+// Platform Icon Configurations
+const platformConfig = {
+  'Twitter': { icon: '𝕏', class: 'tw-icon' },
+  'Twitter / X': { icon: '𝕏', class: 'tw-icon' },
+  'X': { icon: '𝕏', class: 'tw-icon' },
+  'Instagram': { icon: 'Ig', class: 'ig-icon' },
+  'LinkedIn': { icon: 'in', class: 'li-icon' },
+  'Facebook': { icon: 'Fb', class: 'fb-icon', colorStyle: 'background: #1877F2; color: white;' },
+  'Reddit': { icon: 'Rd', class: 'rd-icon', colorStyle: 'background: #FF4500; color: white;' },
+  'TikTok': { icon: 'Tk', class: 'tk-icon', colorStyle: 'background: #000; color: #fff; box-shadow: inset 2px 2px 0 #ff0050, inset -2px -2px 0 #00f2fe;' },
+  'YouTube': { icon: 'Yt', class: 'yt-icon', colorStyle: 'background: #FF0000; color: white;' },
+  'Pinterest': { icon: 'P', class: 'pin-icon', colorStyle: 'background: #E60023; color: white; border-radius: 50%;' },
+  'Snapchat': { icon: 'Sc', class: 'snap-icon', colorStyle: 'background: #FFFC00; color: black;' },
+  'Threads': { icon: '@', class: 'thr-icon', colorStyle: 'background: #000; color: white; border-radius: 50%;' },
+  'Discord': { icon: 'Dc', class: 'disc-icon', colorStyle: 'background: #5865F2; color: white;' },
+  'Telegram': { icon: 'Tg', class: 'tg-icon', colorStyle: 'background: #26A5E4; color: white; border-radius: 50%;' },
+  'WhatsApp': { icon: 'Wa', class: 'wa-icon', colorStyle: 'background: #25D366; color: white; border-radius: 50%;' },
+  'Quora': { icon: 'Q', class: 'quora-icon', colorStyle: 'background: #B92B27; color: white; border-radius: 50%;' },
+  'Twitch': { icon: 'Tw', class: 'twitch-icon', colorStyle: 'background: #9146FF; color: white;' }
+};
+
+function showToast(msg, type) {
+  const el = document.getElementById('statusToast');
+  el.textContent = msg;
+  el.className = 'status-toast show ' + (type || 'info');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderProfile(profile, refreshedAt) {
+  const p = profile || {};
+  const grid = document.getElementById('profileGrid');
+  const extra = document.getElementById('profileExtra');
+  const tsEl = document.getElementById('profileRefreshedAt');
+  if (!grid) return;
+  grid.innerHTML = `
+    <div class="profile-stat"><div class="val">${escapeHtml(p.followers ?? '—')}</div><div class="lbl">Followers</div></div>
+    <div class="profile-stat"><div class="val">${escapeHtml(p.likes ?? '—')}</div><div class="lbl">Engagement</div></div>
+    <div class="profile-stat"><div class="val" style="font-size:0.95rem;">${escapeHtml(p.growthVelocity ?? '—')}</div><div class="lbl">Growth</div></div>`;
+  const groups = (p.suggestedGroups || []).join(', ') || '—';
+  if (extra) {
+    extra.innerHTML = `<div><strong>Best time:</strong> ${escapeHtml(p.bestTime || '—')}</div>
+      <div style="margin-top:6px;"><strong>Trending niche:</strong> ${escapeHtml(p.topTrendingNiche || '—')}</div>
+      <div style="margin-top:6px;"><strong>Suggested communities:</strong> ${escapeHtml(groups)}</div>`;
+  }
+  if (tsEl) {
+    tsEl.textContent = refreshedAt
+      ? `Last refreshed: ${new Date(refreshedAt).toLocaleString()}`
+      : '';
+  }
+}
+
+async function loadGroups() {
+  const listEl = document.getElementById('groupsList');
+  if (!listEl || !currentAccountId) return;
+  const res = await ipcRenderer.invoke('get-account-groups', currentAccountId);
+  const groups = res.groups || [];
+  if (!groups.length) {
+    listEl.innerHTML = '<div style="color:#64748b;font-style:italic;">No groups or communities found. Click <strong>Refresh Sub-Accounts</strong> to pull from the platform API.</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  groups.forEach((g) => {
+    const div = document.createElement('div');
+    div.className = 'group-item';
+    div.innerHTML = `<div style="flex:1;"><div style="color:#e2e8f0;font-weight:600;">${escapeHtml(g.name)}</div><div class="group-meta">${escapeHtml(g.platform || '')} · ${escapeHtml(g.type || 'Group')}${g.privacy ? ' · ' + escapeHtml(g.privacy) : ''}${g.subreddit ? ' · r/' + escapeHtml(g.subreddit) : ''}</div></div>`;
+    listEl.appendChild(div);
+  });
+}
+
+async function loadChildren() {
+  const listEl = document.getElementById('childrenList');
+  if (!listEl || !currentAccountId) return;
+  const res = await ipcRenderer.invoke('get-account-children', currentAccountId);
+  const children = res.children || [];
+  if (!children.length) {
+    listEl.innerHTML = '<div style="color:#64748b;font-style:italic;">No linked pages or sub-accounts yet. Use <strong>Refresh Sub-Accounts</strong> to discover them, then link from the banner above.</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  children.forEach((c) => {
+    const cfg = platformConfig[c.platform] || { icon: '?', class: '' };
+    const div = document.createElement('div');
+    div.className = 'group-item';
+    div.style.cursor = 'default';
+    div.innerHTML = `<div class="acc-icon ${cfg.class}" style="width:32px;height:32px;font-size:0.9rem;${cfg.colorStyle ? cfg.colorStyle.replace(/"/g, '') : ''}">${cfg.icon}</div><div style="flex:1;"><div style="color:#e2e8f0;font-weight:600;">${escapeHtml(c.handle)}</div><div class="group-meta">${escapeHtml(c.platform)} · ${escapeHtml(c.type || 'Account')}</div></div>`;
+    listEl.appendChild(div);
+  });
+}
+
+let refreshInFlight = false;
+
+async function refreshAccountData({ silent = false } = {}) {
+  if (!currentAccountId || refreshInFlight) return;
+  refreshInFlight = true;
+  if (!silent) showToast('Pulling live profile, pages, and communities…', 'info');
+  try {
+    const res = await ipcRenderer.invoke('refresh-account-profile', currentAccountId);
+    if (res.success) {
+      currentAccount = res.account;
+      renderProfile(res.profile, res.account?.profileRefreshedAt);
+      if (res.newAccounts?.length) showSubAccountsBanner(res.newAccounts);
+      await loadGroups();
+      await loadChildren();
+      if (!silent) {
+        const pageCount = (res.newAccounts || []).filter((a) => a.type === 'Page').length;
+        const groupCount = (res.groups || []).length;
+        let msg = `Refreshed — ${groupCount} group(s), ${pageCount} new page(s) to link.`;
+        if (res.warnings?.length) msg += ' Some items need extra Meta permissions.';
+        showToast(msg, res.error ? 'error' : 'success');
+      }
+      if (res.error && !silent) showToast(res.error, 'error');
+      if (res.warnings?.length && !silent) console.warn('Facebook discovery warnings:', res.warnings);
+    } else if (!silent) {
+      showToast(res.error || 'Could not refresh account data', 'error');
+    }
+  } catch (e) {
+    if (!silent) showToast('Refresh failed: ' + e.message, 'error');
+  } finally {
+    refreshInFlight = false;
+  }
+}
+
+async function loadHubStatus() {
+  hubStatus = await ipcRenderer.invoke('get-account-hub-status');
+  const bar = document.getElementById('hubApiStatus');
+  const pk = hubStatus.platformKeys || {};
+  const dot = (on, label) => `<span class="api-dot ${on ? 'on' : 'off'}"><i class="fas fa-circle" style="font-size:0.45rem;"></i> ${label}</span>`;
+  bar.innerHTML = [dot(pk.Twitter,'X'), dot(pk.LinkedIn,'LI'), dot(pk.Facebook,'FB'), dot(pk.Reddit,'Rd'), dot(pk.YouTube,'YT')].join('');
+
+  document.querySelectorAll('.platform-option').forEach(opt => {
+    const p = opt.dataset.platform;
+    const ready = pk[p];
+    opt.classList.toggle('ready', !!ready);
+    opt.classList.toggle('disabled', false);
+    opt.title = ready ? 'API keys configured — click to connect' : 'Click to connect — paste tokens or add API keys in Settings';
+  });
+}
+
+async function loadAccounts() {
+  const listEl = document.getElementById('accountsList');
+  listEl.innerHTML = '<div style="color: #64748b;">Loading connections...</div>';
+  
+  try {
+    const accounts = await ipcRenderer.invoke('get-linked-accounts');
+    listEl.innerHTML = '';
+    
+    if (accounts.length === 0) {
+      listEl.innerHTML = '<div style="color: #64748b; font-size: 0.9rem;">No accounts linked. Click above to connect a platform.</div>';
+      document.querySelector('.workspace').style.display = 'none';
+      return;
+    }
+    
+    document.querySelector('.workspace').style.display = 'flex';
+    
+    accounts.forEach((acc, index) => {
+      const config = platformConfig[acc.platform] || { icon: '?', class: '' };
+      const extraStyle = config.colorStyle ? `style="${config.colorStyle}"` : '';
+      
+      const div = document.createElement('div');
+      div.className = `account-item ${index === 0 ? 'active' : ''}`;
+      div.id = acc.id;
+      div.innerHTML = `
+        <div class="acc-icon ${config.class}" ${extraStyle}>${config.icon}</div>
+        <div class="acc-details">
+          <h4>${acc.platform}${acc.type ? ' · ' + acc.type : ''}</h4>
+          <p><span class="status-dot"></span> ${acc.handle}</p>
+          ${acc.loginEmail ? `<p style="margin:2px 0 0 0; font-size:0.7rem; color:#64748b;">${acc.loginEmail}</p>` : ''}
+        </div>
+      `;
+      
+      div.addEventListener('click', () => selectAccount(acc, div, config));
+      listEl.appendChild(div);
+      
+      // Auto-select first account
+      if (index === 0) {
+        selectAccount(acc, div, config);
+      }
+    });
+  } catch(e) {
+    listEl.innerHTML = '<div style="color: #ef4444;">Failed to load accounts.</div>';
+  }
+}
+
+async function selectAccount(acc, element, config) {
+  currentAccountId = acc.id;
+  currentAccount = acc;
+
+  document.querySelectorAll('.account-item').forEach(i => i.classList.remove('active'));
+  element.classList.add('active');
+
+  document.getElementById('ws-title').innerText = `${acc.platform}${acc.type ? ' (' + acc.type + ')' : ''}`;
+  document.getElementById('ws-handle').innerText = acc.handle;
+  const iconEl = document.getElementById('ws-icon');
+  iconEl.innerText = config.icon;
+  iconEl.className = `acc-icon ${config.class}`;
+  if(config.colorStyle) iconEl.style.cssText = `width: 56px; height: 56px; font-size: 1.8rem; ${config.colorStyle}`;
+  else iconEl.style.cssText = `width: 56px; height: 56px; font-size: 1.8rem;`;
+
+  hideSubAccountsBanner();
+  renderProfile(acc.profile, acc.profileRefreshedAt);
+  await loadGroups();
+  await loadChildren();
+  refreshAccountData({ silent: true });
+}
+
+const modal = document.getElementById('addAccountModal');
+const connectModal = document.getElementById('connectModal');
+
+document.getElementById('addAccountBtn').addEventListener('click', async () => {
+  await loadHubStatus();
+  modal.classList.add('active');
+});
+
+document.getElementById('closeModalBtn').addEventListener('click', () => modal.classList.remove('active'));
+
+const OAUTH_FIRST_PLATFORMS = new Set(['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'Reddit', 'TikTok', 'Pinterest', 'Snapchat', 'Discord', 'Threads', 'Twitch']);
+const TOKEN_FIRST_PLATFORMS = new Set(['Telegram', 'WhatsApp']);
+const CREDENTIAL_ONLY_PLATFORMS = new Set(['Telegram', 'WhatsApp', 'Quora']);
+
+const CREDENTIAL_HINTS = {
+  Telegram: 'Paste your @BotFather bot token as the password. Optional: @channel or chat ID in username.',
+  WhatsApp: 'Phone Number ID in email field. Meta Business Access Token as password.',
+  Reddit: 'OAuth tab: add http://127.0.0.1:42813/oauth/callback as redirect URI in reddit.com/prefs/apps. Or use username + password in Credentials tab.',
+  LinkedIn: 'Email labels this login. Password: paste LinkedIn access token (or save linkedinAccessToken in Settings).',
+  Facebook: 'Email labels this login. Password: paste Meta access token with pages_show_list scope.',
+  Instagram: 'Email labels this login. Password: paste Meta/Instagram access token.',
+  Twitter: 'X does NOT use your website password. Use the OAuth tab to sign in with your @handle, or paste an API access token as password. Set Client ID + Secret in Settings first.',
+  YouTube: 'Enter Google email + password. Your browser opens — on Google\'s screen pick which YouTube brand/channel to link (you have many). Repeat connect to link more brands.',
+  Discord: 'Password: paste bot token or user access token.',
+  Quora: 'Email = your Quora login email. Password = your Quora password. A browser opens to save your session for automated answers, upvotes, and Q&A posting.',
+  default: 'Password = API access token from the platform developer portal. Saved Settings tokens are used if password is left blank.',
+};
+
+function setConnectMode(mode) {
+  document.querySelectorAll('.connect-mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  const oauth = mode === 'oauth';
+  document.getElementById('credentialsConnectPanel').style.display = oauth ? 'none' : 'block';
+  document.getElementById('oauthConnectPanel').style.display = oauth ? 'block' : 'none';
+}
+
+document.querySelectorAll('.platform-option').forEach(opt => {
+  opt.addEventListener('click', async (e) => {
+    const platform = e.currentTarget.dataset.platform;
+    pendingPlatform = platform;
+    modal.classList.remove('active');
+    document.getElementById('connectModalHeader').innerText = `Connect ${platform}`;
+    const credOnly = CREDENTIAL_ONLY_PLATFORMS.has(platform);
+    document.querySelectorAll('.connect-mode-btn').forEach((b) => {
+      if (credOnly && b.dataset.mode === 'oauth') b.style.display = 'none';
+      else b.style.display = '';
+    });
+    setConnectMode('credentials');
+    document.getElementById('credentialsConnectHint').innerHTML = CREDENTIAL_HINTS[platform] || CREDENTIAL_HINTS.default;
+    document.getElementById('connectModalDesc').innerText =
+      `Opens your browser for OAuth authorization. Use Email & Password tab to paste an access token instead.`;
+    connectModal.classList.add('active');
+  });
+});
+
+document.querySelectorAll('.connect-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setConnectMode(btn.dataset.mode));
+});
+
+function closeConnectModal() {
+  connectModal.classList.remove('active');
+  pendingPlatform = null;
+  document.getElementById('connectEmail').value = '';
+  document.getElementById('connectPassword').value = '';
+  document.getElementById('connectUsername').value = '';
+}
+
+document.getElementById('cancelConnectBtn').addEventListener('click', closeConnectModal);
+document.getElementById('cancelOAuthBtn').addEventListener('click', closeConnectModal);
+
+document.getElementById('startCredentialsBtn').addEventListener('click', async () => {
+  const email = document.getElementById('connectEmail').value.trim();
+  const password = document.getElementById('connectPassword').value;
+  const username = document.getElementById('connectUsername').value.trim();
+  const platform = pendingPlatform;
+  if (platform !== 'Telegram' && platform !== 'Reddit' && !email) {
+    showToast('Email is required to identify this connection.', 'error'); return;
+  }
+  if (platform === 'Reddit' && !username && !email) {
+    showToast('Reddit: enter your username in the username field.', 'error'); return;
+  }
+
+  if (platform === 'Telegram' && !password) {
+    showToast('Telegram: paste your @BotFather bot token in the password field.', 'error'); return;
+  }
+  if (platform === 'WhatsApp' && (!email || !password)) {
+    showToast('WhatsApp: Phone Number ID in email, Business token in password.', 'error'); return;
+  }
+  if (platform === 'Quora' && (!email || !password)) {
+    showToast('Quora: enter your Quora email and password. A browser window will open to sign in.', 'error'); return;
+  }
+  const savedPlatform = platform;
+  closeConnectModal();
+  const btn = document.getElementById('addAccountBtn');
+  btn.innerText = platform === 'YouTube' && password
+    ? 'Opening Google sign-in & pulling all channels...'
+    : platform === 'Quora'
+      ? 'Opening Quora sign-in & saving session...'
+      : 'Connecting & pulling all sub-accounts...';
+  btn.disabled = true;
+  try {
+    const res = await ipcRenderer.invoke('connect-platform', {
+      platform: savedPlatform,
+      email: email || undefined,
+      password,
+      username: username || undefined,
+      method: 'credentials',
+    });
+    if (res.success) {
+      const names = (res.discovered || []).map((d) => d.handle).join(', ');
+      const multiBrand = savedPlatform === 'YouTube' && password;
+      showToast(
+        `Linked ${res.linked} account(s)${names ? ': ' + names : ''}. Pulling live profile data…`
+        + (multiBrand ? ' Link again to add more YouTube brands from Google\'s picker.' : ''),
+        'success'
+      );
+      await loadAccounts();
+      if (res.profileAccountId) {
+        try {
+          const disc = await ipcRenderer.invoke('discover-sub-accounts', res.profileAccountId);
+          if (disc.newAccounts?.length) {
+            await ipcRenderer.invoke('link-discovered-sub-accounts', res.profileAccountId);
+          }
+          await ipcRenderer.invoke('refresh-account-profile', res.profileAccountId);
+        } catch (e) { /* non-fatal */ }
+        await loadAccounts();
+      }
+    } else {
+      showToast(res.error || 'Connection failed', 'error');
+    }
+  } catch (err) {
+    showToast('Connection failed: ' + err.message, 'error');
+  }
+  btn.innerText = '+ Add Platform Link';
+  btn.disabled = false;
+  pendingPlatform = null;
+});
+
+async function finishAccountLink(accounts) {
+  if (!accounts?.length) {
+    showToast('No accounts returned from platform.', 'error');
+    return;
+  }
+  await ipcRenderer.invoke('use-selected-accounts', accounts);
+  showToast(`Linked ${accounts.length} account(s) including pages, groups & communities.`, 'success');
+  loadAccounts();
+}
+
+document.getElementById('startOAuthBtn').addEventListener('click', async () => {
+  const email = document.getElementById('connectEmail').value.trim();
+  const savedPlatform = pendingPlatform;
+  connectModal.classList.remove('active');
+  const btn = document.getElementById('addAccountBtn');
+  btn.innerText = 'Connecting via OAuth...';
+  btn.disabled = true;
+  try {
+    const res = await ipcRenderer.invoke('connect-platform', {
+      platform: savedPlatform,
+      email: email || undefined,
+      method: 'oauth',
+    });
+    if (res.success) {
+      showToast(`Linked ${res.linked} account(s) from ${savedPlatform}. Pulling live profile data…`, 'success');
+      await loadAccounts();
+      if (res.profileAccountId) {
+        currentAccountId = res.profileAccountId;
+        try {
+          const disc = await ipcRenderer.invoke('discover-sub-accounts', res.profileAccountId);
+          if (disc.newAccounts?.length) {
+            await ipcRenderer.invoke('link-discovered-sub-accounts', res.profileAccountId);
+          }
+          await refreshAccountData({ silent: true });
+        } catch (e) { /* non-fatal */ }
+      }
+    } else {
+      showToast(res.error || 'OAuth connection failed', 'error');
+    }
+  } catch (err) {
+    showToast('Connection failed: ' + err.message, 'error');
+  }
+  btn.innerText = '+ Add Platform Link';
+  btn.disabled = false;
+  pendingPlatform = null;
+});
+
+if(document.getElementById('cancelSelectionBtn')) {
+  document.getElementById('cancelSelectionBtn').addEventListener('click', () => {
+    document.getElementById('selectionModal').classList.remove('active');
+  });
+
+  document.getElementById('saveSelectionBtn').addEventListener('click', async () => {
+    const selectedIndices = Array.from(document.querySelectorAll('[id^="sel_"]:checked')).map(cb => parseInt(cb.value));
+    
+    if (selectedIndices.length === 0) {
+      showToast('Select at least one account.', 'error');
+      return;
+    }
+    const selectedAccounts = selectedIndices.map(i => pendingAccounts[i]);
+    document.getElementById('selectionModal').classList.remove('active');
+    const btn = document.getElementById('addAccountBtn');
+    btn.innerText = 'Saving accounts...';
+    btn.disabled = true;
+    try {
+      await ipcRenderer.invoke('use-selected-accounts', selectedAccounts);
+      showToast(`${selectedAccounts.length} account(s) linked.`, 'success');
+      loadAccounts();
+    } catch (err) {
+      showToast('Failed to save: ' + err.message, 'error');
+    }
+    btn.innerText = '+ Add Platform Link';
+    btn.disabled = false;
+  });
+}
+
+function hideSubAccountsBanner() {
+  const el = document.getElementById('subAccountsBanner');
+  el.classList.add('hidden');
+  el.innerHTML = '';
+}
+
+function showSubAccountsBanner(newAccounts) {
+  const el = document.getElementById('subAccountsBanner');
+  if (!newAccounts?.length) { hideSubAccountsBanner(); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = `<strong>${newAccounts.length} new sub-account(s) found.</strong><br>${newAccounts.map(a => `• ${a.platform} — ${a.handle}`).join('<br>')}
+    <button class="refresh-btn" style="margin-top:0.75rem;" onclick="linkNewSubAccounts()"><i class="fas fa-link"></i> Link All New Sub-Accounts</button>`;
+}
+
+window.linkNewSubAccounts = async function() {
+  if (!currentAccountId) return;
+  const res = await ipcRenderer.invoke('link-discovered-sub-accounts', currentAccountId);
+  if (res.success) {
+    showToast(res.linked ? `Linked ${res.linked} sub-account(s).` : 'No new sub-accounts to link.', 'success');
+    hideSubAccountsBanner();
+    loadAccounts();
+  } else {
+    showToast(res.error || 'Link failed', 'error');
+  }
+};
+
+window.refreshGroups = async function() {
+  if (!currentAccountId) return;
+  await refreshAccountData({ silent: false });
+};
+
+document.getElementById('refreshSubAccountsBtn').addEventListener('click', refreshGroups);
+document.getElementById('refreshProfileBtn').addEventListener('click', () => refreshAccountData({ silent: false }));
+
+document.getElementById('disconnectBtn').addEventListener('click', async () => {
+  if (!currentAccountId) return;
+  
+  if (confirm("Are you sure you want to completely disconnect this account from this Campaign?")) {
+    try {
+      await ipcRenderer.invoke('unlink-account', currentAccountId);
+      currentAccountId = null;
+      document.querySelector('.workspace').style.display = 'none';
+      loadAccounts();
+    } catch (e) {
+      showToast('Failed to disconnect account.', 'error');
+    }
+  }
+});
+
+(async () => {
+  await loadHubStatus();
+  loadAccounts();
+})();
+
+</script>
+</body>
+</html>

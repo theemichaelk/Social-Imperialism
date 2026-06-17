@@ -1,0 +1,2021 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - Campaign Manager</title>
+<style>
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+  background-color: #0f172a; 
+  color: #f8fafc; 
+  margin: 0; 
+  padding: 0; 
+  display: flex; 
+  height: 100vh;
+  background: radial-gradient(circle at top right, #1e293b, #0f172a);
+}
+
+
+
+
+
+
+
+.main-content { flex: 1; padding: 3rem; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+
+.container { 
+  width: 100%;
+  max-width: 1100px; 
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 2.5rem; 
+  border-radius: 12px; 
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); 
+  border: 1px solid #334155;
+  margin-bottom: 2rem;
+}
+
+.header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 1.5rem; margin-bottom: 2.5rem; }
+h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); font-size: 1.8rem; letter-spacing: 0.5px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid #334155; padding-bottom: 1rem; }
+.tab { padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; color: #94a3b8; transition: all 0.2s; }
+.tab:hover { background: rgba(30, 41, 59, 0.8); color: white; }
+.tab.active { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+/* Campaign List */
+.campaign-card { 
+  background: rgba(15, 23, 42, 0.6); 
+  border: 1px solid #475569; 
+  border-radius: 8px; 
+  padding: 1.5rem; 
+  margin-bottom: 1.5rem; 
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+.campaign-card:hover { border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.1); }
+.campaign-card.active-campaign { border-left: 4px solid #10b981; }
+
+.campaign-info h3 { margin: 0 0 0.5rem 0; color: #f1f5f9; font-size: 1.2rem; }
+.campaign-info p { margin: 0; color: #94a3b8; font-size: 0.9rem; }
+.campaign-stats { display: flex; gap: 1rem; margin-top: 1rem; }
+.stat-badge { background: rgba(30, 41, 59, 0.8); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; color: #cbd5e1; border: 1px solid #475569; }
+
+/* Forms */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.form-group { margin-bottom: 1.5rem; } 
+.form-group.full-width { grid-column: 1 / -1; }
+label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #94a3b8; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; } 
+
+input, textarea, select { 
+  width: 100%; 
+  padding: 1rem; 
+  border: 1px solid #475569; 
+  border-radius: 8px; 
+  box-sizing: border-box; 
+  font-family: inherit;
+  background: rgba(15, 23, 42, 0.8);
+  color: #f8fafc;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+}
+
+/* Auto-Rules Section */
+.rule-box { 
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid #475569; 
+  border-radius: 8px; 
+  padding: 1.5rem; 
+  margin-bottom: 1.5rem; 
+  position: relative;
+} 
+.rule-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; } 
+.rule-title { font-weight: 600; font-size: 1.1rem; color: #e2e8f0; } 
+.rule-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+.toggle-switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(71, 85, 105, 0.5); transition: .4s; border-radius: 24px; border: 1px solid #475569; }
+.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 3px; background-color: #94a3b8; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: rgba(16, 185, 129, 0.2); border-color: #10b981; }
+input:checked + .slider:before { transform: translateX(24px); background-color: #34d399; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+
+button { 
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: white; 
+  border: none; 
+  padding: 0.8rem 1.5rem; 
+  border-radius: 6px; 
+  font-weight: 600; 
+  cursor: pointer; 
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+} 
+button:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4); transform: translateY(-1px); } 
+button.secondary { background: transparent; color: #f8fafc; border: 1px solid #475569; box-shadow: none; }
+button.secondary:hover { background: rgba(71, 85, 105, 0.3); transform: none; }
+button.danger { background: transparent; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); box-shadow: none; }
+button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; transform: none; }
+
+.hidden { display: none; }
+
+.api-status-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; }
+.api-pill { font-size: 0.75rem; padding: 4px 10px; border-radius: 999px; border: 1px solid #475569; color: #94a3b8; }
+.api-pill.ok { border-color: #10b981; color: #34d399; background: rgba(16,185,129,0.1); }
+.api-pill.miss { border-color: #64748b; color: #64748b; }
+
+#toastContainer { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 18px; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
+.toast.success { background: #065f46; color: #d1fae5; border: 1px solid #10b981; }
+.toast.error { background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; }
+.toast.info { background: #1e3a5f; color: #bae6fd; border: 1px solid #38bdf8; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.tutorial-card { cursor: pointer; transition: all 0.2s; }
+.tutorial-card:hover { border-color: #38bdf8 !important; transform: translateY(-2px); }
+.tutorial-card.completed { border-color: #10b981 !important; }
+.tutorial-thumb { height: 140px; position: relative; overflow: hidden; background: #1e293b; }
+.tutorial-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+.tutorial-card:hover .tutorial-thumb img { transform: scale(1.05); }
+.tutorial-thumb-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.1) 55%, transparent 100%); pointer-events: none; }
+.tutorial-detail-thumb { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155; }
+.tutorial-cat-btn { padding: 0.4rem 0.9rem; border-radius: 999px; border: 1px solid #475569; background: transparent; color: #94a3b8; cursor: pointer; font-size: 0.8rem; text-transform: none; letter-spacing: 0; }
+.tutorial-cat-btn.active { background: rgba(56,189,248,0.15); border-color: #38bdf8; color: #38bdf8; }
+.tutorial-detail-panel { background: rgba(15,23,42,0.9); border: 1px solid #38bdf8; border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
+.tutorial-steps { margin: 0; padding-left: 1.25rem; color: #cbd5e1; }
+.tutorial-steps li { margin-bottom: 0.5rem; }
+
+.plan-card { background: rgba(30, 41, 59, 0.5); border: 1px solid #475569; border-radius: 12px; padding: 2rem; position: relative; transition: all 0.2s; }
+.plan-card.plan-active { border: 2px solid #10b981; box-shadow: 0 0 20px rgba(16,185,129,0.2); }
+.plan-card.plan-popular { background: rgba(15, 23, 42, 0.8); border: 2px solid #38bdf8; box-shadow: 0 0 20px rgba(56,189,248,0.15); }
+.plan-card.plan-active.plan-popular { border-color: #10b981; }
+.plan-select-btn { width: 100%; }
+.billing-summary { background: rgba(15,23,42,0.8); border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
+.billing-history { margin-top: 1.5rem; }
+.billing-history table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.billing-history th, .billing-history td { padding: 0.6rem; text-align: left; border-bottom: 1px solid #334155; color: #cbd5e1; }
+.billing-history th { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+
+/* Sidebar Standardized Styles */
+
+
+
+
+
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+
+
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+
+/* Sidebar Standardized Styles */
+.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
+.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
+.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
+.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+.nav-link:hover { background-color: #1e293b; color: white; transform: translateX(2px); }
+.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); transform: translateX(2px); }
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
+.campaign-switcher-box select:hover { border-color: #38bdf8; }
+.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
+
+</style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="sidebar-nav.css">
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('settings', () => location.reload());
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+
+
+
+<div class="main-content">
+  <div class="container">
+    <div class="header">
+      <h1>Campaign & Client Brands Manager <span style="font-size:0.5em; background:rgba(56,189,248,0.2); color:#38bdf8; padding:4px 8px; border-radius:4px; vertical-align:middle;">Agency Ready</span></h1>
+      <div><button id="newCampaignBtn">+ New Campaign</button></div>
+    </div>
+
+    <div class="api-status-bar" id="settingsStatusBar"></div>
+    
+    <!-- Settings Sub-Navigation -->
+    <div style="display:flex; gap:10px; margin-bottom: 2rem;">
+      <button class="primary" id="btn-campaigns" onclick="switchSettingsView('campaignListView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-layer-group"></i> Campaigns</button>
+      <button class="secondary" id="btn-api-keys" onclick="switchSettingsView('apiKeysView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-key"></i> Global API Integrations</button>
+      <button class="secondary" id="btn-pricing" onclick="switchSettingsView('pricingView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-credit-card"></i> Pricing Plans & Billing</button>
+      <button class="secondary" id="btn-tutorials" onclick="switchSettingsView('tutorialView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-graduation-cap"></i> Setup / Tutorials</button>
+      <button class="secondary" id="btn-system-health" onclick="switchSettingsView('systemHealthView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-heartbeat"></i> System Health</button>
+    </div>
+
+    <!-- Campaign Selection View -->
+
+    <div id="campaignListView">
+      <div id="campaignsContainer">
+        <!-- Dynamically loaded campaigns go here -->
+      </div>
+    </div>
+
+    
+    <!-- Pricing & Billing View -->
+    <div id="pricingView" class="hidden">
+      <div class="header">
+        <h1><i class="fas fa-credit-card"></i> Pricing Plans & Billing</h1>
+        <p style="color:#94a3b8; margin-top:5px;">Subscribe via Stripe or PayPal. Plans activate automatically after payment.</p>
+      </div>
+
+      <div class="billing-summary" id="paymentGatewayPanel" style="margin-bottom:1.5rem;">
+        <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;justify-content:space-between;">
+          <div>
+            <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Payment Gateway</div>
+            <div id="paymentGatewayStatus" style="color:#cbd5e1;font-size:0.9rem;margin-top:0.35rem;">Checking Stripe &amp; PayPal…</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+            <label style="font-size:0.85rem;color:#94a3b8;display:flex;align-items:center;gap:0.5rem;">
+              Mode
+              <select id="paymentModeSelect" style="padding:0.45rem 0.6rem;background:#0f172a;border:1px solid #334155;color:#f8fafc;border-radius:4px;">
+                <option value="live">Live (charge clients)</option>
+                <option value="test">Test / Sandbox</option>
+              </select>
+            </label>
+            <label style="font-size:0.85rem;color:#94a3b8;display:flex;align-items:center;gap:0.5rem;">
+              Pay with
+              <select id="paymentProviderSelect" style="padding:0.45rem 0.6rem;background:#0f172a;border:1px solid #334155;color:#f8fafc;border-radius:4px;">
+                <option value="stripe">Stripe</option>
+                <option value="paypal">PayPal</option>
+              </select>
+            </label>
+            <button type="button" class="secondary" id="btnTestPayments" style="text-transform:none;padding:0.55rem 0.9rem;">Test Connections</button>
+            <button type="button" class="secondary" id="btnVerifyPayment" style="text-transform:none;padding:0.55rem 0.9rem;">Verify Payment</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="billing-summary" id="billingSummaryPanel">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Current Plan</div>
+            <div id="billingCurrentPlan" style="font-size:1.5rem; font-weight:bold; color:#f8fafc; margin-top:0.25rem;">Loading...</div>
+            <div id="billingCurrentPrice" style="color:#38bdf8; margin-top:0.25rem;"></div>
+            <div id="billingNextDate" style="color:#94a3b8; font-size:0.85rem; margin-top:0.5rem;"></div>
+          </div>
+          <div style="min-width:220px;">
+            <label style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Billing Email</label>
+            <div style="display:flex; gap:0.5rem; margin-top:0.35rem;">
+              <input type="email" id="billingEmailInput" placeholder="you@company.com" style="flex:1; padding:0.6rem;">
+              <button type="button" class="secondary" id="btnSaveBillingEmail" style="padding:0.6rem 1rem; text-transform:none;">Save</button>
+            </div>
+          </div>
+        </div>
+        <div id="billingLimitsRow" style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:1rem;"></div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+        <div class="plan-card" id="planCardStarter" data-plan="starter">
+          <h3 style="color: #e2e8f0; margin-top: 0; font-size: 1.3rem;">Starter</h3>
+          <div style="font-size: 2.5rem; font-weight: bold; color: #f8fafc; margin-bottom: 1rem;">$49<span style="font-size:1rem; color:#94a3b8; font-weight:normal;">/mo</span></div>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; min-height: 40px;">For solo creators automating basic engagement.</p>
+          <ul id="planFeaturesStarter" style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #cbd5e1; font-size: 0.9rem;"></ul>
+          <button type="button" class="secondary plan-select-btn" id="btnPlanStarter" data-plan="starter">Select Starter</button>
+        </div>
+
+        <div class="plan-card plan-popular" id="planCardGrowth" data-plan="growth">
+          <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #38bdf8; color: #020617; padding: 2px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Most Popular</div>
+          <h3 style="color: #38bdf8; margin-top: 0; font-size: 1.3rem;">Growth</h3>
+          <div style="font-size: 2.5rem; font-weight: bold; color: #f8fafc; margin-bottom: 1rem;">$149<span style="font-size:1rem; color:#94a3b8; font-weight:normal;">/mo</span></div>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; min-height: 40px;">For agencies and growing brands managing communities.</p>
+          <ul id="planFeaturesGrowth" style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #cbd5e1; font-size: 0.9rem;"></ul>
+          <button type="button" class="primary plan-select-btn" id="btnPlanGrowth" data-plan="growth">Select Growth</button>
+        </div>
+
+        <div class="plan-card" id="planCardEnterprise" data-plan="enterprise">
+          <h3 style="color: #e2e8f0; margin-top: 0; font-size: 1.3rem;">Enterprise</h3>
+          <div style="font-size: 2.5rem; font-weight: bold; color: #f8fafc; margin-bottom: 1rem;">Custom</div>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; min-height: 40px;">High volume teams across Finance, Ecommerce & Automotive.</p>
+          <ul id="planFeaturesEnterprise" style="list-style: none; padding: 0; margin: 0 0 2rem 0; color: #cbd5e1; font-size: 0.9rem;"></ul>
+          <button type="button" class="secondary plan-select-btn" id="btnPlanEnterprise" data-plan="enterprise">Select Enterprise</button>
+        </div>
+      </div>
+
+      <div class="billing-history" id="billingHistoryPanel">
+        <h4 style="color:#e2e8f0; margin:0 0 1rem 0;"><i class="fas fa-receipt"></i> Billing History</h4>
+        <table>
+          <thead><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Note</th></tr></thead>
+          <tbody id="billingHistoryBody"><tr><td colspan="4" style="color:#64748b;">No billing activity yet — select a plan above.</td></tr></tbody>
+        </table>
+      </div>
+      
+      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+        <div>
+          <h4 style="color: #34d399; margin: 0 0 0.5rem 0;">Launch in 24 hours</h4>
+          <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Dedicated Account Managers to enable seamless onboarding. We learn your brand in days, not weeks.</p>
+        </div>
+        <button type="button" class="primary" id="btnScheduleOnboarding" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">Schedule Onboarding</button>
+      </div>
+    </div>
+
+    <!-- Tutorials & Setup View -->
+    <div id="tutorialView" class="hidden">
+      <div class="header">
+        <h1><i class="fas fa-graduation-cap"></i> Setup & Tutorials</h1>
+        <p style="color:#94a3b8; margin-top:5px;">Step-by-step setup guides for every feature. Click a tutorial to view steps, then open the related page to complete setup.</p>
+      </div>
+
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1.5rem;" id="tutorialCategoryBar">
+        <button type="button" class="tutorial-cat-btn active" data-cat="all">All</button>
+        <button type="button" class="tutorial-cat-btn" data-cat="getting-started">Getting Started</button>
+        <button type="button" class="tutorial-cat-btn" data-cat="campaigns">Campaigns</button>
+        <button type="button" class="tutorial-cat-btn" data-cat="apis">APIs & OAuth</button>
+        <button type="button" class="tutorial-cat-btn" data-cat="content">Content</button>
+        <button type="button" class="tutorial-cat-btn" data-cat="automation">Automation</button>
+        <button type="button" class="tutorial-cat-btn" data-cat="engagement">Engagement</button>
+      </div>
+
+      <div id="tutorialProgress" style="color:#94a3b8; font-size:0.85rem; margin-bottom:1rem;"></div>
+      
+      <div id="tutorialGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;"></div>
+
+      <div id="tutorialDetailPanel" class="tutorial-detail-panel hidden">
+        <img id="tutorialDetailThumb" class="tutorial-detail-thumb hidden" alt="">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
+          <div>
+            <h3 id="tutorialDetailTitle" style="margin:0 0 0.5rem 0; color:#f1f5f9;"></h3>
+            <div id="tutorialDetailMeta" style="color:#94a3b8; font-size:0.85rem;"></div>
+          </div>
+          <button type="button" class="secondary" id="tutorialDetailClose" style="text-transform:none; padding:0.4rem 0.8rem;">Close</button>
+        </div>
+        <ol id="tutorialDetailSteps" class="tutorial-steps" style="margin-top:1rem;"></ol>
+        <div style="display:flex; gap:0.75rem; margin-top:1.25rem; flex-wrap:wrap;">
+          <button type="button" class="primary" id="tutorialOpenPageBtn" style="text-transform:none;">Open Related Page</button>
+          <button type="button" class="secondary" id="tutorialMarkCompleteBtn" style="text-transform:none;">Mark Complete</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="systemHealthView" class="hidden">
+      <div class="header">
+        <h1><i class="fas fa-heartbeat"></i> System Health</h1>
+        <div style="display:flex; gap:0.75rem;">
+          <button class="secondary" id="btnRefreshHealth" type="button" style="text-transform:none;">Refresh Check</button>
+        </div>
+      </div>
+      <p style="color:#94a3b8; margin-top:0; margin-bottom:1rem;">Verifies all 14 sidebar sections are wired to real IPC handlers — no mock data paths. Green = ready; yellow = needs campaign/keys; red = broken wiring.</p>
+      <div class="api-status-bar" id="healthSummaryBar"></div>
+      <div id="healthSectionsGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1rem; margin-top:1.5rem;"></div>
+    </div>
+    
+    <!-- Edit/Create Campaign View -->
+
+    <div id="campaignEditView" class="hidden">
+      <div class="tabs">
+        <div class="tab active" id="tabDetails">Brand Details</div>
+        <div class="tab" id="tabRules">Auto-Rules (Campaign Specific)</div>
+      </div>
+
+      <div id="detailsSection">
+        <form id="setupForm" class="form-grid">
+          <div class="form-group">
+            <label for="brandName">Campaign / Brand Name</label>
+            <input type="text" id="brandName" placeholder="e.g. Acme Corp" required>
+          </div>
+          <div class="form-group">
+            <label for="domain">Website (Domain)</label>
+            <input type="text" id="domain" placeholder="e.g. acme.com" required>
+          </div>
+          <div class="form-group full-width">
+            <label for="description">Brand Description</label>
+            <textarea id="description" rows="3" placeholder="What does your brand do? Who is it for?"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="tone">Tone of Voice</label>
+            <select id="tone">
+              <option value="professional">Professional & Authoritative</option>
+              <option value="friendly">Friendly & Conversational</option>
+              <option value="humorous">Humorous & Witty</option>
+              <option value="enthusiastic">Enthusiastic & Bold</option>
+              <option value="playful">Playful & Fun</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="audience">Target Audience</label>
+            <input type="text" id="audience" placeholder="e.g. Small business owners">
+          </div>
+          <div class="form-group full-width">
+            <label for="affiliateLinks">Affiliate Links & Core USPs</label>
+            <textarea id="affiliateLinks" rows="2" placeholder="List affiliate links, discount codes, or Unique Selling Propositions the AI should leverage."></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label for="disallowedTopics">Disallowed Topics</label>
+            <textarea id="disallowedTopics" rows="2" placeholder="e.g. Politics, Religion, Pricing negotiations (Instructs AI what to ignore or avoid)."></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label for="examplePosts">Example Posts / Tone Training</label>
+            <textarea id="examplePosts" rows="3" placeholder="Paste 2-3 examples of ideal replies here so the AI can mimic your exact brand style."></textarea>
+          </div>
+        
+          <div class="form-group full-width" style="background:rgba(15,23,42,0.8); border:1px solid #38bdf8; padding:1.5rem; border-radius:8px; margin-top:1rem;">
+            <label style="color:#38bdf8; font-size:1rem; margin-bottom:1rem;"><i class="fas fa-link"></i> Brand Visibility & UTM Tracking (Acquisition)</label>
+            <p style="font-size:0.8rem; color:#94a3b8; margin-top:0; margin-bottom:1rem;">Automatically append tracking parameters to any brand links the AI suggests to convert curious users.</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+              <div>
+                <label style="font-size:0.8rem;">UTM Source (e.g., social_imperialism)</label>
+                <input type="text" id="utmSource" placeholder="social_imperialism">
+              </div>
+              <div>
+                <label style="font-size:0.8rem;">UTM Medium (e.g., ai_reply)</label>
+                <input type="text" id="utmMedium" placeholder="ai_reply">
+              </div>
+            </div>
+            <div style="margin-top:1rem;">
+                <label style="font-size:0.8rem;">Fallback / Primary Conversion Link</label>
+                <input type="text" id="primaryLink" placeholder="https://client-brand.com/signup">
+            </div>
+          </div>
+
+        </form>
+        <div style="display: flex; justify-content: space-between; margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1.5rem;">
+          <button class="secondary cancel-btn">Cancel</button>
+          <button id="saveBtn">Save Campaign</button>
+        </div>
+      </div>
+
+      <div id="rulesSection" class="hidden">
+        <div class="rule-box" style="border-color: #38bdf8;">
+          <div class="rule-header">
+            <div class="rule-title">Global AI Response Threshold</div>
+            <label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label>
+          </div>
+          <div class="rule-controls">
+            <div class="form-group">
+              <label>Minimum Match Score</label>
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <input type="number" id="globalScore" value="85" style="width: 80px;" min="0" max="100">
+                <span style="color: #94a3b8;">%</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Delay Before Response</label>
+              <select id="globalDelay">
+                <option value="instant">Instant (Be First)</option>
+                <option value="human" selected>Human-like (2-5 mins)</option>
+                <option value="hourly">Batch Hourly</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>Scheduler Frequency (Scan Interval)</label>
+              <select id="globalSchedule">
+                <option value="5m">Every 5 Minutes (Aggressive)</option>
+                <option value="15m" selected>Every 15 Minutes</option>
+                <option value="1h">Every 1 Hour</option>
+                <option value="24h">Once a day</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="rule-box">
+          <div class="rule-header">
+            <div class="rule-title">Platform Specific Overrides</div>
+            <button class="secondary" id="addPlatformRuleBtn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">+ Add Platform Rule</button>
+          </div>
+          <div id="platformRulesContainer">
+            <div class="rule-controls platform-rule-item" style="margin-bottom: 1rem;">
+              <div class="form-group">
+                <label>Target Platform</label>
+                <select class="platformTarget">
+                  <option value="twitter">Twitter / X</option>
+                  <option value="linkedin" selected>LinkedIn</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Workflow Action</label>
+                <select class="platformAction">
+                  <option value="auto">Auto-Reply (Skip Approvals)</option>
+                  <option value="hold" selected>Hold in 'Pending' for Review</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1.5rem;">
+          <button class="secondary cancel-btn">Back to Campaigns</button>
+          <button id="saveRulesBtn">Save Auto-Rules</button>
+        </div>
+      </div>
+    </div>
+    <div id="apiKeysView" class="hidden">
+    <div class="header">
+      <h1>Global API Integrations</h1>
+      <div style="display:flex; gap:0.75rem;">
+        <button class="secondary" id="testApiKeysBtn">Test Connections</button>
+        <button class="secondary" id="backToCampaignsBtn">Back to Campaigns</button>
+      </div>
+    </div>
+    <div class="api-status-bar" id="apiKeysStatusBar"></div>
+    
+    <div class="rule-box" style="margin-bottom: 2rem;">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <div class="rule-title" style="color: #38bdf8;">🧠 AI Engine Credentials</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Google Gemini API Key (Default)</label>
+          <input type="password" id="geminiKey" placeholder="AIzaSy...">
+        </div>
+        <div class="form-group">
+          <label>OpenAI API Key (Optional)</label>
+          <input type="password" id="openaiKey" placeholder="sk-...">
+        </div>
+        <div class="form-group">
+          <label>OpenRouter API Key (Unified multi-model AI - OpenAI compatible)</label>
+          <input type="password" id="openrouterKey" placeholder="sk-or-...">
+          <span style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: block;">Access 100+ models (Claude 3.5, GPT-4o, Llama 3.1, Gemini, Mistral, etc.) through one key. Recommended for flexibility.</span>
+        </div>
+        <div class="form-group">
+          <label>Unsplash Access Key (Free high-quality images for Content Hub &amp; creation)</label>
+          <input type="password" id="unsplashAccessKey" placeholder="Enter Unsplash Access Key">
+        </div>
+        <div class="form-group">
+          <label>Unsplash Application ID (full list - for certain API calls / rate tracking)</label>
+          <input type="text" id="unsplashApplicationId" placeholder="Enter Application ID">
+        </div>
+        <div class="form-group">
+          <label>NewsAPI Key (Real trending news feed in Dashboard)</label>
+          <input type="password" id="newsApiKey" placeholder="Enter NewsAPI Key">
+        </div>
+        <div class="form-group">
+          <label>LinkedIn Access Token (Real LinkedIn posting &amp; automation)</label>
+          <input type="password" id="linkedinAccessToken" placeholder="Enter LinkedIn Access Token">
+        </div>
+        <div class="form-group full-width">
+          <label>Advanced AI Workflow Key (for enhanced content tools, image/video magic, repurpose in Content Hub)</label>
+          <input type="password" id="advancedWorkflowKey" placeholder="Enter Advanced Workflow Key">
+          <span style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: block;">Powers smart AI features like advanced image editing, smart captions, video repurposing, and intelligent content generation without mocks.</span>
+        </div>
+        <!-- Additional preloaded keys for real data across features (YouTube, streaming, SEO, TTS, research, CMS, shortening, social automation, etc.) -->
+        <div class="form-group">
+          <label>YouTube API Key</label>
+          <input type="password" id="youtubeApiKey" placeholder="AIzaSyDFzNgKVo_S...">
+        </div>
+        <div class="form-group">
+          <label>YouTube Client ID</label>
+          <input type="text" id="youtubeClientId" placeholder="457822248990-...">
+        </div>
+        <div class="form-group">
+          <label>YouTube Client Secret</label>
+          <input type="password" id="youtubeClientSecret" placeholder="CdkvpoHWzP6uIIc...">
+        </div>
+        <div class="form-group">
+          <label>TinyURL API Key (link shortening in posts)</label>
+          <input type="password" id="tinyurlApiKey" placeholder="FOQDuDMhkGw1LpnE...">
+        </div>
+        <div class="form-group">
+          <label>SerpAPI Key (research & SEO)</label>
+          <input type="password" id="serpApiKey" placeholder="d7dc8ad714606a25...">
+        </div>
+        <div class="form-group">
+          <label>Play.ht User ID (TTS for audio content)</label>
+          <input type="text" id="playhtUserId" placeholder="XDuQKo0qcObM7j4x...">
+        </div>
+        <div class="form-group">
+          <label>Play.ht Secret Key</label>
+          <input type="password" id="playhtSecretKey" placeholder="e0281223651d4ca3...">
+        </div>
+        <div class="form-group">
+          <label>Contentful Space ID (CMS content sourcing)</label>
+          <input type="text" id="contentfulSpaceId" placeholder="m5uwkwxcnm1k">
+        </div>
+        <div class="form-group">
+          <label>Contentful Access Token</label>
+          <input type="password" id="contentfulAccessToken" placeholder="pGtNwQQpniCVdRP8...">
+        </div>
+        <div class="form-group">
+          <label>ContentStudio API Key (scheduling content)</label>
+          <input type="password" id="contentStudioApiKey" placeholder="Enter ContentStudio API Key">
+        </div>
+        <div class="form-group">
+          <label>DeepL API Key (translation)</label>
+          <input type="password" id="deeplKey" placeholder="Enter DeepL API Key">
+        </div>
+        <div class="form-group">
+          <label>Discord Client ID</label>
+          <input type="text" id="discordClientId" placeholder="Enter Discord Client ID">
+        </div>
+        <div class="form-group">
+          <label>Discord Bot Token</label>
+          <input type="password" id="discordBotToken" placeholder="Enter Discord Bot Token">
+        </div>
+        <!-- Streaming / RTMP keys for live (YouTube, FB, etc.) - stored for automation/live features -->
+        <div class="form-group full-width">
+          <label>Live Streaming Keys (RTMP for YouTube/FB live in automations)</label>
+          <textarea id="streamingKeys" style="height: 80px;" placeholder="e.g. YT: rtmp://a.rtmp.youtube.com/live2 / key: x0xt-... ; FB: rtmps://live-api-s.facebook.com:443/rtmp/ / key: FB-..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Twitch Stream Key (full from user list for live/automations)</label>
+          <input type="password" id="twitchStreamKey" placeholder="Enter Twitch Stream Key">
+        </div>
+        <!-- Instagram sessions for automation -->
+        <div class="form-group">
+          <label>Instagram Sessions (for multi-account automation)</label>
+          <textarea id="instagramSessions" style="height: 60px;" placeholder="account: session_id ; account2: session_id"></textarea>
+        </div>
+        <!-- Reddit / Twitter / X detailed keys (multiple accounts) -->
+        <div class="form-group">
+          <label>Reddit Client ID</label>
+          <input type="text" id="redditClientId" placeholder="Enter Reddit Client ID">
+        </div>
+        <div class="form-group">
+          <label>Reddit Client Secret</label>
+          <input type="password" id="redditClientSecret" placeholder="Enter Reddit Client Secret">
+        </div>
+        <div class="form-group full-width">
+          <label>Twitter/X Consumer & Access Keys (multi-account)</label>
+          <textarea id="twitterKeys" style="height: 80px;" placeholder="Consumer Key / Secret ; Access Token / Secret ; Bearer ; Client ID"></textarea>
+        </div>
+        <div class="form-group full-width">
+          <label>Google Clients / Streamr (for links, research, streaming)</label>
+          <textarea id="googleClients" style="height: 60px;" placeholder="Client ID / Client Secret (one per line)"></textarea>
+        </div>
+        <div class="form-group">
+          <label>MOZ Access ID</label>
+          <input type="text" id="mozAccessId" placeholder="Enter MOZ Access ID">
+        </div>
+        <div class="form-group">
+          <label>MOZ Secret</label>
+          <input type="password" id="mozSecret" placeholder="Enter MOZ Secret">
+        </div>
+        <div class="form-group full-width">
+          <label>FAL AI API Key (Image Generation)</label>
+          <input type="password" id="falKey" placeholder="Enter FAL API Key">
+          <span style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: block;">Used for automatically generating images, thumbnails, and carousels.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-box" style="margin-bottom: 2rem; border-color: #7c3aed;">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <div class="rule-title" style="color: #a78bfa;"><i class="fas fa-robot"></i> Grok Engine (Browser Session — No API)</div>
+        <span style="font-size: 0.8rem; color: #94a3b8;">Infographic generator, Grok text (new chat), and Grok Imagine use a persistent browser login — not an API key.</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>x.ai / Grok Email</label>
+          <input type="email" id="grokEmail" placeholder="your@email.com" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>x.ai / Grok Password</label>
+          <input type="password" id="grokPassword" placeholder="Stored locally on this device" autocomplete="current-password">
+        </div>
+        <div class="form-group full-width">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="grokAutoLogin" checked style="width:auto;">
+            Auto-fill credentials on Connect (complete CAPTCHA/2FA manually if prompted)
+          </label>
+        </div>
+        <div class="form-group full-width" id="grokSessionStatus" style="padding:0.75rem;background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;font-size:0.85rem;color:#94a3b8;">
+          Grok session status loading…
+        </div>
+        <div class="form-group full-width" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button type="button" class="secondary" id="grokConnectBtn"><i class="fas fa-plug"></i> Connect &amp; Authorize Grok</button>
+          <button type="button" class="secondary" id="grokSaveBtn"><i class="fas fa-save"></i> Save Grok Credentials</button>
+          <button type="button" class="secondary" id="grokDisconnectBtn"><i class="fas fa-sign-out-alt"></i> Close Browser Session</button>
+        </div>
+        <p style="grid-column:1/-1;margin:0;color:#64748b;font-size:0.78rem;">Opens a real Chrome window via Puppeteer. Session cookies are saved in your app data folder so you stay logged in. Use <strong>new chat</strong> for text and <strong>Imagine</strong> for infographic images/videos in Content Hub.</p>
+      </div>
+    </div>
+    
+    <div class="rule-box" style="margin-bottom: 2rem;">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <div class="rule-title" style="color: #f59e0b;">📊 Data & Metrics APIs</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label>DomDetailer API Key (Domain Metrics)</label>
+          <input type="password" id="domDetailerKey" placeholder="Enter API Key (e.g. ERCHSWC16KHS6)">
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-box" style="margin-bottom: 2rem;">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <div class="rule-title" style="color: #10b981;">📸 Stock Photo & Media APIs</div>
+        <span style="font-size: 0.8rem; color: #94a3b8;">Used to find high-quality images for your content automatically.</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Pexels API Key</label>
+          <input type="password" id="pexelsKey" placeholder="Enter Pexels Key">
+        </div>
+        <div class="form-group">
+          <label>Pixabay API Key</label>
+          <input type="password" id="pixabayKey" placeholder="Enter Pixabay Key">
+        </div>
+        <div class="form-group">
+          <label>Flickr API Key / ID</label>
+          <input type="password" id="flickrKey" placeholder="Enter Flickr Key">
+        </div>
+        <div class="form-group">
+          <label>Flickr Secret</label>
+          <input type="password" id="flickrSecret" placeholder="Enter Flickr Secret">
+        </div>
+        <div class="form-group">
+          <label>Flickr Key 2 (second pair from full user list for extra stock sources)</label>
+          <input type="password" id="flickrKey2" placeholder="Enter Flickr Key 2">
+        </div>
+        <div class="form-group">
+          <label>Flickr Secret 2</label>
+          <input type="password" id="flickrSecret2" placeholder="Enter Flickr Secret 2">
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-box" style="margin-bottom: 2rem;">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+        <div class="rule-title" style="color: #a78bfa;">🔔 Notification Webhooks</div>
+        <span style="font-size: 0.8rem; color: #94a3b8;">Where should the Unanswered Questions Tracker send alerts?</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Slack Webhook URL</label>
+          <input type="url" id="slackWebhook" placeholder="https://hooks.slack.com/services/...">
+        </div>
+        <div class="form-group">
+          <label>Discord Webhook URL</label>
+          <input type="url" id="discordWebhook" placeholder="https://discord.com/api/webhooks/...">
+        </div>
+        <div class="form-group full-width">
+          <label>Email Notification Address</label>
+          <input type="email" id="alertEmail" placeholder="team@company.com">
+        </div>
+      </div>
+    </div>
+    
+    <div class="rule-box" style="margin-bottom: 2rem;">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div class="rule-title" style="color: #34d399;">🌐 Social Media API Keys (Central place to connect to REAL data - removes mocks for feed, accounts, publishing, fanpage growth, be-first, etc. across all 14+ platforms)</div>
+        <p style="font-size:0.75rem; color:#64748b; margin-bottom:0.5rem;">Enter keys from the developer portals (detailed in root OAUTH_INTEGRATION_GUIDE.md). When saved, Dashboard, Account Hub, Content Hub, worker "be first"/auto/RSS, Q&amp;A, etc. will use live APIs (Reddit real search, FB Graph for pages/fanpages, Twitter publish, etc.) instead of simulation. Use your brand profile + keywords for targeted real interactions.</p>
+          <span style="font-size: 0.8rem; color: #94a3b8;">Select a platform below to securely store your Developer Client IDs & Secrets.</span>
+        </div>
+        <select id="apiPlatformSelector" style="width: auto; background: #0f172a; border-color: #38bdf8;">
+          <option value="twitter">Twitter / X</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="meta">Facebook / Instagram</option>
+          <option value="tiktok">TikTok</option>
+          <option value="youtube">YouTube / Google</option>
+          <option value="reddit">Reddit</option>
+          <option value="pinterest">Pinterest</option>
+          <option value="snapchat">Snapchat</option>
+          <option value="discord">Discord</option>
+          <option value="telegram">Telegram</option>
+          <option value="whatsapp">WhatsApp Business</option>
+          <option value="twitch">Twitch</option>
+          <option value="wechat">WeChat</option>
+          <option value="weibo">Weibo</option>
+        </select>
+      </div>
+      
+      <div id="apiFieldsContainer">
+        <!-- Fields injected by JS based on selection -->
+      </div>
+    </div>
+    
+    <div style="display: flex; justify-content: flex-end;">
+      <button id="saveGlobalKeysBtn">Save API Integrations</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+const { ipcRenderer, shell } = require('electron');
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = message;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+async function loadSettingsStatus() {
+  const bar = document.getElementById('settingsStatusBar');
+  if (!bar) return;
+  try {
+    const status = await ipcRenderer.invoke('get-settings-status');
+    const pills = [];
+    pills.push(`<span class="api-pill ${status.campaignCount > 0 ? 'ok' : 'miss'}">${status.campaignCount || 0} campaign(s)</span>`);
+    if (status.apiMetrics) {
+      const connected = Object.entries(status.apiMetrics).filter(([, v]) => v === 'Connected').length;
+      const total = Object.keys(status.apiMetrics).length;
+      pills.push(`<span class="api-pill ${connected > 0 ? 'ok' : 'miss'}">${connected}/${total} APIs connected</span>`);
+    }
+    pills.push(`<span class="api-pill ok">Plan: ${escapeHtml((status.billingPlan || 'starter').toUpperCase())}</span>`);
+    bar.innerHTML = pills.join('');
+  } catch (e) {
+    bar.innerHTML = `<span class="api-pill miss">Status unavailable</span>`;
+  }
+}
+
+async function loadSystemHealth() {
+  const bar = document.getElementById('healthSummaryBar');
+  const grid = document.getElementById('healthSectionsGrid');
+  if (!bar || !grid) return;
+  bar.innerHTML = '<span class="api-pill miss">Running health check...</span>';
+  grid.innerHTML = '';
+  try {
+    const report = await ipcRenderer.invoke('get-page-health');
+    const s = report.summary || {};
+    const pills = [
+      `<span class="api-pill ok">${s.ok || 0} ready</span>`,
+      `<span class="api-pill ${s.warn ? 'miss' : 'ok'}">${s.warn || 0} need setup</span>`,
+      `<span class="api-pill ${s.broken ? 'miss' : 'ok'}">${s.broken || 0} broken</span>`,
+      `<span class="api-pill ok">${s.registeredIpcCount || 0} IPC handlers</span>`,
+      `<span class="api-pill ${s.hasAi ? 'ok' : 'miss'}">AI ${s.hasAi ? 'configured' : 'not configured'}</span>`,
+    ];
+    bar.innerHTML = pills.join('');
+    grid.innerHTML = (report.sections || []).map((sec) => {
+      const statusClass = sec.status === 'ok' ? 'ok' : (sec.status === 'broken' ? 'miss' : 'miss');
+      const statusLabel = sec.status === 'ok' ? 'Ready' : (sec.status === 'broken' ? 'Broken' : 'Needs setup');
+      const issues = (sec.issues || []).map((i) => `<li style="color:#f87171;">${escapeHtml(i)}</li>`).join('');
+      const hints = (sec.hints || []).map((h) => `<li style="color:#fbbf24;">${escapeHtml(h)}</li>`).join('');
+      const href = sec.hash ? `${sec.html}${sec.hash}` : sec.html;
+      return `<div class="campaign-card" style="flex-direction:column; align-items:stretch;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+          <strong style="color:#f1f5f9;">${escapeHtml(sec.label)}</strong>
+          <span class="api-pill ${statusClass}">${statusLabel}</span>
+        </div>
+        <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem;">${escapeHtml(sec.html)} · ${sec.invokeChannelCount || 0} IPC calls</div>
+        ${issues || hints ? `<ul style="margin:0; padding-left:1.2rem; font-size:0.8rem;">${issues}${hints}</ul>` : '<div style="font-size:0.8rem; color:#10b981;">Fully wired — configure API keys for live external data.</div>'}
+        <a href="${escapeHtml(href)}" style="margin-top:0.75rem; font-size:0.85rem; color:#38bdf8;">Open section →</a>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    bar.innerHTML = `<span class="api-pill miss">Health check failed: ${escapeHtml(e.message || String(e))}</span>`;
+  }
+}
+
+document.getElementById('btnRefreshHealth')?.addEventListener('click', () => loadSystemHealth());
+
+async function loadApiKeysStatusBar() {
+  const bar = document.getElementById('apiKeysStatusBar');
+  if (!bar) return;
+  try {
+    const result = await ipcRenderer.invoke('check-api-status');
+    const pills = [];
+    if (result.apiMetrics) {
+      Object.entries(result.apiMetrics).forEach(([name, status]) => {
+        const ok = status === 'Connected';
+        pills.push(`<span class="api-pill ${ok ? 'ok' : 'miss'}">${ok ? '✓' : '✗'} ${escapeHtml(name)}</span>`);
+      });
+    }
+    bar.innerHTML = pills.join('') || `<span class="api-pill miss">No API status data</span>`;
+  } catch (e) {
+    bar.innerHTML = `<span class="api-pill miss">API check failed</span>`;
+  }
+}
+
+let billingState = null;
+let tutorialData = { tutorials: [], completed: [] };
+let activeTutorialId = null;
+let activeTutorialCategory = 'all';
+let billingUsesFallback = false;
+
+function isMissingIpcHandler(err) {
+  const msg = String(err?.message || err || '');
+  return msg.includes('No handler registered');
+}
+
+const CLIENT_PLAN_CATALOG = {
+  starter: { id: 'starter', name: 'Starter', price: 49, priceLabel: '$49/mo', accounts: 3, aiGenerations: 500, crisisMonitoring: false, features: ['3 Social Accounts', 'Basic AI Replies', '500 AI Generations/mo', 'Content Calendar', 'Keyword Tracking'] },
+  growth: { id: 'growth', name: 'Growth', price: 149, priceLabel: '$149/mo', accounts: 15, aiGenerations: 5000, crisisMonitoring: false, features: ['15 Social Accounts', 'Spam & Bot Filtering', 'Advanced Analytics', 'Reddit Prospector', 'Visual Automations', 'Auto-Rules Engine'] },
+  enterprise: { id: 'enterprise', name: 'Enterprise', price: null, priceLabel: 'Custom', accounts: 999, aiGenerations: 999999, crisisMonitoring: true, features: ['Unlimited Accounts', '24/7 Crisis Monitoring', 'Dedicated Account Manager', 'Custom Industry Routing', 'SLA & Priority Support'] },
+};
+
+function loadClientBillingState() {
+  const defaults = { plan: 'starter', status: 'active', billingEmail: '', startedAt: new Date().toISOString(), nextBillingDate: null, history: [] };
+  try {
+    const parsed = JSON.parse(localStorage.getItem('billingPlan') || '{}');
+    return { ...defaults, ...parsed, plan: parsed.plan || 'starter' };
+  } catch (e) { return defaults; }
+}
+
+function buildClientBillingResponse(state) {
+  const catalog = CLIENT_PLAN_CATALOG[state.plan] || CLIENT_PLAN_CATALOG.starter;
+  return {
+    ...state,
+    catalog,
+    allPlans: CLIENT_PLAN_CATALOG,
+    planName: catalog.name,
+    price: catalog.price,
+    priceLabel: catalog.priceLabel,
+    limits: { accounts: catalog.accounts, aiGenerations: catalog.aiGenerations, crisisMonitoring: catalog.crisisMonitoring },
+  };
+}
+
+function saveClientBillingState(state) {
+  localStorage.setItem('billingPlan', JSON.stringify(state));
+  return buildClientBillingResponse(state);
+}
+
+async function billingInvoke(channel, arg) {
+  try {
+    return await ipcRenderer.invoke(channel, arg);
+  } catch (e) {
+    if (!isMissingIpcHandler(e)) throw e;
+    billingUsesFallback = true;
+    if (channel === 'get-billing-plan') return buildClientBillingResponse(loadClientBillingState());
+    if (channel === 'save-billing-plan') {
+      const planId = typeof arg === 'string' ? arg : (arg?.plan || 'starter');
+      const catalog = CLIENT_PLAN_CATALOG[planId] || CLIENT_PLAN_CATALOG.starter;
+      const existing = loadClientBillingState();
+      const now = new Date().toISOString();
+      const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const payload = {
+        ...existing, plan: planId, planName: catalog.name, price: catalog.price, priceLabel: catalog.priceLabel,
+        status: planId === 'enterprise' ? 'pending_sales' : 'active', updatedAt: now,
+        nextBillingDate: planId === 'enterprise' ? null : nextMonth.toISOString(),
+        billingEmail: (arg?.billingEmail) || existing.billingEmail,
+        history: Array.isArray(existing.history) ? [...existing.history] : [],
+      };
+      payload.history.unshift({ id: 'bill_' + Date.now(), date: now, plan: planId, planName: catalog.name, amount: catalog.price, priceLabel: catalog.priceLabel, note: 'Plan selected (local — restart app to sync)' });
+      payload.history = payload.history.slice(0, 25);
+      return saveClientBillingState(payload);
+    }
+    if (channel === 'save-billing-email') {
+      const existing = loadClientBillingState();
+      existing.billingEmail = String(arg || '').trim();
+      existing.updatedAt = new Date().toISOString();
+      return saveClientBillingState(existing);
+    }
+    throw e;
+  }
+}
+
+async function tutorialsInvoke(channel, arg) {
+  try {
+    return await ipcRenderer.invoke(channel, arg);
+  } catch (e) {
+    if (!isMissingIpcHandler(e)) throw e;
+    if (channel === 'get-setup-tutorials') {
+      let completed = [];
+      try { completed = JSON.parse(localStorage.getItem('completedTutorials') || '[]'); } catch (_) {}
+      return {
+        tutorials: EMBEDDED_TUTORIALS.map(t => ({ ...t, thumbnail: t.thumbnail || `assets/tutorials/${t.id}.jpg` })),
+        completed,
+      };
+    }
+    if (channel === 'mark-tutorial-complete') {
+      let completed = [];
+      try { completed = JSON.parse(localStorage.getItem('completedTutorials') || '[]'); } catch (_) {}
+      if (arg && !completed.includes(arg)) completed.push(arg);
+      localStorage.setItem('completedTutorials', JSON.stringify(completed));
+      return { success: true, completed };
+    }
+    throw e;
+  }
+}
+
+const EMBEDDED_TUTORIALS = [
+  { id: 'tut_01', category: 'getting-started', title: 'Create Your First Campaign', duration: '5 min', icon: 'fa-layer-group', color: '#38bdf8', page: 'settings.html', steps: ['Click + New Campaign in Settings', 'Enter brand name, domain, and tone of voice', 'Save — the campaign becomes your active brand profile', 'Switch campaigns anytime from the sidebar dropdown'] },
+  { id: 'tut_02', category: 'getting-started', title: 'Connect Global API Keys', duration: '8 min', icon: 'fa-key', color: '#f59e0b', page: 'settings.html', steps: ['Open Settings → Global API Integrations', 'Paste keys from your .env or developer portals', 'Click Test Connections to verify live status', 'Save API Integrations — Dashboard and Content Hub use these keys'] },
+  { id: 'tut_03', category: 'apis', title: 'OAuth 2.0 — Twitter / X', duration: '12 min', icon: 'fab fa-twitter', color: '#1d9bf0', page: 'account-hub.html', steps: ['Create an app at developer.x.com', 'Set callback URI: social-imperialism://oauth-callback', 'Copy Client ID and Secret into Global API Integrations', 'Link your account in Linked Accounts'] },
+  { id: 'tut_reddit', category: 'apis', title: 'OAuth — Reddit', duration: '8 min', icon: 'fab fa-reddit', color: '#ff4500', page: 'account-hub.html', steps: ['Create a web app at reddit.com/prefs/apps', 'Add redirect URI: http://127.0.0.1:42813/oauth/callback', 'Copy Client ID and Secret into Settings → API', 'Linked Accounts → Reddit → OAuth tab'] },
+  { id: 'tut_04', category: 'apis', title: 'OAuth 2.0 — LinkedIn', duration: '10 min', icon: 'fab fa-linkedin', color: '#0A66C2', page: 'account-hub.html', steps: ['Create app at developer.linkedin.com', 'Request Sign In + Share on LinkedIn products', 'Add redirect URL: social-imperialism://oauth-callback', 'Connect via Linked Accounts hub'] },
+  { id: 'tut_05', category: 'apis', title: 'Meta (Facebook & Instagram)', duration: '15 min', icon: 'fab fa-facebook', color: '#1877F2', page: 'account-hub.html', steps: ['Create Business app at developers.facebook.com', 'Add Facebook Login + Instagram Graph API products', 'Configure OAuth redirect URIs', 'Link pages and IG accounts in Account Hub'] },
+  { id: 'tut_06', category: 'content', title: 'Content Hub — Publish Posts', duration: '7 min', icon: 'fa-edit', color: '#34d399', page: 'content-hub.html', steps: ['Select a linked account', 'Write or generate AI copy', 'Attach media from upload or stock search', 'Publish now or schedule for later'] },
+  { id: 'tut_07', category: 'content', title: 'Content Calendar Scheduling', duration: '6 min', icon: 'fa-calendar-alt', color: '#a78bfa', page: 'calendar.html', steps: ['Open Content Calendar', 'Drag posts to preferred dates/times', 'Use Suggest Best Times for AI recommendations', 'Due posts auto-publish via the background worker'] },
+  { id: 'tut_08', category: 'automation', title: 'Visual Automations Builder', duration: '12 min', icon: 'fa-project-diagram', color: '#a855f7', page: 'automations.html', steps: ['Open Visual Builder', 'Add trigger nodes (keyword match, schedule, webhook)', 'Connect action nodes (reply, like, publish)', 'Save flow and set status to Active'] },
+  { id: 'tut_09', category: 'automation', title: 'Spam Filtering & Escalation', duration: '8 min', icon: 'fa-shield-alt', color: '#10b981', page: 'rules.html', steps: ['Open Auto-Rules', 'Enable spam, offensive, and crisis moderation', 'Set auto-reply mode (mentions vs all)', 'Configure industry routing and notification webhooks'] },
+  { id: 'tut_10', category: 'automation', title: 'Reddit Prospector Workflows', duration: '15 min', icon: 'fab fa-reddit-alien', color: '#f97316', page: 'keywords.html', steps: ['Add high-intent keywords in Keywords page', 'Run keyword research for live Reddit/Twitter signals', 'Enable auto-rules for Reddit platform', 'Review AI drafts in AI Replies before publishing'] },
+  { id: 'tut_11', category: 'engagement', title: 'AI Replies & Approval Queue', duration: '5 min', icon: 'fa-robot', color: '#38bdf8', page: 'history.html', steps: ['Worker scans keywords and generates draft replies', 'Review pending replies in AI Replies', 'Approve to publish or edit before sending', 'Track engagement in post history'] },
+  { id: 'tut_12', category: 'engagement', title: 'Engagement Lists & Outreach', duration: '9 min', icon: 'fa-users', color: '#f472b6', page: 'engagement.html', steps: ['Build prospect lists from keyword matches', 'Filter by platform and intent score', 'Generate personalized outreach copy', 'Post directly to LinkedIn or export leads'] },
+  { id: 'tut_13', category: 'campaigns', title: 'Multi-Brand Agency Setup', duration: '10 min', icon: 'fa-building', color: '#38bdf8', page: 'settings.html', steps: ['Create a campaign per client brand', 'Set active campaign before working on that client', 'Each campaign has isolated keywords and linked accounts', 'Use sidebar switcher to jump between brands'] },
+  { id: 'tut_14', category: 'campaigns', title: 'UTM Tracking & Conversion Links', duration: '4 min', icon: 'fa-link', color: '#10b981', page: 'settings.html', steps: ['Edit campaign → Brand Details', 'Set UTM Source and UTM Medium', 'Add primary conversion link', 'AI replies append tracking params automatically'] },
+  { id: 'tut_15', category: 'getting-started', title: 'Dashboard Command Center', duration: '5 min', icon: 'fa-home', color: '#38bdf8', page: 'dashboard.html', steps: ['View live API status and worker state', 'Monitor trending topics from real feeds', 'Check domain metrics for active campaign', 'Export data snapshot from dashboard tools'] },
+];
+
+function renderPlanFeatures(planId, features) {
+  const ul = document.getElementById('planFeatures' + planId.charAt(0).toUpperCase() + planId.slice(1));
+  if (!ul || !features) return;
+  ul.innerHTML = features.map(f => `<li style="margin-bottom:0.5rem;"><i class="fas fa-check" style="color:#10b981;margin-right:8px;"></i> ${escapeHtml(f)}</li>`).join('');
+}
+
+function renderBillingUI(billing) {
+  billingState = billing;
+  const plan = billing.plan || 'starter';
+  const catalog = billing.catalog || billing.allPlans?.[plan] || {};
+
+  document.getElementById('billingCurrentPlan').textContent = catalog.name || plan;
+  document.getElementById('billingCurrentPrice').textContent = (billing.priceLabel || catalog.priceLabel || '') + (billing.paymentProvider ? ' · via ' + billing.paymentProvider : '');
+  const statusLabel = billing.status === 'pending_sales' ? ' (Pending sales contact)' : '';
+  const nextEl = document.getElementById('billingNextDate');
+  if (nextEl) {
+    if (billing.nextBillingDate && plan !== 'enterprise') {
+      nextEl.textContent = 'Next billing: ' + new Date(billing.nextBillingDate).toLocaleDateString() + statusLabel;
+    } else if (plan === 'enterprise') {
+      nextEl.textContent = 'Custom contract — sales team will reach out' + statusLabel;
+    } else {
+      nextEl.textContent = 'Select a plan to set billing cycle' + statusLabel;
+    }
+  }
+
+  const emailInput = document.getElementById('billingEmailInput');
+  if (emailInput && billing.billingEmail) emailInput.value = billing.billingEmail;
+
+  const limitsRow = document.getElementById('billingLimitsRow');
+  if (limitsRow && billing.limits) {
+    limitsRow.innerHTML = [
+      `<span class="api-pill ok">${billing.limits.accounts >= 999 ? 'Unlimited' : billing.limits.accounts} accounts</span>`,
+      `<span class="api-pill ok">${billing.limits.aiGenerations >= 999999 ? 'Unlimited' : billing.limits.aiGenerations} AI gens/mo</span>`,
+      `<span class="api-pill ${billing.limits.crisisMonitoring ? 'ok' : 'miss'}">${billing.limits.crisisMonitoring ? 'Crisis monitoring' : 'No crisis monitoring'}</span>`,
+    ].join('');
+  }
+
+  ['starter', 'growth', 'enterprise'].forEach((pid) => {
+    const card = document.getElementById('planCard' + pid.charAt(0).toUpperCase() + pid.slice(1));
+    const btn = document.getElementById('btnPlan' + pid.charAt(0).toUpperCase() + pid.slice(1));
+    if (card) card.classList.toggle('plan-active', plan === pid);
+    if (btn) {
+      btn.textContent = plan === pid ? '✓ Current Plan' : (pid === 'enterprise' ? 'Contact Sales' : ('Subscribe — ' + (billing.allPlans?.[pid]?.name || pid)));
+      btn.className = plan === pid ? 'secondary plan-select-btn' : (pid === 'growth' ? 'primary plan-select-btn' : 'secondary plan-select-btn');
+      btn.disabled = plan === pid;
+    }
+    if (billing.allPlans?.[pid]) renderPlanFeatures(pid, billing.allPlans[pid].features);
+  });
+
+  const tbody = document.getElementById('billingHistoryBody');
+  if (tbody) {
+    const history = billing.history || [];
+    if (!history.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:#64748b;">No billing activity yet — select a plan above.</td></tr>';
+    } else {
+      tbody.innerHTML = history.map(h => `<tr>
+        <td>${escapeHtml(new Date(h.date).toLocaleString())}</td>
+        <td>${escapeHtml(h.planName || h.plan || '')}</td>
+        <td>${h.priceLabel || (h.amount != null ? '$' + h.amount + '/mo' : 'Custom')}</td>
+        <td>${escapeHtml(h.note || '')}</td>
+      </tr>`).join('');
+    }
+  }
+}
+
+async function loadBillingUI() {
+  try {
+    billingUsesFallback = false;
+    await loadPaymentGatewayUI();
+    const billing = await billingInvoke('get-billing-plan');
+    renderBillingUI(billing);
+    if (billingUsesFallback) {
+      showToast('Billing loaded locally. Fully quit the app and run npm start to enable server sync.', 'info');
+    }
+  } catch (e) {
+    const fallback = buildClientBillingResponse(loadClientBillingState());
+    renderBillingUI(fallback);
+    showToast('Billing loaded from local storage. Restart app: npm start', 'info');
+  }
+}
+
+window.selectBillingPlan = async function(planId) {
+  try {
+    const email = document.getElementById('billingEmailInput')?.value?.trim() || '';
+    if (planId === 'enterprise') {
+      shell.openExternal('mailto:sales@socialimperialism.com?subject=Enterprise%20Plan%20Inquiry&body=I%20selected%20the%20Enterprise%20plan%20in%20Social%20Imperialism.');
+      const result = await billingInvoke('save-billing-plan', { plan: planId, billingEmail: email });
+      renderBillingUI(result);
+      return;
+    }
+
+    const provider = document.getElementById('paymentProviderSelect')?.value || 'stripe';
+    const checkout = await ipcRenderer.invoke('create-subscription-checkout', {
+      planId,
+      provider,
+      billingEmail: email,
+    });
+
+    if (checkout.success) {
+      showToast('Opening ' + (provider === 'paypal' ? 'PayPal' : 'Stripe') + ' checkout — complete payment in your browser.', 'info');
+      if (checkout.checkoutUrl) shell.openExternal(checkout.checkoutUrl);
+    } else {
+      showToast('Checkout failed: ' + (checkout.error || 'Payment gateway not configured'), 'error');
+      const fallback = await billingInvoke('save-billing-plan', { plan: planId, billingEmail: email });
+      renderBillingUI(fallback);
+      showToast('Plan saved locally without payment — configure .env keys and retry.', 'info');
+    }
+  } catch (e) {
+    showToast('Failed to start checkout: ' + e.message, 'error');
+  }
+};
+
+async function loadPaymentGatewayUI() {
+  const statusEl = document.getElementById('paymentGatewayStatus');
+  try {
+    const [status, settings] = await Promise.all([
+      ipcRenderer.invoke('get-payment-status'),
+      ipcRenderer.invoke('get-payment-settings'),
+    ]);
+    const modeSel = document.getElementById('paymentModeSelect');
+    const provSel = document.getElementById('paymentProviderSelect');
+    if (modeSel && settings?.mode) modeSel.value = settings.mode;
+    if (provSel && settings?.defaultProvider) provSel.value = settings.defaultProvider;
+
+    const pills = [];
+    pills.push(status.stripe?.configured
+      ? '<span class="api-pill ok"><i class="fab fa-stripe"></i> Stripe ready</span>'
+      : '<span class="api-pill miss">Stripe not configured</span>');
+    pills.push(status.paypal?.configured
+      ? '<span class="api-pill ok"><i class="fab fa-paypal"></i> PayPal ready (' + escapeHtml(status.paypal.email || '') + ')</span>'
+      : '<span class="api-pill miss">PayPal not configured</span>');
+    pills.push('<span class="api-pill ok">' + (status.mode === 'test' ? 'Test mode' : 'Live mode') + '</span>');
+    if (statusEl) statusEl.innerHTML = pills.join(' ');
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'Payment status unavailable — restart app after updating .env';
+  }
+}
+
+async function savePaymentPreferences() {
+  const mode = document.getElementById('paymentModeSelect')?.value || 'live';
+  const defaultProvider = document.getElementById('paymentProviderSelect')?.value || 'stripe';
+  await ipcRenderer.invoke('save-payment-settings', { mode, defaultProvider });
+  await loadPaymentGatewayUI();
+}
+
+document.getElementById('paymentModeSelect')?.addEventListener('change', savePaymentPreferences);
+document.getElementById('paymentProviderSelect')?.addEventListener('change', savePaymentPreferences);
+
+document.getElementById('btnTestPayments')?.addEventListener('click', async () => {
+  showToast('Testing Stripe & PayPal connections…', 'info');
+  const res = await ipcRenderer.invoke('test-payment-connections');
+  const parts = [];
+  parts.push('Stripe: ' + (res.stripe?.ok ? 'OK' : (res.stripe?.error || 'fail')));
+  parts.push('PayPal: ' + (res.paypal?.ok ? 'OK' : (res.paypal?.error || 'fail')));
+  showToast(parts.join(' · '), res.stripe?.ok || res.paypal?.ok ? 'success' : 'error');
+  loadPaymentGatewayUI();
+});
+
+document.getElementById('btnVerifyPayment')?.addEventListener('click', async () => {
+  const provider = document.getElementById('paymentProviderSelect')?.value || 'stripe';
+  let sessionId = null;
+  let subscriptionId = null;
+  if (provider === 'stripe') {
+    sessionId = prompt('Paste Stripe checkout session ID (cs_…):');
+    if (!sessionId) return;
+  } else {
+    subscriptionId = prompt('Paste PayPal subscription ID (I-…):');
+    if (!subscriptionId) return;
+  }
+  const planId = billingState?.plan || 'starter';
+  const res = await ipcRenderer.invoke('verify-subscription-payment', { provider, sessionId, subscriptionId, planId });
+  if (res.success && res.billing) {
+    renderBillingUI(res.billing);
+    loadSettingsStatus();
+    showToast('Payment verified — ' + (res.billing.planName || planId) + ' plan active.', 'success');
+  } else {
+    showToast('Verification failed: ' + (res.error || 'Payment not completed'), 'error');
+  }
+});
+
+ipcRenderer.on('payment-complete', (_evt, result) => {
+  if (result?.billing) {
+    renderBillingUI(result.billing);
+    loadSettingsStatus();
+    showToast('Payment complete — ' + (result.billing.planName || 'plan') + ' activated.', 'success');
+  } else if (result?.cancelled) {
+    showToast('Payment cancelled.', 'info');
+  } else if (result?.error) {
+    showToast('Payment: ' + result.error, 'error');
+  }
+});
+
+function wirePricingButtons() {
+  ['starter', 'growth', 'enterprise'].forEach((planId) => {
+    const btn = document.getElementById('btnPlan' + planId.charAt(0).toUpperCase() + planId.slice(1));
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.selectBillingPlan(planId);
+      });
+    }
+  });
+
+  document.getElementById('btnSaveBillingEmail')?.addEventListener('click', async () => {
+    const email = document.getElementById('billingEmailInput')?.value?.trim() || '';
+    if (!email || !email.includes('@')) {
+      showToast('Enter a valid billing email.', 'error');
+      return;
+    }
+    const result = await billingInvoke('save-billing-email', email);
+    renderBillingUI(result);
+    showToast('Billing email saved.', 'success');
+  });
+
+  document.getElementById('btnScheduleOnboarding')?.addEventListener('click', () => {
+    shell.openExternal('mailto:onboarding@socialimperialism.com?subject=Schedule%20Onboarding%20Session&body=Plan:%20' + encodeURIComponent(billingState?.planName || 'Starter'));
+    showToast('Opening email to schedule onboarding.', 'info');
+  });
+}
+
+function tutorialThumbSrc(t) {
+  return t.thumbnail || `assets/tutorials/${t.id}.jpg`;
+}
+
+function renderTutorialGrid() {
+  const grid = document.getElementById('tutorialGrid');
+  if (!grid) return;
+  const filtered = tutorialData.tutorials.filter(t =>
+    activeTutorialCategory === 'all' || t.category === activeTutorialCategory
+  );
+  grid.innerHTML = filtered.map(t => {
+    const done = tutorialData.completed.includes(t.id);
+    const thumb = tutorialThumbSrc(t);
+    return `<div class="tutorial-card ${done ? 'completed' : ''}" data-tutorial-id="${t.id}" style="background:rgba(30,41,59,0.5);border:1px solid #475569;border-radius:8px;overflow:hidden;">
+      <div class="tutorial-thumb">
+        <img src="${escapeHtml(thumb)}" alt="${escapeHtml(t.title)}" loading="lazy">
+        <div class="tutorial-thumb-overlay"></div>
+        <div style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.75);padding:2px 8px;border-radius:4px;font-size:0.75rem;z-index:2;">${escapeHtml(t.duration)}</div>
+        ${done ? '<div style="position:absolute;top:10px;left:10px;background:#10b981;color:#020617;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:bold;z-index:2;">DONE</div>' : ''}
+      </div>
+      <div style="padding:1rem;">
+        <div style="font-size:0.7rem;color:#64748b;text-transform:uppercase;margin-bottom:0.25rem;">${escapeHtml(t.category.replace('-', ' '))}</div>
+        <h4 style="margin:0 0 0.5rem 0;color:#e2e8f0;">${escapeHtml(t.title)}</h4>
+        <p style="margin:0;color:#94a3b8;font-size:0.85rem;">${t.steps?.length || 0} steps — click to view guide</p>
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.tutorial-card[data-tutorial-id]').forEach(card => {
+    card.addEventListener('click', () => openTutorialDetail(card.dataset.tutorialId));
+  });
+
+  const prog = document.getElementById('tutorialProgress');
+  if (prog) {
+    const total = tutorialData.tutorials.length;
+    const done = tutorialData.completed.length;
+    prog.textContent = `${done} of ${total} tutorials completed`;
+  }
+}
+
+function openTutorialDetail(tutorialId) {
+  const t = tutorialData.tutorials.find(x => x.id === tutorialId);
+  if (!t) return;
+  activeTutorialId = tutorialId;
+  const panel = document.getElementById('tutorialDetailPanel');
+  panel?.classList.remove('hidden');
+  document.getElementById('tutorialDetailTitle').textContent = t.title;
+  document.getElementById('tutorialDetailMeta').textContent = `${t.duration} · ${t.category.replace('-', ' ')} · ${t.steps?.length || 0} steps`;
+  const detailThumb = document.getElementById('tutorialDetailThumb');
+  if (detailThumb) {
+    detailThumb.src = tutorialThumbSrc(t);
+    detailThumb.alt = t.title;
+    detailThumb.classList.remove('hidden');
+    detailThumb.onerror = () => detailThumb.classList.add('hidden');
+  }
+  const stepsEl = document.getElementById('tutorialDetailSteps');
+  if (stepsEl) stepsEl.innerHTML = (t.steps || []).map(s => `<li>${escapeHtml(s)}</li>`).join('');
+  const openBtn = document.getElementById('tutorialOpenPageBtn');
+  if (openBtn) {
+    openBtn.onclick = () => {
+      if (t.page === 'settings.html') {
+        if (t.id === 'tut_02') switchSettingsView('apiKeysView');
+        else if (t.id === 'tut_14') { switchSettingsView('campaignListView'); showToast('Edit a campaign to configure UTM fields.', 'info'); }
+        else switchSettingsView('campaignListView');
+        return;
+      }
+      if (t.page) window.location.href = t.page;
+    };
+  }
+  panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function loadTutorials() {
+  try {
+    tutorialData = await tutorialsInvoke('get-setup-tutorials');
+    if (!tutorialData.tutorials?.length) {
+      tutorialData.tutorials = EMBEDDED_TUTORIALS.map(t => ({ ...t, thumbnail: `assets/tutorials/${t.id}.jpg` }));
+    }
+    renderTutorialGrid();
+  } catch (e) {
+    tutorialData = {
+      tutorials: EMBEDDED_TUTORIALS.map(t => ({ ...t, thumbnail: `assets/tutorials/${t.id}.jpg` })),
+      completed: JSON.parse(localStorage.getItem('completedTutorials') || '[]'),
+    };
+    renderTutorialGrid();
+    showToast('Tutorials loaded locally. Restart app (npm start) for full sync.', 'info');
+  }
+}
+
+function wireTutorialCards() {
+  document.querySelectorAll('#tutorialCategoryBar .tutorial-cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#tutorialCategoryBar .tutorial-cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeTutorialCategory = btn.dataset.cat || 'all';
+      renderTutorialGrid();
+    });
+  });
+
+  document.getElementById('tutorialDetailClose')?.addEventListener('click', () => {
+    document.getElementById('tutorialDetailPanel')?.classList.add('hidden');
+    document.getElementById('tutorialDetailThumb')?.classList.add('hidden');
+    activeTutorialId = null;
+  });
+
+  document.getElementById('tutorialMarkCompleteBtn')?.addEventListener('click', async () => {
+    if (!activeTutorialId) return;
+    const result = await tutorialsInvoke('mark-tutorial-complete', activeTutorialId);
+    tutorialData.completed = result.completed || [];
+    renderTutorialGrid();
+    showToast('Tutorial marked complete.', 'success');
+  });
+}
+
+// View Switching Logic
+const listView = document.getElementById('campaignListView');
+const editView = document.getElementById('campaignEditView');
+const detailsSection = document.getElementById('detailsSection');
+const rulesSection = document.getElementById('rulesSection');
+const tabDetails = document.getElementById('tabDetails');
+const tabRules = document.getElementById('tabRules');
+const campaignsContainer = document.getElementById('campaignsContainer');
+
+let currentCampaigns = [];
+let editingCampaignId = null;
+
+function switchSettingsView(viewId) {
+    const views = ['campaignListView', 'pricingView', 'tutorialView', 'apiKeysView', 'systemHealthView', 'campaignEditView'];
+    views.forEach(v => {
+        const el = document.getElementById(v);
+        if(el) el.classList.add('hidden');
+    });
+    
+    const targetEl = document.getElementById(viewId);
+    if(targetEl) targetEl.classList.remove('hidden');
+
+    if(viewId === 'apiKeysView') {
+        loadGlobalApiKeys();
+        loadApiKeysStatusBar();
+        loadGrokSettings();
+    }
+    if (viewId === 'pricingView') {
+      loadPaymentGatewayUI();
+      loadBillingUI();
+    }
+    if (viewId === 'tutorialView') {
+      loadTutorials();
+    }
+    if (viewId === 'systemHealthView') {
+      loadSystemHealth();
+    }
+    
+    if(viewId !== 'campaignEditView') {
+        if(document.getElementById('btn-campaigns')) document.getElementById('btn-campaigns').className = 'secondary';
+        if(document.getElementById('btn-pricing')) document.getElementById('btn-pricing').className = 'secondary';
+        if(document.getElementById('btn-tutorials')) document.getElementById('btn-tutorials').className = 'secondary';
+        if(document.getElementById('btn-api-keys')) document.getElementById('btn-api-keys').className = 'secondary';
+        if(document.getElementById('btn-system-health')) document.getElementById('btn-system-health').className = 'secondary';
+        
+        if(viewId === 'campaignListView' && document.getElementById('btn-campaigns')) document.getElementById('btn-campaigns').className = 'primary';
+        if(viewId === 'pricingView' && document.getElementById('btn-pricing')) document.getElementById('btn-pricing').className = 'primary';
+        if(viewId === 'tutorialView' && document.getElementById('btn-tutorials')) document.getElementById('btn-tutorials').className = 'primary';
+        if(viewId === 'apiKeysView' && document.getElementById('btn-api-keys')) document.getElementById('btn-api-keys').className = 'primary';
+        if(viewId === 'systemHealthView' && document.getElementById('btn-system-health')) document.getElementById('btn-system-health').className = 'primary';
+    }
+    
+    // Hide New Campaign button if not in list view
+    const newCampBtn = document.getElementById('newCampaignBtn');
+    if(newCampBtn) {
+        if(viewId === 'campaignListView') newCampBtn.classList.remove('hidden');
+        else newCampBtn.classList.add('hidden');
+    }
+}
+window.switchSettingsView = switchSettingsView;
+
+
+function showEditView(showRules = false, campaignId = null) {
+  if (listView) listView.classList.add('hidden');
+  if (editView) editView.classList.remove('hidden');
+  const ncb2 = document.getElementById('newCampaignBtn');
+  if (ncb2) ncb2.classList.add('hidden');
+  
+  editingCampaignId = campaignId;
+
+  const setIf = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  const clearHtml = (id) => { const el = document.getElementById(id); if (el) el.innerHTML = ''; };
+
+  if (campaignId) {
+    const camp = currentCampaigns.find(c => c.id === campaignId);
+    if(camp) {
+      setIf('brandName', camp.brandName);
+      setIf('domain', camp.domain);
+      setIf('description', camp.description);
+      setIf('tone', camp.tone || 'professional');
+      setIf('audience', camp.audience);
+      setIf('affiliateLinks', camp.affiliateLinks);
+      setIf('disallowedTopics', camp.disallowedTopics);
+      setIf('examplePosts', camp.examplePosts);
+      setIf('utmSource', camp.utmSource);
+      setIf('utmMedium', camp.utmMedium);
+      setIf('primaryLink', camp.primaryLink);
+      
+      if(camp.rules) {
+        setIf('globalScore', camp.rules.globalScore || '85');
+        setIf('globalDelay', camp.rules.globalDelay || 'human');
+        setIf('globalSchedule', camp.rules.globalSchedule || '15m');
+        
+        clearHtml('platformRulesContainer');
+        const prs = camp.rules.platformRules || [];
+        if(prs.length > 0) {
+          prs.forEach(pr => addPlatformRuleRow(pr.platformTarget, pr.platformAction, pr.platformPrompt, pr.monitorAccount));
+        } else {
+          addPlatformRuleRow('linkedin', 'hold', '', '');
+        }
+      } else {
+        setIf('globalScore', '85');
+        setIf('globalDelay', 'human');
+        setIf('globalSchedule', '15m');
+        clearHtml('platformRulesContainer');
+        addPlatformRuleRow('linkedin', 'hold', '', '');
+      }
+    }
+  } else {
+    // Clear form for new campaign
+    const form = document.getElementById('setupForm');
+    if (form && form.reset) form.reset();
+    setIf('globalScore', '85');
+    setIf('globalDelay', 'human');
+    setIf('globalSchedule', '15m');
+    clearHtml('platformRulesContainer');
+    addPlatformRuleRow('linkedin', 'hold', '', '');
+  }
+  
+  const tDet = document.getElementById('tabDetails');
+  const tRul = document.getElementById('tabRules');
+  const dSec = document.getElementById('detailsSection');
+  const rSec = document.getElementById('rulesSection');
+  if (showRules) {
+    if (tDet) tDet.classList.remove('active');
+    if (tRul) tRul.classList.add('active');
+    if (dSec) dSec.classList.add('hidden');
+    if (rSec) rSec.classList.remove('hidden');
+  } else {
+    if (tDet) tDet.classList.add('active');
+    if (tRul) tRul.classList.remove('active');
+    if (dSec) dSec.classList.remove('hidden');
+    if (rSec) rSec.classList.add('hidden');
+  }
+}
+
+
+async function loadGlobalApiKeys() {
+  const keys = await ipcRenderer.invoke('get-global-keys');
+  if (keys) {
+    currentGlobalKeys = keys;
+  } else {
+    currentGlobalKeys = {};
+  }
+  const k = currentGlobalKeys || {};
+
+  // Load ALL Global API Integrations fields comprehensively (all preloaded keys from full list + UI fields)
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || '';
+  };
+
+  setVal('geminiKey', k.gemini || k.geminiKey);
+  setVal('openaiKey', k.openai || k.openaiKey);
+  setVal('openrouterKey', k.openrouter || k.openrouterKey);
+  setVal('unsplashAccessKey', k.unsplashAccessKey);
+  setVal('unsplashApplicationId', k.unsplashApplicationId || k.unsplashAppId);
+  setVal('newsApiKey', k.newsApiKey);
+  setVal('linkedinAccessToken', k.linkedinAccessToken);
+  setVal('advancedWorkflowKey', k.advancedWorkflowKey);
+  setVal('falKey', k.falKey);
+  setVal('youtubeApiKey', k.youtubeApiKey);
+  setVal('youtubeClientId', k.youtubeClientId);
+  setVal('youtubeClientSecret', k.youtubeClientSecret);
+  setVal('tinyurlApiKey', k.tinyurlApiKey);
+  setVal('serpApiKey', k.serpApiKey);
+  setVal('playhtUserId', k.playhtUserId);
+  setVal('playhtSecretKey', k.playhtSecretKey);
+  setVal('contentfulSpaceId', k.contentfulSpaceId);
+  setVal('contentfulAccessToken', k.contentfulAccessToken);
+  setVal('contentStudioApiKey', k.contentStudioApiKey);
+  setVal('pixabayKey', k.pixabayKey);
+  setVal('flickrKey', k.flickrKey);
+  setVal('deeplKey', k.deeplKey);
+  setVal('discordClientId', k.discordClientId);
+  setVal('discordBotToken', k.discordBotToken);
+  setVal('domDetailerKey', k.domDetailer || k.domDetailerKey);
+  setVal('pexelsKey', k.pexelsKey);
+  setVal('flickrSecret', k.flickrSecret);
+  setVal('flickrKey2', k.flickrKey2);
+  setVal('flickrSecret2', k.flickrSecret2);
+  setVal('twitchStreamKey', k.twitchStreamKey);
+  setVal('slackWebhook', k.slackWebhook);
+  setVal('discordWebhook', k.discordWebhook);
+  setVal('alertEmail', k.alertEmail);
+  setVal('mozAccessId', k.mozAccessId);
+  setVal('mozSecret', k.mozSecret);
+
+  // Group textareas
+  setVal('streamingKeys', k.streamingKeys);
+  setVal('instagramSessions', k.instagramSessions);
+  setVal('twitterKeys', k.twitterKeys);
+  setVal('googleClients', k.googleClients);
+  setVal('redditClientId', k.redditClientId || k.rdId);
+  setVal('redditClientSecret', k.redditClientSecret || k.rdSecret);
+
+  // Also set any platform specific from keys
+  if (document.getElementById('apiPlatformSelector')) {
+    document.getElementById('apiPlatformSelector').value = 'twitter';
+  }
+  renderPlatformFields('twitter');
+}
+
+async function loadGrokSettings() {
+  try {
+    const s = await ipcRenderer.invoke('get-grok-settings');
+    const emailEl = document.getElementById('grokEmail');
+    const passEl = document.getElementById('grokPassword');
+    const autoEl = document.getElementById('grokAutoLogin');
+    if (emailEl) emailEl.value = s.email || '';
+    if (passEl) passEl.value = s.password || '';
+    if (autoEl) autoEl.checked = s.autoLogin !== false;
+    await refreshGrokSessionStatus();
+  } catch (e) {
+    const st = document.getElementById('grokSessionStatus');
+    if (st) st.textContent = 'Could not load Grok settings.';
+  }
+}
+
+async function refreshGrokSessionStatus() {
+  const el = document.getElementById('grokSessionStatus');
+  if (!el) return;
+  try {
+    const st = await ipcRenderer.invoke('grok-get-status');
+    const ok = st.session?.loggedIn || st.settings?.sessionValid;
+    el.innerHTML = ok
+      ? `<span style="color:#10b981;"><i class="fas fa-check-circle"></i> Grok authorized</span> · Puppeteer ${st.puppeteerReady ? 'ready' : 'missing'} · Last login: ${st.settings?.lastLoginAt || '—'}`
+      : `<span style="color:#f59e0b;"><i class="fas fa-exclamation-circle"></i> Not authorized</span> — click Connect &amp; Authorize. Puppeteer ${st.puppeteerReady ? 'ready' : 'not installed'}.`;
+  } catch (e) {
+    el.textContent = 'Grok status unavailable.';
+  }
+}
+
+async function saveGrokCredentials() {
+  const payload = {
+    email: document.getElementById('grokEmail')?.value?.trim() || '',
+    password: document.getElementById('grokPassword')?.value || '',
+    autoLogin: document.getElementById('grokAutoLogin')?.checked !== false,
+    enabled: true,
+  };
+  const res = await ipcRenderer.invoke('save-grok-settings', payload);
+  if (res.success) {
+    showToast('Grok credentials saved locally.', 'success');
+    await refreshGrokSessionStatus();
+  } else {
+    showToast('Failed to save Grok settings.', 'error');
+  }
+}
+
+document.getElementById('grokSaveBtn')?.addEventListener('click', saveGrokCredentials);
+document.getElementById('grokConnectBtn')?.addEventListener('click', async () => {
+  showToast('Opening Grok browser — complete sign-in if prompted…', 'info');
+  await saveGrokCredentials();
+  const res = await ipcRenderer.invoke('grok-connect');
+  if (res.success) showToast(res.message || 'Grok connected.', 'success');
+  else showToast(res.error || res.message || 'Grok connect failed.', 'error');
+  await refreshGrokSessionStatus();
+});
+document.getElementById('grokDisconnectBtn')?.addEventListener('click', async () => {
+  await ipcRenderer.invoke('grok-close-browser');
+  showToast('Grok browser session closed.', 'info');
+  await refreshGrokSessionStatus();
+});
+
+function showListView() {
+  editingCampaignId = null;
+  switchSettingsView('campaignListView');
+  loadCampaigns();
+}
+
+const newCampBtnEl = document.getElementById('newCampaignBtn');
+if (newCampBtnEl) newCampBtnEl.addEventListener('click', () => showEditView(false, null));
+document.querySelectorAll('.cancel-btn').forEach(btn => btn.addEventListener('click', showListView));
+
+if (tabDetails) tabDetails.addEventListener('click', () => showEditView(false, editingCampaignId));
+if (tabRules) tabRules.addEventListener('click', () => showEditView(true, editingCampaignId));
+
+// Load/Save Settings Logic
+async function loadCampaigns() {
+  campaignsContainer.innerHTML = '<div style="color: #94a3b8;">Loading campaigns...</div>';
+  try {
+    currentCampaigns = await ipcRenderer.invoke('get-settings');
+    const status = await ipcRenderer.invoke('get-settings-status').catch(() => ({}));
+    const statsMap = {};
+    (status.campaigns || []).forEach((s) => { statsMap[s.id] = s; });
+    const activeId = status.activeCampaignId;
+    campaignsContainer.innerHTML = '';
+    loadSettingsStatus();
+    
+    if(!currentCampaigns || currentCampaigns.length === 0) {
+      campaignsContainer.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 2rem;">No campaigns found. Click <strong>+ New Campaign</strong> above to create your first brand profile, then link accounts in <a href="account-hub.html" style="color:#38bdf8;">Linked Accounts</a>.</div>';
+      return;
+    }
+
+    currentCampaigns.forEach((camp) => {
+      const div = document.createElement('div');
+      const isActive = camp.id === activeId;
+      div.className = `campaign-card ${isActive ? 'active-campaign' : ''}`;
+      const stats = statsMap[camp.id] || {};
+      const linkedCount = stats.linkedAccounts ?? 0;
+      const kwCount = stats.keywords ?? 0;
+      
+      const statusColor = camp.status === 'Running' ? '#34d399' : '#94a3b8';
+      const statusBorder = camp.status === 'Running' ? '#10b981' : '#475569';
+      
+      div.innerHTML = `
+        <div class="campaign-info">
+          <h3>${escapeHtml(camp.brandName || 'Unnamed Campaign')}${isActive ? ' <span style="font-size:0.7rem;color:#10b981;">(Active)</span>' : ''}</h3>
+          <p>${escapeHtml(camp.domain || 'no domain')} &bull; ${escapeHtml(camp.tone || 'standard')}</p>
+          <div class="campaign-stats">
+            <span class="stat-badge">${linkedCount} Linked Account${linkedCount === 1 ? '' : 's'}</span>
+            <span class="stat-badge">${kwCount} Keyword${kwCount === 1 ? '' : 's'}</span>
+            <span class="stat-badge" style="color: ${statusColor}; border-color: ${statusBorder};">${escapeHtml(camp.status || 'Draft')}</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+          ${!isActive ? `<button class="secondary activate-btn" data-id="${camp.id}">Set Active</button>` : ''}
+          <button class="secondary edit-btn" data-id="${camp.id}">Edit Details</button>
+          <button class="secondary rules-btn" data-id="${camp.id}" style="border-color: #38bdf8; color: #38bdf8;">Auto-Rules</button>
+          <button class="danger delete-btn" data-id="${camp.id}" style="padding:0.4rem 0.8rem; font-size:0.75rem;">Delete</button>
+        </div>
+      `;
+      campaignsContainer.appendChild(div);
+    });
+
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => showEditView(false, e.currentTarget.dataset.id));
+    });
+    document.querySelectorAll('.rules-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => showEditView(true, e.currentTarget.dataset.id));
+    });
+    document.querySelectorAll('.activate-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        await ipcRenderer.invoke('set-active-campaign', e.currentTarget.dataset.id);
+        showToast('Campaign activated.', 'success');
+        window.location.reload();
+      });
+    });
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.id;
+        const camp = currentCampaigns.find(c => c.id === id);
+        if (!confirm(`Delete campaign "${camp?.brandName || id}"? This cannot be undone.`)) return;
+        const result = await ipcRenderer.invoke('delete-campaign', id);
+        currentCampaigns = result.campaigns || [];
+        showToast('Campaign deleted.', 'success');
+        loadCampaigns();
+      });
+    });
+
+  } catch(e) {
+    campaignsContainer.innerHTML = '<div style="color: #ef4444;">Failed to load campaigns.</div>';
+  }
+}
+
+const saveBtnEl = document.getElementById("saveBtn");
+if (saveBtnEl) saveBtnEl.addEventListener("click", async () => { 
+  const brandName = (document.getElementById('brandName')||{}).value?.trim() || '';
+  const domain = (document.getElementById('domain')||{}).value?.trim() || '';
+  if (!brandName || !domain) {
+    showToast('Brand name and domain are required.', 'error');
+    return;
+  }
+  const newCampData = {
+    id: editingCampaignId || 'camp_' + Date.now(),
+    brandName,
+    domain,
+    description: (document.getElementById('description')||{}).value || '',
+    tone: (document.getElementById('tone')||{}).value || 'professional',
+    audience: (document.getElementById('audience')||{}).value || '',
+    affiliateLinks: (document.getElementById('affiliateLinks')||{}).value || '',
+    disallowedTopics: (document.getElementById('disallowedTopics')||{}).value || '',
+    examplePosts: (document.getElementById('examplePosts')||{}).value || '',
+    utmSource: (document.getElementById('utmSource')||{}).value || '',
+    utmMedium: (document.getElementById('utmMedium')||{}).value || '',
+    primaryLink: (document.getElementById('primaryLink')||{}).value || '',
+    status: 'Running'
+  };
+
+  if(editingCampaignId) {
+    const index = currentCampaigns.findIndex(c => c.id === editingCampaignId);
+    if(index !== -1) {
+       currentCampaigns[index] = { ...currentCampaigns[index], ...newCampData };
+    }
+  } else {
+    currentCampaigns.push(newCampData);
+  }
+
+  await ipcRenderer.invoke('save-settings', currentCampaigns);
+  try {
+    await ipcRenderer.invoke('set-active-campaign', newCampData.id);
+  } catch(_) {}
+  showListView();
+  showToast('Campaign saved and set as active.', 'success');
+});
+
+const saveRulesBtnEl = document.getElementById("saveRulesBtn");
+if (saveRulesBtnEl) saveRulesBtnEl.addEventListener("click", async () => {
+  const platformRules = [];
+  document.querySelectorAll('.platform-rule-item').forEach(row => {
+    const pt = row.querySelector('.platformTarget');
+    const pa = row.querySelector('.platformAction');
+    const pp = row.querySelector('.platformPrompt');
+    const ma = row.querySelector('.monitorAccount');
+    platformRules.push({
+      platformTarget: pt ? pt.value : 'twitter',
+      platformAction: pa ? pa.value : 'hold',
+      platformPrompt: pp ? (pp.value || '').trim() : '',
+      monitorAccount: ma ? (ma.value || '').trim() : ''
+    });
+  });
+
+  const rulesData = {
+    globalScore: (document.getElementById('globalScore')||{}).value || '85',
+    globalDelay: (document.getElementById('globalDelay')||{}).value || 'human',
+    globalSchedule: (document.getElementById('globalSchedule')||{}).value || '15m',
+    platformRules: platformRules
+  };
+
+  if(editingCampaignId) {
+    const index = currentCampaigns.findIndex(c => c.id === editingCampaignId);
+    if(index !== -1) {
+       currentCampaigns[index].rules = rulesData;
+    }
+  }
+
+  await ipcRenderer.invoke('save-settings', currentCampaigns);
+
+  const active = await ipcRenderer.invoke('get-active-campaign').catch(() => null);
+  if (editingCampaignId && active?.id === editingCampaignId) {
+    await ipcRenderer.invoke('save-auto-rules', {
+      frequency: rulesData.globalSchedule || '15m',
+      enabled: true,
+      matchScoreThreshold: parseInt(rulesData.globalScore, 10) || 85,
+      platformRules: rulesData.platformRules,
+      campaignId: editingCampaignId,
+    });
+  }
+
+  showListView();
+  showToast('Auto-Rules saved for this campaign.', 'success');
+});
+
+function addPlatformRuleRow(target = 'twitter', action = 'hold', prompt = '', monitorAccount = '') {
+  const container = document.getElementById('platformRulesContainer');
+  const div = document.createElement('div');
+  div.className = 'rule-controls platform-rule-item';
+  div.style.marginBottom = '1rem';
+  div.style.background = 'rgba(2, 6, 23, 0.4)';
+  div.style.padding = '1rem';
+  div.style.borderRadius = '8px';
+  div.style.border = '1px solid #334155';
+  
+  div.innerHTML = `
+    <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+        <label>Target Platform</label>
+        <button class="danger remove-rule-btn" style="padding:0.2rem 0.5rem; font-size:0.7rem;">Remove</button>
+    </div>
+    <div style="display:flex; gap:1rem; margin-bottom: 1rem;">
+      <select class="platformTarget" style="flex:1;">
+        <option value="twitter" ${target==='twitter' ? 'selected' : ''}>Twitter / X</option>
+        <option value="linkedin" ${target==='linkedin' ? 'selected' : ''}>LinkedIn</option>
+        <option value="instagram" ${target==='instagram' ? 'selected' : ''}>Instagram</option>
+        <option value="facebook" ${target==='facebook' ? 'selected' : ''}>Facebook</option>
+        <option value="tiktok" ${target==='tiktok' ? 'selected' : ''}>TikTok</option>
+        <option value="youtube" ${target==='youtube' ? 'selected' : ''}>YouTube</option>
+        <option value="pinterest" ${target==='pinterest' ? 'selected' : ''}>Pinterest</option>
+        <option value="snapchat" ${target==='snapchat' ? 'selected' : ''}>Snapchat</option>
+        <option value="threads" ${target==='threads' ? 'selected' : ''}>Threads</option>
+        <option value="discord" ${target==='discord' ? 'selected' : ''}>Discord</option>
+        <option value="telegram" ${target==='telegram' ? 'selected' : ''}>Telegram</option>
+        <option value="whatsapp" ${target==='whatsapp' ? 'selected' : ''}>WhatsApp</option>
+        <option value="reddit" ${target==='reddit' ? 'selected' : ''}>Reddit</option>
+        <option value="twitch" ${target==='twitch' ? 'selected' : ''}>Twitch</option>
+        <option value="wechat" ${target==='wechat' ? 'selected' : ''}>WeChat</option>
+        <option value="weibo" ${target==='weibo' ? 'selected' : ''}>Weibo</option>
+      </select>
+      <select class="platformAction" style="flex:1;">
+        <option value="auto" ${action==='auto' ? 'selected' : ''}>Auto-Reply & Like</option>
+        <option value="follow" ${action==='follow' ? 'selected' : ''}>Auto-Follow & Reply</option>
+        <option value="share" ${action==='share' ? 'selected' : ''}>Auto-Share/Retweet</option>
+        <option value="hold" ${action==='hold' ? 'selected' : ''}>Hold in 'Pending' for Review</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem; grid-column: 1 / -1;">
+      <label>Specific Account/Page Monitoring (Optional)</label>
+      <input type="text" class="monitorAccount" placeholder="@competitor or /r/subreddit" value="${monitorAccount}">
+    </div>
+    <div class="form-group" style="margin-bottom:0; grid-column: 1 / -1;">
+      <label>Custom Engagement Prompt (Optional)</label>
+      <textarea class="platformPrompt" rows="2" placeholder="e.g. Always reply with a question, keep it under 280 chars, mention the word 'automation'.">${prompt}</textarea>
+      <span style="font-size:0.7rem; color:#64748b;">If blank, the AI will use the global Brand Description and Tone.</span>
+    </div>
+  `;
+  container.appendChild(div);
+  
+  div.querySelector('.remove-rule-btn').addEventListener('click', () => {
+    div.remove();
+  });
+}
+
+const addRuleBtn = document.getElementById('addPlatformRuleBtn');
+if (addRuleBtn) addRuleBtn.addEventListener('click', () => {
+  addPlatformRuleRow();
+});
+
+const apiKeysView = document.getElementById('apiKeysView');
+let currentGlobalKeys = {};
+
+const platformFields = {
+  'twitter': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'twId', secretKey: 'twSecret' },
+  'linkedin': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'liId', secretKey: 'liSecret' },
+  'meta': { idLabel: 'App ID (for FB Fanpages / IG / WhatsApp / Threads)', secretLabel: 'App Secret', idKey: 'fbId', secretKey: 'fbSecret' },
+  'tiktok': { idLabel: 'Client Key', secretLabel: 'Client Secret', idKey: 'tkId', secretKey: 'tkSecret' },
+  'youtube': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'ytId', secretKey: 'ytSecret' },
+  'reddit': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'rdId', secretKey: 'rdSecret' },
+  'pinterest': { idLabel: 'App ID', secretLabel: 'App Secret', idKey: 'pnId', secretKey: 'pnSecret' },
+  'snapchat': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'scId', secretKey: 'scSecret' },
+  'discord': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'dcId', secretKey: 'dcSecret' },
+  'telegram': { idLabel: 'Bot Token (from @BotFather)', secretLabel: '(n/a for bots)', idKey: 'tgBotToken', secretKey: '' },
+  'whatsapp': { idLabel: 'Phone Number ID (Meta Business)', secretLabel: 'Business Access Token', idKey: 'waPhoneId', secretKey: 'waAccessToken' },
+  'twitch': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'twitchId', secretKey: 'twitchSecret' },
+  'wechat': { idLabel: 'App ID', secretLabel: 'App Secret', idKey: 'wechatAppId', secretKey: 'wechatAppSecret' },
+  'weibo': { idLabel: 'App Key', secretLabel: 'App Secret', idKey: 'weiboAppKey', secretKey: 'weiboAppSecret' },
+};
+
+function renderPlatformFields(platformValue) {
+  const container = document.getElementById('apiFieldsContainer');
+  const cfg = platformFields[platformValue];
+  if(!cfg || !container) return;
+  const selOpt = document.querySelector(`#apiPlatformSelector option[value="${platformValue}"]`);
+  const labelText = selOpt ? selOpt.innerText : platformValue;
+  container.innerHTML = `
+    <h4 style="margin-bottom: 0.5rem; color: #cbd5e1; text-transform: capitalize;">${labelText} Credentials</h4>
+    <div class="form-grid" style="margin-bottom: 1.5rem;">
+      <div class="form-group">
+        <label>${cfg.idLabel}</label>
+        <input type="text" id="activePlatformId" data-key="${cfg.idKey}" value="${(currentGlobalKeys || {})[cfg.idKey] || ''}">
+      </div>
+      <div class="form-group">
+        <label>${cfg.secretLabel}</label>
+        <input type="password" id="activePlatformSecret" data-key="${cfg.secretKey}" value="${(currentGlobalKeys || {})[cfg.secretKey] || ''}">
+      </div>
+    </div>
+  `;
+}
+
+// Ensure changes are saved to memory before switching tabs
+const apiPlatformSel = document.getElementById('apiPlatformSelector');
+if (apiPlatformSel) {
+  apiPlatformSel.addEventListener('change', (e) => {
+    // Save current values to local object first
+    const currentIdInput = document.getElementById('activePlatformId');
+    const currentSecretInput = document.getElementById('activePlatformSecret');
+    
+    if(currentIdInput && currentSecretInput) {
+      currentGlobalKeys[currentIdInput.dataset.key] = currentIdInput.value;
+      currentGlobalKeys[currentSecretInput.dataset.key] = currentSecretInput.value;
+    }
+    
+    renderPlatformFields(e.target.value);
+  });
+}
+
+
+// (Removed: legacy 'navGlobalApiKeys' listener which referenced non-existent element and would crash script execution on page load. Settings subnav now uses inline onclick="switchSettingsView(...)" + loadGlobalApiKeys inside the function.)
+
+document.getElementById('backToCampaignsBtn')?.addEventListener('click', () => {
+  switchSettingsView('campaignListView');
+});
+
+document.getElementById('testApiKeysBtn')?.addEventListener('click', async () => {
+  await loadApiKeysStatusBar();
+  const result = await ipcRenderer.invoke('check-api-status');
+  const connected = result.apiMetrics ? Object.values(result.apiMetrics).filter(v => v === 'Connected').length : 0;
+  showToast(result.message || `Checked ${connected} connection(s).`, connected > 0 ? 'success' : 'error');
+});
+
+document.getElementById('saveGlobalKeysBtn')?.addEventListener('click', async () => {
+  // Make sure we save the currently visible inputs too
+  const currentIdInput = document.getElementById('activePlatformId');
+  const currentSecretInput = document.getElementById('activePlatformSecret');
+  if(currentIdInput && currentSecretInput) {
+    currentGlobalKeys[currentIdInput.dataset.key] = currentIdInput.value;
+    currentGlobalKeys[currentSecretInput.dataset.key] = currentSecretInput.value;
+  }
+
+  const getVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  };
+
+  currentGlobalKeys.gemini = getVal('geminiKey');
+  currentGlobalKeys.openai = getVal('openaiKey');
+  currentGlobalKeys.openrouter = getVal('openrouterKey');
+  currentGlobalKeys.unsplashAccessKey = getVal('unsplashAccessKey');
+  currentGlobalKeys.unsplashApplicationId = getVal('unsplashApplicationId');
+  currentGlobalKeys.newsApiKey = getVal('newsApiKey');
+  currentGlobalKeys.linkedinAccessToken = getVal('linkedinAccessToken');
+  currentGlobalKeys.advancedWorkflowKey = getVal('advancedWorkflowKey');
+  currentGlobalKeys.falKey = getVal('falKey');
+  currentGlobalKeys.youtubeApiKey = getVal('youtubeApiKey');
+  currentGlobalKeys.youtubeClientId = getVal('youtubeClientId');
+  currentGlobalKeys.youtubeClientSecret = getVal('youtubeClientSecret');
+  currentGlobalKeys.tinyurlApiKey = getVal('tinyurlApiKey');
+  currentGlobalKeys.serpApiKey = getVal('serpApiKey');
+  currentGlobalKeys.playhtUserId = getVal('playhtUserId');
+  currentGlobalKeys.playhtSecretKey = getVal('playhtSecretKey');
+  currentGlobalKeys.contentfulSpaceId = getVal('contentfulSpaceId');
+  currentGlobalKeys.contentfulAccessToken = getVal('contentfulAccessToken');
+  currentGlobalKeys.contentStudioApiKey = getVal('contentStudioApiKey');
+  currentGlobalKeys.pixabayKey = getVal('pixabayKey');
+  currentGlobalKeys.flickrKey = getVal('flickrKey');
+  currentGlobalKeys.deeplKey = getVal('deeplKey');
+  currentGlobalKeys.discordClientId = getVal('discordClientId');
+  currentGlobalKeys.discordBotToken = getVal('discordBotToken');
+  currentGlobalKeys.mozAccessId = getVal('mozAccessId');
+  currentGlobalKeys.mozSecret = getVal('mozSecret');
+  currentGlobalKeys.domDetailer = getVal('domDetailerKey');
+  currentGlobalKeys.pexelsKey = getVal('pexelsKey');
+  currentGlobalKeys.flickrSecret = getVal('flickrSecret');
+  currentGlobalKeys.flickrKey2 = getVal('flickrKey2');
+  currentGlobalKeys.flickrSecret2 = getVal('flickrSecret2');
+  currentGlobalKeys.twitchStreamKey = getVal('twitchStreamKey');
+  currentGlobalKeys.slackWebhook = getVal('slackWebhook');
+  currentGlobalKeys.discordWebhook = getVal('discordWebhook');
+  currentGlobalKeys.alertEmail = getVal('alertEmail');
+
+  // Group fields (textareas for sessions, keys, RTMPs, multi-account etc.)
+  currentGlobalKeys.streamingKeys = getVal('streamingKeys');
+  currentGlobalKeys.instagramSessions = getVal('instagramSessions');
+  currentGlobalKeys.twitterKeys = getVal('twitterKeys');
+  currentGlobalKeys.googleClients = getVal('googleClients');
+  currentGlobalKeys.redditClientId = getVal('redditClientId');
+  currentGlobalKeys.redditClientSecret = getVal('redditClientSecret');
+
+  // Keep both name styles in storage for compatibility (getGlobalKey('gemini') and direct 'geminiKey' etc in various modules)
+  currentGlobalKeys.geminiKey = currentGlobalKeys.gemini;
+  currentGlobalKeys.openrouterKey = currentGlobalKeys.openrouter;
+  currentGlobalKeys.falKey = currentGlobalKeys.fal || currentGlobalKeys.falKey;
+  currentGlobalKeys.advancedWorkflowKey = currentGlobalKeys.advancedWorkflow || currentGlobalKeys.advancedWorkflowKey;
+
+  // All preloaded keys from user list (Unsplash, LinkedIn, News, Advanced/Goey, OpenRouter, YT, TinyURL, Serp, Play.ht, IG sessions/passwords, Reddit, Twitter/X multi, FB streams, Contentful, DeepL, Discord, FAL, ContentStudio, Pixabay, Pexels, Flickr, MOZ, Gemini, Google clients, streaming RTMPs etc.) are now fully round-tripped via Global API Integrations. Features use getGlobalKey / get-global-keys for real pulls.
+  
+  await ipcRenderer.invoke('save-global-keys', currentGlobalKeys);
+  await loadApiKeysStatusBar();
+  loadSettingsStatus();
+  showToast('Global API keys saved. Dashboard, Content Hub, and workers will use live credentials.', 'success');
+});
+
+// Initialize
+wirePricingButtons();
+wireTutorialCards();
+loadCampaigns();
+loadSettingsStatus();
+loadBillingUI();
+</script>
+</body>
+</html>

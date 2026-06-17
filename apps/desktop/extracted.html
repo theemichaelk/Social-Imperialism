@@ -1,0 +1,92 @@
+<div class="feed-section">
+    <div class="feed-header">
+      <div class="feed-title" id="feedTitle">Live Intelligence Feed (Discovery & Hub)</div>
+      <div class="filters" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <select id="savedProfilesDropdown" onchange="loadSavedProfile()">
+            <option value="">-- Saved Profiles --</option>
+            <!-- Injected -->
+        </select>
+        <button onclick="saveCurrentProfile()" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; white-space: nowrap;">Save Profile</button>
+        
+        <div style="width: 1px; height: 20px; background: #334155; margin: 0 0.5rem;"></div>
+
+        <select id="feedPlatformFilter" onchange="loadFeed()">
+          <option value="All">All Platforms</option>
+          <option value="Twitter">Twitter</option>
+          <option value="LinkedIn">LinkedIn</option>
+          <option value="Facebook">Facebook Groups</option>
+          <option value="Reddit">Reddit Communities</option>
+          <option value="Quora">Quora Spaces</option>
+          <option value="Instagram">Instagram</option>
+          <option value="TikTok">TikTok</option>
+          <option value="Twitch">Twitch</option>
+          <option value="Snapchat">Snapchat</option>
+          <option value="Pinterest">Pinterest</option>
+          <option value="Discord">Discord</option>
+          <option value="Telegram">Telegram</option>
+          <option value="WhatsApp">WhatsApp</option>
+        </select>
+        <select id="feedLanguageFilter" onchange="loadFeed()">
+          <option value="en">English</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+        </select>
+        <select id="feedLocationFilter" onchange="loadFeed()">
+          <option value="global">Global</option>
+          <option value="us">United States</option>
+          <option value="eu">Europe</option>
+        </select>
+        <select id="feedTimeFilter" onchange="loadFeed()">
+          <option value="all">Any Time</option>
+          <option value="15m">Last 15 minutes</option>
+          <option value="1h">Last 1 hour</option>
+          <option value="24h">Last 24 hours</option>
+        </select>
+        <select id="feedMinEngageFilter" onchange="loadFeed()">
+          <option value="0">Any Engagement</option>
+          <option value="10">&gt; 10 Likes</option>
+          <option value="100">&gt; 100 Likes</option>
+          <option value="1000">&gt; 1k Likes</option>
+        </select>
+        <select id="feedMediaFilter" onchange="loadFeed()">
+          <option value="all">Any Format</option>
+          <option value="media">Has Media (Images/Video)</option>
+          <option value="text">Text Only</option>
+        </select>
+        <div style="display: flex; align-items: center; gap: 0.25rem;">
+          <label style="font-size: 0.75rem; color: #94a3b8;">Min Followers:</label>
+          <input type="number" id="feedMinFollowers" value="0" min="0" onchange="loadFeed()" style="width: 60px; background: rgba(15,23,42,0.8); border: 1px solid #475569; color: #f8fafc; padding: 0.2rem; border-radius: 4px; font-size: 0.75rem;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.25rem;">
+          <input type="text" id="feedExcludeWords" placeholder="Exclude Words (comma separated)" onchange="loadFeed()" style="width: 180px; background: rgba(15,23,42,0.8); border: 1px solid #475569; color: #f8fafc; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
+        </div>
+        <select id="feedPostTypeFilter" onchange="loadFeed()">
+          <option value="all">All Types</option>
+          <option value="question">Questions</option>
+          <option value="complaint">Complaints</option>
+          <option value="praise">Praise</option>
+        </select>
+        <select id="feedSortFilter">
+          <option>Newest First</option>
+          <option>Highest Engagement</option>
+          <option>AI Match Score</option>
+        </select>
+      </div>
+    </div>
+    
+    <div id="deep-engagement-panel" style="display: none; padding: 1rem 1.5rem; background: rgba(30, 41, 59, 0.4); border-bottom: 1px solid #334155;">
+        <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Deep Engagement Discovery</div>
+        <div id="deepEngagementTags" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <!-- Tags injected here -->
+        </div>
+    </div>
+    
+    <div id="feed-container">
+      <div style="padding: 2rem; text-align: center; color: #94a3b8;">
+        <i>Scanning network for relevant engagement opportunities...</i>
+      </div>
+    </div>
+  </div>
+
+</div>
+

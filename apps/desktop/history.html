@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - AI Replies</title>
+
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0; display: flex; height: 100vh; }
+
+.main-content { flex: 1; padding: 2rem; overflow-y: auto; background: radial-gradient(circle at top right, #1e293b, #0f172a); }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); }
+.charts-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 2rem; }
+.chart-container { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.history-section { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid #334155; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+.history-header { padding: 1.5rem; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.history-title { font-weight: bold; font-size: 1.2rem; color: #e2e8f0; }
+.filters select, .filters input[type="search"] { padding: 0.5rem 1rem; border: 1px solid #475569; border-radius: 6px; margin-left: 0.5rem; background-color: #0f172a; color: #f1f5f9; }
+.source-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 0.5rem; }
+.source-tab { padding: 0.4rem 0.85rem; border-radius: 999px; border: 1px solid #475569; background: rgba(15,23,42,0.8); color: #94a3b8; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
+.source-tab:hover { border-color: #38bdf8; color: #e2e8f0; }
+.source-tab.active { background: rgba(56,189,248,0.15); border-color: #38bdf8; color: #38bdf8; font-weight: 600; }
+.source-tab .count { opacity: 0.75; margin-left: 0.25rem; }
+.meta-chip { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-right: 0.35rem; margin-bottom: 0.25rem; }
+.chip-source { background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+.chip-keyword { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+.chip-mode { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+.chip-monitor { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+.hub-stats-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.8rem; }
+.hub-stat-pill { background: rgba(15,23,42,0.7); border: 1px solid #334155; padding: 0.35rem 0.75rem; border-radius: 6px; color: #cbd5e1; }
+.reply-item { padding: 1.5rem; border-bottom: 1px solid #334155; display: grid; grid-template-columns: 2fr 3fr 1fr; gap: 1.5rem; align-items: start; transition: background-color 0.2s; }
+.reply-item:hover { background-color: rgba(51, 65, 85, 0.5); }
+.reply-item:last-child { border-bottom: none; }
+.reply-meta { color: #94a3b8; font-size: 0.875rem; display: flex; justify-content: space-between; align-items: center; }
+.platform-badge { font-weight: bold; color: #38bdf8; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; }
+.reply-status { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.status-sent { background-color: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.5); }
+.status-pending { background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.5); }
+.original-post { background-color: rgba(15, 23, 42, 0.8); padding: 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem; border-left: 4px solid #475569; color: #cbd5e1; }
+.ai-draft { font-size: 1rem; line-height: 1.6; color: #f8fafc; }
+.action-buttons { display: flex; flex-direction: column; gap: 0.75rem; }
+button { padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; font-family: inherit; }
+button.approve { background-color: #38bdf8; color: #020617; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+button.approve:hover { background-color: #0ea5e9; box-shadow: 0 0 15px rgba(14, 165, 233, 0.5); transform: translateY(-1px); }
+button.edit { background-color: transparent; color: #f1f5f9; border: 1px solid #475569; }
+button.edit:hover { background-color: #1e293b; border-color: #94a3b8; }
+button.delete { background-color: transparent; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+button.delete:hover { background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
+.export-btn { background-color: transparent; color: #38bdf8; border: 1px solid #38bdf8; padding: 0.75rem 1.5rem; cursor: pointer; border-radius: 6px; font-weight: 600; font-family: inherit; }
+.export-btn:hover { background-color: rgba(56, 189, 248, 0.1); }
+
+.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
+.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
+.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
+.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+.nav-link:hover { background-color: #1e293b; color: white; transform: translateX(2px); }
+.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); transform: translateX(2px); }
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="sidebar-nav.css">
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('history', () => location.reload());
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+
+
+
+<div class="main-content">
+  <div class="header">
+    <h1>Command Center & AI Replies Hub</h1>
+    <div>
+      <button class="export-btn" onclick="exportData()">Export Data</button>
+    </div>
+  </div>
+
+  <div class="charts-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+    <div class="chart-container"><canvas id="statusChart"></canvas></div>
+    <div class="chart-container"><canvas id="sourceChart"></canvas></div>
+    <div class="chart-container"><canvas id="engagementChart"></canvas></div>
+  </div>
+
+  <div class="history-section">
+    <div class="history-header">
+      <div class="history-title" style="display:flex; justify-content:space-between; width:100%; flex-wrap:wrap; gap:1rem;">
+        <div>Command Center</div>
+        <div style="display:flex; gap:1.5rem; font-size:0.9rem; font-weight:normal; flex-wrap:wrap;">
+          <div><span style="color:#94a3b8;">Total Posts Published:</span> <span id="totalPostsMetric" style="color:#f8fafc; font-weight:bold;">0</span></div>
+          <div><span style="color:#94a3b8;">AI Replies Drafted:</span> <span id="aiDraftsMetric" style="color:#38bdf8; font-weight:bold;">0</span></div>
+          <div><span style="color:#94a3b8;">Total Engagement:</span> <span id="totalEngagementMetric" style="color:#34d399; font-weight:bold;">0</span></div>
+          <div><span style="color:#94a3b8;">Active Keywords:</span> <span id="activeKeywordsMetric" style="color:#a78bfa; font-weight:bold;">0</span></div>
+          <div><span style="color:#94a3b8;">Auto-Rules:</span> <span id="autoRulesMetric" style="color:#f8fafc; font-weight:bold;">Off</span></div>
+          <div><span style="color:#94a3b8;">Worker:</span> <span id="workerStatusMetric" style="color:#f8fafc; font-weight:bold;">Idle</span></div>
+          <div><span style="color:#94a3b8;">Published:</span> <span id="publishedMetric" style="color:#34d399; font-weight:bold;">0</span></div>
+          <div><span style="color:#94a3b8;">Pending:</span> <span id="pendingMetric" style="color:#fbbf24; font-weight:bold;">0</span></div>
+          <div><span style="color:#94a3b8;">Est. Clicks:</span> <span id="estClicksMetric" style="color:#38bdf8; font-weight:bold;">0</span></div>
+        </div>
+      </div>
+      <div class="source-tabs" id="sourceTabs"></div>
+      <div class="hub-stats-row" id="hubStatsRow"></div>
+      <div class="filters" style="margin-top:10px; display:flex; flex-wrap:wrap; align-items:center; gap:0.35rem;">
+        <input type="search" id="searchFilter" placeholder="Search replies, keywords, authors..." style="min-width:220px;">
+        <select id="statusFilter">
+          <option value="all">All Statuses</option>
+          <option value="draft">Pending Approval</option>
+          <option value="published">Published</option>
+        </select>
+        <select id="replyModeFilter">
+          <option value="all">All Reply Modes</option>
+          <option value="manual">Manual</option>
+          <option value="manual_approval">Manual Approval (Auto-Rules)</option>
+          <option value="auto_post_all">Auto Post All</option>
+          <option value="mentions_only">Mentions Only</option>
+          <option value="unspecified">Unspecified</option>
+        </select>
+        <select id="intentFilter">
+          <option value="all">All Use Cases</option>
+          <option value="brand">Brand Promotion</option>
+          <option value="mentions">Mentions</option>
+          <option value="affiliate">Affiliate Products</option>
+          <option value="client">Client Brands (Agency)</option>
+          <option value="qa">Q&amp;A Discovery</option>
+        </select>
+        <select id="keywordFilter">
+          <option value="all">All Keywords</option>
+        </select>
+        <select id="platformFilter">
+          <option value="all">All Platforms</option>
+          <option value="Twitter">Twitter</option>
+          <option value="LinkedIn">LinkedIn</option>
+          <option value="Reddit">Reddit</option>
+          <option value="Quora">Quora</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Instagram">Instagram</option>
+        </select>
+        <select id="campaignScopeFilter">
+          <option value="active">Active Campaign</option>
+          <option value="all">All Campaigns</option>
+        </select>
+        <button class="export-btn" style="padding:0.5rem 1rem;" onclick="loadReplies()"><i class="fas fa-sync"></i> Refresh</button>
+        <button class="export-btn" style="padding:0.5rem 1rem;" onclick="exportAgencyReport()"><i class="fas fa-file-csv"></i> Agency Report</button>
+      </div>
+    </div>
+    <div id="history-container">
+      <div style="padding:2rem; text-align:center; color:#94a3b8;">Loading history...</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const { ipcRenderer, shell } = require('electron');
+
+let hubData = { replies: [], stats: {}, sources: [] };
+let activeSourceFilter = 'all';
+let statusChartInstance = null;
+let platformChartInstance = null;
+let sourceChartInstance = null;
+
+const SOURCE_LABELS = {
+  manual: 'Manual (Feed)',
+  keyword: 'Keywords',
+  monitor: 'Monitors',
+  automation: 'Auto-Rules',
+  'automation-flow': 'Visual Builder',
+  engagement: 'Engagement',
+  qa: 'Q&A',
+  lead: 'Leads',
+  onboarding: 'Setup Wizard',
+  'content-hub': 'Content Hub',
+};
+
+const REPLY_MODE_LABELS = {
+  manual: 'Manual',
+  manual_approval: 'Manual Approval',
+  auto_post_all: 'Auto Post',
+  mentions_only: 'Mentions Only',
+  unspecified: '—',
+};
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function normalizeStatus(status) {
+  const s = String(status || 'draft').toLowerCase();
+  if (s === 'published' || s === 'sent') return 'published';
+  return 'draft';
+}
+
+function getFilterPayload() {
+  const campaignScope = document.getElementById('campaignScopeFilter')?.value || 'active';
+  return {
+    campaignId: campaignScope === 'all' ? 'all' : undefined,
+    source: activeSourceFilter,
+    status: document.getElementById('statusFilter')?.value || 'all',
+    intent: document.getElementById('intentFilter')?.value || 'all',
+    platform: document.getElementById('platformFilter')?.value || 'all',
+    replyMode: document.getElementById('replyModeFilter')?.value || 'all',
+    keyword: document.getElementById('keywordFilter')?.value || 'all',
+    search: document.getElementById('searchFilter')?.value || '',
+  };
+}
+
+function renderSourceTabs(sources, total) {
+  const el = document.getElementById('sourceTabs');
+  if (!el) return;
+  const tabs = [{ id: 'all', label: 'All Sources', count: total }, ...(sources || [])];
+  el.innerHTML = tabs.map((t) => {
+    const label = t.id === 'all' ? t.label : (SOURCE_LABELS[t.id] || t.label || t.id);
+    const active = activeSourceFilter === t.id ? 'active' : '';
+    return `<button type="button" class="source-tab ${active}" data-source="${escapeHtml(t.id)}">${escapeHtml(label)}<span class="count">(${t.count || 0})</span></button>`;
+  }).join('');
+  el.querySelectorAll('.source-tab').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      activeSourceFilter = btn.getAttribute('data-source') || 'all';
+      await loadReplies(false);
+    });
+  });
+}
+
+function renderHubStats(stats) {
+  const el = document.getElementById('hubStatsRow');
+  if (!el || !stats) return;
+  const pills = [
+    `<span class="hub-stat-pill"><strong>${stats.total || 0}</strong> shown</span>`,
+    `<span class="hub-stat-pill">${stats.byStatus?.published || 0} published</span>`,
+    `<span class="hub-stat-pill">${stats.byStatus?.draft || 0} pending</span>`,
+  ];
+  Object.entries(stats.bySource || {}).slice(0, 5).forEach(([src, n]) => {
+    pills.push(`<span class="hub-stat-pill">${escapeHtml(SOURCE_LABELS[src] || src)}: ${n}</span>`);
+  });
+  el.innerHTML = pills.join('');
+}
+
+function populateKeywordFilter(keywords) {
+  const sel = document.getElementById('keywordFilter');
+  if (!sel) return;
+  const current = sel.value || 'all';
+  sel.innerHTML = '<option value="all">All Keywords</option>';
+  (keywords || []).forEach((k) => {
+    const o = document.createElement('option');
+    o.value = k.term;
+    o.textContent = `${k.term} (${k.count})`;
+    sel.appendChild(o);
+  });
+  if ([...sel.options].some((o) => o.value === current)) sel.value = current;
+}
+
+async function loadCommandCenterMetrics() {
+  try {
+    const stats = await ipcRenderer.invoke('get-dashboard-stats');
+    document.getElementById('totalPostsMetric').textContent = stats.totalPosts || 0;
+    document.getElementById('aiDraftsMetric').textContent = stats.aiDrafts || 0;
+    document.getElementById('totalEngagementMetric').textContent = stats.totalEngagement || 0;
+    document.getElementById('activeKeywordsMetric').textContent = stats.activeKeywords || 0;
+    document.getElementById('autoRulesMetric').textContent = stats.autoRulesEnabled ? 'On' : 'Off';
+    document.getElementById('workerStatusMetric').textContent = stats.workerStatus || 'Idle';
+    const pub = document.getElementById('publishedMetric'); if (pub) pub.textContent = stats.publishedReplies || 0;
+    const pend = document.getElementById('pendingMetric'); if (pend) pend.textContent = stats.pendingApproval || 0;
+    const clicks = document.getElementById('estClicksMetric'); if (clicks) clicks.textContent = stats.estimatedClicks || 0;
+  } catch (e) {
+    console.error('Failed to load command center metrics', e);
+  }
+}
+
+function updateCharts(replies, stats) {
+  const published = replies.filter((r) => normalizeStatus(r.status) === 'published').length;
+  const draft = replies.length - published;
+  const platformCounts = stats?.byPlatform || {};
+  const sourceCounts = stats?.bySource || {};
+
+  const statusCtx = document.getElementById('statusChart');
+  if (statusCtx) {
+    if (statusChartInstance) statusChartInstance.destroy();
+    statusChartInstance = new Chart(statusCtx, {
+      type: 'doughnut',
+      data: { labels: ['Published', 'Pending'], datasets: [{ data: [published, draft], backgroundColor: ['#10b981', '#f59e0b'] }] },
+      options: { plugins: { legend: { labels: { color: '#cbd5e1' } }, title: { display: true, text: 'Reply Status', color: '#e2e8f0' } } },
+    });
+  }
+
+  const sourceCtx = document.getElementById('sourceChart');
+  if (sourceCtx) {
+    const srcLabels = Object.keys(sourceCounts).map((k) => SOURCE_LABELS[k] || k);
+    const srcValues = Object.values(sourceCounts);
+    if (sourceChartInstance) sourceChartInstance.destroy();
+    sourceChartInstance = new Chart(sourceCtx, {
+      type: 'doughnut',
+      data: {
+        labels: srcLabels.length ? srcLabels : ['No data'],
+        datasets: [{ data: srcValues.length ? srcValues : [0], backgroundColor: ['#38bdf8', '#a78bfa', '#34d399', '#f59e0b', '#f97316', '#ec4899', '#6366f1'] }],
+      },
+      options: { plugins: { legend: { labels: { color: '#cbd5e1', font: { size: 10 } } }, title: { display: true, text: 'By Source', color: '#e2e8f0' } } },
+    });
+  }
+
+  const engageCtx = document.getElementById('engagementChart');
+  if (engageCtx) {
+    const labels = Object.keys(platformCounts);
+    const values = Object.values(platformCounts);
+    if (platformChartInstance) platformChartInstance.destroy();
+    platformChartInstance = new Chart(engageCtx, {
+      type: 'bar',
+      data: { labels: labels.length ? labels : ['No data'], datasets: [{ label: 'Replies by platform', data: values.length ? values : [0], backgroundColor: '#38bdf8' }] },
+      options: {
+        plugins: { legend: { display: false }, title: { display: true, text: 'By Platform', color: '#e2e8f0' } },
+        scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' }, beginAtZero: true } },
+      },
+    });
+  }
+}
+
+function formatMetaChips(reply) {
+  const chips = [];
+  const src = reply.sourceLabel || SOURCE_LABELS[reply.source] || reply.source || 'manual';
+  chips.push(`<span class="meta-chip chip-source">${escapeHtml(src)}</span>`);
+  if (reply.matchedKeyword) chips.push(`<span class="meta-chip chip-keyword">${escapeHtml(reply.matchedKeyword)}</span>`);
+  if (reply.replyMode) chips.push(`<span class="meta-chip chip-mode">${escapeHtml(REPLY_MODE_LABELS[reply.replyMode] || reply.replyMode)}</span>`);
+  if (reply.searchLabel) chips.push(`<span class="meta-chip chip-monitor">${escapeHtml(reply.searchLabel)}</span>`);
+  if (reply.listName) chips.push(`<span class="meta-chip chip-monitor">List: ${escapeHtml(reply.listName)}</span>`);
+  if (reply.beFirst) chips.push('<span class="meta-chip chip-mode">Be First</span>');
+  if (reply.rateLimited) chips.push('<span class="meta-chip chip-mode">Rate Limited</span>');
+  return chips.join('');
+}
+
+function renderReplies() {
+  const container = document.getElementById('history-container');
+  const replies = hubData.replies || [];
+
+  if (!replies.length) {
+    const srcHint = activeSourceFilter !== 'all' ? ` for <strong>${escapeHtml(SOURCE_LABELS[activeSourceFilter] || activeSourceFilter)}</strong>` : '';
+    container.innerHTML = `<div style="padding:2rem; text-align:center; color:#94a3b8;">No AI replies${srcHint}. Draft from <a href="dashboard.html" style="color:#38bdf8;">Dashboard</a>, <a href="engagement.html" style="color:#38bdf8;">Engagement Lists</a>, enable <a href="rules.html" style="color:#38bdf8;">Auto-Rules</a>, or run the <a href="onboarding.html" style="color:#38bdf8;">Setup Wizard</a>.</div>`;
+    updateCharts([], hubData.stats);
+    return;
+  }
+
+  container.innerHTML = '';
+  replies.forEach((reply) => {
+    const status = normalizeStatus(reply.status);
+    const statusClass = status === 'published' ? 'status-sent' : 'status-pending';
+    const statusLabel = status === 'published' ? 'Published' : 'Pending Approval';
+    const date = reply.timestamp ? new Date(reply.timestamp).toLocaleString() : 'Unknown';
+    const item = document.createElement('div');
+    item.className = 'reply-item';
+    item.innerHTML = `
+      <div>
+        <div class="reply-meta" style="margin-bottom:0.5rem; flex-wrap:wrap; gap:0.35rem;">
+          <span class="platform-badge">${escapeHtml(reply.platform)}</span>
+          <span style="font-size:0.7rem;color:#64748b;text-transform:uppercase;">${escapeHtml(reply.intent || 'brand')}</span>
+          <span class="reply-status ${statusClass}">${statusLabel}</span>
+        </div>
+        <div style="margin-bottom:0.5rem;">${formatMetaChips(reply)}</div>
+        <div class="original-post"><strong>Original:</strong> ${escapeHtml(reply.originalPost)}</div>
+        <div style="font-size:0.8rem; color:#64748b;">${date}${reply.author ? ' • ' + escapeHtml(reply.author) : ''}${reply.campaignId ? ' • Campaign: ' + escapeHtml(reply.campaignId) : ''}</div>
+      </div>
+      <div><div class="ai-draft" contenteditable="false" id="draft-${reply.id}">${escapeHtml(reply.replyContent)}</div></div>
+      <div class="action-buttons">
+        ${status === 'draft' ? `<button class="approve" data-action="publish" data-id="${reply.id}">Approve & Publish</button>` : `<button class="edit" data-action="republish" data-id="${reply.id}">Re-post</button>`}
+        <button class="edit" data-action="edit" data-id="${reply.id}">Edit</button>
+        ${reply.url ? `<button class="edit" data-action="open" data-url="${escapeHtml(reply.url)}">View Post</button>` : ''}
+        <button class="delete" data-action="delete" data-id="${reply.id}">Delete</button>
+      </div>`;
+    container.appendChild(item);
+  });
+
+  container.querySelectorAll('button[data-action]').forEach((btn) => btn.addEventListener('click', handleReplyAction));
+  updateCharts(replies, hubData.stats);
+}
+
+async function handleReplyAction(e) {
+  const action = e.target.getAttribute('data-action');
+  const id = e.target.getAttribute('data-id');
+
+  if (action === 'open') {
+    const url = e.target.getAttribute('data-url');
+    if (url) shell.openExternal(url);
+    return;
+  }
+  if (action === 'delete') {
+    if (!confirm('Delete this AI reply from history?')) return;
+    await ipcRenderer.invoke('delete-ai-reply', id);
+    await loadReplies();
+    await loadCommandCenterMetrics();
+    return;
+  }
+  if (action === 'edit') {
+    const draftEl = document.getElementById('draft-' + id);
+    if (!draftEl || draftEl.getAttribute('contenteditable') === 'true') return;
+    draftEl.setAttribute('contenteditable', 'true');
+    draftEl.style.border = '1px solid #38bdf8';
+    draftEl.style.padding = '0.5rem';
+    draftEl.style.borderRadius = '6px';
+    e.target.textContent = 'Save';
+    e.target.setAttribute('data-action', 'save');
+    return;
+  }
+  if (action === 'save') {
+    const draftEl = document.getElementById('draft-' + id);
+    await ipcRenderer.invoke('update-ai-reply', { id, updates: { replyContent: draftEl.innerText.trim() } });
+    draftEl.setAttribute('contenteditable', 'false');
+    draftEl.style.border = 'none';
+    draftEl.style.padding = '0';
+    e.target.textContent = 'Edit';
+    e.target.setAttribute('data-action', 'edit');
+    await loadReplies();
+    return;
+  }
+  if (action === 'publish' || action === 'republish') {
+    e.target.disabled = true;
+    e.target.textContent = 'Publishing...';
+    const result = await ipcRenderer.invoke('publish-ai-reply', id);
+    e.target.disabled = false;
+    if (!result.success) {
+      alert('Publish failed: ' + result.error);
+      e.target.textContent = action === 'publish' ? 'Approve & Publish' : 'Re-post';
+      return;
+    }
+    alert(result.message);
+    await loadReplies();
+    await loadCommandCenterMetrics();
+  }
+}
+
+async function loadReplies(showLoading = true) {
+  const container = document.getElementById('history-container');
+  if (showLoading) container.innerHTML = '<div style="padding:2rem; text-align:center; color:#94a3b8;">Loading AI replies...</div>';
+  try {
+    hubData = await ipcRenderer.invoke('get-ai-replies-hub', getFilterPayload());
+    renderSourceTabs(hubData.sources, hubData.campaignStats?.total || hubData.stats?.total || 0);
+    renderHubStats(hubData.stats);
+    populateKeywordFilter(hubData.campaignStats?.keywords || hubData.stats?.keywords);
+    renderReplies();
+  } catch (e) {
+    container.innerHTML = `<div style="padding:2rem; color:#ef4444; text-align:center;">Failed to load replies: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function buildCsvExport(rows) {
+  const header = 'Campaign ID,Source,Intent,Use Case,Original Post,AI Reply,Platform,Status,Reply Mode,Be First,UTM Link,Date,Author,Post URL,Matched Keyword,Monitor,List\n';
+  const intentLabels = { brand: 'Brand Promotion', affiliate: 'Affiliate Products', client: 'Client Brand', qa: 'Q&A Discovery', mentions: 'Mentions' };
+  const body = rows.map((e) => {
+    const intent = e.intent || 'brand';
+    const useCase = intentLabels[intent] || intent;
+    const src = e.sourceLabel || SOURCE_LABELS[e.source] || e.source || '';
+    return `"${e.campaignId||''}","${src}","${intent}","${useCase}","${(e.originalPost||'').replace(/"/g,'""')}","${(e.replyContent||'').replace(/"/g,'""')}","${e.platform||''}","${e.status||''}","${e.replyMode||''}","${e.beFirst?'yes':'no'}","${e.hasUtmLink?'yes':'no'}","${e.timestamp?new Date(e.timestamp).toLocaleString():''}","${e.author||''}","${e.url||''}","${e.matchedKeyword||''}","${e.searchLabel||''}","${e.listName||''}"`;
+  }).join('\n');
+  return header + body;
+}
+
+function downloadCsv(csv, filename) {
+  const link = document.createElement('a');
+  link.href = encodeURI('data:text/csv;charset=utf-8,' + csv);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+async function exportData() {
+  const history = await ipcRenderer.invoke('get-all-replies-history');
+  if (!history || history.length === 0) { alert('No data to export'); return; }
+  downloadCsv(buildCsvExport(history), 'ai_replies_export.csv');
+}
+
+async function exportAgencyReport() {
+  const hub = await ipcRenderer.invoke('get-ai-replies-hub', getFilterPayload());
+  if (!hub.replies || hub.replies.length === 0) { alert('No replies for current filters'); return; }
+  const active = await ipcRenderer.invoke('get-active-campaign').catch(() => ({}));
+  const brand = (active && active.brandName) ? active.brandName.replace(/[^a-z0-9]/gi, '_') : 'client';
+  downloadCsv(buildCsvExport(hub.replies), `agency_report_${brand}_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+let searchDebounce = null;
+function onFilterChange() { loadReplies(false); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  ['statusFilter', 'intentFilter', 'platformFilter', 'replyModeFilter', 'keywordFilter', 'campaignScopeFilter'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('change', onFilterChange);
+  });
+  document.getElementById('searchFilter')?.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => loadReplies(false), 300);
+  });
+  loadCommandCenterMetrics();
+  loadReplies();
+});
+</script>
+</body>
+</html>

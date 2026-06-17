@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Social Imperialism - Account Creator</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: radial-gradient(circle at top right, #1e293b, #0f172a); color: #f8fafc; margin: 0; display: flex; height: 100vh; }
+.sidebar { width: 250px; background: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
+.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
+.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
+.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
+.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
+.nav-link:hover { background: #1e293b; color: white; transform: translateX(2px); }
+.nav-link.active { background: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+.campaign-switcher-box { padding: 0 0.5rem 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+.main-content { flex: 1; padding: 2rem; overflow-y: auto; }
+.container { max-width: 1100px; margin: 0 auto; }
+h1 { margin: 0 0 0.5rem; color: #f1f5f9; }
+.subtitle { color: #94a3b8; margin: 0 0 1.5rem; }
+.status-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; }
+.status-pill { padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; border: 1px solid #475569; }
+.status-pill.ok { border-color: #10b981; color: #34d399; }
+.status-pill.bad { border-color: #ef4444; color: #f87171; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+.panel { background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+.panel h2 { margin: 0 0 1rem; font-size: 1.1rem; color: #e2e8f0; }
+label { display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.4rem; }
+input, select, textarea { width: 100%; box-sizing: border-box; padding: 0.75rem; border: 1px solid #475569; border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #f8fafc; font-family: inherit; margin-bottom: 1rem; }
+textarea { min-height: 80px; resize: vertical; }
+.platform-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+.platform-chip { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid #475569; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+.platform-chip input { width: auto; margin: 0; }
+.platform-chip.selected { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+button { font-family: inherit; cursor: pointer; border-radius: 6px; padding: 0.75rem 1.25rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; }
+button.primary { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; border: none; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); }
+button.secondary { background: transparent; color: #f1f5f9; border: 1px solid #475569; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+.progress-box { background: rgba(15, 23, 42, 0.6); border: 1px dashed #38bdf8; border-radius: 8px; padding: 1rem; margin-top: 1rem; display: none; }
+.progress-box.active { display: block; }
+.kit-list { display: flex; flex-direction: column; gap: 0.75rem; max-height: 320px; overflow-y: auto; }
+.kit-item { padding: 0.75rem 1rem; border: 1px solid #475569; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.kit-item:hover, .kit-item.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.08); }
+.kit-item .meta { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
+.asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
+.asset-card { border: 1px solid #475569; border-radius: 8px; overflow: hidden; background: #0f172a; }
+.asset-card img { width: 100%; height: 120px; object-fit: cover; display: block; background: #1e293b; }
+.asset-card .cap { padding: 0.5rem; font-size: 0.75rem; color: #94a3b8; }
+.schedule-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.schedule-table th, .schedule-table td { border: 1px solid #334155; padding: 0.5rem; text-align: left; }
+.schedule-table th { background: #1e293b; color: #94a3b8; }
+.bio-block { background: rgba(15, 23, 42, 0.5); border: 1px solid #334155; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem; }
+.bio-block strong { color: #38bdf8; display: block; margin-bottom: 0.25rem; font-size: 0.8rem; }
+.proxy-row { display: grid; grid-template-columns: 1fr 80px 100px 1fr auto; gap: 0.5rem; align-items: end; margin-bottom: 0.5rem; }
+.proxy-row input, .proxy-row select { margin-bottom: 0; }
+.proxy-list { max-height: 200px; overflow-y: auto; margin-top: 1rem; }
+.proxy-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; border: 1px solid #334155; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem; }
+.empty { color: #64748b; text-align: center; padding: 2rem; }
+.mapping-row { display: grid; grid-template-columns: 140px 1fr; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; }
+.mapping-row label { margin: 0; color: #e2e8f0; font-size: 0.9rem; }
+.mapping-row select { margin: 0; }
+.batch-job { padding: 0.75rem; border: 1px solid #334155; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem; }
+.batch-job.running { border-color: #a78bfa; }
+.batch-job.completed { border-color: #10b981; }
+.batch-job.failed { border-color: #ef4444; }
+</style>
+  <link rel="stylesheet" href="sidebar-nav.css">
+</head>
+<body>
+<div id="app-sidebar" class="sidebar app-sidebar"></div>
+<script>
+(() => {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar('account-creator', () => location.reload());
+  } catch (e) { console.warn('Sidebar init:', e.message); }
+})();
+</script>
+
+
+
+<div class="main-content">
+  <div class="container">
+    <h1><i class="fas fa-user-plus"></i> Social Profile Account Creator</h1>
+    <p class="subtitle">Generate complete multi-platform account kits — names, bios, AI profile photos, Unsplash covers, proxy/IP assignment, YouTube videos, and content schedules.</p>
+
+    <div class="status-bar" id="statusBar"></div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h2>1. Configure New Profile Kit</h2>
+
+        <label>Persona name (optional — AI will invent if blank)</label>
+        <input type="text" id="personaName" placeholder="e.g. Alex Rivera">
+
+        <label>Persona style</label>
+        <select id="personaStyle">
+          <option value="professional, trustworthy, expert">Professional expert</option>
+          <option value="friendly, approachable, community-focused">Friendly community builder</option>
+          <option value="bold, innovative, startup founder">Bold innovator</option>
+          <option value="creative, artistic, lifestyle influencer">Creative lifestyle</option>
+        </select>
+
+        <label>Platforms to create</label>
+        <div class="platform-grid" id="platformGrid"></div>
+
+        <label>Assign proxy / IP (one per kit — use unique IPs when signing up)</label>
+        <select id="proxySelect"><option value="">No proxy assigned</option></select>
+
+        <label>YouTube featured video URL (optional)</label>
+        <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=...">
+
+        <div class="grid-2" style="gap:1rem;">
+          <div>
+            <label>Schedule weeks</label>
+            <input type="number" id="scheduleWeeks" value="4" min="1" max="12">
+          </div>
+          <div>
+            <label>Posts per week</label>
+            <input type="number" id="postsPerWeek" value="3" min="1" max="14">
+          </div>
+        </div>
+
+        <label>Variant profile photos (AI, different settings)</label>
+        <input type="number" id="variantCount" value="4" min="1" max="6">
+
+        <label>Launch date for schedule</label>
+        <input type="date" id="launchDate">
+
+        <div class="actions">
+          <button class="primary" id="generateBtn"><i class="fas fa-magic"></i> Generate Full Kit</button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid #334155;margin:1.5rem 0;">
+        <h3 style="margin:0 0 1rem;color:#38bdf8;font-size:0.95rem;">Bulk Generation</h3>
+        <div class="grid-2" style="gap:1rem;">
+          <div>
+            <label>Number of personas (max 20)</label>
+            <input type="number" id="bulkCount" value="3" min="1" max="20">
+          </div>
+          <div>
+            <label>Name prefix (e.g. "Brand Ambassador")</label>
+            <input type="text" id="bulkNamePrefix" placeholder="Persona">
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-bottom:1rem;">
+          <input type="checkbox" id="bulkAutoProxy" checked style="width:auto;margin:0;">
+          Auto-assign available proxies (one per kit)
+        </label>
+        <button class="secondary" id="bulkGenerateBtn"><i class="fas fa-clone"></i> Generate Bulk Kits</button>
+
+        <div class="progress-box" id="progressBox">
+          <span id="progressText" style="color:#38bdf8;">Starting...</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>2. Proxy / IP Pool</h2>
+        <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem;">Add residential or datacenter proxies. Each profile kit can bind one IP for account signup and posting.</p>
+        <div class="proxy-row">
+          <input type="text" id="proxyLabel" placeholder="Label (e.g. US-Mobile-1)">
+          <input type="text" id="proxyHost" placeholder="Host">
+          <input type="number" id="proxyPort" placeholder="Port">
+          <select id="proxyProtocol"><option value="http">HTTP</option><option value="https">HTTPS</option><option value="socks5">SOCKS5</option></select>
+          <button class="secondary" id="addProxyBtn">Add</button>
+        </div>
+        <div class="proxy-row" style="grid-template-columns:1fr 1fr auto;">
+          <input type="text" id="proxyUser" placeholder="Username (optional)">
+          <input type="password" id="proxyPass" placeholder="Password (optional)">
+          <button class="secondary" id="testProxyBtn">Test</button>
+        </div>
+        <div class="proxy-list" id="proxyList"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h2>Saved Profile Kits</h2>
+        <div class="kit-list" id="kitList"><div class="empty">No kits yet — generate one above.</div></div>
+      </div>
+
+      <div class="panel">
+        <h2>Kit Actions</h2>
+        <div id="kitActionsHint" class="empty" style="padding:1rem;">Select a kit to review and export.</div>
+        <div class="actions" id="kitActions" style="display:none;">
+          <button class="secondary" id="browserApplyBtn" style="border-color:#a78bfa;color:#c4b5fd;"><i class="fas fa-robot"></i> Apply via Browser (Puppeteer)</button>
+          <button class="secondary" id="apiUploadBtn" style="border-color:#10b981;color:#34d399;"><i class="fas fa-cloud-upload-alt"></i> Upload to Linked Accounts</button>
+          <button class="secondary" id="pushCalendarBtn"><i class="fas fa-calendar-plus"></i> Push Schedule to Calendar</button>
+          <button class="secondary" id="exportKitBtn"><i class="fas fa-download"></i> Export JSON Kit</button>
+          <button class="secondary" id="deleteKitBtn" style="border-color:#ef4444;color:#f87171;"><i class="fas fa-trash"></i> Delete Kit</button>
+        </div>
+        <div id="automationMode" style="display:none;margin-top:1rem;">
+          <label>Browser mode</label>
+          <select id="browserMode">
+            <option value="edit">Edit existing profile (logged-in)</option>
+            <option value="signup">Open signup flow (new account)</option>
+          </select>
+        </div>
+        <div id="automationResults" style="margin-top:1rem;font-size:0.85rem;color:#94a3b8;"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="accountMappingPanel" style="display:none;">
+      <h2><i class="fas fa-sitemap"></i> Per-Platform Account Mapping</h2>
+      <p style="color:#94a3b8;font-size:0.85rem;margin:0 0 1rem;">Map each kit platform to a specific linked account. Used for API uploads and calendar scheduling.</p>
+      <div id="accountMappingRows"></div>
+      <div class="actions" style="margin-top:0.5rem;">
+        <button class="secondary" id="saveAccountMapBtn"><i class="fas fa-save"></i> Save Mapping</button>
+        <button class="secondary" id="autoMapAccountsBtn"><i class="fas fa-magic"></i> Auto-map by platform</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><i class="fas fa-moon"></i> Overnight Headless Batch</h2>
+      <p style="color:#94a3b8;font-size:0.85rem;margin:0 0 1rem;">Queue kits to run headless browser automation overnight (or at a scheduled time). The background worker processes due batches automatically.</p>
+      <div class="grid-2" style="gap:1rem;">
+        <div>
+          <label>Run at (leave blank = tonight 2:00 AM)</label>
+          <input type="datetime-local" id="batchRunAt">
+        </div>
+        <div>
+          <label>Browser mode</label>
+          <select id="batchMode">
+            <option value="edit">Edit profile (logged-in)</option>
+            <option value="signup">Signup flow</option>
+          </select>
+        </div>
+      </div>
+      <label>Kits to include</label>
+      <select id="batchKitScope" style="margin-bottom:0.75rem;">
+        <option value="selected">Selected kit only</option>
+        <option value="all">All saved kits</option>
+        <option value="ready">All ready kits</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-bottom:0.5rem;">
+        <input type="checkbox" id="batchAlsoApi" style="width:auto;margin:0;"> Also API-upload assets after browser step
+      </label>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-bottom:1rem;">
+        <input type="checkbox" id="batchAlsoCalendar" style="width:auto;margin:0;"> Also push schedules to calendar
+      </label>
+      <div class="actions">
+        <button class="primary" id="scheduleBatchBtn"><i class="fas fa-clock"></i> Schedule Overnight Batch</button>
+        <button class="secondary" id="runBatchNowBtn"><i class="fas fa-play"></i> Run Headless Now</button>
+      </div>
+      <div id="batchQueueStatus" style="margin-top:1rem;"></div>
+      <div id="batchProgress" style="margin-top:0.75rem;color:#38bdf8;font-size:0.85rem;"></div>
+    </div>
+
+    <div class="panel" id="kitDetailPanel" style="display:none;">
+      <h2 id="kitDetailTitle">Kit Details</h2>
+
+      <h3 style="color:#38bdf8; font-size:0.95rem;">Identity &amp; Bios</h3>
+      <div id="identitySection"></div>
+
+      <h3 style="color:#38bdf8; font-size:0.95rem; margin-top:1.5rem;">Profile &amp; Cover Assets</h3>
+      <div class="asset-grid" id="assetSection"></div>
+
+      <h3 style="color:#38bdf8; font-size:0.95rem; margin-top:1.5rem;">Content Schedule</h3>
+      <div style="overflow-x:auto;">
+        <table class="schedule-table" id="scheduleSection">
+          <thead><tr><th>Day</th><th>Time</th><th>Platform</th><th>Type</th><th>Content</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+let selectedKitId = null;
+let allKits = [];
+let allProxies = [];
+let supportedPlatforms = [];
+let linkedAccountsByPlatform = [];
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function loadStatus() {
+  const status = await ipcRenderer.invoke('get-account-creator-status');
+  supportedPlatforms = status.platforms || [];
+  const items = [
+    ['Campaign', status.hasCampaign],
+    ['AI (bios/schedule)', status.aiReady],
+    ['AI images (FAL)', status.imageGenReady],
+    ['Unsplash covers', status.unsplashReady],
+    ['Puppeteer browser', status.puppeteerReady],
+    [`Proxies (${status.proxyCount})`, status.proxyCount > 0],
+  ];
+  document.getElementById('statusBar').innerHTML = items.map(([label, ok]) =>
+    `<span class="status-pill ${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${label}</span>`
+  ).join('');
+  if (!status.hasCampaign) {
+    document.getElementById('generateBtn').disabled = true;
+  }
+}
+
+function renderPlatformGrid() {
+  const defaults = ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'TikTok'];
+  const grid = document.getElementById('platformGrid');
+  grid.innerHTML = supportedPlatforms.map((p) => {
+    const checked = defaults.includes(p) ? 'checked' : '';
+    return `<label class="platform-chip selected"><input type="checkbox" value="${p}" ${checked}> ${p}</label>`;
+  }).join('');
+  grid.querySelectorAll('.platform-chip').forEach((chip) => {
+    chip.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const cb = chip.querySelector('input');
+      cb.checked = !cb.checked;
+      chip.classList.toggle('selected', cb.checked);
+    });
+    chip.querySelector('input').addEventListener('change', () => {
+      chip.classList.toggle('selected', chip.querySelector('input').checked);
+    });
+  });
+}
+
+function getSelectedPlatforms() {
+  return Array.from(document.querySelectorAll('#platformGrid input:checked')).map((cb) => cb.value);
+}
+
+async function loadProxies() {
+  allProxies = await ipcRenderer.invoke('get-proxy-pool') || [];
+  const sel = document.getElementById('proxySelect');
+  const available = allProxies.filter((p) => p.status === 'active' && !p.assignedKitId);
+  sel.innerHTML = '<option value="">No proxy assigned</option>' +
+    available.map((p) => `<option value="${p.id}">${escapeHtml(p.label)} (${p.host}:${p.port})</option>`).join('');
+
+  const list = document.getElementById('proxyList');
+  if (!allProxies.length) {
+    list.innerHTML = '<div class="empty" style="padding:1rem;">No proxies added yet.</div>';
+    return;
+  }
+  list.innerHTML = allProxies.map((p) => `
+    <div class="proxy-item">
+      <span>${escapeHtml(p.label)} — ${p.protocol}://${escapeHtml(p.host)}:${p.port}
+        ${p.assignedKitId ? '<span style="color:#fbbf24;"> (assigned)</span>' : ''}</span>
+      <button class="secondary" style="padding:0.3rem 0.6rem;font-size:0.7rem;" onclick="removeProxy('${p.id}')">Remove</button>
+    </div>
+  `).join('');
+}
+
+window.removeProxy = async function(id) {
+  if (!confirm('Remove this proxy?')) return;
+  await ipcRenderer.invoke('delete-proxy', id);
+  await loadProxies();
+};
+
+async function loadKits() {
+  const active = await ipcRenderer.invoke('get-active-campaign');
+  allKits = await ipcRenderer.invoke('get-profile-kits', active?.id) || [];
+  const list = document.getElementById('kitList');
+  if (!allKits.length) {
+    list.innerHTML = '<div class="empty">No kits yet — generate one above.</div>';
+    return;
+  }
+  list.innerHTML = allKits.map((k) => `
+    <div class="kit-item ${k.id === selectedKitId ? 'active' : ''}" data-id="${k.id}">
+      <strong>${escapeHtml(k.name || k.identity?.displayName || 'Unnamed')}</strong>
+      <div class="meta">${k.platforms?.length || 0} platforms · ${k.status} · ${Object.keys(k.accountMap || {}).length} mapped · ${k.contentSchedule?.length || 0} posts</div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.kit-item').forEach((el) => {
+    el.addEventListener('click', () => selectKit(el.dataset.id));
+  });
+}
+
+async function renderAccountMapping(kit) {
+  const panel = document.getElementById('accountMappingPanel');
+  const rows = document.getElementById('accountMappingRows');
+  if (!kit?.platforms?.length) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  const active = await ipcRenderer.invoke('get-active-campaign');
+  linkedAccountsByPlatform = await ipcRenderer.invoke('get-linked-accounts-for-kit', {
+    campaignId: active?.id,
+    platforms: kit.platforms,
+  });
+
+  const map = kit.accountMap || {};
+  rows.innerHTML = kit.platforms.map((platform) => {
+    const entry = linkedAccountsByPlatform.find((e) => e.platform === platform) || { accounts: [] };
+    const options = ['<option value="">— Select linked account —</option>']
+      .concat((entry.accounts || []).map((a) =>
+        `<option value="${a.id}" ${map[platform] === a.id ? 'selected' : ''}>${escapeHtml(a.handle || a.platform)} (${escapeHtml(a.type || 'Profile')})</option>`
+      ));
+    return `<div class="mapping-row" data-platform="${escapeHtml(platform)}">
+      <label>${escapeHtml(platform)}</label>
+      <select class="kit-account-map-select" data-platform="${escapeHtml(platform)}">${options.join('')}</select>
+    </div>`;
+  }).join('');
+
+  panel.style.display = 'block';
+}
+
+function collectAccountMap() {
+  const map = {};
+  document.querySelectorAll('.kit-account-map-select').forEach((sel) => {
+    if (sel.value) map[sel.dataset.platform] = sel.value;
+  });
+  return map;
+}
+
+async function selectKit(id) {
+  selectedKitId = id;
+  const kit = allKits.find((k) => k.id === id);
+  if (!kit) return;
+  loadKits();
+  document.getElementById('kitActions').style.display = 'flex';
+  document.getElementById('kitActionsHint').style.display = 'none';
+  document.getElementById('automationMode').style.display = 'block';
+  document.getElementById('kitDetailPanel').style.display = 'block';
+  await renderAccountMapping(kit);
+  if (kit.browserResults?.length) {
+    document.getElementById('automationResults').innerHTML = '<strong>Last browser run:</strong><br>' +
+      kit.browserResults.map((r) => `${r.platform}: ${r.message || r.error || 'done'}`).join('<br>');
+  }
+  if (kit.apiUploadResults?.length) {
+    document.getElementById('automationResults').innerHTML += '<br><strong>Last API upload:</strong><br>' +
+      kit.apiUploadResults.map((r) => `${r.platform}: ${r.success ? 'OK' : r.error}`).join('<br>');
+  }
+  document.getElementById('kitDetailTitle').textContent = kit.name || kit.identity?.displayName || 'Profile Kit';
+
+  const idEl = document.getElementById('identitySection');
+  const identity = kit.identity || {};
+  let bioHtml = `<p><strong>Display name:</strong> ${escapeHtml(identity.displayName)}</p>
+    <p><strong>Tagline:</strong> ${escapeHtml(identity.tagline)}</p>
+    <p>${escapeHtml(identity.longDescription)}</p>`;
+  if (identity.bios) {
+    bioHtml += Object.entries(identity.bios).map(([plat, bio]) =>
+      `<div class="bio-block"><strong>${escapeHtml(plat)}</strong>${escapeHtml(bio)}</div>`
+    ).join('');
+  }
+  if (identity.handleSuggestions) {
+    bioHtml += '<p style="font-size:0.85rem;color:#94a3b8;"><strong>Handles:</strong> ' +
+      Object.entries(identity.handleSuggestions).map(([p, h]) => `${p}: ${h}`).join(' · ') + '</p>';
+  }
+  idEl.innerHTML = bioHtml;
+
+  const assets = kit.assets || {};
+  const assetCards = [];
+  if (assets.profilePic?.url) {
+    assetCards.push({ label: 'Profile pic (AI)', url: assets.profilePic.url });
+  }
+  (assets.variantPics || []).forEach((v) => {
+    if (v.url) assetCards.push({ label: v.label, url: v.url });
+  });
+  Object.entries(assets.covers || {}).forEach(([plat, c]) => {
+    if (c?.imageUrl) assetCards.push({ label: `${plat} cover`, url: c.imageUrl });
+  });
+  document.getElementById('assetSection').innerHTML = assetCards.length
+    ? assetCards.map((a) => `<div class="asset-card"><img src="${a.url}" alt=""><div class="cap">${escapeHtml(a.label)}</div></div>`).join('')
+    : '<div class="empty">No assets generated yet.</div>';
+
+  const tbody = document.querySelector('#scheduleSection tbody');
+  const sched = kit.contentSchedule || [];
+  tbody.innerHTML = sched.map((s) => `
+    <tr>
+      <td>+${s.dayOffset ?? 0}d</td>
+      <td>${escapeHtml(s.time)}</td>
+      <td>${escapeHtml(s.platform)}</td>
+      <td>${escapeHtml(s.contentType || 'post')}</td>
+      <td>${escapeHtml((s.content || '').slice(0, 80))}${s.youtubeUrl ? ' <i class="fab fa-youtube" style="color:#ef4444;"></i>' : ''}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="empty">No schedule items.</td></tr>';
+}
+
+document.getElementById('addProxyBtn').addEventListener('click', async () => {
+  const res = await ipcRenderer.invoke('save-proxy', {
+    label: document.getElementById('proxyLabel').value,
+    host: document.getElementById('proxyHost').value,
+    port: document.getElementById('proxyPort').value,
+    protocol: document.getElementById('proxyProtocol').value,
+    username: document.getElementById('proxyUser').value,
+    password: document.getElementById('proxyPass').value,
+  });
+  if (!res.success) return alert(res.error);
+  document.getElementById('proxyLabel').value = '';
+  document.getElementById('proxyHost').value = '';
+  document.getElementById('proxyPort').value = '';
+  await loadProxies();
+});
+
+document.getElementById('testProxyBtn').addEventListener('click', async () => {
+  const sel = document.getElementById('proxySelect').value;
+  if (!sel && allProxies.length) {
+    const res = await ipcRenderer.invoke('test-proxy', allProxies[allProxies.length - 1].id);
+    alert(res.success ? res.message : res.error);
+    return;
+  }
+  if (!sel) return alert('Add a proxy first, or select one from the kit dropdown after saving.');
+  const res = await ipcRenderer.invoke('test-proxy', sel);
+  alert(res.success ? res.message : res.error);
+});
+
+ipcRenderer.on('profile-kit-progress', (e, data) => {
+  const box = document.getElementById('progressBox');
+  box.classList.add('active');
+  document.getElementById('progressText').textContent = data.message || 'Working...';
+});
+
+ipcRenderer.on('bulk-kit-progress', (e, data) => {
+  const box = document.getElementById('progressBox');
+  box.classList.add('active');
+  document.getElementById('progressText').textContent = data.message || `Persona ${data.current}/${data.total}...`;
+});
+
+ipcRenderer.on('browser-batch-progress', (e, data) => {
+  const el = document.getElementById('batchProgress');
+  if (!el) return;
+  el.textContent = data.step
+    ? `Batch ${data.batchId?.slice(-8) || ''}: ${data.kitName || data.kitId} — ${data.step} (${data.index}/${data.total})`
+    : 'Processing batch...';
+  loadBatchStatus();
+});
+
+async function loadBatchStatus() {
+  const status = await ipcRenderer.invoke('get-browser-batch-status');
+  const el = document.getElementById('batchQueueStatus');
+  if (!el) return;
+  const header = `<p style="margin:0 0 0.75rem;color:#94a3b8;">Worker: ${status.running ? '<span style="color:#a78bfa;">RUNNING</span>' : 'idle'} · Queued: ${status.queued} · Done: ${status.completed} · Failed: ${status.failed}</p>`;
+  const jobs = (status.jobs || []).map((j) => {
+    const runAt = new Date(j.runAt).toLocaleString();
+    const kits = (j.kitIds || []).length;
+    let actions = '';
+    if (j.status === 'queued') {
+      actions = `<button class="secondary" style="padding:0.25rem 0.5rem;font-size:0.7rem;margin-left:0.5rem;" onclick="runBatchNow('${j.id}')">Run now</button>
+        <button class="secondary" style="padding:0.25rem 0.5rem;font-size:0.7rem;margin-left:0.25rem;border-color:#ef4444;color:#f87171;" onclick="cancelBatch('${j.id}')">Cancel</button>`;
+    }
+    return `<div class="batch-job ${j.status}"><strong>${escapeHtml(j.label || j.id)}</strong> — ${j.status} · ${kits} kit(s) · ${runAt}${actions}
+      ${j.currentKitId ? `<div style="color:#a78bfa;margin-top:0.25rem;">Processing: ${escapeHtml(j.currentKitId)}</div>` : ''}
+      ${j.error ? `<div style="color:#f87171;margin-top:0.25rem;">${escapeHtml(j.error)}</div>` : ''}</div>`;
+  }).join('');
+  el.innerHTML = header + (jobs || '<div class="empty" style="padding:1rem;">No batch jobs queued.</div>');
+}
+
+window.runBatchNow = async function(batchId) {
+  await ipcRenderer.invoke('run-browser-batch-now', batchId);
+  await loadBatchStatus();
+};
+
+window.cancelBatch = async function(batchId) {
+  if (!confirm('Cancel this batch job?')) return;
+  await ipcRenderer.invoke('cancel-browser-batch', batchId);
+  await loadBatchStatus();
+};
+
+function getBatchKitIds(scope) {
+  if (scope === 'all') return allKits.map((k) => k.id);
+  if (scope === 'ready') return allKits.filter((k) => k.status === 'ready').map((k) => k.id);
+  if (selectedKitId) return [selectedKitId];
+  return [];
+}
+
+function getKitPayload() {
+  const launchInput = document.getElementById('launchDate').value;
+  return {
+    platforms: getSelectedPlatforms(),
+    proxyId: document.getElementById('proxySelect').value || null,
+    personaName: document.getElementById('personaName').value.trim(),
+    personaStyle: document.getElementById('personaStyle').value,
+    youtubeVideoUrl: document.getElementById('youtubeUrl').value.trim(),
+    scheduleWeeks: parseInt(document.getElementById('scheduleWeeks').value, 10) || 4,
+    postsPerWeek: parseInt(document.getElementById('postsPerWeek').value, 10) || 3,
+    variantCount: parseInt(document.getElementById('variantCount').value, 10) || 4,
+    launchDate: launchInput ? new Date(launchInput).toISOString() : new Date().toISOString(),
+    generateAssets: true,
+  };
+}
+
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  const platforms = getSelectedPlatforms();
+  if (!platforms.length) return alert('Select at least one platform.');
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  document.getElementById('progressBox').classList.add('active');
+  document.getElementById('progressText').textContent = 'Starting generation...';
+
+  const res = await ipcRenderer.invoke('generate-profile-kit', getKitPayload());
+
+  btn.disabled = false;
+  document.getElementById('progressBox').classList.remove('active');
+
+  if (res.error) return alert('Generation failed: ' + res.error);
+  if (res.kit) {
+    selectedKitId = res.kit.id;
+    await loadKits();
+    await loadProxies();
+    selectKit(res.kit.id);
+    alert(`Profile kit "${res.kit.name}" is ready! Review assets below, then push the schedule to your calendar.`);
+  }
+});
+
+document.getElementById('bulkGenerateBtn').addEventListener('click', async () => {
+  const platforms = getSelectedPlatforms();
+  if (!platforms.length) return alert('Select at least one platform.');
+  const btn = document.getElementById('bulkGenerateBtn');
+  btn.disabled = true;
+  document.getElementById('progressBox').classList.add('active');
+  const res = await ipcRenderer.invoke('generate-bulk-profile-kits', {
+    ...getKitPayload(),
+    count: parseInt(document.getElementById('bulkCount').value, 10) || 3,
+    personaNamePrefix: document.getElementById('bulkNamePrefix').value.trim() || 'Persona',
+    autoAssignProxies: document.getElementById('bulkAutoProxy').checked,
+  });
+  btn.disabled = false;
+  document.getElementById('progressBox').classList.remove('active');
+  if (!res.success && !res.kits?.length) return alert('Bulk generation failed: ' + (res.errors?.[0]?.error || 'Unknown error'));
+  await loadKits();
+  await loadProxies();
+  if (res.kits?.length) {
+    selectedKitId = res.kits[0].id;
+    selectKit(res.kits[0].id);
+  }
+  alert(`Generated ${res.count} profile kit(s).${res.errors?.length ? ` ${res.errors.length} failed.` : ''}`);
+});
+
+document.getElementById('browserApplyBtn').addEventListener('click', async () => {
+  if (!selectedKitId) return;
+  const kit = allKits.find((k) => k.id === selectedKitId);
+  if (!confirm(`Open browser to apply "${kit?.name}" to ${kit?.platforms?.length || 0} platform(s)? Log in manually first if needed.`)) return;
+  const btn = document.getElementById('browserApplyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Opening browser...';
+  const res = await ipcRenderer.invoke('apply-kit-browser-automation', {
+    kitId: selectedKitId,
+    platforms: kit?.platforms,
+    mode: document.getElementById('browserMode').value,
+    keepBrowserOpen: true,
+  });
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-robot"></i> Apply via Browser (Puppeteer)';
+  if (!res.success) return alert('Browser automation failed: ' + res.error);
+  document.getElementById('automationResults').innerHTML = (res.results || []).map((r) =>
+    `<div>${escapeHtml(r.platform)}: ${escapeHtml(r.message || (r.steps || []).join(', '))}</div>`
+  ).join('');
+  await loadKits();
+  selectKit(selectedKitId);
+});
+
+document.getElementById('saveAccountMapBtn').addEventListener('click', async () => {
+  if (!selectedKitId) return;
+  const accountMap = collectAccountMap();
+  const res = await ipcRenderer.invoke('save-kit-account-map', { kitId: selectedKitId, accountMap });
+  if (!res.success) return alert(res.error);
+  const kit = allKits.find((k) => k.id === selectedKitId);
+  if (kit) kit.accountMap = accountMap;
+  alert('Account mapping saved for this kit.');
+});
+
+document.getElementById('autoMapAccountsBtn').addEventListener('click', async () => {
+  if (!selectedKitId) return;
+  const kit = allKits.find((k) => k.id === selectedKitId);
+  await renderAccountMapping(kit);
+  document.querySelectorAll('.kit-account-map-select').forEach((sel) => {
+    const entry = linkedAccountsByPlatform.find((e) => e.platform === sel.dataset.platform);
+    if (entry?.accounts?.length) sel.value = entry.accounts[0].id;
+  });
+});
+
+document.getElementById('apiUploadBtn').addEventListener('click', async () => {
+  if (!selectedKitId) return;
+  const kit = allKits.find((k) => k.id === selectedKitId);
+  const accountMap = collectAccountMap();
+  if (Object.keys(accountMap).length) {
+    await ipcRenderer.invoke('save-kit-account-map', { kitId: selectedKitId, accountMap });
+    if (kit) kit.accountMap = accountMap;
+  }
+  const btn = document.getElementById('apiUploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  const res = await ipcRenderer.invoke('upload-kit-to-linked-accounts', {
+    kitId: selectedKitId,
+    platforms: kit?.platforms,
+    accountMap: accountMap || kit?.accountMap,
+  });
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload to Linked Accounts';
+  if (!res.success) {
+    const msg = (res.summary || []).map((s) => `${s.platform}: ${s.error || 'OK'}`).join('\n');
+    alert('Upload results:\n' + msg);
+  } else {
+    alert(`Uploaded to ${res.uploaded}/${res.total} platform(s). Connect missing accounts in Linked Accounts first.`);
+  }
+  await loadKits();
+  selectKit(selectedKitId);
+});
+
+document.getElementById('scheduleBatchBtn').addEventListener('click', async () => {
+  const scope = document.getElementById('batchKitScope').value;
+  const kitIds = getBatchKitIds(scope);
+  if (!kitIds.length) return alert('No kits selected for batch. Select a kit or choose "All saved kits".');
+  const runAtVal = document.getElementById('batchRunAt').value;
+  const res = await ipcRenderer.invoke('schedule-browser-batch', {
+    kitIds,
+    runAt: runAtVal ? new Date(runAtVal).toISOString() : null,
+    mode: document.getElementById('batchMode').value,
+    headless: true,
+    alsoUploadApi: document.getElementById('batchAlsoApi').checked,
+    alsoPushCalendar: document.getElementById('batchAlsoCalendar').checked,
+    label: `Overnight batch (${kitIds.length} kits)`,
+  });
+  if (!res.success) return alert(res.error);
+  alert(`Batch scheduled for ${new Date(res.job.runAt).toLocaleString()}. Keep the app running — the worker will process it automatically.`);
+  await loadBatchStatus();
+});
+
+document.getElementById('runBatchNowBtn').addEventListener('click', async () => {
+  const scope = document.getElementById('batchKitScope').value;
+  const kitIds = getBatchKitIds(scope);
+  if (!kitIds.length) return alert('No kits selected for batch.');
+  const sched = await ipcRenderer.invoke('schedule-browser-batch', {
+    kitIds,
+    runAt: new Date().toISOString(),
+    mode: document.getElementById('batchMode').value,
+    headless: true,
+    alsoUploadApi: document.getElementById('batchAlsoApi').checked,
+    alsoPushCalendar: document.getElementById('batchAlsoCalendar').checked,
+    label: `Immediate headless batch (${kitIds.length} kits)`,
+  });
+  if (!sched.success) return alert(sched.error);
+  const run = await ipcRenderer.invoke('run-browser-batch-now', sched.job.id);
+  if (!run.success) return alert(run.error);
+  document.getElementById('batchProgress').textContent = 'Headless batch started — watch progress below.';
+  await loadBatchStatus();
+});
+
+document.getElementById('pushCalendarBtn').addEventListener('click', async () => {
+  if (!selectedKitId) return;
+  const accountMap = collectAccountMap();
+  if (Object.keys(accountMap).length) {
+    await ipcRenderer.invoke('save-kit-account-map', { kitId: selectedKitId, accountMap });
+  }
+  const launchInput = document.getElementById('launchDate').value;
+  const res = await ipcRenderer.invoke('push-kit-schedule-to-calendar', {
+    kitId: selectedKitId,
+    launchDate: launchInput ? new Date(launchInput).toISOString() : null,
+  });
+  if (!res.success) return alert(res.error);
+  alert(`Pushed ${res.count} posts to Content Calendar. Open Calendar to review.`);
+  await loadKits();
+});
+
+document.getElementById('exportKitBtn').addEventListener('click', async () => {
+  if (!selectedKitId) return;
+  const res = await ipcRenderer.invoke('export-profile-kit', { kitId: selectedKitId });
+  if (!res.success) return alert(res.error);
+  alert(`Kit exported to:\n${res.filePath}`);
+});
+
+document.getElementById('deleteKitBtn').addEventListener('click', async () => {
+  if (!selectedKitId || !confirm('Delete this profile kit?')) return;
+  await ipcRenderer.invoke('delete-profile-kit', { kitId: selectedKitId });
+  selectedKitId = null;
+  document.getElementById('kitDetailPanel').style.display = 'none';
+  document.getElementById('accountMappingPanel').style.display = 'none';
+  document.getElementById('kitActions').style.display = 'none';
+  document.getElementById('kitActionsHint').style.display = 'block';
+  document.getElementById('automationMode').style.display = 'none';
+  await loadKits();
+  await loadProxies();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('launchDate').value = new Date().toISOString().slice(0, 10);
+  const tonight = new Date();
+  tonight.setHours(2, 0, 0, 0);
+  if (tonight.getTime() <= Date.now()) tonight.setDate(tonight.getDate() + 1);
+  const batchInput = document.getElementById('batchRunAt');
+  if (batchInput) {
+    batchInput.value = tonight.toISOString().slice(0, 16);
+  }
+  await loadStatus();
+  renderPlatformGrid();
+  await loadProxies();
+  await loadKits();
+  await loadBatchStatus();
+  setInterval(loadBatchStatus, 30000);
+});
+</script>
+</body>
+</html>
