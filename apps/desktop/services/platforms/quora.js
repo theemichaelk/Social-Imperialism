@@ -78,11 +78,20 @@ async function publish(payload, accessToken, account) {
   const questionUrl = payload.questionUrl || payload.url;
 
   if (connectionId && quoraBrowser.sessionExists(connectionId) && questionUrl) {
-    return quoraBrowser.postAnswer({ connectionId, questionUrl, content });
+    try {
+      return await quoraBrowser.postAnswer({ connectionId, questionUrl, content });
+    } catch (e) {
+      return {
+        success: false,
+        platform: 'Quora',
+        livePosted: false,
+        error: e.message || 'Quora browser post failed',
+      };
+    }
   }
 
   return {
-    success: true,
+    success: false,
     platform: 'Quora',
     accountId: account?.id,
     draft: true,
@@ -90,8 +99,8 @@ async function publish(payload, accessToken, account) {
     content,
     questionUrl: questionUrl || null,
     message: questionUrl
-      ? 'Answer queued — link Quora with email/password in Linked Accounts to post automatically.'
-      : 'Answer saved. Provide question URL to post live.',
+      ? 'Live posting requires a linked Quora account with email/password in Account Hub. Answer saved locally as draft.'
+      : 'Answer saved as draft. Provide a question URL to post live.',
   };
 }
 

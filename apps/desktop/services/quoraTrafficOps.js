@@ -37,7 +37,7 @@ const PROMPT_FRAMEWORKS = [
 
 const DEFAULT_SETTINGS = {
   mode: 'manual',
-  model: 'openai/gpt-4o-mini',
+  model: 'gemini',
   minViews: 5000,
   minUpvotes: 100,
   autoPublish: false,
@@ -197,10 +197,179 @@ function estimateMetricsFromRank(index, snippet) {
   return { views, upvotes, answerCount: answers, metricsSource: 'estimated' };
 }
 
+const QUORA_JUNK_PATHS = /\/(?:login|signup|search|topic|profile|user|spaces|about|terms|privacy|help|contact|careers|press|qemail|settings)(?:\/|$|\?)/i;
+
+function isValidQuoraQuestionUrl(url, title = '') {
+  if (!url || !url.includes('quora.com') || QUORA_JUNK_PATHS.test(url)) return false;
+  const path = url.replace(/^https?:\/\/(?:www\.)?quora\.com/i, '').split('?')[0];
+  if (!path || path === '/' || path.startsWith('/search')) return false;
+  const t = String(title).toLowerCase();
+  if (/terms of service|privacy policy|quora login|sign up|help center/.test(t)) return false;
+  return true;
+}
+
+function pushQuestionResult(results, seen, item, keyword, index, enrich, keys) {
+  const url = item.url || item.link || '';
+  const title = (item.title || item.question || '').replace(/ - Quora.*$/i, '').trim();
+  if (!isValidQuoraQuestionUrl(url, title) || seen.has(url)) return;
+  seen.add(url);
+  if (!title) return;
+  let metrics = estimateMetricsFromRank(index, item.snippet || '');
+  results.push({
+    id: `qq_${Buffer.from(url).toString('base64').slice(0, 20)}`,
+    question: title,
+    url,
+    keyword,
+    views: metrics.views,
+    viewsLabel: formatMetric(metrics.views),
+    upvotes: metrics.upvotes,
+    upvotesLabel: formatMetric(metrics.upvotes),
+    answerCount: metrics.answerCount,
+    existingAnswers: [],
+    metricsSource: metrics.metricsSource,
+    score: metrics.views + metrics.upvotes * 10,
+    _enrich: enrich,
+    _keys: keys,
+  });
+}
+
+async function enrichQuestionMetrics(entry) {
+  if (!entry._enrich || !entry.url) return entry;
+  const scraped = await scrapeQuestionMetrics(entry.url);
+  if (scraped) {
+    entry.views = scraped.views || entry.views;
+    entry.upvotes = scraped.upvotes || entry.upvotes;
+    entry.answerCount = scraped.answerCount || entry.answerCount;
+    entry.existingAnswers = scraped.existingAnswers || [];
+    entry.metricsSource = scraped.views ? 'scrape' : entry.metricsSource;
+    entry.score = entry.views + entry.upvotes * 10;
+    entry.viewsLabel = formatMetric(entry.views);
+    entry.upvotesLabel = formatMetric(entry.upvotes);
+  }
+  delete entry._enrich;
+  delete entry._keys;
+  return entry;
+}
+
+function cleanSearchTitle(title, url) {
+  let t = String(title || '').replace(/ - Quora.*$/i, '').trim();
+  t = t.replace(/^Quora\s+quora\.com\s*[›>]\s*[^\s›>]+\s*/i, '').trim();
+  if ((!t || t.length < 8) && url) {
+    const slug = url.replace(/\/$/, '').split('/').pop() || '';
+    t = decodeURIComponent(slug).replace(/-/g, ' ').replace(/\?.*$/, '').trim();
+  }
+  return t;
+}
+
+async function scrapeViaBraveSearch(keyword, limit = 20) {
+  try {
+    const res = await axios.get('https://search.brave.com/search', {
+      params: { q: `site:quora.com ${keyword}` },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      timeout: 25000,
+    });
+    const html = String(res.data || '');
+    const items = [];
+    const seen = new Set();
+    const re = /<a[^>]+href="(https?:\/\/(?:www\.)?quora\.com[^"#]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    while ((m = re.exec(html)) !== null && items.length < limit) {
+      const url = m[1].split('&')[0].split('#')[0];
+      const title = cleanSearchTitle(m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), url);
+      if (!isValidQuoraQuestionUrl(url, title) || seen.has(url)) continue;
+      seen.add(url);
+      items.push({ url, title, snippet: '' });
+    }
+    return items;
+  } catch (e) {
+    console.warn('Quora Brave search:', e.message);
+    return [];
+  }
+}
+
+async function scrapeViaDuckDuckGo(keyword, limit = 20) {
+  try {
+    const res = await axios.get('https://html.duckduckgo.com/html/', {
+      params: { q: `site:quora.com ${keyword}` },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html',
+      },
+      timeout: 25000,
+    });
+    const html = String(res.data || '');
+    const items = [];
+    const linkRe = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    while ((m = linkRe.exec(html)) !== null && items.length < limit) {
+      const url = m[1].replace(/&amp;/g, '&');
+      const title = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (url.includes('quora.com')) items.push({ url, title, snippet: '' });
+    }
+    return items;
+  } catch (e) {
+    console.warn('Quora DuckDuckGo search:', e.message);
+    return [];
+  }
+}
+
+async function scrapeViaQuoraBrowser(keyword, limit = 15) {
+  let puppeteer;
+  try { puppeteer = require('puppeteer'); } catch (e) { return []; }
+  if (!puppeteer) return [];
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36');
+    await page.goto(`https://www.quora.com/search?q=${encodeURIComponent(keyword)}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 45000,
+    });
+    await new Promise((r) => setTimeout(r, 3000));
+    const items = await page.evaluate((max) => {
+      const junk = /\/(?:login|signup|search|topic|profile|user|spaces|about|terms|privacy|help)(?:\/|$|\?)/i;
+      const out = [];
+      const seen = new Set();
+      document.querySelectorAll('a[href]').forEach((a) => {
+        const href = (a.href || '').split('?')[0];
+        if (!href.includes('quora.com') || junk.test(href) || seen.has(href)) return;
+        const text = (a.innerText || '').trim();
+        if (text.length < 12 || text.length > 300) return;
+        if (/terms of service|privacy policy|log in|sign up/i.test(text)) return;
+        seen.add(href);
+        out.push({ url: href, title: text, snippet: '' });
+      });
+      return out.slice(0, max);
+    }, limit);
+    await browser.close();
+    return items;
+  } catch (e) {
+    if (browser) try { await browser.close(); } catch (err) { /* ignore */ }
+    console.warn('Quora browser search:', e.message);
+    return [];
+  }
+}
+
+function resolveAIModel(model, keys) {
+  const wantsOpenRouter = model && String(model).includes('/');
+  if (keys?.openrouter && wantsOpenRouter) return model;
+  if (keys?.openrouter) return model || 'openai/gpt-4o-mini';
+  return 'gemini';
+}
+
 async function scrapeQuestions(keyword, keys, options = {}) {
   const limit = options.limit || 25;
   const enrich = options.enrich !== false;
   const results = [];
+  const seen = new Set();
 
   if (keys?.serpApiKey) {
     try {
@@ -215,66 +384,54 @@ async function scrapeQuestions(keyword, keys, options = {}) {
       });
       const organic = res.data?.organic_results || [];
       for (let i = 0; i < organic.length; i++) {
-        const r = organic[i];
-        const url = r.link || '';
-        if (!url.includes('quora.com')) continue;
-        const title = (r.title || '').replace(/ - Quora.*$/i, '').trim();
-        let metrics = estimateMetricsFromRank(i, r.snippet);
-        if (enrich && url) {
-          const scraped = await scrapeQuestionMetrics(url);
-          if (scraped) {
-            metrics = {
-              views: scraped.views || metrics.views,
-              upvotes: scraped.upvotes || metrics.upvotes,
-              answerCount: scraped.answerCount || metrics.answerCount,
-              existingAnswers: scraped.existingAnswers,
-              metricsSource: scraped.views ? 'scrape' : metrics.metricsSource,
-            };
-          }
-        }
-        results.push({
-          id: `qq_${Buffer.from(url).toString('base64').slice(0, 20)}`,
-          question: title || r.snippet?.slice(0, 120),
-          url,
-          keyword,
-          views: metrics.views,
-          viewsLabel: formatMetric(metrics.views),
-          upvotes: metrics.upvotes,
-          upvotesLabel: formatMetric(metrics.upvotes),
-          answerCount: metrics.answerCount,
-          existingAnswers: metrics.existingAnswers || [],
-          metricsSource: metrics.metricsSource,
-          score: metrics.views + metrics.upvotes * 10,
-        });
+        pushQuestionResult(results, seen, {
+          url: organic[i].link,
+          title: organic[i].title,
+          snippet: organic[i].snippet,
+        }, keyword, i, enrich, keys);
       }
     } catch (e) {
       console.error('Quora Traffic SerpAPI:', e.message);
     }
   }
 
+  if (results.length < limit) {
+    const braveHits = await scrapeViaBraveSearch(keyword, limit);
+    braveHits.forEach((item, i) => pushQuestionResult(results, seen, item, keyword, i, enrich, keys));
+  }
+
+  if (results.length < limit) {
+    const ddg = await scrapeViaDuckDuckGo(keyword, limit);
+    ddg.forEach((item, i) => pushQuestionResult(results, seen, item, keyword, i, enrich, keys));
+  }
+
+  if (results.length < Math.min(5, limit)) {
+    const browserHits = await scrapeViaQuoraBrowser(keyword, limit);
+    browserHits.forEach((item, i) => pushQuestionResult(results, seen, item, keyword, i, enrich, keys));
+  }
+
   if (!results.length) {
     const fallback = await quora.searchPosts(keyword, keys, limit);
     fallback.forEach((p, i) => {
-      const m = estimateMetricsFromRank(i, p.content);
-      results.push({
-        id: p.externalId,
-        question: p.content,
+      pushQuestionResult(results, seen, {
         url: p.url,
-        keyword,
-        views: m.views,
-        viewsLabel: formatMetric(m.views),
-        upvotes: m.upvotes,
-        upvotesLabel: formatMetric(m.upvotes),
-        answerCount: m.answerCount,
-        existingAnswers: [],
-        metricsSource: 'estimated',
-        score: m.views,
-      });
+        title: p.content,
+        snippet: p.content,
+      }, keyword, i, enrich, keys);
     });
   }
 
-  results.sort((a, b) => b.score - a.score);
-  return results.slice(0, limit);
+  if (!results.length) {
+    throw new Error('No Quora questions found for that keyword. Try another keyword or paste a Quora question URL below.');
+  }
+
+  const enriched = [];
+  for (const entry of results.slice(0, limit)) {
+    enriched.push(await enrichQuestionMetrics({ ...entry }));
+  }
+
+  enriched.sort((a, b) => b.score - a.score);
+  return enriched.slice(0, limit);
 }
 
 function getAngle(settings, angleId) {
@@ -293,6 +450,31 @@ function buildAngleContext(angle, campaign) {
     campaign?.description && `About: ${campaign.description}`,
     campaign?.tone && `Tone: ${campaign.tone}`,
   ].filter(Boolean).join('\n');
+}
+
+async function lookupQuestionByUrl(url, keyword = 'manual') {
+  if (!isValidQuoraQuestionUrl(url)) {
+    throw new Error('Paste a valid Quora question URL (not login, search, or profile pages).');
+  }
+  const scraped = await scrapeQuestionMetrics(url);
+  const title = scraped?.title || cleanSearchTitle('', url);
+  const metrics = scraped?.views
+    ? scraped
+    : { ...estimateMetricsFromRank(0, ''), title, existingAnswers: scraped?.existingAnswers || [] };
+  return {
+    id: `qq_${Buffer.from(url).toString('base64').slice(0, 20)}`,
+    question: metrics.title || title,
+    url,
+    keyword,
+    views: metrics.views || 0,
+    viewsLabel: formatMetric(metrics.views || 0),
+    upvotes: metrics.upvotes || 0,
+    upvotesLabel: formatMetric(metrics.upvotes || 0),
+    answerCount: metrics.answerCount || 0,
+    existingAnswers: metrics.existingAnswers || [],
+    metricsSource: scraped?.views ? 'scrape' : 'estimated',
+    score: (metrics.views || 0) + (metrics.upvotes || 0) * 10,
+  };
 }
 
 async function generateAnswer(deps, payload) {
@@ -362,8 +544,10 @@ Requirements:
 - ${mode === 'youtube' && videoId ? `Include this link: https://www.youtube.com/watch?v=${videoId}` : ''}
 Output the answer text only (plain text or light HTML paragraphs).`;
 
+  const keys = deps.keys || {};
+  const resolvedModel = resolveAIModel(model || settings.model, keys);
   const generate = deps.generateAIWithModel || deps.generateAI;
-  const text = await generate(prompt, model || settings.model || 'openai/gpt-4o-mini');
+  const text = await generate(prompt, resolvedModel);
 
   let content = text.trim();
   if (mode === 'youtube' && videoId && !content.includes('youtube.com')) {
@@ -413,7 +597,7 @@ async function publishAnswer(deps, payload) {
     account,
   );
 
-  if (result.livePosted || result.success) {
+  if (result.livePosted) {
     const settings = loadSettings(store, campaignId);
     const updated = {
       ...answer,
@@ -435,21 +619,35 @@ async function publishAnswer(deps, payload) {
   return result;
 }
 
-function getStatus(store, campaignId, keys, linkedAccounts) {
+function getStatus(store, campaignId, keys, linkedAccounts, campaign = {}) {
   const settings = loadSettings(store, campaignId);
   const quoraAccount = getQuoraAccount(linkedAccounts || []);
-  const connectionId = quoraAccount ? quoraBrowser.resolveConnectionId(quoraAccount, null) : null;
+  const tokens = quoraAccount ? require('./intelligenceProfile').parseTokens(quoraAccount) : null;
+  const connectionId = quoraAccount ? quoraBrowser.resolveConnectionId(quoraAccount, tokens) : null;
+  let puppeteerOk = false;
+  try { puppeteerOk = !!require('puppeteer'); } catch (e) { puppeteerOk = false; }
   return {
     mode: settings.mode,
     hasSerpApi: !!keys?.serpApiKey,
     hasOpenRouter: !!keys?.openrouter,
+    hasGemini: !!keys?.gemini,
+    hasAI: !!(keys?.openrouter || keys?.gemini),
+    puppeteerOk,
     quoraLinked: !!quoraAccount,
+    quoraHandle: quoraAccount?.handle || null,
+    connectionId,
     sessionValid: connectionId ? quoraBrowser.sessionExists(connectionId) : false,
     angleCount: settings.angles.length,
     documentCount: settings.documents.length,
     draftCount: settings.answers.filter((a) => a.status === 'draft').length,
     publishedCount: settings.publishedLog.length,
     frameworks: PROMPT_FRAMEWORKS,
+    campaign: {
+      brandName: campaign.brandName || '',
+      domain: campaign.domain || '',
+      description: campaign.description || '',
+      tone: campaign.tone || '',
+    },
   };
 }
 
@@ -459,11 +657,16 @@ module.exports = {
   loadSettings,
   saveSettings,
   scrapeQuestions,
+  scrapeViaBraveSearch,
+  scrapeViaDuckDuckGo,
+  scrapeViaQuoraBrowser,
+  lookupQuestionByUrl,
   scrapeQuestionMetrics,
   fetchYouTubeTranscript,
   generateAnswer,
   publishAnswer,
   getStatus,
+  resolveAIModel,
   formatMetric,
   extractYouTubeId,
 };

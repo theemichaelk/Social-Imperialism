@@ -220,14 +220,32 @@ async function postAnswer({ connectionId, questionUrl, content }) {
       'div[role="button"][class*="Answer"]',
       'a[href*="answer"]',
     ]);
+    await pageRef.evaluate(() => {
+      const clickByText = (text) => {
+        const nodes = [...document.querySelectorAll('button, a, div[role="button"]')];
+        const el = nodes.find((n) => (n.innerText || '').trim().toLowerCase() === text.toLowerCase());
+        if (el) el.click();
+        return !!el;
+      };
+      clickByText('Answer');
+    });
 
     await delay(1500);
 
     const plainText = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const filled = await pageRef.evaluate((text) => {
-      const editable = document.querySelector('[contenteditable="true"]')
-        || document.querySelector('div.q-text textarea')
-        || document.querySelector('textarea');
+      const selectors = [
+        'div[contenteditable="true"][data-testid]',
+        'div.q-box.qu-font--regular[contenteditable="true"]',
+        '[contenteditable="true"]',
+        'div.q-text textarea',
+        'textarea',
+      ];
+      let editable = null;
+      for (const sel of selectors) {
+        editable = document.querySelector(sel);
+        if (editable) break;
+      }
       if (!editable) return false;
       editable.focus();
       if (editable.tagName === 'TEXTAREA') {
@@ -241,17 +259,31 @@ async function postAnswer({ connectionId, questionUrl, content }) {
     }, plainText);
 
     if (!filled) {
-      const typed = await tryFill(pageRef, ['textarea', '[contenteditable="true"]'], plainText);
+      const typed = await tryFill(pageRef, [
+        'div[contenteditable="true"][data-testid]',
+        'div.q-box[contenteditable="true"]',
+        'textarea',
+        '[contenteditable="true"]',
+      ], plainText);
       if (!typed) throw new Error('Could not find Quora answer editor on this question page.');
     }
 
     await delay(1000);
-    const posted = await tryClick(pageRef, [
+    let posted = await tryClick(pageRef, [
       'button[class*="Submit"]',
       'button[class*="submit"]',
       'div[role="button"][class*="Post"]',
       'button[type="submit"]',
+      '[data-testid="submit_button"]',
     ]);
+    if (!posted) {
+      posted = await pageRef.evaluate(() => {
+        const nodes = [...document.querySelectorAll('button, div[role="button"]')];
+        const el = nodes.find((n) => /^(post|submit)$/i.test((n.innerText || '').trim()));
+        if (el) { el.click(); return true; }
+        return false;
+      });
+    }
 
     if (!posted) throw new Error('Could not submit Quora answer — post button not found.');
 

@@ -12,6 +12,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .hero { background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(167,139,250,0.12)); border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
 .hero h1 { margin: 0 0 0.5rem; font-size: 1.6rem; display: flex; align-items: center; gap: 10px; }
 .hero p { margin: 0; color: #94a3b8; font-size: 0.9rem; max-width: 720px; }
+.lab-bridge { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.lab-bridge-card { background: linear-gradient(135deg, rgba(185,28,28,0.14), rgba(30,41,59,0.85)); border: 1px solid #475569; border-radius: 10px; padding: 1.1rem 1.25rem; cursor: pointer; transition: border-color 0.2s, transform 0.2s; }
+.lab-bridge-card:hover { transform: translateY(-2px); border-color: #b91c1c; }
+.lab-bridge-card h3 { margin: 0 0 0.35rem; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.lab-bridge-card p { margin: 0; color: #94a3b8; font-size: 0.78rem; line-height: 1.45; }
 .module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .module-card { background: rgba(30,41,59,0.75); border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; cursor: pointer; transition: border-color 0.2s, transform 0.2s; }
 .module-card:hover { transform: translateY(-2px); }
@@ -57,7 +62,14 @@ textarea { min-height: 70px; resize: vertical; }
   <div class="container">
     <div class="hero">
       <h1><i class="fas fa-brain" style="color:#a78bfa;"></i> Powered by the Latest in AI</h1>
-      <p>Six intelligent growth modules for Reddit and content marketing — organic presence, thread outreach, viral posts, inbox replies, Medium articles, and trend-driven product ideas. Actions queue for your approval before posting.</p>
+      <p>Seven intelligent growth modules for Reddit, Quora, and content marketing — organic presence, thread outreach, viral posts, inbox replies, Medium articles, trend-driven product ideas, and Quora traffic ops. Actions queue for your approval before posting.</p>
+    </div>
+
+    <div class="lab-bridge">
+      <div class="lab-bridge-card" id="openQuoraLab">
+        <h3><i class="fab fa-quora" style="color:#b91c1c;"></i> Quora Traffic Ops</h3>
+        <p>Research high-traffic questions, generate contextual answers with your brand angle, and publish via your linked Quora session.</p>
+      </div>
     </div>
 
     <div class="module-grid" id="moduleGrid"></div>
@@ -311,6 +323,9 @@ window.dismissAction = async function(id) {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('openQuoraLab')?.addEventListener('click', () => {
+    window.location.href = 'quora-traffic-ops.html';
+  });
   const hash = (location.hash || '').replace('#', '');
   if (hash && MODULE_UI[hash]) activeModule = hash;
   await refreshStatus();

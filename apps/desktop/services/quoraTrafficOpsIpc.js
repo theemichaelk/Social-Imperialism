@@ -19,6 +19,7 @@ function registerQuoraTrafficOpsHandlers({
     'fetch-youtube-transcript',
     'save-quora-traffic-answer',
     'delete-quora-traffic-answer',
+    'lookup-quora-question-url',
   ];
 
   channels.forEach((ch) => {
@@ -33,13 +34,14 @@ function registerQuoraTrafficOpsHandlers({
     generateAIWithModel: generateAIWithModel || ((p, m) => generateAI(p)),
     campaign: getCampaign(),
     linkedAccounts: getLinkedAccounts ? getLinkedAccounts() : [],
+    keys: keys(),
     store,
     campaignId: campaignId(),
   });
 
   ipcMain.handle('get-quora-traffic-status', () => {
-    const cid = campaignId();
-    return quoraTrafficOps.getStatus(store, cid, keys(), deps().linkedAccounts);
+    const d = deps();
+    return quoraTrafficOps.getStatus(store, d.campaignId, keys(), d.linkedAccounts, d.campaign);
   });
 
   ipcMain.handle('get-quora-traffic-settings', () => ({
@@ -118,6 +120,21 @@ function registerQuoraTrafficOpsHandlers({
     settings.answers = settings.answers.filter((a) => a.id !== id);
     quoraTrafficOps.saveSettings(store, campaignId(), settings);
     return { success: true };
+  });
+
+  ipcMain.handle('lookup-quora-question-url', async (event, { url, keyword }) => {
+    try {
+      const question = await quoraTrafficOps.lookupQuestionByUrl(url, keyword || 'manual');
+      const settings = quoraTrafficOps.loadSettings(store, campaignId());
+      const cached = settings.cachedQuestions || [];
+      if (!cached.some((q) => q.url === question.url)) {
+        settings.cachedQuestions = [question, ...cached];
+        quoraTrafficOps.saveSettings(store, campaignId(), settings);
+      }
+      return { success: true, question };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
   });
 }
 

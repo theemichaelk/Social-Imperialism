@@ -20,6 +20,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .status-chip.ok { border-color: #10b981; color: #6ee7b7; }
 .status-chip.warn { border-color: #f59e0b; color: #fcd34d; }
 .status-chip.bad { border-color: #ef4444; color: #fca5a5; }
+.status-chip.link { border-color: #38bdf8; color: #7dd3fc; cursor: pointer; }
+.status-chip.link:hover { background: rgba(56,189,248,0.12); }
 .mode-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: rgba(30,41,59,0.75); border: 1px solid #334155; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
 .mode-bar h3 { margin: 0; font-size: 0.95rem; color: #e2e8f0; }
 .mode-toggle { display: flex; border: 1px solid #475569; border-radius: 8px; overflow: hidden; }
@@ -157,6 +159,13 @@ textarea { min-height: 80px; resize: vertical; }
         </div>
         <button class="btn primary" id="btnScrape"><i class="fas fa-search"></i> Scrape Quora</button>
       </div>
+      <div class="scrape-row" style="margin-top:0.75rem;">
+        <div class="kw-wrap">
+          <label>Or paste a Quora question URL</label>
+          <input type="text" id="manualQuestionUrl" placeholder="https://www.quora.com/How-does-...">
+        </div>
+        <button class="btn" id="btnAddQuestionUrl"><i class="fas fa-link"></i> Add question</button>
+      </div>
       <div id="scrapeStatus" style="font-size:0.78rem;color:#64748b;margin-top:0.5rem;"></div>
       <table class="questions-table" id="questionsTable" style="display:none;">
         <thead>
@@ -243,10 +252,11 @@ textarea { min-height: 80px; resize: vertical; }
 
           <label style="margin-top:1rem;">AI model</label>
           <select id="aiModel">
-            <option value="openai/gpt-4o-mini">GPT-4o Mini (fast)</option>
-            <option value="openai/gpt-4o">GPT-4o</option>
-            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-            <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+            <option value="gemini">Gemini (recommended)</option>
+            <option value="openai/gpt-4o-mini">GPT-4o Mini (OpenRouter)</option>
+            <option value="openai/gpt-4o">GPT-4o (OpenRouter)</option>
+            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (OpenRouter)</option>
+            <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash (OpenRouter)</option>
           </select>
 
           <div class="btn-row">
@@ -321,17 +331,54 @@ function setStep(step) {
 }
 
 function renderStatus() {
+  const aiLabel = status.hasAI
+    ? (status.hasGemini && !status.hasOpenRouter ? 'Gemini AI ready' : status.hasOpenRouter ? 'OpenRouter AI ready' : 'AI ready')
+    : 'Add Gemini or OpenRouter in Settings';
   const chips = [
-    { ok: status.hasSerpApi, label: status.hasSerpApi ? 'SerpAPI connected' : 'SerpAPI missing (Settings)' },
-    { ok: status.hasOpenRouter, label: status.hasOpenRouter ? 'OpenRouter connected' : 'OpenRouter missing (Settings)' },
-    { ok: status.quoraLinked, label: status.quoraLinked ? 'Quora account linked' : 'Link Quora in Account Hub' },
-    { ok: status.sessionValid, label: status.sessionValid ? 'Quora session active' : 'Quora session not saved' },
+    { ok: status.hasSerpApi, label: status.hasSerpApi ? 'SerpAPI connected' : 'SerpAPI optional (free search fallback)', warn: !status.hasSerpApi },
+    { ok: status.hasAI, label: aiLabel },
+    { ok: status.puppeteerOk, label: status.puppeteerOk ? 'Browser automation ready' : 'Puppeteer not installed', warn: !status.puppeteerOk },
+    { ok: status.quoraLinked, label: status.quoraLinked ? `Quora linked${status.quoraHandle ? ` (${status.quoraHandle})` : ''}` : 'Link Quora in Account Hub', link: !status.quoraLinked },
+    { ok: status.sessionValid, label: status.sessionValid ? 'Quora session active' : (status.quoraLinked ? 'Re-link Quora to refresh session' : 'Quora session not saved'), warn: status.quoraLinked && !status.sessionValid },
     { ok: true, label: `${status.draftCount || 0} drafts · ${status.publishedCount || 0} published` },
   ];
   document.getElementById('statusBar').innerHTML = chips.map((c) => {
-    const cls = c.ok ? 'ok' : (c.label.includes('missing') || c.label.includes('Link') ? 'bad' : 'warn');
-    return `<span class="status-chip ${cls}">${escapeHtml(c.label)}</span>`;
+    let cls = 'ok';
+    if (!c.ok && c.link) cls = 'link';
+    else if (!c.ok && c.warn) cls = 'warn';
+    else if (!c.ok) cls = 'bad';
+    return `<span class="status-chip ${cls}" ${c.link ? 'data-action="link-quora"' : ''}>${escapeHtml(c.label)}</span>`;
   }).join('');
+  document.querySelectorAll('[data-action="link-quora"]').forEach((el) => {
+    el.onclick = () => { window.location.href = 'account-hub.html'; };
+  });
+}
+
+async function syncCampaignToAngle() {
+  const campaign = status.campaign || {};
+  if (!campaign.brandName && !campaign.domain && !campaign.description) return;
+  const angle = settings.angles?.find((a) => a.id === settings.activeAngleId) || settings.angles?.[0];
+  if (!angle) return;
+  let updated = false;
+  if (!angle.brandPositioning?.trim() && campaign.description) {
+    angle.brandPositioning = campaign.description;
+    updated = true;
+  }
+  if (!angle.productContext?.trim() && campaign.brandName) {
+    angle.productContext = campaign.brandName;
+    updated = true;
+  }
+  if (!angle.ctaUrl?.trim() && campaign.domain) {
+    angle.ctaUrl = campaign.domain.startsWith('http') ? campaign.domain : `https://${campaign.domain}`;
+    updated = true;
+  }
+  if ((!angle.name || angle.name === 'Default Brand Angle') && campaign.brandName) {
+    angle.name = campaign.brandName;
+    updated = true;
+  }
+  if (updated) {
+    await ipcRenderer.invoke('save-quora-traffic-settings', { angles: settings.angles });
+  }
 }
 
 function applyModeUI() {
@@ -553,7 +600,7 @@ async function publishAnswer(answer) {
   const automated = settings.mode === 'automated';
   showToast('Publishing to Quora…');
   const res = await ipcRenderer.invoke('publish-quora-answer', { answer: payload, automated });
-  if (res?.success || res?.livePosted) {
+  if (res?.livePosted) {
     showToast('Published to Quora!');
     await refreshSettings();
     await refreshStatus();
@@ -561,6 +608,9 @@ async function publishAnswer(answer) {
     renderPublishedLog();
     currentAnswer = null;
     document.getElementById('answerEditor').value = '';
+  } else if (res?.draft) {
+    showToast(res?.message || 'Saved as draft — link Quora in Account Hub to post live');
+    await refreshSettings();
   } else {
     showToast(res?.error || res?.message || 'Publish failed — link Quora in Account Hub');
   }
@@ -594,6 +644,32 @@ document.getElementById('btnAutomated').onclick = async () => {
 ['minViews', 'minUpvotes', 'autoPublish', 'aiModel'].forEach((id) => {
   document.getElementById(id).addEventListener('change', () => saveModeSettings());
 });
+
+document.getElementById('btnAddQuestionUrl').onclick = async () => {
+  const url = document.getElementById('manualQuestionUrl').value.trim();
+  if (!url) { showToast('Paste a Quora question URL'); return; }
+  document.getElementById('btnAddQuestionUrl').disabled = true;
+  document.getElementById('scrapeStatus').textContent = 'Looking up question…';
+  const res = await ipcRenderer.invoke('lookup-quora-question-url', {
+    url,
+    keyword: document.getElementById('scrapeKeyword').value.trim() || 'manual',
+  });
+  document.getElementById('btnAddQuestionUrl').disabled = false;
+  if (res?.success && res.question) {
+    selectedQuestion = res.question;
+    await refreshSettings();
+    questions = settings.cachedQuestions || [];
+    renderQuestions();
+    updateSelectedQuestionBox();
+    document.getElementById('btnToGenerate').disabled = false;
+    document.getElementById('scrapeStatus').textContent = 'Question added from URL';
+    document.getElementById('manualQuestionUrl').value = '';
+    showToast('Question added');
+  } else {
+    document.getElementById('scrapeStatus').textContent = res?.error || 'Could not load question';
+    showToast(res?.error || 'Could not load question');
+  }
+};
 
 document.getElementById('btnScrape').onclick = async () => {
   const keyword = document.getElementById('scrapeKeyword').value.trim();
@@ -754,6 +830,9 @@ document.getElementById('btnPublishNow').onclick = async () => {
 (async () => {
   await refreshStatus();
   await refreshSettings();
+  await syncCampaignToAngle();
+  await refreshSettings();
+  if (!status.hasAI) showToast('Add a Gemini key in Settings to generate answers');
   renderFrameworks();
   if (settings.lastScrape?.keyword) {
     document.getElementById('scrapeKeyword').value = settings.lastScrape.keyword;

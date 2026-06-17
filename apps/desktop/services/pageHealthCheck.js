@@ -84,7 +84,7 @@ const NAV_SECTIONS = [
     label: 'Quora',
     html: 'quora-traffic-ops.html',
     requiredKeys: [],
-    optionalKeys: ['serpApiKey', 'openrouter'],
+    optionalKeys: ['serpApiKey', 'openrouter', 'gemini'],
     dataChecks: ['activeCampaign', 'linkedAccounts'],
   },
   {
