@@ -265,6 +265,59 @@ function cleanSearchTitle(title, url) {
   return t;
 }
 
+function parseMojeekHtml(html, limit = 20) {
+  const items = [];
+  const seen = new Set();
+  const blockRe = /<!--rs--><li class="r\d+">([\s\S]*?)<!--re-->/gi;
+  let m;
+  while ((m = blockRe.exec(html)) !== null && items.length < limit) {
+    const block = m[1];
+    const urlM = block.match(/href="(https?:\/\/(?:www\.)?quora\.com\/[^"]+)"/i);
+    if (!urlM) continue;
+    const url = urlM[1].split('#')[0];
+    const titleAttr = block.match(/<a class="title"[^>]*title="([^"]+)"/i);
+    const title = cleanSearchTitle(
+      titleAttr ? titleAttr[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"') : '',
+      url,
+    );
+    if (!isValidQuoraQuestionUrl(url, title) || seen.has(url)) continue;
+    seen.add(url);
+    const snippetM = block.match(/<p class="s">([\s\S]*?)<\/p>/i);
+    const snippet = snippetM
+      ? snippetM[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      : '';
+    items.push({ url, title, snippet });
+  }
+  return items;
+}
+
+async function scrapeViaMojeekBrowser(keyword, limit = 20) {
+  let puppeteer;
+  try { puppeteer = require('puppeteer'); } catch (e) { return []; }
+  if (!puppeteer) return [];
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.goto(`https://www.mojeek.com/search?q=${encodeURIComponent(`site:quora.com ${keyword}`)}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 45000,
+    });
+    await new Promise((r) => setTimeout(r, 2500));
+    const html = await page.content();
+    await browser.close();
+    return parseMojeekHtml(html, limit);
+  } catch (e) {
+    if (browser) try { await browser.close(); } catch (err) { /* ignore */ }
+    console.warn('Quora Mojeek browser search:', e.message);
+    return [];
+  }
+}
+
 async function scrapeViaMojeekSearch(keyword, limit = 20) {
   try {
     const res = await axios.get('https://www.mojeek.com/search', {
@@ -276,34 +329,12 @@ async function scrapeViaMojeekSearch(keyword, limit = 20) {
       },
       timeout: 25000,
     });
-    const html = String(res.data || '');
-    const items = [];
-    const seen = new Set();
-    const blockRe = /<!--rs--><li class="r\d+">([\s\S]*?)<!--re-->/gi;
-    let m;
-    while ((m = blockRe.exec(html)) !== null && items.length < limit) {
-      const block = m[1];
-      const urlM = block.match(/href="(https?:\/\/(?:www\.)?quora\.com\/[^"]+)"/i);
-      if (!urlM) continue;
-      const url = urlM[1].split('#')[0];
-      const titleAttr = block.match(/<a class="title"[^>]*title="([^"]+)"/i);
-      const title = cleanSearchTitle(
-        titleAttr ? titleAttr[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"') : '',
-        url,
-      );
-      if (!isValidQuoraQuestionUrl(url, title) || seen.has(url)) continue;
-      seen.add(url);
-      const snippetM = block.match(/<p class="s">([\s\S]*?)<\/p>/i);
-      const snippet = snippetM
-        ? snippetM[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-        : '';
-      items.push({ url, title, snippet });
-    }
-    return items;
+    const items = parseMojeekHtml(String(res.data || ''), limit);
+    if (items.length) return items;
   } catch (e) {
     console.warn('Quora Mojeek search:', e.message);
-    return [];
   }
+  return scrapeViaMojeekBrowser(keyword, limit);
 }
 
 async function scrapeViaBraveSearch(keyword, limit = 20) {
