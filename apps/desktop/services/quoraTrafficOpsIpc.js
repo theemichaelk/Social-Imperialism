@@ -54,10 +54,14 @@ function registerQuoraTrafficOpsHandlers({
     return { success: true, settings: saved };
   });
 
-  ipcMain.handle('scrape-quora-questions', async (event, { keyword, limit, enrich }) => {
+  ipcMain.handle('scrape-quora-questions', async (event, { keyword, limit, enrich, enrichMax }) => {
     try {
       if (!keyword?.trim()) return { success: false, error: 'Keyword required' };
-      const questions = await quoraTrafficOps.scrapeQuestions(keyword.trim(), keys(), { limit: limit || 25, enrich });
+      const questions = await quoraTrafficOps.scrapeQuestions(keyword.trim(), keys(), {
+        limit: limit || 25,
+        enrich: enrich !== false,
+        enrichMax: enrichMax || 5,
+      });
       const settings = quoraTrafficOps.loadSettings(store, campaignId());
       settings.lastScrape = { keyword, at: new Date().toISOString(), count: questions.length };
       settings.cachedQuestions = questions;

@@ -674,9 +674,9 @@ document.getElementById('btnAddQuestionUrl').onclick = async () => {
 document.getElementById('btnScrape').onclick = async () => {
   const keyword = document.getElementById('scrapeKeyword').value.trim();
   if (!keyword) { showToast('Enter a keyword'); return; }
-  document.getElementById('scrapeStatus').textContent = 'Scraping Quora… (may take a minute with live metrics)';
+  document.getElementById('scrapeStatus').textContent = 'Searching Quora… (live metrics load for top 5, ~30 sec)';
   document.getElementById('btnScrape').disabled = true;
-  const res = await ipcRenderer.invoke('scrape-quora-questions', { keyword, limit: 25, enrich: true });
+  const res = await ipcRenderer.invoke('scrape-quora-questions', { keyword, limit: 25, enrich: true, enrichMax: 5 });
   document.getElementById('btnScrape').disabled = false;
   if (res?.success) {
     questions = res.questions || [];
