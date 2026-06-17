@@ -200,7 +200,7 @@ function estimateMetricsFromRank(index, snippet) {
 const QUORA_JUNK_PATHS = /\/(?:login|signup|search|topic|profile|user|spaces|about|terms|privacy|help|contact|careers|press|qemail|settings)(?:\/|$|\?)/i;
 
 function isValidQuoraQuestionUrl(url, title = '') {
-  if (!url || !url.includes('quora.com') || QUORA_JUNK_PATHS.test(url)) return false;
+  if (!url || !url.includes('quora.com') || url.includes('business.quora.com') || QUORA_JUNK_PATHS.test(url)) return false;
   const path = url.replace(/^https?:\/\/(?:www\.)?quora\.com/i, '').split('?')[0];
   if (!path || path === '/' || path.startsWith('/search')) return false;
   const t = String(title).toLowerCase();
@@ -251,14 +251,59 @@ async function enrichQuestionMetrics(entry) {
   return entry;
 }
 
+function titleFromQuoraUrl(url) {
+  if (!url) return '';
+  const slug = url.replace(/\/$/, '').split('/').pop() || '';
+  return decodeURIComponent(slug).replace(/-/g, ' ').replace(/\?.*$/, '').trim();
+}
+
 function cleanSearchTitle(title, url) {
   let t = String(title || '').replace(/ - Quora.*$/i, '').trim();
+  if (/^https?:\/\/(?:www\.)?quora\.com\//i.test(t) || /^quora\.com\//i.test(t)) t = '';
   t = t.replace(/^Quora\s+quora\.com\s*[›>]\s*[^\s›>]+\s*/i, '').trim();
-  if ((!t || t.length < 8) && url) {
-    const slug = url.replace(/\/$/, '').split('/').pop() || '';
-    t = decodeURIComponent(slug).replace(/-/g, ' ').replace(/\?.*$/, '').trim();
-  }
+  if (!t || t.length < 8) t = titleFromQuoraUrl(url);
   return t;
+}
+
+async function scrapeViaMojeekSearch(keyword, limit = 20) {
+  try {
+    const res = await axios.get('https://www.mojeek.com/search', {
+      params: { q: `site:quora.com ${keyword}` },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      timeout: 25000,
+    });
+    const html = String(res.data || '');
+    const items = [];
+    const seen = new Set();
+    const blockRe = /<!--rs--><li class="r\d+">([\s\S]*?)<!--re-->/gi;
+    let m;
+    while ((m = blockRe.exec(html)) !== null && items.length < limit) {
+      const block = m[1];
+      const urlM = block.match(/href="(https?:\/\/(?:www\.)?quora\.com\/[^"]+)"/i);
+      if (!urlM) continue;
+      const url = urlM[1].split('#')[0];
+      const titleAttr = block.match(/<a class="title"[^>]*title="([^"]+)"/i);
+      const title = cleanSearchTitle(
+        titleAttr ? titleAttr[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"') : '',
+        url,
+      );
+      if (!isValidQuoraQuestionUrl(url, title) || seen.has(url)) continue;
+      seen.add(url);
+      const snippetM = block.match(/<p class="s">([\s\S]*?)<\/p>/i);
+      const snippet = snippetM
+        ? snippetM[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+        : '';
+      items.push({ url, title, snippet });
+    }
+    return items;
+  } catch (e) {
+    console.warn('Quora Mojeek search:', e.message);
+    return [];
+  }
 }
 
 async function scrapeViaBraveSearch(keyword, limit = 20) {
@@ -393,6 +438,11 @@ async function scrapeQuestions(keyword, keys, options = {}) {
     } catch (e) {
       console.error('Quora Traffic SerpAPI:', e.message);
     }
+  }
+
+  if (results.length < limit) {
+    const mojeekHits = await scrapeViaMojeekSearch(keyword, limit);
+    mojeekHits.forEach((item, i) => pushQuestionResult(results, seen, item, keyword, i, enrich, keys));
   }
 
   if (results.length < limit) {
@@ -657,6 +707,7 @@ module.exports = {
   loadSettings,
   saveSettings,
   scrapeQuestions,
+  scrapeViaMojeekSearch,
   scrapeViaBraveSearch,
   scrapeViaDuckDuckGo,
   scrapeViaQuoraBrowser,

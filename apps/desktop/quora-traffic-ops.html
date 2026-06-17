@@ -335,7 +335,7 @@ function renderStatus() {
     ? (status.hasGemini && !status.hasOpenRouter ? 'Gemini AI ready' : status.hasOpenRouter ? 'OpenRouter AI ready' : 'AI ready')
     : 'Add Gemini or OpenRouter in Settings';
   const chips = [
-    { ok: status.hasSerpApi, label: status.hasSerpApi ? 'SerpAPI connected' : 'SerpAPI optional (free search fallback)', warn: !status.hasSerpApi },
+    { ok: status.hasSerpApi, label: status.hasSerpApi ? 'SerpAPI connected' : 'Free search active (Mojeek/Brave)', warn: !status.hasSerpApi },
     { ok: status.hasAI, label: aiLabel },
     { ok: status.puppeteerOk, label: status.puppeteerOk ? 'Browser automation ready' : 'Puppeteer not installed', warn: !status.puppeteerOk },
     { ok: status.quoraLinked, label: status.quoraLinked ? `Quora linked${status.quoraHandle ? ` (${status.quoraHandle})` : ''}` : 'Link Quora in Account Hub', link: !status.quoraLinked },
