@@ -3,35 +3,39 @@
  */
 const axios = require('axios');
 const quoraBrowser = require('../quoraBrowserAutomation');
+const { discoverQuoraPosts } = require('../webDiscovery');
 
 const UA = 'SocialImperialism/1.0';
 
 async function searchPosts(keyword, keys, limit = 5) {
-  if (!keys?.serpApiKey || !keyword?.trim()) return [];
-  try {
-    const res = await axios.get('https://serpapi.com/search.json', {
-      params: {
-        engine: 'google',
-        q: `site:quora.com ${keyword}`,
-        api_key: keys.serpApiKey,
-        num: Math.min(limit, 10),
-      },
-      timeout: 20000,
-    });
-    return (res.data?.organic_results || []).slice(0, limit).map((r, i) => ({
-      platform: 'Quora',
-      externalId: `quora_${Buffer.from(r.link || '').toString('base64').slice(0, 24)}_${i}`,
-      content: r.title || r.snippet || '',
-      url: r.link,
-      author: r.source || 'Quora',
-      createdAt: Date.now(),
-      stats: { likes: 0, comments: 0, views: 0 },
-      matchedKeyword: keyword,
-    }));
-  } catch (e) {
-    console.error('Quora Serp search error:', e.message);
-    return [];
+  if (!keyword?.trim()) return [];
+  if (keys?.serpApiKey) {
+    try {
+      const res = await axios.get('https://serpapi.com/search.json', {
+        params: {
+          engine: 'google',
+          q: `site:quora.com ${keyword}`,
+          api_key: keys.serpApiKey,
+          num: Math.min(limit, 10),
+        },
+        timeout: 20000,
+      });
+      const mapped = (res.data?.organic_results || []).slice(0, limit).map((r, i) => ({
+        platform: 'Quora',
+        externalId: `quora_${Buffer.from(r.link || '').toString('base64').slice(0, 24)}_${i}`,
+        content: r.title || r.snippet || '',
+        url: r.link,
+        author: r.source || 'Quora',
+        createdAt: Date.now(),
+        stats: { likes: 0, comments: 0, views: 0 },
+        matchedKeyword: keyword,
+      }));
+      if (mapped.length) return mapped;
+    } catch (e) {
+      console.error('Quora Serp search error:', e.message);
+    }
   }
+  return discoverQuoraPosts(keyword, keys, limit);
 }
 
 function discoverAccounts(username, email, extras = {}) {

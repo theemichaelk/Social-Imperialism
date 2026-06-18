@@ -342,6 +342,28 @@ async function runRedditProspector(store, keys, campaign) {
     });
   } catch (e) {
     console.error('Reddit prospector error:', e.message);
+    try {
+      const { discoverRedditPosts } = require('./webDiscovery');
+      const hits = await discoverRedditPosts(query, keys, 15);
+      hits.forEach((p) => {
+        const intent = (p.content || '').toLowerCase();
+        const isLead = intent.includes('recommend') || intent.includes('best') || intent.includes('alternative') || intent.includes('help') || intent.includes('?');
+        if (isLead) {
+          leads.push({
+            platform: 'Reddit',
+            author: p.author || 'Reddit',
+            content: p.content,
+            ups: 0,
+            url: p.url,
+            externalId: p.externalId,
+            score: 10,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      });
+    } catch (err) {
+      console.error('Reddit prospector web fallback:', err.message);
+    }
   }
 
   leads.sort((a, b) => b.score - a.score);

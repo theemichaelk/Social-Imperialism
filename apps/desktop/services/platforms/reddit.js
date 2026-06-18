@@ -1,15 +1,9 @@
 const axios = require('axios');
+const { discoverRedditPosts } = require('../webDiscovery');
 
 const UA = 'SocialImperialism/1.0 by SocialImperialismApp';
 
-async function searchPosts(keyword, keys, limit = 5) {
-  try {
-    const res = await axios.get('https://www.reddit.com/search.json', {
-      params: { q: keyword, limit, sort: 'new', type: 'link' },
-      headers: { 'User-Agent': UA },
-    });
-
-    return (res.data?.data?.children || []).map((child) => {
+function mapRedditChild(child, keyword) {
       const post = child.data;
       return {
         platform: 'Reddit',
@@ -30,9 +24,34 @@ async function searchPosts(keyword, keys, limit = 5) {
           views: 0,
         },
       };
+}
+
+async function searchPosts(keyword, keys, limit = 5) {
+  try {
+    const res = await axios.get('https://www.reddit.com/search.json', {
+      params: { q: keyword, limit, sort: 'new', type: 'link' },
+      headers: { 'User-Agent': UA },
+      timeout: 15000,
     });
+
+    const mapped = (res.data?.data?.children || []).map((child) => mapRedditChild(child, keyword));
+    if (mapped.length) return mapped;
   } catch (e) {
     console.error('Reddit search error:', e.message);
+  }
+
+  const fallback = await discoverRedditPosts(keyword, keys, limit);
+  if (fallback.length) return fallback;
+
+  try {
+    const res = await axios.get('https://www.reddit.com/hot.json', {
+      params: { limit: Math.min(limit, 15) },
+      headers: { 'User-Agent': UA },
+      timeout: 15000,
+    });
+    return (res.data?.data?.children || []).slice(0, limit).map((child) => mapRedditChild(child, keyword));
+  } catch (e) {
+    console.error('Reddit hot fallback error:', e.message);
     return [];
   }
 }

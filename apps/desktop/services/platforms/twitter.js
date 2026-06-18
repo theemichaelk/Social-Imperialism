@@ -57,7 +57,8 @@ async function searchPosts(keyword, keys, limit = 5) {
     });
   } catch (e) {
     console.error('Twitter search error:', e.message);
-    return [];
+    const { discoverTwitterPosts } = require('../webDiscovery');
+    return discoverTwitterPosts(keyword, keys, limit);
   }
 }
 

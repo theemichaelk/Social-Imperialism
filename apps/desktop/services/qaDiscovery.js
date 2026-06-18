@@ -239,6 +239,27 @@ async function discoverQuestions(store, keys, campaign, generateAI) {
     });
   } catch (e) {
     console.error('Reddit Q&A discovery error:', e.message);
+    try {
+      const { discoverRedditPosts } = require('./webDiscovery');
+      const hits = await discoverRedditPosts(kwStr, keys, 15);
+      hits.forEach((p) => {
+        if (!p.content) return;
+        rawCandidates.push({
+          platform: 'Reddit',
+          views: 100,
+          engagement: 0,
+          comments: 0,
+          timeElapsed: 'recent',
+          content: p.content,
+          url: p.url,
+          externalId: p.externalId,
+          author: p.author || 'Reddit',
+          noAnswersYet: true,
+        });
+      });
+    } catch (err) {
+      console.error('Reddit web Q&A fallback:', err.message);
+    }
   }
 
   if (keys.serpApiKey) {

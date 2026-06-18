@@ -1,0 +1,140 @@
+/**
+ * Free + SerpAPI web search fallbacks when platform APIs block or rate-limit.
+ */
+const axios = require('axios');
+
+const SEARCH_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+function titleFromUrl(url) {
+  if (!url) return '';
+  const slug = url.replace(/\/$/, '').split('/').pop() || '';
+  return decodeURIComponent(slug).replace(/-/g, ' ').replace(/\?.*$/, '').trim();
+}
+
+function cleanTitle(raw, url) {
+  let t = String(raw || '').replace(/ - (Quora|Reddit).*$/i, '').trim();
+  if (/^https?:\/\//i.test(t) || /^quora\.com\//i.test(t)) t = '';
+  if (!t || t.length < 6) t = titleFromUrl(url);
+  return t;
+}
+
+function extractLinks(html, hostPattern, limit = 15) {
+  const items = [];
+  const seen = new Set();
+  const re = new RegExp(`href="(https?:\\/\\/(?:www\\.)?${hostPattern}[^"#]+)"[^>]*>([\\s\\S]*?)<\\/a>`, 'gi');
+  let m;
+  while ((m = re.exec(html)) !== null && items.length < limit * 2) {
+    const url = m[1].split('&')[0].split('#')[0];
+    const title = cleanTitle(m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), url);
+    if (!title || seen.has(url)) continue;
+    if (/\/(?:login|signup|search|topic|about|terms|privacy|help)(?:\/|$)/i.test(url)) continue;
+    seen.add(url);
+    items.push({ url, title });
+  }
+  return items.slice(0, limit);
+}
+
+async function searchViaBrave(query, hostPattern, limit = 15) {
+  try {
+    const res = await axios.get('https://search.brave.com/search', {
+      params: { q: query },
+      headers: { 'User-Agent': SEARCH_UA, Accept: 'text/html' },
+      timeout: 25000,
+      validateStatus: (s) => s < 500,
+    });
+    if (res.status !== 200) return [];
+    return extractLinks(String(res.data || ''), hostPattern, limit);
+  } catch (e) {
+    console.warn('Brave discovery:', e.message);
+    return [];
+  }
+}
+
+async function searchViaSerp(query, keys, limit = 15) {
+  if (!keys?.serpApiKey) return [];
+  try {
+    const res = await axios.get('https://serpapi.com/search.json', {
+      params: { engine: 'google', q: query, api_key: keys.serpApiKey, num: Math.min(limit, 20) },
+      timeout: 20000,
+    });
+    return (res.data?.organic_results || []).slice(0, limit).map((r) => ({
+      url: r.link,
+      title: cleanTitle(r.title || '', r.link),
+      snippet: r.snippet || '',
+    }));
+  } catch (e) {
+    console.warn('SerpAPI discovery:', e.message);
+    return [];
+  }
+}
+
+async function discoverSitePosts({ site, hostPattern, keyword, keys, limit = 5, platform }) {
+  const q = `site:${site} ${keyword}`;
+  const seen = new Set();
+  const out = [];
+
+  const merge = (hits) => {
+    hits.forEach((h) => {
+      if (out.length >= limit || !h.url || seen.has(h.url)) return;
+      seen.add(h.url);
+      out.push({
+        platform,
+        externalId: `${platform.toLowerCase()}_${Buffer.from(h.url).toString('base64').slice(0, 20)}`,
+        content: h.title || titleFromUrl(h.url),
+        url: h.url,
+        author: platform,
+        createdAt: Date.now(),
+        stats: { likes: 0, comments: 0, views: 0 },
+        matchedKeyword: keyword,
+        snippet: h.snippet || '',
+      });
+    });
+  };
+
+  merge(await searchViaSerp(q, keys, limit));
+  if (out.length < limit) merge(await searchViaBrave(q, hostPattern, limit));
+  if (out.length < limit) merge(await searchViaBrave(`${keyword} ${site.replace('.com', '')}`, hostPattern, limit));
+
+  return out.slice(0, limit);
+}
+
+async function discoverRedditPosts(keyword, keys, limit = 5) {
+  return discoverSitePosts({
+    site: 'reddit.com',
+    hostPattern: 'reddit\\.com',
+    keyword,
+    keys,
+    limit,
+    platform: 'Reddit',
+  });
+}
+
+async function discoverQuoraPosts(keyword, keys, limit = 5) {
+  return discoverSitePosts({
+    site: 'quora.com',
+    hostPattern: 'quora\\.com',
+    keyword,
+    keys,
+    limit,
+    platform: 'Quora',
+  });
+}
+
+async function discoverTwitterPosts(keyword, keys, limit = 5) {
+  return discoverSitePosts({
+    site: 'twitter.com',
+    hostPattern: '(?:twitter|x)\\.com',
+    keyword,
+    keys,
+    limit,
+    platform: 'Twitter',
+  });
+}
+
+module.exports = {
+  discoverRedditPosts,
+  discoverQuoraPosts,
+  discoverTwitterPosts,
+  searchViaBrave,
+  searchViaSerp,
+};

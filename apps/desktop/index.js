@@ -405,32 +405,54 @@ Rules for this brand:
       }
   }
   
-  // Default / Fallback: Gemini
+  // Default / Fallback: Gemini (try multiple models if primary 404s)
   if (!geminiKey) throw new Error("No AI API Keys configured. Please add one in Settings > API Integrations.");
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${latestModelName}:generateContent?key=${geminiKey}`;
-    const data = {
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }]
-    };
-    
-    const response = await axios.post(url, data, {
-      headers: {
-        'Content-Type': 'application/json'
+  const geminiModels = [...new Set([
+    latestModelName,
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+  ].filter(Boolean))];
+  let lastGeminiError = null;
+  for (const modelName of geminiModels) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
+      const response = await axios.post(url, {
+        contents: [{ parts: [{ text: finalPrompt }] }],
+      }, { headers: { 'Content-Type': 'application/json' }, timeout: 60000 });
+      if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        if (modelName !== latestModelName) latestModelName = modelName;
+        return response.data.candidates[0].content.parts[0].text;
       }
-    });
-    
-    if (response.data && response.data.candidates && response.data.candidates.length > 0) {
-      return response.data.candidates[0].content.parts[0].text;
+      lastGeminiError = new Error('Invalid response format from Gemini API');
+    } catch (error) {
+      lastGeminiError = error;
+      const status = error.response?.status;
+      if (status !== 404 && status !== 400) break;
+      console.warn(`Gemini model ${modelName} unavailable, trying next…`);
     }
-    throw new Error("Invalid response format from Gemini API");
-  } catch (error) {
-    console.error("Gemini Generation Error:", error.response ? error.response.data : error.message);
-    throw error;
   }
+  if (openrouterKey) {
+    try {
+      const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+        model: 'openai/gpt-4o-mini',
+        messages: [{ role: 'user', content: finalPrompt }],
+      }, {
+        headers: {
+          Authorization: `Bearer ${openrouterKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://socialimperialism.local',
+          'X-Title': 'Social Imperialism',
+        },
+        timeout: 60000,
+      });
+      return res.data.choices[0].message.content;
+    } catch (e) {
+      console.error('OpenRouter fallback error:', e.message);
+    }
+  }
+  console.error('Gemini Generation Error:', lastGeminiError?.response?.data || lastGeminiError?.message);
+  throw lastGeminiError || new Error('AI generation failed');
 }
 
 async function generateAIWithModel(prompt, modelId = 'gemini') {
@@ -741,8 +763,31 @@ function seedKeywordsFromCampaign(activeCampaignId) {
   return [...new Set(seeds.filter(Boolean))].slice(0, 5);
 }
 
+function ensureCampaignKeywords(activeCampaignId) {
+  let allKeywords = [];
+  try { allKeywords = JSON.parse(store.getItem('keywords') || '[]'); } catch (e) {}
+  const existing = allKeywords.filter((k) => k.campaignId === activeCampaignId);
+  if (existing.length) return existing;
+
+  const seeds = seedKeywordsFromCampaign(activeCampaignId);
+  if (!seeds.length) return [];
+
+  const newKws = seeds.map((term, i) => ({
+    id: `kw_seed_${Date.now()}_${i}`,
+    campaignId: activeCampaignId,
+    term,
+    platforms: ['Twitter', 'LinkedIn', 'Reddit', 'Quora', 'Facebook'],
+    intent: 'mentions',
+    metrics: { source: 'campaign_seed' },
+  }));
+  store.setItem('keywords', JSON.stringify([...allKeywords, ...newKws]));
+  console.log(`Auto-seeded ${newKws.length} keywords from campaign profile`);
+  return newKws;
+}
+
 async function fetchLiveFeed(filters = {}) {
   const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  ensureCampaignKeywords(activeCampaignId);
 
   let trackedKeywords = [];
   try {
@@ -2866,6 +2911,7 @@ ipcMain.handle('save-auto-search-settings', (event, settings) => {
 ipcMain.handle('trigger-full-auto-search', async () => {
   try {
     const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+    ensureCampaignKeywords(activeCampaignId);
     const campsData = store.getItem('campaigns');
     let campaign = {};
     if (campsData) {

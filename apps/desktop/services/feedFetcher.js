@@ -107,7 +107,7 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
       posts.push(...twPosts);
     }
 
-    if (keys.serpApiKey && platformAllowed('Quora', filters, allowedPlatforms)) {
+    if (platformAllowed('Quora', filters, allowedPlatforms)) {
       const qPosts = await quora.searchPosts(keyword, keys, 5);
       posts.push(...qPosts);
     }
@@ -130,6 +130,21 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
       if (!seen.has(key)) {
         seen.add(key);
         deduped.push(p);
+      }
+    });
+  }
+
+  if (deduped.length < minDesired && queryList[0]) {
+    const { discoverRedditPosts, discoverQuoraPosts } = require('./webDiscovery');
+    const webReddit = platformAllowed('Reddit', filters, allowedPlatforms)
+      ? await discoverRedditPosts(queryList[0], keys, 8) : [];
+    const webQuora = platformAllowed('Quora', filters, allowedPlatforms)
+      ? await discoverQuoraPosts(queryList[0], keys, 5) : [];
+    [...webReddit, ...webQuora].forEach((p) => {
+      const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(normalizePostStats(p));
       }
     });
   }
