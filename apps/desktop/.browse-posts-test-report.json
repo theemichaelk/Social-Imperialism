@@ -1,0 +1,72 @@
+[
+  {
+    "feature": "1. KPI Stats (get-dashboard-stats)",
+    "status": "OK",
+    "detail": "0 posts, 0 keywords"
+  },
+  {
+    "feature": "2. Keywords dropdown (get-keywords)",
+    "status": "PARTIAL",
+    "detail": "Auto-seeded 3 keywords (dropdown empty until refresh)"
+  },
+  {
+    "feature": "3. Live Feed — default filters",
+    "status": "OK",
+    "detail": "13 posts [Quora, Twitter, Reddit] — 13 urls, 0 API ids, 13 web-discovery"
+  },
+  {
+    "feature": "4. Live Feed — preset high-intent (strict filters)",
+    "status": "PARTIAL",
+    "detail": "Strict preset empties feed (13 raw → 0 filtered) — expected for low-engage discovery posts"
+  },
+  {
+    "feature": "5. Linked account chips (get-linked-accounts)",
+    "status": "PARTIAL",
+    "detail": "No linked accounts — connect in Account Hub for account feeds"
+  },
+  {
+    "feature": "6. Draft AI Reply (draft-post-reply)",
+    "status": "OK",
+    "detail": "\"Focus on content marketing, SEO, freemium models, and customer success\""
+  },
+  {
+    "feature": "7. Engage Like — Reddit API post",
+    "status": "PARTIAL",
+    "detail": "No Reddit post with real API id in feed"
+  },
+  {
+    "feature": "8. Engage Like — web-discovery post",
+    "status": "OK",
+    "detail": "Correctly rejects/fails synthetic id: Link a Reddit account in Account Hub to upvote or reply on Reddit."
+  },
+  {
+    "feature": "9. Be First monitors (save/get-watched-monitors)",
+    "status": "OK",
+    "detail": "1 monitor(s)"
+  },
+  {
+    "feature": "10. Post history merge (get-all-post-history)",
+    "status": "OK",
+    "detail": "0 published hub posts"
+  },
+  {
+    "feature": "11. Stock photos (search-stock-photo)",
+    "status": "OK",
+    "detail": "Unsplash search OK"
+  },
+  {
+    "feature": "12. Image generation (generate-image / FAL)",
+    "status": "OK",
+    "detail": "FAL key present"
+  },
+  {
+    "feature": "13. Live news sidebar (get-live-news)",
+    "status": "OK",
+    "detail": "4 headlines"
+  },
+  {
+    "feature": "14. Pagination simulation (5 per page)",
+    "status": "OK",
+    "detail": "13 posts → 3 pages at 5/page"
+  }
+]

@@ -853,9 +853,9 @@ function applyBrowseMode() {
 window.addEventListener('hashchange', applyBrowseMode);
 
 const PRESET_FETCH_PROFILES = [
-  { id: 'preset_high_intent_q', name: '★ High-intent questions (>100 views)', filters: { postType: 'question', minEngage: '100', time: '24h', sort: 'engagement' }},
+  { id: 'preset_high_intent_q', name: '★ High-intent questions', filters: { postType: 'question', minEngage: '0', time: 'all', sort: 'engagement' }},
   { id: 'preset_brand_no_reply', name: '★ Brand mentions (no replies yet)', filters: { noRepliesYet: true, minEngage: '0', postType: 'all' }},
-  { id: 'preset_media_only', name: '★ Posts with media only', filters: { media: 'media', minEngage: '10' }},
+  { id: 'preset_media_only', name: '★ Posts with media only', filters: { media: 'media', minEngage: '0' }},
 ];
 
 // Dashboard state
@@ -873,7 +873,12 @@ async function loadFeed() {
     document.getElementById('stat-engage').innerText = stats.totalEngagement;
     document.getElementById('stat-keys').innerText = stats.activeKeywords;
     window._feedKeywordCount = stats.activeKeywords || 0;
-    
+    if (typeof populateFeedKeywordFilter === 'function') {
+      await populateFeedKeywordFilter();
+      const kwCount = document.getElementById('feedKeywordFilter')?.options?.length || 0;
+      if (kwCount > 1) window._feedKeywordCount = kwCount - 1;
+    }
+
     const leadsElem = document.getElementById('stat-leads');
     if (leadsElem) leadsElem.innerText = stats.leadsGenerated || stats.inboundLeads || 0;
 
@@ -1050,7 +1055,8 @@ async function loadFeed() {
         // Check Post Type Filter (Heuristic approach since simulated)
         let passesPostType = true;
         if (postTypeFilter === 'question') {
-            passesPostType = p.content.includes('?');
+            passesPostType = p.content.includes('?')
+              || /\b(how|what|why|when|where|should|can|is|are|does|do)\b/i.test(p.content);
         } else if (postTypeFilter === 'complaint') {
             passesPostType = p.content.toLowerCase().includes('hate') || p.content.toLowerCase().includes('annoying') || p.content.toLowerCase().includes('sucks') || p.content.toLowerCase().includes('issue') || p.content.toLowerCase().includes('broken');
         } else if (postTypeFilter === 'praise') {
@@ -1453,22 +1459,32 @@ window.openPostPreview = function(postItem, url, platform, contentSnippet) {
   };
   document.getElementById('postPreviewPostNow').onclick = async () => {
     const finalReply = document.getElementById('postPreviewReplyText').value;
-    await ipcRenderer.invoke('save-ai-reply', {
-      originalPost: modal.dataset.content,
-      replyContent: finalReply,
-      platform: modal.dataset.platform,
-      status: 'published',
-      externalId: postItem?.dataset?.externalId || '',
-      url: postUrl,
-      matchedKeyword: modal.dataset.keyword || '',
-      source: 'manual',
-      replyMode: 'manual',
-      intent: 'brand',
-    });
-    await ipcRenderer.invoke('increment-ai-drafts');
-    alert('Reply saved to AI Replies history. Link accounts to post live to the platform.');
-    modal.style.display = 'none';
-    loadFeed();
+    const extId = postItem?.dataset?.externalId || '';
+    const webDisc = postItem?.dataset?.webDiscovery === '1' || /^(reddit|quora|twitter)_/i.test(extId);
+    const canPostLive = extId && !webDisc;
+    try {
+      await ipcRenderer.invoke('save-ai-reply', {
+        originalPost: modal.dataset.content,
+        replyContent: finalReply,
+        platform: modal.dataset.platform,
+        status: canPostLive ? 'published' : 'draft',
+        externalId: canPostLive ? extId : '',
+        url: postUrl,
+        matchedKeyword: modal.dataset.keyword || '',
+        source: 'manual',
+        replyMode: 'manual',
+        intent: 'brand',
+        isWebDiscovery: webDisc,
+      });
+      await ipcRenderer.invoke('increment-ai-drafts');
+      alert(canPostLive
+        ? 'Reply posted live and saved to AI Replies history.'
+        : 'Reply saved as draft in AI Replies. Link accounts or use posts with platform IDs to publish live.');
+      modal.style.display = 'none';
+      loadFeed();
+    } catch (err) {
+      alert('Failed to save/post reply: ' + err.message);
+    }
   };
   document.getElementById('postPreviewSchedule').onclick = async () => {
     const when = prompt('Schedule reply — enter minutes from now (e.g. 30):', '30');
@@ -1556,14 +1572,17 @@ function attachReplyListener(button) {
           const finalReply = responseArea.querySelector('.edit-reply-box').value;
           const platformName = postItem.dataset.platform || postItem.querySelector('.platform-badge').innerText;
           const externalId = postItem.dataset.externalId || '';
+          const webDisc = postItem.dataset.webDiscovery === '1' || /^(reddit|quora|twitter)_/i.test(externalId);
+          const canPostLive = externalId && !webDisc;
 
           await ipcRenderer.invoke('increment-ai-drafts');
           await ipcRenderer.invoke('save-ai-reply', {
             originalPost: content,
             replyContent: finalReply,
             platform: platformName,
-            status: externalId ? 'published' : 'draft',
-            externalId,
+            status: canPostLive ? 'published' : 'draft',
+            externalId: canPostLive ? externalId : '',
+            isWebDiscovery: webDisc,
             matchedKeyword: matchedKw,
             source: 'manual',
             replyMode: 'manual',
@@ -1572,8 +1591,10 @@ function attachReplyListener(button) {
             author: postItem?.querySelector('.post-author')?.innerText?.trim() || null,
           });
 
-          if (!externalId) {
-            alert('Reply saved locally. Link Twitter/Reddit accounts in Settings to post live replies to feed posts.');
+          if (!canPostLive) {
+            alert(webDisc
+              ? 'Reply saved as draft. Web-discovered posts must be replied to on the platform — use View Post to open the link.'
+              : 'Reply saved locally. Link Twitter/Reddit accounts in Account Hub to post live replies.');
           }
           
           ev.target.innerText = 'Transmission Complete';
@@ -1620,6 +1641,17 @@ function attachReplyListener(button) {
   });
 }
 
+function isWebDiscoveryPost(postItem) {
+  return postItem?.dataset?.webDiscovery === '1';
+}
+
+function openPostExternalUrl(postItem) {
+  const url = postItem?.dataset?.url;
+  if (!url) return false;
+  try { shell.openExternal(url); } catch (err) { window.open(url, '_blank'); }
+  return true;
+}
+
 function attachEngageListener(button, actionType) {
   if(!button) return;
   button.addEventListener('click', async (e) => {
@@ -1628,8 +1660,21 @@ function attachEngageListener(button, actionType) {
     const platform = e.target.getAttribute('data-platform');
     const externalId = postItem.dataset.externalId || '';
 
+    if (isWebDiscoveryPost(postItem) || (externalId && /^(reddit|quora|twitter)_/i.test(externalId))) {
+      if (openPostExternalUrl(postItem)) {
+        alert('This post was found via web search. Opened in your browser — engage there with your linked account.');
+      } else {
+        alert('This post was found via web search and has no direct link. Use View Post to preview.');
+      }
+      return;
+    }
+
     if (!externalId) {
-      alert('This post has no platform ID. Only live feed posts from Reddit/Twitter support Like/Share.');
+      if (openPostExternalUrl(postItem)) {
+        alert('Opened post in browser — engage there with your linked account.');
+        return;
+      }
+      alert('This post has no platform ID. Link accounts in Account Hub for API Like/Share, or use View Post.');
       return;
     }
     
@@ -2703,6 +2748,7 @@ function renderFeedPage() {
       const div = document.createElement('div');
       div.className = 'post-item';
       if (post.externalId) div.dataset.externalId = post.externalId;
+      if (post.isWebDiscovery) div.dataset.webDiscovery = '1';
       if (post.url) div.dataset.url = post.url;
       div.dataset.platform = post.platform || '';
       div.dataset.author = post.author || '';
@@ -2807,20 +2853,26 @@ function renderFeedPage() {
     }
 }
 
-// Populate Keywords Filter
-try {
-    ipcRenderer.invoke('get-keywords').then(keywords => {
-        const kwSelect = document.getElementById('feedKeywordFilter');
-        if (kwSelect && keywords && keywords.length > 0) {
-            keywords.forEach(kw => {
-                const opt = document.createElement('option');
-                opt.value = kw.term || kw;
-                opt.innerText = kw.term || kw;
-                kwSelect.appendChild(opt);
-            });
-        }
-    });
-} catch(e) {}
+async function populateFeedKeywordFilter() {
+  const kwSelect = document.getElementById('feedKeywordFilter');
+  if (!kwSelect) return;
+  const prev = kwSelect.value || 'all';
+  const keywords = await ipcRenderer.invoke('get-keywords').catch(() => []);
+  kwSelect.innerHTML = '<option value="all">All keywords</option>';
+  (keywords || []).forEach((kw) => {
+    const term = kw.term || kw;
+    if (!term) return;
+    const opt = document.createElement('option');
+    opt.value = term;
+    opt.textContent = term;
+    kwSelect.appendChild(opt);
+  });
+  if (prev !== 'all' && [...kwSelect.options].some((o) => o.value === prev)) {
+    kwSelect.value = prev;
+  }
+}
+
+populateFeedKeywordFilter();
 </script>
 </body>
 </html>

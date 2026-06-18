@@ -1150,16 +1150,16 @@ ipcMain.handle('save-keywords', (event, payload) => {
 
 ipcMain.handle('get-keywords', (event, campaignId) => {
   if (!campaignId) {
-    // tolerant: use active campaign or return all
-    campaignId = store.getItem('activeCampaignId') || null;
+    campaignId = store.getItem('activeCampaignId') || 'default';
   }
+  ensureCampaignKeywords(campaignId);
   const data = store.getItem('keywords');
   if (data) {
-    try { 
-        const parsed = JSON.parse(data); 
-        if (campaignId) return parsed.filter(k => k.campaignId === campaignId);
-        return parsed; // all if no active
-    } catch(e) {}
+    try {
+      const parsed = JSON.parse(data);
+      if (campaignId) return parsed.filter((k) => k.campaignId === campaignId);
+      return parsed;
+    } catch (e) {}
   }
   return [];
 });
@@ -1434,6 +1434,7 @@ ipcMain.handle('get-dashboard-stats', (event) => {
   let linkedAccountsCount = 0;
   let scheduledCount = 0;
   const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+  ensureCampaignKeywords(activeCampaignId);
 
   try {
     const kwData = store.getItem('keywords');
@@ -1528,8 +1529,9 @@ ipcMain.handle('save-ai-reply', async (event, replyData) => {
   const activeCampaignId = store.getItem('activeCampaignId') || 'default';
   const linkedAccounts = JSON.parse(store.getItem('linkedAccounts_' + activeCampaignId) || '[]');
 
+  const { isEngageablePost } = require('./services/postIdUtils');
   const normalizedStatus = aiReplyStore.normalizeStatus(replyData.status);
-  if (normalizedStatus === 'published' && replyData.externalId) {
+  if (normalizedStatus === 'published' && isEngageablePost(replyData)) {
     try {
       await integrations.engagePost({
         action: 'reply',

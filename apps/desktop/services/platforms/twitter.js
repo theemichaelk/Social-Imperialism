@@ -128,11 +128,14 @@ async function publish(postData, keys, accessToken) {
 }
 
 async function engage(payload, keys, accessToken) {
+  const { isSyntheticExternalId } = require('../postIdUtils');
   const client = getClientForPublish(keys, accessToken);
   if (!client) throw new Error('Twitter API credentials not configured');
 
   const tweetId = payload.postId || payload.externalId;
-  if (!tweetId) throw new Error('Missing tweet ID for engagement');
+  if (!tweetId || isSyntheticExternalId(tweetId)) {
+    throw new Error('This post was found via web search — open the link to engage on X/Twitter.');
+  }
 
   const me = await client.v2.me();
   const userId = me.data.id;

@@ -2,6 +2,7 @@ const twitter = require('./platforms/twitter');
 const linkedin = require('./platforms/linkedin');
 const meta = require('./platforms/meta');
 const quora = require('./platforms/quora');
+const reddit = require('./platforms/reddit');
 const { parseTokens } = require('./intelligenceProfile');
 const { pickEngagementAccount } = require('./accountAutomation');
 const { waitBeforeAction } = require('./humanBehavior');
@@ -41,6 +42,9 @@ async function engagePost(payload, keys, linkedAccounts, rules = null, store = n
     case 'Facebook Group':
     case 'Facebook Page':
       return meta.engage(payload, accessToken || keys.metaAccess);
+
+    case 'Reddit':
+      return reddit.engage(payload, keys, accessToken);
 
     case 'Quora':
       return quora.engage(payload, keys, tokens, account);

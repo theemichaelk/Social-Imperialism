@@ -131,4 +131,44 @@ async function publish(postData, keys, accessToken) {
   return res.data;
 }
 
-module.exports = { searchPosts, getProfile, discoverAccounts, discoverSubreddits, publish };
+async function engage(payload, keys, accessToken) {
+  const { isSyntheticExternalId } = require('../postIdUtils');
+  const token = accessToken || keys.rdAccess || keys.redditAccessToken;
+  if (!token) throw new Error('Link a Reddit account in Account Hub to upvote or reply on Reddit.');
+
+  const rawId = payload.postId || payload.externalId;
+  if (!rawId || isSyntheticExternalId(rawId)) {
+    throw new Error('This post was found via web search — open the link to engage on Reddit.');
+  }
+
+  const fullname = rawId.startsWith('t3_') ? rawId : `t3_${rawId}`;
+  const headers = { Authorization: `Bearer ${token}`, 'User-Agent': UA };
+
+  if (payload.action === 'like') {
+    const res = await axios.post(
+      'https://oauth.reddit.com/api/vote',
+      new URLSearchParams({ id: fullname, dir: '1' }),
+      { headers, timeout: 15000 },
+    );
+    return res.data;
+  }
+
+  if (payload.action === 'reply' && payload.content) {
+    const res = await axios.post(
+      'https://oauth.reddit.com/api/comment',
+      new URLSearchParams({ api_type: 'json', text: payload.content, thing_id: fullname }),
+      { headers, timeout: 20000 },
+    );
+    const errors = res.data?.json?.errors;
+    if (errors?.length) throw new Error(errors.map((e) => e.join(': ')).join('; '));
+    return res.data;
+  }
+
+  if (payload.action === 'share') {
+    throw new Error('Reddit cross-post requires opening the post — use View Post to share manually.');
+  }
+
+  throw new Error(`Unsupported Reddit action: ${payload.action}`);
+}
+
+module.exports = { searchPosts, getProfile, discoverAccounts, discoverSubreddits, publish, engage };

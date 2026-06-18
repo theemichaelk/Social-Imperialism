@@ -1,0 +1,82 @@
+[
+  {
+    "feature": "KPI Stats (get-dashboard-stats)",
+    "status": "OK",
+    "detail": "0 posts, 0 keywords"
+  },
+  {
+    "feature": "Platform Pulse (API keys)",
+    "status": "OK",
+    "detail": "Gemini, NewsAPI, SerpAPI, LinkedIn, Twitter"
+  },
+  {
+    "feature": "Headlines (get-live-news)",
+    "status": "OK",
+    "detail": "4 headlines"
+  },
+  {
+    "feature": "Trending Topics",
+    "status": "OK",
+    "detail": "6 topics (e.g. daveigh chase)"
+  },
+  {
+    "feature": "Live Feed (get-live-feed)",
+    "status": "OK",
+    "detail": "10 posts from Reddit, Twitter, Quora"
+  },
+  {
+    "feature": "Linked Accounts",
+    "status": "PARTIAL",
+    "detail": "No linked accounts — connect in Account Hub"
+  },
+  {
+    "feature": "AI Draft Reply (generate-ai)",
+    "status": "OK",
+    "detail": "Generated: \"You're welcome! Feel free to ask more marketing questions an\""
+  },
+  {
+    "feature": "Q&A Discovery (discover-best-questions)",
+    "status": "OK",
+    "detail": "18 questions"
+  },
+  {
+    "feature": "Reddit Prospector (scan-reddit)",
+    "status": "OK",
+    "detail": "8 leads"
+  },
+  {
+    "feature": "Image Generation (generate-image)",
+    "status": "OK",
+    "detail": "FAL key configured"
+  },
+  {
+    "feature": "Stock Photos (search-stock-photo)",
+    "status": "OK",
+    "detail": "Unsplash search works"
+  },
+  {
+    "feature": "Fan Page RSS Curation",
+    "status": "OK",
+    "detail": "Settings loaded (autoPost: true)"
+  },
+  {
+    "feature": "Full Scan (trigger-full-auto-search)",
+    "status": "PARTIAL",
+    "detail": "No keywords configured — add in Keywords page"
+  },
+  {
+    "feature": "Engage Post (like/upvote)",
+    "status": "PARTIAL",
+    "detail": "Needs linked account to engage live"
+  },
+  {
+    "feature": "Publish Post",
+    "status": "PARTIAL",
+    "detail": "No publish-capable linked accounts"
+  },
+  {
+    "feature": "Domain Metrics",
+    "status": "PARTIAL",
+    "detail": "No domain set on campaign"
+  }
+]
