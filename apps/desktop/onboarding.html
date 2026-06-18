@@ -795,7 +795,9 @@ async function loadMonitors() {
       const list = await ipcRenderer.invoke('get-watched-monitors');
       list.splice(parseInt(btn.dataset.i, 10), 1);
       await ipcRenderer.invoke('save-watched-monitors', list);
+      setupStatus.monitorCount = list.length;
       loadMonitors();
+      renderSetupReadiness(setupStatus);
     };
   });
 }
