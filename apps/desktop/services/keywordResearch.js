@@ -167,10 +167,14 @@ async function researchSingleKeyword(term, keys) {
 }
 
 function getApiStatus(keys) {
+  const { hasLinkedInKeys, hasMetaKeys, hasRedditKeys } = require('./keys');
   return {
     serpApi: !!keys.serpApiKey,
-    reddit: true,
+    reddit: hasRedditKeys(keys),
     twitter: hasTwitterKeys(keys),
+    linkedin: hasLinkedInKeys(keys),
+    meta: hasMetaKeys(keys),
+    newsApi: !!keys.newsApiKey,
     ai: !!(keys.gemini || keys.openrouter || keys.openai),
   };
 }

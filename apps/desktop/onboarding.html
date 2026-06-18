@@ -60,6 +60,14 @@ button { font-family: inherit; cursor: pointer; border-radius: 6px; padding: 0.7
 .setup-logo { height: 56px; width: 56px; min-width: 56px; object-fit: contain; }
 .setup-header h1 { margin: 0 0 0.35rem; font-size: 1.75rem; display: flex; align-items: center; gap: 0; }
 .setup-header .sub { margin: 0; }
+.api-status-bar { display:flex; flex-wrap:wrap; gap:0.4rem; margin:0 0 1.5rem; }
+.api-pill { font-size:0.72rem; padding:0.25rem 0.55rem; border-radius:12px; border:1px solid #334155; color:#94a3b8; }
+.api-pill.ok { border-color:#10b981; color:#6ee7b7; background:rgba(16,185,129,0.08); }
+.api-pill.warn { border-color:#f59e0b; color:#fcd34d; background:rgba(245,158,11,0.08); }
+.setup-readiness { background:rgba(15,23,42,0.55); border:1px solid #334155; border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; font-size:0.82rem; }
+.setup-readiness .row { display:flex; justify-content:space-between; padding:0.25rem 0; color:#94a3b8; }
+.setup-readiness .row.done { color:#34d399; }
+.feed-count { font-size:0.8rem; color:#64748b; margin-bottom:0.75rem; }
 </style>
 </head>
 <body>
@@ -81,6 +89,9 @@ button { font-family: inherit; cursor: pointer; border-radius: 6px; padding: 0.7
       <p class="sub">Complete all 4 steps to integrate your brand with AI, track keywords across social platforms, browse matching posts, and auto-draft replies.</p>
     </div>
   </div>
+
+  <div class="api-status-bar" id="apiStatusBar" aria-label="API connection status"></div>
+  <div class="setup-readiness" id="setupReadiness" style="display:none;"></div>
 
   <div class="steps" id="stepNav">
     <span class="step-pill active" data-step="1" title="Create your brand project">1. Create Project</span>
@@ -181,11 +192,14 @@ button { font-family: inherit; cursor: pointer; border-radius: 6px; padding: 0.7
         <button class="btn-secondary" id="refreshFeedBtn" style="padding:0.4rem 0.8rem;font-size:0.8rem;"><i class="fas fa-sync"></i> Refresh</button>
       </div>
     </details>
+    <p class="feed-count" id="feedPreviewCount"></p>
     <div id="feedPreview"><div style="color:#64748b;text-align:center;padding:2rem;">Loading posts...</div></div>
     <div class="actions">
       <button class="btn-secondary" id="step3Back">← Back</button>
+      <button class="btn-secondary" id="runFirstScanBtn"><i class="fas fa-search"></i> Run First Full Scan</button>
       <button class="btn-primary" id="step3Next">Continue to AI Replies →</button>
     </div>
+    <p class="progress-msg" id="step3Msg"></p>
   </div>
 
   <!-- STEP 4 -->
@@ -265,6 +279,7 @@ let maxStepReached = 1;
 let draftKeywords = [];
 let campaignId = null;
 let setupStatus = { hasProject: false, hasKeywords: false };
+let lastFeedCount = 0;
 
 function escapeHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -331,6 +346,44 @@ function showStep(n, { skipGuard = false } = {}) {
     maybeAutoFillGlobalPrompt();
   }
   return true;
+}
+
+function renderApiStatusBar(status) {
+  const bar = document.getElementById('apiStatusBar');
+  if (!bar) return;
+  const ready = status?.apiReady || {};
+  const pills = [
+    ['AI', ready.ai],
+    ['SerpAPI', ready.serpApi],
+    ['Twitter', ready.twitter],
+    ['Reddit', ready.reddit],
+    ['LinkedIn', ready.linkedin],
+    ['NewsAPI', ready.newsApi],
+  ].map(([label, ok]) => `<span class="api-pill ${ok ? 'ok' : 'warn'}">${label}: ${ok ? 'Connected' : 'Check .env'}</span>`);
+  const acct = status?.linkedAccountsCount > 0
+    ? `<span class="api-pill ok">${status.linkedAccountsCount} linked account(s)</span>`
+    : `<a href="account-hub.html" class="api-pill warn" style="text-decoration:none;">Link accounts →</a>`;
+  bar.innerHTML = pills.join('') + acct;
+}
+
+function renderSetupReadiness(status) {
+  const el = document.getElementById('setupReadiness');
+  if (!el) return;
+  const rows = [
+    ['Brand project saved', status?.hasProject],
+    ['Keywords configured', status?.hasKeywords],
+    ['Live feed posts found', lastFeedCount > 0],
+    ['Be-First monitors', (status?.monitorCount || 0) > 0],
+    ['Social accounts linked', status?.hasLinkedAccounts],
+  ];
+  el.style.display = 'block';
+  el.innerHTML = '<div style="color:#e2e8f0;font-weight:600;margin-bottom:0.35rem;">Setup readiness</div>'
+    + rows.map(([label, ok]) => `<div class="row ${ok ? 'done' : ''}"><span>${label}</span><span>${ok ? '✓' : '—'}</span></div>`).join('');
+}
+
+function isQuestionContent(text) {
+  const t = String(text || '');
+  return t.includes('?') || /\b(how|what|why|when|where|should|can|is|are|does|do)\b/i.test(t);
 }
 
 function bindStepNav() {
@@ -487,6 +540,9 @@ document.getElementById('aiSuggestBtn').addEventListener('click', async () => {
   btn.textContent = 'Fetching AI keywords...';
   const active = await ipcRenderer.invoke('get-active-campaign');
   const res = await ipcRenderer.invoke('generate-keywords', active);
+  if (res?.error && !(res.keywords || []).length) {
+    document.getElementById('step2Msg').textContent = res.error;
+  }
   const kws = Array.isArray(res) ? res : (res.keywords || []);
   const el = document.getElementById('aiSuggestions');
   el.innerHTML = kws.slice(0, 12).map((k) => {
@@ -518,8 +574,11 @@ document.getElementById('addManualKwBtn').addEventListener('click', () => {
   renderKeywordList();
 });
 
-document.getElementById('saveKeywordsBtn').addEventListener('click', async () => {
-  if (!draftKeywords.length) return alert('Add at least one keyword.');
+async function saveKeywordsToStore() {
+  if (!draftKeywords.length) {
+    alert('Add at least one keyword.');
+    return false;
+  }
   const plats = getSelectedPlatforms();
   const globalPrompt = document.getElementById('globalCustomPrompt').value.trim();
   draftKeywords = draftKeywords.map((k) => ({
@@ -534,13 +593,20 @@ document.getElementById('saveKeywordsBtn').addEventListener('click', async () =>
   setupStatus.hasKeywords = true;
   if (maxStepReached < 3) maxStepReached = 3;
   updateStepNav();
-});
+  return true;
+}
+
+document.getElementById('saveKeywordsBtn').addEventListener('click', () => saveKeywordsToStore());
 
 document.getElementById('step2Back').addEventListener('click', () => showStep(1));
-document.getElementById('step2Next').addEventListener('click', () => {
+document.getElementById('step2Next').addEventListener('click', async () => {
   if (!draftKeywords.length) {
     alert('Add at least one keyword, or save keywords before continuing.');
     return;
+  }
+  if (!setupStatus.hasKeywords) {
+    const saved = await saveKeywordsToStore();
+    if (!saved) return;
   }
   showStep(3);
 });
@@ -569,7 +635,7 @@ async function loadFeedPreview() {
     if (exclude.length && exclude.some((w) => (p.content || '').toLowerCase().includes(w))) return false;
     if (timeFilter !== 'all' && timeLimits[timeFilter] && p.createdAt && now - p.createdAt > timeLimits[timeFilter]) return false;
     if (minEng > 0 && (p.stats?.likes || 0) < minEng) return false;
-    if (postType === 'question' && !(p.content || '').includes('?')) return false;
+    if (postType === 'question' && !isQuestionContent(p.content)) return false;
     if (postType === 'video' && !(p.content || '').toLowerCase().includes('[media]') && !(p.content || '').toLowerCase().includes('video')) return false;
     if (postType === 'text' && ((p.content || '').includes('[Media]') || (p.content || '').toLowerCase().includes('video'))) return false;
     return true;
@@ -578,22 +644,42 @@ async function loadFeedPreview() {
   else if (sort === 'relevance') posts.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
   else if (sort === 'recent' && posts[0]?.createdAt) posts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
+  lastFeedCount = posts.length;
+  const countEl = document.getElementById('feedPreviewCount');
+  if (countEl) countEl.textContent = posts.length
+    ? `Showing ${Math.min(8, posts.length)} of ${posts.length} matching posts`
+    : '';
+
   if (!posts.length) {
-    container.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:2rem;">No posts yet. Reddit works without API keys; Twitter needs keys in Settings. Try refreshing after saving keywords.</div>';
+    container.innerHTML = `<div style="color:#94a3b8;text-align:center;padding:2rem;max-width:480px;margin:0 auto;">
+      <div style="color:#e2e8f0;margin-bottom:0.5rem;">No posts matched your filters</div>
+      <div style="font-size:0.85rem;line-height:1.5;">Try <strong>Any Engagement</strong> and <strong>Any Time</strong>, then Refresh. SerpAPI discovers posts when Reddit/Twitter APIs rate-limit. Run <strong>First Full Scan</strong> for broader results.</div>
+      <button class="btn-secondary" style="margin-top:1rem;" onclick="document.getElementById('feedMinEngage').value='0';document.getElementById('feedTime').value='all';loadFeedPreview();">Reset filters &amp; retry</button>
+    </div>`;
+    renderSetupReadiness(setupStatus);
     return;
   }
   container.innerHTML = posts.slice(0, 8).map((p) => `
-    <div class="post-card" data-content="${escapeHtml((p.content||'').substring(0,200))}" data-kw="${escapeHtml(p.matchedKeyword||'')}" data-url="${escapeHtml(p.url||'')}">
-      <div class="meta"><strong>${escapeHtml(p.platform)}</strong> · ${escapeHtml(p.author)} · ${escapeHtml(p.matchedKeyword ? 'Keyword: '+p.matchedKeyword : '')}</div>
+    <div class="post-card" data-content="${escapeHtml((p.content||'').substring(0,500))}" data-kw="${escapeHtml(p.matchedKeyword||'')}" data-url="${escapeHtml(p.url||'')}" data-platform="${escapeHtml(p.platform||'')}">
+      <div class="meta"><strong>${escapeHtml(p.platform)}</strong> · ${escapeHtml(p.author)} · ${escapeHtml(p.matchedKeyword ? 'Keyword: '+p.matchedKeyword : '')}${p.url ? ' · <a href="#" class="post-link" style="color:#38bdf8;">open ↗</a>' : ''}</div>
       <div>${escapeHtml((p.content||'').substring(0, 280))}</div>
       <div class="post-actions">
         <button class="btn-primary btn-draft" style="font-size:0.75rem;">Draft AI Reply</button>
+        <button class="btn-secondary btn-save-reply" style="font-size:0.75rem;display:none;">Save to AI Replies</button>
         <button class="btn-secondary btn-view-post" style="font-size:0.75rem;"><i class="fas fa-external-link-alt"></i> View Post</button>
         <button class="btn-secondary btn-be-first" style="font-size:0.75rem;border-color:#a78bfa;color:#c4b5fd;">Be First (Watch)</button>
       </div>
       <div class="ai-reply-box"></div>
     </div>
   `).join('');
+
+  container.querySelectorAll('.post-link').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url = link.closest('.post-card')?.dataset?.url;
+      if (url) require('electron').shell.openExternal(url);
+    });
+  });
 
   container.querySelectorAll('.btn-view-post').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -626,17 +712,70 @@ async function loadFeedPreview() {
       box.style.display = 'block';
       box.innerHTML = '<span style="color:#38bdf8;">Generating tailored reply...</span>';
       const custom = document.getElementById('globalCustomPrompt')?.value || '';
-      const reply = await ipcRenderer.invoke('draft-post-reply', {
-        postContent: card.dataset.content,
-        matchedKeyword: card.dataset.kw,
-        oneTimeOverride: custom || undefined,
-      });
-      box.innerHTML = `<strong style="color:#34d399;">AI Reply (mentions your brand):</strong><p style="margin:0.5rem 0;line-height:1.5;">${escapeHtml(reply)}</p>`;
+      try {
+        const reply = await ipcRenderer.invoke('draft-post-reply', {
+          postContent: card.dataset.content,
+          matchedKeyword: card.dataset.kw,
+          oneTimeOverride: custom || undefined,
+        });
+        if (!reply || String(reply).startsWith('Error generating')) {
+          box.innerHTML = `<span style="color:#ef4444;">${escapeHtml(reply || 'AI draft failed — check Gemini/OpenRouter in Settings.')}</span>`;
+          return;
+        }
+        card.dataset.draftReply = reply;
+        box.innerHTML = `<strong style="color:#34d399;">AI Reply (mentions your brand):</strong><p style="margin:0.5rem 0;line-height:1.5;">${escapeHtml(reply)}</p>`;
+        const saveBtn = card.querySelector('.btn-save-reply');
+        if (saveBtn) saveBtn.style.display = 'inline-block';
+      } catch (err) {
+        box.innerHTML = `<span style="color:#ef4444;">Draft failed: ${escapeHtml(err.message)}</span>`;
+      }
     });
   });
+
+  container.querySelectorAll('.btn-save-reply').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('.post-card');
+      const reply = card.dataset.draftReply;
+      if (!reply) return alert('Draft a reply first.');
+      await ipcRenderer.invoke('save-ai-reply', {
+        originalPost: card.dataset.content,
+        replyContent: reply,
+        platform: card.dataset.platform || 'Social',
+        status: 'draft',
+        url: card.dataset.url || '',
+        matchedKeyword: card.dataset.kw || '',
+        source: 'onboarding',
+        replyMode: 'manual',
+        intent: 'brand',
+      });
+      await ipcRenderer.invoke('increment-ai-drafts').catch(() => {});
+      btn.textContent = 'Saved ✓';
+      btn.disabled = true;
+    });
+  });
+
+  renderSetupReadiness(setupStatus);
 }
 
 document.getElementById('refreshFeedBtn').addEventListener('click', loadFeedPreview);
+
+document.getElementById('runFirstScanBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('runFirstScanBtn');
+  const msg = document.getElementById('step3Msg');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning…'; }
+  if (msg) msg.textContent = 'Running first full scan across all platforms…';
+  try {
+    const res = await ipcRenderer.invoke('trigger-full-auto-search');
+    if (msg) msg.textContent = res.success
+      ? (res.message || 'Full scan complete — refresh feed to see new posts.')
+      : ('Scan issue: ' + (res.error || 'unknown'));
+    await loadFeedPreview();
+  } catch (e) {
+    if (msg) msg.textContent = 'Scan failed: ' + e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-search"></i> Run First Full Scan'; }
+  }
+});
 
 async function loadMonitors() {
   const mons = await ipcRenderer.invoke('get-watched-monitors').catch(() => []);
@@ -724,6 +863,10 @@ document.getElementById('addWatchBtn').addEventListener('click', async () => {
   const term = document.getElementById('watchTerm').value.trim();
   if (!term) return alert('Enter a keyword, @handle, or page to watch.');
   const mons = await ipcRenderer.invoke('get-watched-monitors').catch(() => []);
+  const platform = document.getElementById('watchPlatform').value;
+  if (mons.some((m) => m.term?.toLowerCase() === term.toLowerCase() && (m.platform || 'All') === platform)) {
+    return alert('This monitor is already on your watch list.');
+  }
   mons.push({
     term,
     platform: document.getElementById('watchPlatform').value,
@@ -733,14 +876,21 @@ document.getElementById('addWatchBtn').addEventListener('click', async () => {
   });
   await ipcRenderer.invoke('save-watched-monitors', mons);
   document.getElementById('watchTerm').value = '';
+  setupStatus.monitorCount = mons.length;
   loadMonitors();
+  renderSetupReadiness(setupStatus);
 });
 
 document.getElementById('finishBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('finishBtn');
+  const msg = document.getElementById('step4Msg');
   const custom = document.getElementById('replyCustomPrompt').value.trim();
   const autoSearchFreq = document.getElementById('autoSearchFrequency')?.value || 'daily';
   const beFirstFreq = document.getElementById('beFirstMonitorFrequency')?.value || '10m';
   const workerOn = document.getElementById('enableWorker').checked;
+
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finishing…'; }
+  if (msg) msg.textContent = 'Saving auto-rules and running initial platform scan…';
 
   const rules = await ipcRenderer.invoke('get-auto-rules').catch(() => ({}));
   await ipcRenderer.invoke('save-auto-rules', {
@@ -760,11 +910,31 @@ document.getElementById('finishBtn').addEventListener('click', async () => {
     beFirstMonitorFrequency: beFirstFreq,
   });
 
+  if (custom) {
+    const active = await ipcRenderer.invoke('get-active-campaign').catch(() => null);
+    if (active?.id) {
+      const camps = await ipcRenderer.invoke('get-settings').catch(() => []);
+      const idx = camps.findIndex((c) => c.id === active.id);
+      if (idx >= 0) {
+        camps[idx] = { ...camps[idx], globalCustomPrompt: custom };
+        await ipcRenderer.invoke('save-settings', camps);
+      }
+    }
+  }
+
+  const scan = await ipcRenderer.invoke('trigger-full-auto-search').catch((e) => ({ success: false, error: e.message }));
+
   if (workerOn) {
     await ipcRenderer.invoke('start-worker').catch(() => {});
   }
   await ipcRenderer.invoke('set-onboarding-complete', true);
-  window.location.href = 'dashboard.html';
+
+  if (msg) {
+    msg.textContent = scan.success
+      ? 'Setup complete! Initial scan finished — opening Dashboard.'
+      : 'Setup saved. Open Dashboard and run Full Scan if needed.';
+  }
+  setTimeout(() => { window.location.href = 'dashboard.html'; }, scan.success ? 800 : 1200);
 });
 
 (async function init() {
@@ -773,7 +943,14 @@ document.getElementById('finishBtn').addEventListener('click', async () => {
   const params = new URLSearchParams(location.search);
   const step = parseInt(params.get('step') || '1', 10);
   const status = await ipcRenderer.invoke('get-setup-status');
-  setupStatus = { hasProject: status.hasProject, hasKeywords: status.hasKeywords };
+  setupStatus = {
+    hasProject: status.hasProject,
+    hasKeywords: status.hasKeywords,
+    hasLinkedAccounts: status.hasLinkedAccounts,
+    linkedAccountsCount: status.linkedAccountsCount,
+    monitorCount: status.monitorCount,
+  };
+  renderApiStatusBar(status);
   maxStepReached = Math.max(1, status.nextStep || 1, step);
   if (status.campaign) {
     const c = status.campaign;

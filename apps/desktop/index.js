@@ -628,6 +628,7 @@ ipcMain.handle('get-setup-status', () => {
   const campaign = campaigns.find((c) => c.id === activeCampaignId) || campaigns[0] || null;
   const hasProject = !!(campaign?.brandName?.trim() && campaign?.domain?.trim() && campaign?.description?.trim());
 
+  ensureCampaignKeywords(campaign?.id || activeCampaignId);
   let keywords = [];
   try {
     keywords = JSON.parse(store.getItem('keywords') || '[]')
@@ -635,6 +636,19 @@ ipcMain.handle('get-setup-status', () => {
   } catch (e) {}
   const hasKeywords = keywords.length > 0;
   const onboardingComplete = store.getItem('onboardingComplete') === 'true';
+
+  let linkedAccountsCount = 0;
+  try {
+    linkedAccountsCount = JSON.parse(store.getItem(`linkedAccounts_${activeCampaignId}`) || '[]').length;
+  } catch (e) {}
+
+  const globalKeys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+  const apiReady = integrations.getApiStatus ? integrations.getApiStatus(globalKeys) : {};
+  const apiMetrics = buildApiMetrics(globalKeys);
+  const connectedApis = Object.values(apiMetrics).filter((v) => String(v).includes('Connected')).length;
+
+  let monitors = [];
+  try { monitors = JSON.parse(store.getItem('watchedMonitors') || '[]'); } catch (e) {}
 
   let nextStep = 1;
   if (hasProject && !hasKeywords) nextStep = 2;
@@ -649,6 +663,13 @@ ipcMain.handle('get-setup-status', () => {
     nextStep,
     campaign,
     keywords,
+    linkedAccountsCount,
+    hasLinkedAccounts: linkedAccountsCount > 0,
+    apiReady,
+    apiMetrics,
+    connectedApiCount: connectedApis,
+    monitorCount: monitors.length,
+    lastFullScan: parseInt(store.getItem('fullAutoSearchLastRun') || '0', 10) || null,
   };
 });
 
