@@ -84,6 +84,10 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
 .api-pill { padding: 4px 10px; border-radius: 12px; border: 1px solid #475569; }
 .api-pill.ok { border-color: #10b981; color: #34d399; }
 .api-pill.miss { border-color: #ef4444; color: #f87171; }
+.ch-readiness { background: rgba(15,23,42,0.55); border: 1px solid #334155; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; }
+.ch-readiness .ch-stat { color: #94a3b8; }
+.ch-readiness .ch-stat strong { color: #e2e8f0; }
+.ch-no-accounts { background: rgba(245,158,11,0.1); border: 1px solid #f59e0b; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: #fcd34d; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; }
 #toastContainer { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
 .toast { padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 360px; }
 .toast.info { background: #1e293b; border: 1px solid #38bdf8; color: #f8fafc; }
@@ -179,6 +183,11 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
       <button class="secondary-btn" onclick="window.location.href='calendar.html'"><i class="fas fa-calendar-alt"></i> View Calendar</button>
     </div>
     <div id="apiStatusBar"></div>
+    <div id="noAccountsBanner" class="ch-no-accounts" style="display:none;">
+      <span><i class="fas fa-link"></i> No social accounts linked — publish, groups, and live profile need connections in Account Hub.</span>
+      <a href="account-hub.html" class="secondary-btn" style="padding:0.4rem 0.9rem;font-size:0.8rem;text-decoration:none;color:inherit;"><i class="fas fa-plug"></i> Link Accounts</a>
+    </div>
+    <div id="contentHubReadiness" class="ch-readiness" style="display:none;"></div>
     <div id="toastContainer"></div>
 
     <div class="tabs">
@@ -639,6 +648,41 @@ function escapeHtml(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function isAiError(text) {
+  const t = String(text || '').trim();
+  return !t || t.startsWith('Error generating') || t.startsWith('Error:');
+}
+
+async function seedContentStudioKeywords() {
+  try {
+    const active = await ipcRenderer.invoke('get-active-campaign').catch(() => null);
+    const kws = await ipcRenderer.invoke('get-keywords', active?.id).catch(() => []);
+    const terms = (kws || []).map((k) => k.term || k).filter(Boolean);
+    const seed = terms.length ? terms.join(', ') : [active?.brandName, active?.domain].filter(Boolean).join(', ');
+    if (!seed) return;
+    document.querySelectorAll('.cs-keywords-sync').forEach((el) => {
+      if (!el.value.trim()) el.value = seed;
+    });
+  } catch (e) { /* non-fatal */ }
+}
+
+function renderContentHubReadiness(stats, queueLen) {
+  const el = document.getElementById('contentHubReadiness');
+  if (!el) return;
+  el.style.display = 'flex';
+  const acc = stats?.linkedAccounts || 0;
+  const sched = stats?.scheduled || 0;
+  const posts = stats?.totalPosts || 0;
+  const drafts = stats?.aiDrafts || 0;
+  el.innerHTML = `
+    <div class="ch-stat"><strong>${acc}</strong> linked accounts</div>
+    <div class="ch-stat"><strong>${posts}</strong> published posts</div>
+    <div class="ch-stat"><strong>${sched}</strong> scheduled</div>
+    <div class="ch-stat"><strong>${drafts}</strong> AI drafts</div>
+    <div class="ch-stat"><strong>${queueLen || 0}</strong> queue items</div>
+    <button type="button" class="secondary-btn" style="padding:0.35rem 0.75rem;font-size:0.75rem;" onclick="switchTab('comments')"><i class="fas fa-inbox"></i> Review Drafts</button>`;
+}
+
 function showToast(msg, type = 'info') {
   const c = document.getElementById('toastContainer');
   if (!c) return;
@@ -662,6 +706,11 @@ window.switchTab = function(tabId) {
   const content = document.getElementById(tabId + '-tab');
   if (content) content.classList.add('active');
   contentStudioState.lastTab = tabId;
+  try {
+    const url = new URL(window.location.href);
+    url.hash = tabId;
+    window.history.replaceState({ tab: tabId }, '', url.pathname + url.search + url.hash);
+  } catch (e) { /* ignore */ }
   if (tabId === 'analytics') loadPostAnalytics();
   if (tabId === 'comments') loadCommentsForAccount(document.getElementById('commentsAccountSelect')?.value || '');
   if (tabId === 'brand') loadBrandAndKeywords();
@@ -817,9 +866,14 @@ async function loadWizardActivity() {
 window.enhanceWizardPost = async function() {
   const ta = document.getElementById('pwPostContent');
   if (!ta?.value.trim()) return showToast('Write something first.', 'error');
-  const enhanced = await ipcRenderer.invoke('generate-ai', 'Enhance this social post for engagement, add emojis/hashtags, keep under 280 chars: ' + ta.value);
-  ta.value = enhanced;
-  showToast('Post enhanced', 'success');
+  try {
+    const enhanced = await ipcRenderer.invoke('generate-ai', 'Enhance this social post for engagement, add emojis/hashtags, keep under 280 chars: ' + ta.value);
+    if (isAiError(enhanced)) throw new Error(enhanced || 'AI enhance failed');
+    ta.value = enhanced;
+    showToast('Post enhanced', 'success');
+  } catch (e) {
+    showToast('Enhance failed: ' + e.message, 'error');
+  }
 };
 
 window.publishWizardPost = async function() {
@@ -830,13 +884,14 @@ window.publishWizardPost = async function() {
   const btn = document.getElementById('pwPublishBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing…'; }
   try {
-    await ipcRenderer.invoke('publish-post', {
+    const res = await ipcRenderer.invoke('publish-post', {
       accountId: acc.id,
       platform: acc.platform,
       content,
       hasMedia: false,
       humanLike: true,
     });
+    if (res?.success === false) throw new Error(res.error || 'Publish failed');
     showToast('Published via live API.', 'success');
     document.getElementById('pwPostContent').value = '';
     loadWizardActivity();
@@ -1131,7 +1186,7 @@ async function loadApiStatus() {
     const pills = [];
     if (stats.apiMetrics) {
       Object.entries(stats.apiMetrics).forEach(([name, status]) => {
-        const ok = status === 'Connected';
+        const ok = String(status).includes('Connected');
         pills.push(`<span class="api-pill ${ok ? 'ok' : 'miss'}">${ok ? '✓' : '✗'} ${escapeHtml(name)}</span>`);
       });
     }
@@ -1141,6 +1196,10 @@ async function loadApiStatus() {
       if (connected.length) pills.push(`<span class="api-pill ok">Keys: ${escapeHtml(connected.join(', '))}</span>`);
     }
     bar.innerHTML = pills.join('');
+    const noAcc = document.getElementById('noAccountsBanner');
+    if (noAcc) noAcc.style.display = (stats.linkedAccounts > 0) ? 'none' : 'flex';
+    const queue = await ipcRenderer.invoke('get-content-queue').catch(() => []);
+    renderContentHubReadiness(stats, queue.length);
   } catch (e) {
     bar.innerHTML = `<span class="api-pill miss">API status unavailable: ${escapeHtml(e.message)}</span>`;
   }
@@ -1265,7 +1324,9 @@ window.social_api = {
     const orig = ta.value;
     ta.value = 'Enhancing with AI...';
     try {
-      ta.value = await ipcRenderer.invoke('generate-ai', 'Rewrite for engagement with emojis and hashtags, brand voice: ' + orig);
+      const enhanced = await ipcRenderer.invoke('generate-ai', 'Rewrite for engagement with emojis and hashtags, brand voice: ' + orig);
+      if (isAiError(enhanced)) throw new Error(enhanced || 'AI failed');
+      ta.value = enhanced;
       showToast('Post enhanced via AI', 'success');
     } catch (e) {
       ta.value = orig;
@@ -1426,13 +1487,14 @@ window.publishStandardPost = async function() {
       });
       showToast('Post scheduled — view in Content Calendar', 'success');
     } else {
-      await ipcRenderer.invoke('publish-post', {
+      const res = await ipcRenderer.invoke('publish-post', {
         accountId: opt.value,
         platform: opt.getAttribute('data-platform') || 'Facebook',
         content,
         hasMedia: !!mediaUrl,
         mediaUrl,
       });
+      if (res?.success === false) throw new Error(res.error || 'Publish failed');
       showToast('Published to ' + opt.getAttribute('data-platform'), 'success');
     }
     document.getElementById('postContent').value = '';
@@ -1478,7 +1540,7 @@ async function publishVideo() {
       });
       showToast('Video scheduled — view in Content Calendar', 'success');
     } else {
-      await ipcRenderer.invoke('publish-post', {
+      const res = await ipcRenderer.invoke('publish-post', {
         accountId: opt.value,
         platform: opt.getAttribute('data-platform') || 'Instagram',
         content,
@@ -1486,6 +1548,7 @@ async function publishVideo() {
         mediaUrl: base64,
         isVideo: true,
       });
+      if (res?.success === false) throw new Error(res.error || 'Publish failed');
       showToast('Video published via ' + opt.getAttribute('data-platform'), 'success');
     }
     document.getElementById('videoCaption').value = '';
@@ -1566,9 +1629,11 @@ window.loadCommentsForAccount = async function(accId) {
   cont.innerHTML = '<p style="color:#94a3b8;padding:1rem;">Loading AI replies...</p>';
   try {
     const replies = await ipcRenderer.invoke('get-ai-replies') || [];
-    const filtered = accId
-      ? replies.filter(r => r.accountId === accId)
-      : replies;
+    let filtered = replies;
+    if (accId) {
+      const acc = pwLinkedAccounts.find((a) => a.id === accId);
+      filtered = replies.filter((r) => r.accountId === accId || (acc && r.platform === acc.platform));
+    }
     const pending = filtered.filter(r => normalizeStatus(r.status) === 'draft');
 
     if (!pending.length) {
@@ -1865,7 +1930,9 @@ window.enhanceVideoCaption = async function() {
   const orig = ta.value;
   ta.value = 'AI writing caption...';
   try {
-    ta.value = await ipcRenderer.invoke('generate-ai', 'Viral Reels/Shorts caption with hooks, hashtags, CTA: ' + orig);
+    const enhanced = await ipcRenderer.invoke('generate-ai', 'Viral Reels/Shorts caption with hooks, hashtags, CTA: ' + orig);
+    if (isAiError(enhanced)) throw new Error(enhanced || 'AI failed');
+    ta.value = enhanced;
     showToast('Caption enhanced', 'success');
   } catch (e) {
     ta.value = orig;
@@ -2001,7 +2068,10 @@ window.publishComposedAnswer = async function() {
     answer,
     platform: 'Multi',
   });
-  showToast(res.message || 'Answer distributed', res.success ? 'success' : 'error');
+  const msg = res.livePosted
+    ? (res.message || 'Answer posted live')
+    : (res.message || 'Answer saved as draft — open the original post URL to reply, or link accounts for live posting.');
+  showToast(msg, res.success ? 'success' : 'error');
 };
 
 window.saveAutoContentSettings = async function() {
@@ -2035,9 +2105,22 @@ async function loadContentQueue() {
   list.innerHTML = queue.slice(0, 8).map((item) => `
     <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;padding:0.75rem;margin-bottom:0.5rem;">
       <div style="color:#64748b;font-size:0.7rem;">${item.queuedAt || ''} · ${item.platform || item.format || 'content'}</div>
-      <div style="color:#e2e8f0;margin-top:4px;">${(item.content || '').substring(0, 160)}...</div>
-      <button class="tool-btn" style="margin-top:6px;font-size:0.75rem;" onclick="loadQueueItem('${item.id}')">Edit &amp; Publish</button>
+      <div style="color:#e2e8f0;margin-top:4px;">${escapeHtml((item.content || '').substring(0, 160))}…</div>
+      <div style="display:flex;gap:0.5rem;margin-top:6px;flex-wrap:wrap;">
+        <button class="tool-btn queue-load-btn" style="font-size:0.75rem;" data-queue-id="${escapeHtml(item.id)}">Edit &amp; Publish</button>
+        <button class="tool-btn queue-quick-btn" style="font-size:0.75rem;background:rgba(56,189,248,0.15);border-color:#38bdf8;" data-queue-id="${escapeHtml(item.id)}"><i class="fas fa-bolt"></i> Quick Publish</button>
+        <button class="tool-btn queue-dismiss-btn" style="font-size:0.75rem;color:#94a3b8;" data-queue-id="${escapeHtml(item.id)}">Dismiss</button>
+      </div>
     </div>`).join('');
+  list.querySelectorAll('.queue-load-btn').forEach((btn) => {
+    btn.addEventListener('click', () => loadQueueItem(btn.getAttribute('data-queue-id')));
+  });
+  list.querySelectorAll('.queue-quick-btn').forEach((btn) => {
+    btn.addEventListener('click', () => quickPublishQueueItem(btn.getAttribute('data-queue-id')));
+  });
+  list.querySelectorAll('.queue-dismiss-btn').forEach((btn) => {
+    btn.addEventListener('click', () => dismissQueueItem(btn.getAttribute('data-queue-id')));
+  });
   window._contentQueue = queue;
 }
 
@@ -2048,6 +2131,49 @@ window.loadQueueItem = function(id) {
   if (item.mediaUrl) document.getElementById('mediaUrl').value = item.mediaUrl;
   switchTab('standard');
   showToast('Loaded from review queue', 'success');
+};
+
+function resolveQueueAccount(item) {
+  const sel = document.getElementById('accountSelect');
+  const accounts = Array.from(sel?.options || []).filter((o) => o.value);
+  if (!accounts.length) return null;
+  const platform = (item.platform || '').toLowerCase();
+  const match = accounts.find((o) => (o.getAttribute('data-platform') || '').toLowerCase() === platform);
+  return match || accounts[0];
+}
+
+window.quickPublishQueueItem = async function(id) {
+  const item = (window._contentQueue || []).find((q) => q.id === id);
+  if (!item?.content) return showToast('Queue item not found', 'error');
+  const opt = resolveQueueAccount(item);
+  if (!opt?.value) return showToast('Link an account in Account Hub first', 'error');
+  try {
+    const res = await ipcRenderer.invoke('publish-post', {
+      accountId: opt.value,
+      platform: opt.getAttribute('data-platform') || item.platform || 'Facebook',
+      content: item.content,
+      hasMedia: !!item.mediaUrl,
+      mediaUrl: item.mediaUrl || null,
+    });
+    if (res?.success === false) throw new Error(res.error || 'Publish failed');
+    await ipcRenderer.invoke('remove-content-queue-item', id);
+    showToast(`Published to ${opt.getAttribute('data-platform')}`, 'success');
+    loadContentQueue();
+    loadApiStatus();
+  } catch (e) {
+    showToast('Quick publish failed: ' + e.message, 'error');
+  }
+};
+
+window.dismissQueueItem = async function(id) {
+  try {
+    await ipcRenderer.invoke('remove-content-queue-item', id);
+    showToast('Removed from queue', 'info');
+    loadContentQueue();
+    loadApiStatus();
+  } catch (e) {
+    showToast('Could not dismiss: ' + e.message, 'error');
+  }
 };
 
 async function loadAutoContentSettings() {
@@ -2264,7 +2390,7 @@ window.shortenCurrentLink = async function() {
     const res = await ipcRenderer.invoke('shorten-url', m[0]);
     if (res.success) {
       ta.value = ta.value.replace(m[0], res.shortUrl);
-      showToast('Link shortened via TinyURL', 'success');
+      showToast(`Link shortened via ${res.provider || 'shortener'}`, 'success');
     } else {
       showToast(res.error || 'Shorten failed', 'error');
     }
@@ -2388,14 +2514,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadAccounts();
   await loadApiStatus();
   await loadBrandAndKeywords();
+  await seedContentStudioKeywords();
   await refreshGrokHubStatus();
   setInterval(refreshGrokHubStatus, 60000);
 
-  if (window.location.hash === '#publish-wizard') {
-    switchTab('publish-wizard');
-  }
+  const validTabs = ['publish-wizard', 'standard', 'media', 'repurpose', 'analytics', 'answer', 'rss', 'thumbnails', 'infographic', 'brand', 'comments'];
+  const hashTab = (location.hash || '').replace('#', '');
+  if (validTabs.includes(hashTab)) switchTab(hashTab);
   window.addEventListener('hashchange', () => {
-    if (window.location.hash === '#publish-wizard') switchTab('publish-wizard');
+    const t = (location.hash || '').replace('#', '');
+    if (validTabs.includes(t)) switchTab(t);
   });
 
   document.getElementById('scheduleBtn')?.addEventListener('click', () => {

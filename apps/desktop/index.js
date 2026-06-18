@@ -1842,13 +1842,49 @@ ipcMain.handle('get-youtube-channels', async () => {
 });
 
 ipcMain.handle('shorten-url', async (event, longUrl) => {
-  const key = getGlobalKey('tinyurlApiKey') || 'FOQDuDMhkGw1LpnEuQSdCv0OF1X2cr11tKf57juP7R3m5COLvTrwICxHNuTh';
-  try {
-    const res = await axios.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}&apikey=${key}`);
-    return { success: true, shortUrl: res.data };
-  } catch(e) {
-    return { success: false, error: e.message, shortUrl: longUrl }; // fallback
+  if (!longUrl || !String(longUrl).trim()) {
+    return { success: false, error: 'URL required', shortUrl: longUrl };
   }
+  const url = String(longUrl).trim();
+  const tinyKey = getGlobalKey('tinyurlApiKey') || process.env.TINYURL_API_KEY;
+  const providers = [
+    async () => {
+      const apiUrl = tinyKey
+        ? `https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}&api_token=${tinyKey}`
+        : `https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`;
+      const res = await axios.get(apiUrl, { timeout: 15000, validateStatus: (s) => s < 500 });
+      const short = String(res.data || '').trim();
+      if (short.startsWith('http')) return short;
+      throw new Error(short || 'TinyURL returned invalid response');
+    },
+    async () => {
+      const res = await axios.get('https://is.gd/create.php', {
+        params: { format: 'json', url },
+        timeout: 12000,
+      });
+      if (res.data?.shorturl) return res.data.shorturl;
+      throw new Error(res.data?.errormessage || 'is.gd failed');
+    },
+    async () => {
+      const res = await axios.get('https://v.gd/create.php', {
+        params: { format: 'json', url },
+        timeout: 12000,
+      });
+      if (res.data?.shorturl) return res.data.shorturl;
+      throw new Error(res.data?.errormessage || 'v.gd failed');
+    },
+  ];
+  let lastError = null;
+  for (const attempt of providers) {
+    try {
+      const shortUrl = await attempt();
+      const provider = shortUrl.includes('tinyurl') ? 'TinyURL' : shortUrl.includes('is.gd') ? 'is.gd' : 'v.gd';
+      return { success: true, shortUrl, provider };
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  return { success: false, error: lastError?.message || 'All URL shorteners failed', shortUrl: url };
 });
 
 ipcMain.handle('serp-search', async (event, q) => {
@@ -2396,6 +2432,16 @@ ipcMain.handle('reuse-qa-as-content', (event, payload) => {
 
 ipcMain.handle('get-content-queue', () => {
   try { return JSON.parse(store.getItem('contentReviewQueue') || '[]'); } catch (e) { return []; }
+});
+
+ipcMain.handle('remove-content-queue-item', (event, id) => {
+  if (!id) return { success: false, error: 'Queue item id required' };
+  let queue = [];
+  try { queue = JSON.parse(store.getItem('contentReviewQueue') || '[]'); } catch (e) {}
+  const before = queue.length;
+  queue = queue.filter((item) => item.id !== id);
+  store.setItem('contentReviewQueue', JSON.stringify(queue));
+  return { success: true, removed: before - queue.length };
 });
 
 ipcMain.handle('generate-carousel-fal', async (event, payload) => {
