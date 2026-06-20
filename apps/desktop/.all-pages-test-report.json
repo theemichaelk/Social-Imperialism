@@ -1,0 +1,494 @@
+{
+  "timestamp": "2026-06-20T01:29:18.789Z",
+  "pages": 5,
+  "featuresOk": 66,
+  "featuresPartial": 17,
+  "featuresFail": 2,
+  "results": [
+    {
+      "page": "Dashboard",
+      "status": "PARTIAL",
+      "counts": {
+        "OK": 10,
+        "PARTIAL": 6,
+        "FAIL": 0
+      },
+      "features": [
+        {
+          "feature": "KPI Stats (get-dashboard-stats)",
+          "status": "OK",
+          "detail": "0 posts, 0 keywords"
+        },
+        {
+          "feature": "Platform Pulse (API keys)",
+          "status": "OK",
+          "detail": "Gemini, NewsAPI, SerpAPI, LinkedIn, Twitter"
+        },
+        {
+          "feature": "Headlines (get-live-news)",
+          "status": "OK",
+          "detail": "4 headlines"
+        },
+        {
+          "feature": "Trending Topics",
+          "status": "OK",
+          "detail": "6 topics (e.g. The GTPLAYER Big and Tall Gaming Chair D)"
+        },
+        {
+          "feature": "Live Feed (get-live-feed)",
+          "status": "OK",
+          "detail": "7 posts from News"
+        },
+        {
+          "feature": "Linked Accounts",
+          "status": "PARTIAL",
+          "detail": "No linked accounts — connect in Account Hub"
+        },
+        {
+          "feature": "AI Draft Reply (generate-ai)",
+          "status": "OK",
+          "detail": "Generated: \"You're welcome! Let me know if you have more questions.\""
+        },
+        {
+          "feature": "Q&A Discovery (discover-best-questions)",
+          "status": "OK",
+          "detail": "3 questions"
+        },
+        {
+          "feature": "Reddit Prospector (scan-reddit)",
+          "status": "PARTIAL",
+          "detail": "0 leads (Reddit API may be rate-limited; web-discovery fallback used)"
+        },
+        {
+          "feature": "Image Generation (generate-image)",
+          "status": "OK",
+          "detail": "FAL key configured"
+        },
+        {
+          "feature": "Stock Photos (search-stock-photo)",
+          "status": "OK",
+          "detail": "Unsplash search works"
+        },
+        {
+          "feature": "Fan Page RSS Curation",
+          "status": "OK",
+          "detail": "Settings loaded (autoPost: true)"
+        },
+        {
+          "feature": "Full Scan (trigger-full-auto-search)",
+          "status": "PARTIAL",
+          "detail": "No keywords configured — add in Keywords page"
+        },
+        {
+          "feature": "Engage Post (like/upvote)",
+          "status": "PARTIAL",
+          "detail": "Needs linked account to engage live"
+        },
+        {
+          "feature": "Publish Post",
+          "status": "PARTIAL",
+          "detail": "No publish-capable linked accounts"
+        },
+        {
+          "feature": "Domain Metrics",
+          "status": "PARTIAL",
+          "detail": "No domain set on campaign"
+        }
+      ],
+      "exitCode": 0
+    },
+    {
+      "page": "Browse Posts",
+      "status": "PARTIAL",
+      "counts": {
+        "OK": 9,
+        "PARTIAL": 5,
+        "FAIL": 0
+      },
+      "features": [
+        {
+          "feature": "1. KPI Stats (get-dashboard-stats)",
+          "status": "OK",
+          "detail": "0 posts, 3 keywords"
+        },
+        {
+          "feature": "2. Keywords dropdown (get-keywords)",
+          "status": "OK",
+          "detail": "3 keywords: Test Brand, marketing, technology"
+        },
+        {
+          "feature": "3. Live Feed — default filters",
+          "status": "OK",
+          "detail": "5 posts [News] — 5 urls, 5 API ids, 0 web-discovery"
+        },
+        {
+          "feature": "4. Live Feed — preset high-intent (strict filters)",
+          "status": "PARTIAL",
+          "detail": "Strict preset empties feed (5 raw → 0 filtered) — expected for low-engage discovery posts"
+        },
+        {
+          "feature": "5. Linked account chips (get-linked-accounts)",
+          "status": "PARTIAL",
+          "detail": "No linked accounts — connect in Account Hub for account feeds"
+        },
+        {
+          "feature": "6. Draft AI Reply (draft-post-reply)",
+          "status": "OK",
+          "detail": "\"Leverage content marketing, optimize for SEO, use targeted ads, and pr\""
+        },
+        {
+          "feature": "7. Engage Like — Reddit API post",
+          "status": "PARTIAL",
+          "detail": "No Reddit post with real API id in feed"
+        },
+        {
+          "feature": "8. Engage Like — web-discovery post",
+          "status": "PARTIAL",
+          "detail": "No web-discovery posts in feed to test"
+        },
+        {
+          "feature": "9. Be First monitors (save/get-watched-monitors)",
+          "status": "OK",
+          "detail": "1 monitor(s)"
+        },
+        {
+          "feature": "10. Post history merge (get-all-post-history)",
+          "status": "OK",
+          "detail": "0 published hub posts"
+        },
+        {
+          "feature": "11. Stock photos (search-stock-photo)",
+          "status": "OK",
+          "detail": "Unsplash search OK"
+        },
+        {
+          "feature": "12. Image generation (generate-image / FAL)",
+          "status": "OK",
+          "detail": "FAL key present"
+        },
+        {
+          "feature": "13. Live news sidebar (get-live-news)",
+          "status": "OK",
+          "detail": "4 headlines"
+        },
+        {
+          "feature": "14. Pagination simulation (5 per page)",
+          "status": "PARTIAL",
+          "detail": "Only 5 posts — pagination needs 6+"
+        }
+      ],
+      "exitCode": 0
+    },
+    {
+      "page": "Content Hub",
+      "status": "FAIL",
+      "counts": {
+        "OK": 21,
+        "PARTIAL": 3,
+        "FAIL": 1
+      },
+      "features": [
+        {
+          "feature": "API Status bar data",
+          "status": "OK",
+          "detail": "serpApi, reddit, twitter, linkedin, newsApi, ai"
+        },
+        {
+          "feature": "Publish Wizard — get-linked-accounts",
+          "status": "PARTIAL",
+          "detail": "No linked accounts — wizard needs Account Hub"
+        },
+        {
+          "feature": "Publish Wizard — get-post-history",
+          "status": "OK",
+          "detail": "0 posts in history"
+        },
+        {
+          "feature": "Standard Post — generate-ai (enhance)",
+          "status": "OK",
+          "detail": "\"🚀 Exciting news! Today we launched an amazing pro\""
+        },
+        {
+          "feature": "Standard Post — search-stock-photo",
+          "status": "OK",
+          "detail": "Unsplash OK"
+        },
+        {
+          "feature": "Standard Post — generate-image (FAL)",
+          "status": "OK",
+          "detail": "FAL key configured"
+        },
+        {
+          "feature": "Standard Post — schedule-post",
+          "status": "OK",
+          "detail": "1 scheduled post(s)"
+        },
+        {
+          "feature": "Standard Post — publish-post (live)",
+          "status": "PARTIAL",
+          "detail": "Needs linked account for live publish"
+        },
+        {
+          "feature": "Content Studio — generate batch (preview)",
+          "status": "OK",
+          "detail": "1 item(s) — \"🚀 Ready to elevate your marketing game?\""
+        },
+        {
+          "feature": "Repurpose — generate-ai blog→post",
+          "status": "OK",
+          "detail": "🚀✨ AI is revolutionizing marketing in 2026! From "
+        },
+        {
+          "feature": "Repurpose — get-youtube-channels",
+          "status": "OK",
+          "detail": "3 videos"
+        },
+        {
+          "feature": "Repurpose — generate-carousel-fal",
+          "status": "OK",
+          "detail": "FAL carousel path available"
+        },
+        {
+          "feature": "Post Analytics — get-all-post-history",
+          "status": "OK",
+          "detail": "0 posts for analytics"
+        },
+        {
+          "feature": "Answer Composer — compose-qa-answer",
+          "status": "OK",
+          "detail": "\"When it comes to selecting the best marketing automation too\""
+        },
+        {
+          "feature": "Answer Composer — reuse-qa-as-content",
+          "status": "OK",
+          "detail": "128 chars blog format"
+        },
+        {
+          "feature": "RSS — curate-from-rss",
+          "status": "OK",
+          "detail": "RSS feed reachable"
+        },
+        {
+          "feature": "Auto Content — save/get settings + queue",
+          "status": "OK",
+          "detail": "Settings OK, queue 1 item(s)"
+        },
+        {
+          "feature": "Viral Thumbnails — studio config",
+          "status": "OK",
+          "detail": "thumbnailIpc module loaded"
+        },
+        {
+          "feature": "Brand tab — generate-keywords",
+          "status": "OK",
+          "detail": "5 keywords"
+        },
+        {
+          "feature": "Brand tab — save-keywords",
+          "status": "OK",
+          "detail": "1 keyword(s)"
+        },
+        {
+          "feature": "Comments — get-ai-replies",
+          "status": "OK",
+          "detail": "0 AI replies in inbox"
+        },
+        {
+          "feature": "Comments — run-auto-rules-now",
+          "status": "PARTIAL",
+          "detail": "Worker scan — skipped in unit test (heavy); handler exists in index.js"
+        },
+        {
+          "feature": "Utilities — serp-search",
+          "status": "FAIL",
+          "detail": "Request failed with status code 429"
+        },
+        {
+          "feature": "Utilities — shorten-url",
+          "status": "OK",
+          "detail": "https://tinyurl.com/yahvytml"
+        },
+        {
+          "feature": "Utilities — upload-local-media",
+          "status": "OK",
+          "detail": "184KB data URL"
+        }
+      ],
+      "exitCode": 0
+    },
+    {
+      "page": "Setup Wizard",
+      "status": "ERROR",
+      "counts": {
+        "OK": 14,
+        "PARTIAL": 1,
+        "FAIL": 1
+      },
+      "features": [
+        {
+          "feature": "Step 1 — Save project (save-settings + set-active-campaign)",
+          "status": "OK",
+          "detail": "Saved \"Acme Growth Labs\" (acmegrowth.com)"
+        },
+        {
+          "feature": "Step 1 — get-setup-status after project save",
+          "status": "OK",
+          "detail": "nextStep=2, campaign loaded"
+        },
+        {
+          "feature": "Step 1 — get-active-campaign returns saved brand",
+          "status": "OK",
+          "detail": "Acme Growth Labs"
+        },
+        {
+          "feature": "Step 2 — AI Suggest Keywords (generate-keywords)",
+          "status": "OK",
+          "detail": "5 keywords (e.g. SaaS growth strategies)"
+        },
+        {
+          "feature": "Step 2 — Save keywords (save-keywords)",
+          "status": "OK",
+          "detail": "2 keywords saved"
+        },
+        {
+          "feature": "Step 2 — get-setup-status after keywords save",
+          "status": "OK",
+          "detail": "2 keywords, nextStep=3"
+        },
+        {
+          "feature": "Step 3 — Browse feed preview (get-live-feed)",
+          "status": "FAIL",
+          "detail": "0 posts in feed preview"
+        },
+        {
+          "feature": "Step 3 — Feed filters (engagement + question)",
+          "status": "OK",
+          "detail": "0/0 pass >100 engagement"
+        },
+        {
+          "feature": "Step 3 — Draft AI Reply (draft-post-reply)",
+          "status": "OK",
+          "detail": "\"Effective social listening tools include Hootsuite, Brandwat\""
+        },
+        {
+          "feature": "Step 4 — AI Auto-Fill global prompt (generate-global-custom-prompt)",
+          "status": "OK",
+          "detail": "\"At Acme Growth Labs, we believe in the transformative power of market…"
+        },
+        {
+          "feature": "Step 4 — Be-First monitors (save/get)",
+          "status": "OK",
+          "detail": "1 monitor(s)"
+        },
+        {
+          "feature": "Step 4 — Finish: save-auto-rules + auto-search settings",
+          "status": "OK",
+          "detail": "Auto-rules + search frequency saved"
+        },
+        {
+          "feature": "Step 4 — set-onboarding-complete",
+          "status": "OK",
+          "detail": "Setup marked complete"
+        },
+        {
+          "feature": "Wizard resume — get-setup-status nextStep=4 when complete",
+          "status": "OK",
+          "detail": "User can resume at step 4"
+        },
+        {
+          "feature": "Complementary — linked accounts check",
+          "status": "PARTIAL",
+          "detail": "No linked accounts — wizard should prompt Account Hub link"
+        },
+        {
+          "feature": "Complementary — API readiness panel data",
+          "status": "OK",
+          "detail": "twitter, reddit, linkedin, serp, ai"
+        }
+      ],
+      "exitCode": null
+    },
+    {
+      "page": "Content Calendar",
+      "status": "PARTIAL",
+      "counts": {
+        "OK": 12,
+        "PARTIAL": 2,
+        "FAIL": 0
+      },
+      "features": [
+        {
+          "feature": "Calendar status — get-calendar-status",
+          "status": "OK",
+          "detail": "0 scheduled, 0 due, 0 upcoming"
+        },
+        {
+          "feature": "Schedule — schedule-post",
+          "status": "OK",
+          "detail": "Created sched_1781918958067"
+        },
+        {
+          "feature": "Schedule — get-scheduled-posts",
+          "status": "OK",
+          "detail": "1 post(s), test post found"
+        },
+        {
+          "feature": "Schedule — update-scheduled-post",
+          "status": "OK",
+          "detail": "Content + time updated"
+        },
+        {
+          "feature": "Analytics — get-best-post-times",
+          "status": "OK",
+          "detail": "0 data points, 3 suggestions"
+        },
+        {
+          "feature": "Analytics — get-upcoming-by-platform",
+          "status": "OK",
+          "detail": "1 platform(s), 1 upcoming"
+        },
+        {
+          "feature": "Settings — save/get calendar-settings",
+          "status": "OK",
+          "detail": "tz=America/New_York, view=week"
+        },
+        {
+          "feature": "Publish — publish-scheduled-post-now",
+          "status": "PARTIAL",
+          "detail": "Needs linked account for live publish"
+        },
+        {
+          "feature": "Publish — process-due-scheduled-posts",
+          "status": "PARTIAL",
+          "detail": "Processed: 0 published, 1 failed (no linked account)"
+        },
+        {
+          "feature": "Schedule — delete-scheduled-post",
+          "status": "OK",
+          "detail": "Deleted sched_1781918958067"
+        },
+        {
+          "feature": "Background run — get/save settings",
+          "status": "OK",
+          "detail": "enabled=true, windows=1"
+        },
+        {
+          "feature": "Background run — add/delete slot",
+          "status": "OK",
+          "detail": "Added & removed bgrun_1781918958667_8lpx"
+        },
+        {
+          "feature": "Background run — get-background-run-status",
+          "status": "OK",
+          "detail": "inWindow=false, runs=0"
+        },
+        {
+          "feature": "Analytics module — analyzeEngagementPatterns",
+          "status": "OK",
+          "detail": "0 posts analyzed"
+        }
+      ],
+      "exitCode": 0
+    }
+  ]
+}

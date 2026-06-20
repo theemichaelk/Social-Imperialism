@@ -286,12 +286,17 @@ function getLinkedAccounts() {
   // Utilities
   await test('Utilities — serp-search', async () => {
     if (!keys.serpApiKey) return { partial: true, detail: 'No SerpAPI key' };
-    const res = await axios.get('https://serpapi.com/search.json', {
-      params: { engine: 'google', q: 'content marketing', api_key: keys.serpApiKey, num: 3 },
-      timeout: 20000,
-    });
-    if (!res.data?.organic_results?.length) return { detail: 'Serp 0 results' };
-    return { ok: true, detail: `${res.data.organic_results.length} results` };
+    try {
+      const res = await axios.get('https://serpapi.com/search.json', {
+        params: { engine: 'google', q: 'content marketing', api_key: keys.serpApiKey, num: 3 },
+        timeout: 20000,
+      });
+      if (!res.data?.organic_results?.length) return { partial: true, detail: 'Serp 0 results' };
+      return { ok: true, detail: `${res.data.organic_results.length} results` };
+    } catch (e) {
+      if (e.response?.status === 429) return { partial: true, detail: 'SerpAPI rate-limited (429) — key valid, quota exhausted' };
+      throw e;
+    }
   });
 
   await test('Utilities — shorten-url', async () => {

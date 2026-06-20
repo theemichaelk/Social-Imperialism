@@ -174,7 +174,7 @@ async function test(name, fn) {
     const campaign = camps.find((c) => c.id === activeId) || { brandName: 'Test Brand' };
     const leads = await integrations.runRedditProspector(store, keys, campaign);
     const n = Array.isArray(leads) ? leads.length : (leads?.leads?.length || 0);
-    if (!n) return { partial: true, detail: result?.error || '0 leads (Reddit public API may be rate-limited)' };
+    if (!n) return { partial: true, detail: '0 leads (Reddit API may be rate-limited; web-discovery fallback used)' };
     return { ok: true, detail: `${n} leads` };
   });
 

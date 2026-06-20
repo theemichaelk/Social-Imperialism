@@ -82,11 +82,13 @@ async function publish(postData, accessToken) {
   const token = accessToken || postData.accessToken;
   if (!token) throw new Error('LinkedIn access token required');
 
-  let author = 'urn:li:person:me';
+  let author = null;
   if (postData.orgUrn) {
     author = postData.orgUrn.startsWith('urn:') ? postData.orgUrn : `urn:li:organization:${postData.orgUrn}`;
   } else if (postData.accountType === 'Page' && postData.pageId) {
     author = `urn:li:organization:${postData.pageId}`;
+  } else {
+    author = await getActorUrn(token);
   }
 
   const payload = {

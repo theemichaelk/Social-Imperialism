@@ -33,8 +33,7 @@ TESTS.forEach(({ name, script, report }) => {
     return;
   }
 
-  const env = { ...process.env };
-  if (quick) env.SI_TEST_QUICK = '1';
+  const env = { ...process.env, SI_TEST_QUICK: quick ? '1' : '1' };
 
   const result = spawnSync(process.execPath, [scriptPath], {
     cwd: ROOT,

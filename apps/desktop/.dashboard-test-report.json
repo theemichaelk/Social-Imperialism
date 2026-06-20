@@ -16,13 +16,13 @@
   },
   {
     "feature": "Trending Topics",
-    "status": "FAIL",
-    "detail": "No trending topics returned"
+    "status": "OK",
+    "detail": "6 topics (e.g. The GTPLAYER Big and Tall Gaming Chair D)"
   },
   {
     "feature": "Live Feed (get-live-feed)",
-    "status": "FAIL",
-    "detail": "Feed returned 0 posts — check keywords/APIs"
+    "status": "OK",
+    "detail": "7 posts from News"
   },
   {
     "feature": "Linked Accounts",
@@ -32,17 +32,17 @@
   {
     "feature": "AI Draft Reply (generate-ai)",
     "status": "OK",
-    "detail": "Generated: \"You're welcome! Always here to help with marketing inquiries\""
+    "detail": "Generated: \"You're welcome! Let me know if you have more questions.\""
   },
   {
     "feature": "Q&A Discovery (discover-best-questions)",
-    "status": "PARTIAL",
-    "detail": "0 questions found — add keywords in Keywords page"
+    "status": "OK",
+    "detail": "3 questions"
   },
   {
     "feature": "Reddit Prospector (scan-reddit)",
-    "status": "FAIL",
-    "detail": "result is not defined"
+    "status": "PARTIAL",
+    "detail": "0 leads (Reddit API may be rate-limited; web-discovery fallback used)"
   },
   {
     "feature": "Image Generation (generate-image)",

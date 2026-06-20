@@ -17,7 +17,7 @@
   {
     "feature": "Standard Post — generate-ai (enhance)",
     "status": "OK",
-    "detail": "\"🚀 Exciting news! 🎉 We successfully launched our \""
+    "detail": "\"🚀 Exciting news! Today we launched an amazing pro\""
   },
   {
     "feature": "Standard Post — search-stock-photo",
@@ -42,7 +42,7 @@
   {
     "feature": "Content Studio — generate batch (preview)",
     "status": "OK",
-    "detail": "1 item(s) — \"🚀 Ready to take your marketing strategy\""
+    "detail": "1 item(s) — \"🚀 Ready to elevate your marketing game?\""
   },
   {
     "feature": "Repurpose — generate-ai blog→post",
@@ -67,7 +67,7 @@
   {
     "feature": "Answer Composer — compose-qa-answer",
     "status": "OK",
-    "detail": "\"When considering the best marketing automation tool, it's es\""
+    "detail": "\"When it comes to selecting the best marketing automation too\""
   },
   {
     "feature": "Answer Composer — reuse-qa-as-content",
@@ -92,7 +92,7 @@
   {
     "feature": "Brand tab — generate-keywords",
     "status": "OK",
-    "detail": "6 keywords"
+    "detail": "5 keywords"
   },
   {
     "feature": "Brand tab — save-keywords",
@@ -111,8 +111,8 @@
   },
   {
     "feature": "Utilities — serp-search",
-    "status": "OK",
-    "detail": "10 results"
+    "status": "FAIL",
+    "detail": "Request failed with status code 429"
   },
   {
     "feature": "Utilities — shorten-url",

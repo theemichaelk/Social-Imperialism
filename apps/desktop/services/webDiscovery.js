@@ -50,6 +50,71 @@ async function searchViaBrave(query, hostPattern, limit = 15) {
   }
 }
 
+function parseMojeekHtml(html, hostPattern, limit = 15) {
+  const items = [];
+  const seen = new Set();
+  const re = new RegExp(`href="(https?:\\/\\/(?:www\\.)?${hostPattern}[^"#]+)"`, 'gi');
+  let m;
+  while ((m = re.exec(String(html || ''))) !== null && items.length < limit * 2) {
+    const url = m[1].split('&')[0].split('#')[0];
+    if (seen.has(url)) continue;
+    if (/\/(?:login|signup|search|topic|about|terms|privacy|help)(?:\/|$)/i.test(url)) continue;
+    seen.add(url);
+    items.push({ url, title: titleFromUrl(url) });
+  }
+  return items.slice(0, limit);
+}
+
+async function searchViaMojeek(query, hostPattern, limit = 15) {
+  try {
+    const res = await axios.get('https://www.mojeek.com/search', {
+      params: { q: query },
+      headers: { 'User-Agent': SEARCH_UA, Accept: 'text/html' },
+      timeout: 25000,
+      validateStatus: (s) => s < 500,
+    });
+    if (res.status !== 200) return [];
+    return parseMojeekHtml(res.data, hostPattern, limit);
+  } catch (e) {
+    console.warn('Mojeek discovery:', e.message);
+    return [];
+  }
+}
+
+function parseDuckDuckGoHtml(html, hostPattern, limit = 15) {
+  const items = [];
+  const seen = new Set();
+  const hostRe = new RegExp(hostPattern, 'i');
+  const linkRe = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  let m;
+  while ((m = linkRe.exec(String(html || ''))) !== null && items.length < limit * 2) {
+    let url = m[1].replace(/&amp;/g, '&');
+    if (url.startsWith('//')) url = `https:${url}`;
+    if (!hostRe.test(url) || seen.has(url)) continue;
+    if (/\/(?:login|signup|search|topic|about|terms|privacy|help)(?:\/|$)/i.test(url)) continue;
+    seen.add(url);
+    const title = cleanTitle(m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), url);
+    items.push({ url, title });
+  }
+  return items.slice(0, limit);
+}
+
+async function searchViaDuckDuckGo(query, hostPattern, limit = 15) {
+  const headers = { 'User-Agent': SEARCH_UA, Accept: 'text/html' };
+  try {
+    const res = await axios.post('https://html.duckduckgo.com/html/', `q=${encodeURIComponent(query)}`, {
+      headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' },
+      timeout: 8000,
+      validateStatus: (s) => s < 500,
+    });
+    if (res.status !== 200) return [];
+    return parseDuckDuckGoHtml(res.data, hostPattern, limit);
+  } catch (e) {
+    console.warn('DuckDuckGo discovery:', e.message);
+    return [];
+  }
+}
+
 async function searchViaSerp(query, keys, limit = 15) {
   if (!keys?.serpApiKey) return [];
   try {
@@ -103,7 +168,8 @@ async function discoverSitePosts({ site, hostPattern, keyword, keys, limit = 5, 
 
   merge(await searchViaSerp(q, keys, limit));
   if (out.length < limit) merge(await searchViaBrave(q, hostPattern, limit));
-  if (out.length < limit) merge(await searchViaBrave(`${keyword} ${site.replace('.com', '')}`, hostPattern, limit));
+  if (out.length < limit && !process.env.SI_TEST_QUICK) merge(await searchViaDuckDuckGo(q, hostPattern, limit));
+  if (out.length < limit) merge(await searchViaMojeek(q, hostPattern, limit));
 
   return out.slice(0, limit);
 }
@@ -146,5 +212,7 @@ module.exports = {
   discoverQuoraPosts,
   discoverTwitterPosts,
   searchViaBrave,
+  searchViaDuckDuckGo,
+  searchViaMojeek,
   searchViaSerp,
 };

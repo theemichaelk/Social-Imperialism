@@ -2,22 +2,22 @@
   {
     "feature": "1. KPI Stats (get-dashboard-stats)",
     "status": "OK",
-    "detail": "0 posts, 0 keywords"
+    "detail": "0 posts, 3 keywords"
   },
   {
     "feature": "2. Keywords dropdown (get-keywords)",
-    "status": "PARTIAL",
-    "detail": "Auto-seeded 3 keywords (dropdown empty until refresh)"
+    "status": "OK",
+    "detail": "3 keywords: Test Brand, marketing, technology"
   },
   {
     "feature": "3. Live Feed — default filters",
     "status": "OK",
-    "detail": "13 posts [Quora, Twitter, Reddit] — 13 urls, 0 API ids, 13 web-discovery"
+    "detail": "5 posts [News] — 5 urls, 5 API ids, 0 web-discovery"
   },
   {
     "feature": "4. Live Feed — preset high-intent (strict filters)",
     "status": "PARTIAL",
-    "detail": "Strict preset empties feed (13 raw → 0 filtered) — expected for low-engage discovery posts"
+    "detail": "Strict preset empties feed (5 raw → 0 filtered) — expected for low-engage discovery posts"
   },
   {
     "feature": "5. Linked account chips (get-linked-accounts)",
@@ -27,7 +27,7 @@
   {
     "feature": "6. Draft AI Reply (draft-post-reply)",
     "status": "OK",
-    "detail": "\"Focus on content marketing, SEO, freemium models, and customer success\""
+    "detail": "\"Leverage content marketing, optimize for SEO, use targeted ads, and pr\""
   },
   {
     "feature": "7. Engage Like — Reddit API post",
@@ -36,8 +36,8 @@
   },
   {
     "feature": "8. Engage Like — web-discovery post",
-    "status": "OK",
-    "detail": "Correctly rejects/fails synthetic id: Link a Reddit account in Account Hub to upvote or reply on Reddit."
+    "status": "PARTIAL",
+    "detail": "No web-discovery posts in feed to test"
   },
   {
     "feature": "9. Be First monitors (save/get-watched-monitors)",
@@ -66,7 +66,7 @@
   },
   {
     "feature": "14. Pagination simulation (5 per page)",
-    "status": "OK",
-    "detail": "13 posts → 3 pages at 5/page"
+    "status": "PARTIAL",
+    "detail": "Only 5 posts — pagination needs 6+"
   }
 ]

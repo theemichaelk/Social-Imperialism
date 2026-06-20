@@ -1,0 +1,72 @@
+[
+  {
+    "feature": "Calendar status — get-calendar-status",
+    "status": "OK",
+    "detail": "0 scheduled, 0 due, 0 upcoming"
+  },
+  {
+    "feature": "Schedule — schedule-post",
+    "status": "OK",
+    "detail": "Created sched_1781918958067"
+  },
+  {
+    "feature": "Schedule — get-scheduled-posts",
+    "status": "OK",
+    "detail": "1 post(s), test post found"
+  },
+  {
+    "feature": "Schedule — update-scheduled-post",
+    "status": "OK",
+    "detail": "Content + time updated"
+  },
+  {
+    "feature": "Analytics — get-best-post-times",
+    "status": "OK",
+    "detail": "0 data points, 3 suggestions"
+  },
+  {
+    "feature": "Analytics — get-upcoming-by-platform",
+    "status": "OK",
+    "detail": "1 platform(s), 1 upcoming"
+  },
+  {
+    "feature": "Settings — save/get calendar-settings",
+    "status": "OK",
+    "detail": "tz=America/New_York, view=week"
+  },
+  {
+    "feature": "Publish — publish-scheduled-post-now",
+    "status": "PARTIAL",
+    "detail": "Needs linked account for live publish"
+  },
+  {
+    "feature": "Publish — process-due-scheduled-posts",
+    "status": "PARTIAL",
+    "detail": "Processed: 0 published, 1 failed (no linked account)"
+  },
+  {
+    "feature": "Schedule — delete-scheduled-post",
+    "status": "OK",
+    "detail": "Deleted sched_1781918958067"
+  },
+  {
+    "feature": "Background run — get/save settings",
+    "status": "OK",
+    "detail": "enabled=true, windows=1"
+  },
+  {
+    "feature": "Background run — add/delete slot",
+    "status": "OK",
+    "detail": "Added & removed bgrun_1781918958667_8lpx"
+  },
+  {
+    "feature": "Background run — get-background-run-status",
+    "status": "OK",
+    "detail": "inWindow=false, runs=0"
+  },
+  {
+    "feature": "Analytics module — analyzeEngagementPatterns",
+    "status": "OK",
+    "detail": "0 posts analyzed"
+  }
+]

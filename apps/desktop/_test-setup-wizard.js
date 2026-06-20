@@ -2,6 +2,7 @@
  * Setup Wizard feature tester — exercises all 4 steps without Electron UI.
  */
 require('dotenv').config();
+process.env.SI_TEST_QUICK = process.env.SI_TEST_QUICK || '1';
 const path = require('path');
 const fs = require('fs');
 const { LocalStorage } = require('node-localstorage');

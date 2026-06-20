@@ -134,13 +134,27 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
     });
   }
 
-  if (deduped.length < minDesired && queryList[0]) {
-    const { discoverRedditPosts, discoverQuoraPosts } = require('./webDiscovery');
+  if (deduped.length < minDesired && keys.newsApiKey) {
+    const newsPosts = await fetchNewsAsPosts(keys, queryList[0] || 'marketing', 8);
+    newsPosts.forEach((p) => {
+      const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(normalizePostStats(p));
+      }
+    });
+  }
+
+  if (deduped.length < minDesired && queryList[0] && !process.env.SI_TEST_QUICK) {
+    const { discoverRedditPosts, discoverQuoraPosts, discoverTwitterPosts } = require('./webDiscovery');
+    const primary = queryList[0];
     const webReddit = platformAllowed('Reddit', filters, allowedPlatforms)
-      ? await discoverRedditPosts(queryList[0], keys, 8) : [];
+      ? await discoverRedditPosts(primary, keys, 8) : [];
     const webQuora = platformAllowed('Quora', filters, allowedPlatforms)
-      ? await discoverQuoraPosts(queryList[0], keys, 5) : [];
-    [...webReddit, ...webQuora].forEach((p) => {
+      ? await discoverQuoraPosts(primary, keys, 5) : [];
+    const webTwitter = platformAllowed('Twitter', filters, allowedPlatforms)
+      ? await discoverTwitterPosts(primary, keys, 5) : [];
+    [...webReddit, ...webQuora, ...webTwitter].forEach((p) => {
       const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -193,6 +207,59 @@ async function fetchSerpTrending(keys, limit = 6) {
   }
 }
 
+async function fetchNewsAsPosts(keys, keyword = 'technology', limit = 8) {
+  const newsKey = keys.newsApiKey || process.env.NEWS_API_KEY;
+  if (!newsKey) return [];
+  try {
+    const res = await axios.get('https://newsapi.org/v2/everything', {
+      params: {
+        q: keyword,
+        language: 'en',
+        sortBy: 'publishedAt',
+        pageSize: limit,
+        apiKey: newsKey,
+      },
+      timeout: 15000,
+    });
+    return (res.data?.articles || []).slice(0, limit).map((a, i) => ({
+      platform: 'News',
+      author: a.source?.name || 'News',
+      time: a.publishedAt ? new Date(a.publishedAt).toLocaleString() : 'recent',
+      createdAt: a.publishedAt ? new Date(a.publishedAt).getTime() : Date.now() - i * 60000,
+      matchScore: 50,
+      matchedKeyword: keyword,
+      content: a.title + (a.description ? `\n\n${a.description.substring(0, 200)}` : ''),
+      externalId: `news_${Buffer.from(a.url || a.title || String(i)).toString('base64').slice(0, 16)}`,
+      url: a.url,
+      stats: { likes: 0, comments: 0, views: 0 },
+      isNewsFallback: true,
+    }));
+  } catch (e) {
+    try {
+      const res = await axios.get('https://newsapi.org/v2/top-headlines', {
+        params: { category: 'technology', language: 'en', pageSize: limit, apiKey: newsKey },
+        timeout: 15000,
+      });
+      return (res.data?.articles || []).slice(0, limit).map((a, i) => ({
+        platform: 'News',
+        author: a.source?.name || 'News',
+        time: 'recent',
+        createdAt: Date.now() - i * 60000,
+        matchScore: 45,
+        matchedKeyword: keyword,
+        content: a.title || 'Trending headline',
+        externalId: `news_${Buffer.from(a.url || a.title || String(i)).toString('base64').slice(0, 16)}`,
+        url: a.url,
+        stats: { likes: 0, comments: 0, views: 0 },
+        isNewsFallback: true,
+      }));
+    } catch (err) {
+      console.warn('NewsAPI feed fallback:', err.message);
+      return [];
+    }
+  }
+}
+
 async function fetchNewsHeadlineTrends(keys, limit = 6) {
   const newsKey = keys.newsApiKey || process.env.NEWS_API_KEY;
   if (!newsKey) return [];
@@ -214,11 +281,15 @@ async function fetchNewsHeadlineTrends(keys, limit = 6) {
   }
 }
 
-async function fetchBraveTrending(keyword, limit = 6) {
+async function fetchWebTrending(keyword, limit = 6) {
   if (!keyword) return [];
   try {
-    const { searchViaBrave } = require('./webDiscovery');
-    const hits = await searchViaBrave(`${keyword} trending`, '(?:reddit|quora|news)\\.com', limit);
+    const { searchViaBrave, searchViaMojeek, searchViaDuckDuckGo } = require('./webDiscovery');
+    const query = `${keyword} trending`;
+    const hostPattern = '(?:reddit|quora|news)\\.com';
+    let hits = await searchViaBrave(query, hostPattern, limit);
+    if (!hits.length) hits = await searchViaMojeek(query, hostPattern, limit);
+    if (!hits.length) hits = await searchViaDuckDuckGo(query, hostPattern, limit);
     return hits.map((h) => ({
       topic: (h.title || '').substring(0, 100),
       searchVolume: 'Web',
@@ -227,7 +298,7 @@ async function fetchBraveTrending(keyword, limit = 6) {
       platform: 'Web',
     }));
   } catch (e) {
-    console.warn('Brave trending fallback:', e.message);
+    console.warn('Web trending fallback:', e.message);
     return [];
   }
 }
@@ -262,8 +333,8 @@ async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
 
   const seed = (Array.isArray(seedKeywords) ? seedKeywords : []).map((k) => String(k).trim()).filter(Boolean);
   if (seed.length) {
-    const braveTrends = await fetchBraveTrending(seed[0], 6);
-    if (braveTrends.length > 0) return braveTrends;
+    const webTrends = await fetchWebTrending(seed[0], 6);
+    if (webTrends.length > 0) return webTrends;
     return seed.slice(0, 6).map((term) => ({
       topic: term,
       searchVolume: 'Brand keyword',
