@@ -1,0 +1,127 @@
+[
+  {
+    "feature": "API Status bar data",
+    "status": "OK",
+    "detail": "serpApi, reddit, twitter, linkedin, newsApi, ai"
+  },
+  {
+    "feature": "Publish Wizard — get-linked-accounts",
+    "status": "PARTIAL",
+    "detail": "No linked accounts — wizard needs Account Hub"
+  },
+  {
+    "feature": "Publish Wizard — get-post-history",
+    "status": "OK",
+    "detail": "0 posts in history"
+  },
+  {
+    "feature": "Standard Post — generate-ai (enhance)",
+    "status": "OK",
+    "detail": "\"🚀 Exciting news! 🎉 We successfully launched our \""
+  },
+  {
+    "feature": "Standard Post — search-stock-photo",
+    "status": "OK",
+    "detail": "Unsplash OK"
+  },
+  {
+    "feature": "Standard Post — generate-image (FAL)",
+    "status": "OK",
+    "detail": "FAL key configured"
+  },
+  {
+    "feature": "Standard Post — schedule-post",
+    "status": "OK",
+    "detail": "1 scheduled post(s)"
+  },
+  {
+    "feature": "Standard Post — publish-post (live)",
+    "status": "PARTIAL",
+    "detail": "Needs linked account for live publish"
+  },
+  {
+    "feature": "Content Studio — generate batch (preview)",
+    "status": "OK",
+    "detail": "1 item(s) — \"🚀 Ready to take your marketing strategy\""
+  },
+  {
+    "feature": "Repurpose — generate-ai blog→post",
+    "status": "OK",
+    "detail": "🚀✨ AI is revolutionizing marketing in 2026! From "
+  },
+  {
+    "feature": "Repurpose — get-youtube-channels",
+    "status": "OK",
+    "detail": "3 videos"
+  },
+  {
+    "feature": "Repurpose — generate-carousel-fal",
+    "status": "OK",
+    "detail": "FAL carousel path available"
+  },
+  {
+    "feature": "Post Analytics — get-all-post-history",
+    "status": "OK",
+    "detail": "0 posts for analytics"
+  },
+  {
+    "feature": "Answer Composer — compose-qa-answer",
+    "status": "OK",
+    "detail": "\"When considering the best marketing automation tool, it's es\""
+  },
+  {
+    "feature": "Answer Composer — reuse-qa-as-content",
+    "status": "OK",
+    "detail": "128 chars blog format"
+  },
+  {
+    "feature": "RSS — curate-from-rss",
+    "status": "OK",
+    "detail": "RSS feed reachable"
+  },
+  {
+    "feature": "Auto Content — save/get settings + queue",
+    "status": "OK",
+    "detail": "Settings OK, queue 1 item(s)"
+  },
+  {
+    "feature": "Viral Thumbnails — studio config",
+    "status": "OK",
+    "detail": "thumbnailIpc module loaded"
+  },
+  {
+    "feature": "Brand tab — generate-keywords",
+    "status": "OK",
+    "detail": "6 keywords"
+  },
+  {
+    "feature": "Brand tab — save-keywords",
+    "status": "OK",
+    "detail": "1 keyword(s)"
+  },
+  {
+    "feature": "Comments — get-ai-replies",
+    "status": "OK",
+    "detail": "0 AI replies in inbox"
+  },
+  {
+    "feature": "Comments — run-auto-rules-now",
+    "status": "PARTIAL",
+    "detail": "Worker scan — skipped in unit test (heavy); handler exists in index.js"
+  },
+  {
+    "feature": "Utilities — serp-search",
+    "status": "OK",
+    "detail": "10 results"
+  },
+  {
+    "feature": "Utilities — shorten-url",
+    "status": "OK",
+    "detail": "https://tinyurl.com/yahvytml"
+  },
+  {
+    "feature": "Utilities — upload-local-media",
+    "status": "OK",
+    "detail": "184KB data URL"
+  }
+]

@@ -5,7 +5,7 @@
 <title>Social Imperialism - Content Hub</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0; display: flex; height: 100vh; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 0; }
 
 
 
@@ -17,11 +17,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
 h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); font-size: 1.8rem; letter-spacing: 0.5px; }
 
-/* Tabs Styles */
-.tabs { display: flex; gap: 1rem; border-bottom: 1px solid #334155; margin-bottom: 1.5rem; }
-.tab { padding: 0.75rem 1.5rem; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; }
-.tab:hover { color: #f8fafc; }
-.tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+/* Tabs — compact grouped menu */
+.ch-tabs-wrap { margin-bottom: 1.25rem; border-bottom: 1px solid #334155; padding-bottom: 0.65rem; }
+.ch-tab-groups { display: flex; flex-direction: column; gap: 0.45rem; }
+.ch-tab-group { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ch-tab-group-label {
+  font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.65px;
+  color: #64748b; font-weight: 700; min-width: 4.5rem; flex-shrink: 0; padding-left: 2px;
+}
+.ch-tab-group-items { display: flex; flex-wrap: wrap; gap: 0.3rem; flex: 1; }
+.tabs { display: contents; }
+.tab {
+  padding: 0.4rem 0.7rem; color: #94a3b8; cursor: pointer;
+  border: 1px solid transparent; border-radius: 6px;
+  font-weight: 500; font-size: 0.76rem; transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;
+  background: rgba(15, 23, 42, 0.45);
+}
+.tab i { font-size: 0.72rem; opacity: 0.85; }
+.tab:hover { color: #f1f5f9; border-color: #475569; background: rgba(30, 41, 59, 0.7); }
+.tab.active {
+  color: #38bdf8; border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.1); font-weight: 600;
+}
 
 .tab-content { display: none; }
 .tab-content.active { display: block; }
@@ -51,34 +69,7 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
 .media-preview { height: 120px; background: rgba(0,0,0,0.2); border: 2px dashed #475569; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #94a3b8; margin-bottom: 1rem; cursor: pointer; overflow: hidden; text-align: center; padding: 1rem; }
 .media-preview img { width: 100%; height: 100%; object-fit: cover; display: none; }
 
-/* Sidebar Standardized Styles */
 
-
-
-
-
-.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
-
-
-.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
-.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
-.campaign-switcher-box select:hover { border-color: #38bdf8; }
-.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
-
-
-/* Sidebar Standardized Styles */
-.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
-.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
-.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
-.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
-.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
-.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
-.nav-link:hover { background-color: #1e293b; color: white; transform: translateX(2px); }
-.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); transform: translateX(2px); }
-.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
-.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
-.campaign-switcher-box select:hover { border-color: #38bdf8; }
-.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
 
 #apiStatusBar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1rem; font-size: 0.75rem; }
 .api-pill { padding: 4px 10px; border-radius: 12px; border: 1px solid #475569; }
@@ -190,18 +181,40 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
     <div id="contentHubReadiness" class="ch-readiness" style="display:none;"></div>
     <div id="toastContainer"></div>
 
-    <div class="tabs">
-      <div class="tab" data-tab="publish-wizard" onclick="switchTab('publish-wizard')"><i class="fas fa-route"></i> Publish Wizard</div>
-      <div class="tab active" data-tab="standard" onclick="switchTab('standard')"><i class="fas fa-pen"></i> Standard Post</div>
-      <div class="tab" data-tab="media" onclick="switchTab('media')"><i class="fas fa-video"></i> Video / Reel / Media</div>
-      <div class="tab" data-tab="repurpose" onclick="switchTab('repurpose')"><i class="fas fa-recycle"></i> Repurpose Content</div>
-      <div class="tab" data-tab="analytics" onclick="switchTab('analytics')"><i class="fas fa-chart-line"></i> Post Analytics</div>
-      <div class="tab" data-tab="answer" onclick="switchTab('answer')"><i class="fas fa-question-circle"></i> Answer Composer</div>
-      <div class="tab" data-tab="rss" onclick="switchTab('rss')"><i class="fas fa-rss"></i> RSS & Auto Content</div>
-      <div class="tab" data-tab="thumbnails" onclick="switchTab('thumbnails')"><i class="fas fa-fire"></i> Viral Thumbnails</div>
-      <div class="tab" data-tab="infographic" onclick="switchTab('infographic')"><i class="fas fa-chart-pie"></i> Infographic Generator</div>
-      <div class="tab" data-tab="brand" onclick="switchTab('brand')"><i class="fas fa-bullhorn"></i> Brand & Keywords</div>
-      <div class="tab" data-tab="comments" onclick="switchTab('comments')"><i class="fas fa-comments"></i> Manage Comments / Replies</div>
+    <div class="ch-tabs-wrap">
+      <div class="ch-tab-groups">
+        <div class="ch-tab-group">
+          <span class="ch-tab-group-label">Publish</span>
+          <div class="ch-tab-group-items tabs">
+            <div class="tab" data-tab="publish-wizard" onclick="switchTab('publish-wizard')" title="Publish Wizard"><i class="fas fa-route"></i> Wizard</div>
+            <div class="tab active" data-tab="standard" onclick="switchTab('standard')" title="Standard Post"><i class="fas fa-pen"></i> Post</div>
+            <div class="tab" data-tab="media" onclick="switchTab('media')" title="Video / Reel / Media"><i class="fas fa-video"></i> Media</div>
+          </div>
+        </div>
+        <div class="ch-tab-group">
+          <span class="ch-tab-group-label">Grow</span>
+          <div class="ch-tab-group-items tabs">
+            <div class="tab" data-tab="repurpose" onclick="switchTab('repurpose')" title="Repurpose Content"><i class="fas fa-recycle"></i> Repurpose</div>
+            <div class="tab" data-tab="answer" onclick="switchTab('answer')" title="Answer Composer"><i class="fas fa-question-circle"></i> Q&amp;A</div>
+            <div class="tab" data-tab="rss" onclick="switchTab('rss')" title="RSS & Auto Content"><i class="fas fa-rss"></i> RSS</div>
+          </div>
+        </div>
+        <div class="ch-tab-group">
+          <span class="ch-tab-group-label">Create</span>
+          <div class="ch-tab-group-items tabs">
+            <div class="tab" data-tab="thumbnails" onclick="switchTab('thumbnails')" title="Viral Thumbnails"><i class="fas fa-fire"></i> Thumbnails</div>
+            <div class="tab" data-tab="infographic" onclick="switchTab('infographic')" title="Infographic Generator"><i class="fas fa-chart-pie"></i> Infographic</div>
+          </div>
+        </div>
+        <div class="ch-tab-group">
+          <span class="ch-tab-group-label">Manage</span>
+          <div class="ch-tab-group-items tabs">
+            <div class="tab" data-tab="analytics" onclick="switchTab('analytics')" title="Post Analytics"><i class="fas fa-chart-line"></i> Analytics</div>
+            <div class="tab" data-tab="brand" onclick="switchTab('brand')" title="Brand & Keywords"><i class="fas fa-bullhorn"></i> Brand</div>
+            <div class="tab" data-tab="comments" onclick="switchTab('comments')" title="Manage Comments / Replies"><i class="fas fa-comments"></i> Comments</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- PUBLISH WIZARD TAB -->
@@ -481,6 +494,23 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
 
     <div id="rss-tab" class="tab-content">
       <div class="header" style="border:none; padding:0; margin-bottom:1rem;">
+        <h3 style="color:#38bdf8; margin:0;">Site RSS Hub — Category Routing</h3>
+        <p style="color:#94a3b8;">Turn any website into RSS feeds (per category), then auto-route each category to the most relevant communities, groups, and subreddits — e.g. Tech → r/technology, Tech Facebook groups.</p>
+      </div>
+      <div style="background:rgba(15,23,42,0.55);border:1px solid #334155;border-radius:8px;padding:1rem;margin-bottom:1.25rem;">
+        <label>Website URL</label>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+          <input type="url" id="siteRssUrlInput" class="input-field" placeholder="https://yourblog.com or any news site" style="margin:0;flex:1;min-width:220px;">
+          <button type="button" class="tool-btn generate" id="discoverSiteRssBtn"><i class="fas fa-search"></i> Discover Feeds</button>
+          <button type="button" class="tool-btn" id="saveSiteRssBtn" disabled><i class="fas fa-save"></i> Save &amp; Enable Routing</button>
+          <button type="button" class="tool-btn" id="runCategoryRssBtn"><i class="fas fa-route"></i> Route Now</button>
+        </div>
+        <div id="siteRssDiscoveryStatus" style="font-size:0.82rem;color:#64748b;margin-bottom:0.75rem;">Enter a site URL and click Discover to find main + category feeds.</div>
+        <div id="siteRssDiscoveryResults" style="max-height:340px;overflow-y:auto;"></div>
+      </div>
+      <div id="siteRssSavedSources" style="margin-bottom:1.5rem;"></div>
+
+      <div class="header" style="border:none; padding:0; margin-bottom:1rem;">
         <h3 style="color:#38bdf8; margin:0;">RSS &amp; Auto Content Scheduler (2.7.5)</h3>
         <p style="color:#94a3b8;">Connect blog, partner/affiliate, or industry news RSS. AI summarizes + FAL generates images. Auto-post or queue for review with per-platform formatting.</p>
       </div>
@@ -503,6 +533,9 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
           </select>
           <label style="margin-top:0.75rem;display:flex;align-items:center;gap:8px;cursor:pointer;">
             <input type="checkbox" id="autoContentEnabled" style="width:auto;"> Enable Auto Content Scheduler
+          </label>
+          <label style="margin-top:0.5rem;display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="autoContentCategoryRouting" style="width:auto;"> Route category feeds to matched communities/groups
           </label>
         </div>
       </div>
@@ -1339,10 +1372,11 @@ window.social_api = {
     if (!q) return;
     showToast('Asking Grok in browser session…', 'info');
     try {
-      const res = await ipcRenderer.invoke('grok-ask-text', { prompt: q, newChat: true });
+      const res = await ipcRenderer.invoke('grok-ask-text', { content: q, pageId: 'content-hub', newChat: true });
       if (!res.success) throw new Error(res.error || 'Grok failed');
       if (ta) ta.value = res.text;
-      showToast('Grok text applied to post draft', 'success');
+      const kw = res.matchedKeywords?.length ? ` (keywords: ${res.matchedKeywords.join(', ')})` : '';
+      showToast(`Grok text applied${kw}`, 'success');
     } catch (e) {
       showToast('Grok text: ' + e.message, 'error');
     }
@@ -1416,7 +1450,7 @@ window.grokHubText = async function() {
   const content = document.getElementById('igContent')?.value?.trim();
   if (!content) return showToast('Enter content first', 'error');
   try {
-    const res = await ipcRenderer.invoke('grok-ask-text', { prompt: content, newChat: true });
+    const res = await ipcRenderer.invoke('grok-ask-text', { content, pageId: 'content-hub', taskType: 'research', newChat: true });
     if (!res.success) throw new Error(res.error);
     document.getElementById('igAnalysis').textContent = res.text;
     lastInfographicResult = { postText: res.text, analysis: res.text };
@@ -1429,7 +1463,7 @@ window.grokHubText = async function() {
 window.grokHubImagine = async function() {
   const content = document.getElementById('igContent')?.value?.trim() || 'infographic';
   try {
-    const res = await ipcRenderer.invoke('grok-imagine', { prompt: `Professional infographic: ${content}` });
+    const res = await ipcRenderer.invoke('grok-imagine', { content, pageId: 'content-hub' });
     if (!res.success) throw new Error(res.error);
     lastInfographicResult = { ...(lastInfographicResult || {}), imageAsset: res.primaryAsset };
     const preview = document.getElementById('igPreview');
@@ -2083,6 +2117,7 @@ window.saveAutoContentSettings = async function() {
     frequency: document.getElementById('autoContentFreq')?.value || 'daily',
     publishMode: document.getElementById('autoContentMode')?.value || 'queue',
     targetPlatforms: platforms,
+    categoryRouting: document.getElementById('autoContentCategoryRouting')?.checked === true,
   });
   showToast('Auto content scheduler saved', 'success');
 };
@@ -2090,9 +2125,118 @@ window.saveAutoContentSettings = async function() {
 window.runSchedulerNow = async function() {
   await saveAutoContentSettings();
   const res = await ipcRenderer.invoke('run-content-scheduler-now');
-  showToast(`Scheduler: ${res.processed || 0} item(s) processed`, 'success');
+  const cat = res.categoryRouting?.processed || 0;
+  showToast(`Scheduler: ${res.processed || 0} item(s) processed${cat ? ` (${cat} category-routed)` : ''}`, 'success');
   loadContentQueue();
 };
+
+let _siteRssDiscovery = null;
+
+function renderSiteRssFeedRow(feed, idx) {
+  const mappings = feed.targetMappings || [];
+  const mappingHtml = mappings.length
+    ? mappings.map((m) => `<span style="display:inline-block;background:rgba(56,189,248,0.12);border:1px solid #38bdf8;color:#7dd3fc;border-radius:4px;padding:2px 6px;margin:2px;font-size:0.72rem;">${escapeHtml(m.platform)} · ${escapeHtml(m.targetName)} (${m.relevanceScore}%)</span>`).join('')
+    : '<span style="color:#f59e0b;font-size:0.75rem;">No community match — link groups in Account Hub</span>';
+  return `
+    <div style="background:rgba(30,41,59,0.6);border:1px solid #334155;border-radius:6px;padding:0.75rem;margin-bottom:0.5rem;" data-feed-idx="${idx}">
+      <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+        <strong style="color:#e2e8f0;">${escapeHtml(feed.category)}</strong>
+        <span style="font-size:0.72rem;color:#64748b;">${feed.sourceType === 'native' ? 'RSS' : 'Scraped'} · ${escapeHtml((feed.rssUrl || '').slice(0, 60))}</span>
+      </div>
+      <div style="margin-top:6px;">${mappingHtml}</div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:0.78rem;color:#94a3b8;cursor:pointer;">
+        <input type="checkbox" class="site-rss-feed-enabled" data-feed-idx="${idx}" ${feed.enabled !== false ? 'checked' : ''} style="width:auto;"> Include in routing
+      </label>
+    </div>`;
+}
+
+function renderSiteRssDiscovery(discovery) {
+  const box = document.getElementById('siteRssDiscoveryResults');
+  if (!box || !discovery) return;
+  const feeds = discovery.feeds || [];
+  box.innerHTML = feeds.length
+    ? feeds.map((f, i) => renderSiteRssFeedRow(f, i)).join('')
+    : '<span style="color:#64748b;">No feeds found for this site.</span>';
+  const status = document.getElementById('siteRssDiscoveryStatus');
+  if (status) {
+    status.innerHTML = `<span style="color:#10b981;"><i class="fas fa-check-circle"></i> ${escapeHtml(discovery.siteName)}</span> — ${feeds.length} feed(s): ${discovery.stats?.nativeFeeds || 0} native RSS, ${discovery.stats?.scrapedFeeds || 0} scraped. Matches use your linked groups &amp; communities.`;
+  }
+  document.getElementById('saveSiteRssBtn')?.removeAttribute('disabled');
+}
+
+async function loadSiteRssSources() {
+  const panel = document.getElementById('siteRssSavedSources');
+  if (!panel) return;
+  const res = await ipcRenderer.invoke('get-site-rss-sources');
+  const sources = res.sources || [];
+  if (!sources.length) {
+    panel.innerHTML = '';
+    return;
+  }
+  panel.innerHTML = `<h4 style="color:#e2e8f0;margin:0 0 0.5rem 0;">Saved Site Sources</h4>` + sources.map((s) => `
+    <div style="background:rgba(15,23,42,0.5);border:1px solid #334155;border-radius:6px;padding:0.75rem;margin-bottom:0.5rem;">
+      <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+        <strong style="color:#38bdf8;">${escapeHtml(s.siteName)}</strong>
+        <span style="font-size:0.75rem;color:#64748b;">${(s.feeds || []).length} category feed(s)</span>
+      </div>
+      <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">${escapeHtml(s.siteUrl)}</div>
+      <button type="button" class="tool-btn site-rss-remove-btn" data-source-id="${escapeHtml(s.id)}" style="margin-top:6px;font-size:0.75rem;">Remove</button>
+    </div>`).join('');
+  panel.querySelectorAll('.site-rss-remove-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      await ipcRenderer.invoke('remove-site-rss-source', btn.getAttribute('data-source-id'));
+      showToast('Site source removed', 'info');
+      loadSiteRssSources();
+    });
+  });
+}
+
+document.getElementById('discoverSiteRssBtn')?.addEventListener('click', async () => {
+  const url = document.getElementById('siteRssUrlInput')?.value?.trim();
+  if (!url) return showToast('Enter a website URL', 'error');
+  const status = document.getElementById('siteRssDiscoveryStatus');
+  if (status) status.textContent = 'Scanning site for RSS feeds and categories…';
+  try {
+    const res = await ipcRenderer.invoke('discover-site-rss', { siteUrl: url });
+    if (!res.success) throw new Error(res.error || 'Discovery failed');
+    _siteRssDiscovery = res.discovery;
+    renderSiteRssDiscovery(_siteRssDiscovery);
+    showToast(`Found ${(_siteRssDiscovery.feeds || []).length} feed(s)`, 'success');
+  } catch (e) {
+    if (status) status.textContent = 'Discovery failed.';
+    showToast('Site RSS discovery: ' + e.message, 'error');
+  }
+});
+
+document.getElementById('saveSiteRssBtn')?.addEventListener('click', async () => {
+  if (!_siteRssDiscovery) return showToast('Discover feeds first', 'error');
+  const feeds = (_siteRssDiscovery.feeds || []).map((f, idx) => {
+    const cb = document.querySelector(`.site-rss-feed-enabled[data-feed-idx="${idx}"]`);
+    return { ...f, enabled: cb ? cb.checked : f.enabled !== false };
+  });
+  const res = await ipcRenderer.invoke('save-site-rss-source', { discovery: _siteRssDiscovery, feeds });
+  if (!res.success) return showToast(res.error || 'Save failed', 'error');
+  const urls = (feeds.filter((f) => f.enabled !== false).map((f) => f.rssUrl)).join('\n');
+  const urlBox = document.getElementById('autoRssUrls');
+  if (urlBox && urls) {
+    const existing = (urlBox.value || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    urlBox.value = [...new Set([...existing, ...urls.split('\n').filter(Boolean)])].join('\n');
+  }
+  const routeCb = document.getElementById('autoContentCategoryRouting');
+  const enableCb = document.getElementById('autoContentEnabled');
+  if (routeCb) routeCb.checked = true;
+  if (enableCb) enableCb.checked = true;
+  await saveAutoContentSettings();
+  showToast('Site RSS saved — category routing enabled', 'success');
+  loadSiteRssSources();
+});
+
+document.getElementById('runCategoryRssBtn')?.addEventListener('click', async () => {
+  await saveAutoContentSettings();
+  const res = await ipcRenderer.invoke('run-category-rss-router');
+  showToast(`Category routing: ${res.processed || 0} item(s) processed`, res.processed ? 'success' : 'info');
+  loadContentQueue();
+});
 
 async function loadContentQueue() {
   const list = document.getElementById('contentQueueList');
@@ -2104,7 +2248,7 @@ async function loadContentQueue() {
   }
   list.innerHTML = queue.slice(0, 8).map((item) => `
     <div style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;padding:0.75rem;margin-bottom:0.5rem;">
-      <div style="color:#64748b;font-size:0.7rem;">${item.queuedAt || ''} · ${item.platform || item.format || 'content'}</div>
+      <div style="color:#64748b;font-size:0.7rem;">${item.queuedAt || ''} · ${item.platform || item.format || 'content'}${item.targetName ? ' → ' + escapeHtml(item.targetName) : ''}${item.category ? ' · ' + escapeHtml(item.category) : ''}</div>
       <div style="color:#e2e8f0;margin-top:4px;">${escapeHtml((item.content || '').substring(0, 160))}…</div>
       <div style="display:flex;gap:0.5rem;margin-top:6px;flex-wrap:wrap;">
         <button class="tool-btn queue-load-btn" style="font-size:0.75rem;" data-queue-id="${escapeHtml(item.id)}">Edit &amp; Publish</button>
@@ -2145,19 +2289,30 @@ function resolveQueueAccount(item) {
 window.quickPublishQueueItem = async function(id) {
   const item = (window._contentQueue || []).find((q) => q.id === id);
   if (!item?.content) return showToast('Queue item not found', 'error');
+  const mapping = item.targetMapping;
   const opt = resolveQueueAccount(item);
-  if (!opt?.value) return showToast('Link an account in Account Hub first', 'error');
+  if (!mapping && !opt?.value) return showToast('Link an account in Account Hub first', 'error');
   try {
-    const res = await ipcRenderer.invoke('publish-post', {
-      accountId: opt.value,
-      platform: opt.getAttribute('data-platform') || item.platform || 'Facebook',
-      content: item.content,
-      hasMedia: !!item.mediaUrl,
-      mediaUrl: item.mediaUrl || null,
-    });
+    let res;
+    if (mapping?.targetId && mapping?.accountId) {
+      res = await ipcRenderer.invoke('publish-to-group', {
+        accountId: mapping.accountId,
+        groupId: mapping.targetId,
+        content: item.content,
+      });
+    } else {
+      res = await ipcRenderer.invoke('publish-post', {
+        accountId: opt.value,
+        platform: opt.getAttribute('data-platform') || item.platform || 'Facebook',
+        content: item.content,
+        hasMedia: !!item.mediaUrl,
+        mediaUrl: item.mediaUrl || null,
+      });
+    }
     if (res?.success === false) throw new Error(res.error || 'Publish failed');
     await ipcRenderer.invoke('remove-content-queue-item', id);
-    showToast(`Published to ${opt.getAttribute('data-platform')}`, 'success');
+    const dest = mapping?.targetName || opt?.getAttribute('data-platform') || item.platform;
+    showToast(`Published to ${dest}`, 'success');
     loadContentQueue();
     loadApiStatus();
   } catch (e) {
@@ -2182,6 +2337,7 @@ async function loadAutoContentSettings() {
   if (document.getElementById('autoContentFreq')) document.getElementById('autoContentFreq').value = s.frequency || 'daily';
   if (document.getElementById('autoContentMode')) document.getElementById('autoContentMode').value = s.publishMode || 'queue';
   if (document.getElementById('autoContentEnabled')) document.getElementById('autoContentEnabled').checked = !!s.enabled;
+  if (document.getElementById('autoContentCategoryRouting')) document.getElementById('autoContentCategoryRouting').checked = !!s.categoryRouting;
   if (document.getElementById('autoContentPlatforms')) document.getElementById('autoContentPlatforms').value = (s.targetPlatforms || ['Facebook', 'LinkedIn', 'Twitter']).join(', ');
 }
 
@@ -2577,6 +2733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadCommentsForAccount('');
   await loadAutoContentSettings();
+  await loadSiteRssSources();
   await loadContentQueue();
 
   const params = new URLSearchParams(window.location.search);

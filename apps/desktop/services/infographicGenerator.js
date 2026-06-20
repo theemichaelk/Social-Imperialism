@@ -2,22 +2,19 @@
  * Infographic generator — Grok text analysis + Grok Imagine visuals.
  */
 const grokBrowser = require('./grokBrowserAutomation');
+const { buildGrokPrompt } = require('./grokPromptBuilder');
 
-function buildAnalysisPrompt(content, options = {}) {
-  const topic = options.topic || content?.slice(0, 200) || 'the subject';
-  return `You are a data visualization expert. Analyze this content and produce infographic copy.
-
-CONTENT:
-${content || topic}
-
-Return:
-1) A catchy infographic headline (max 12 words)
-2) 4-6 bullet data insights with specific numbers or percentages where possible
-3) A short caption for social media (max 280 chars)
-4) Color palette suggestion (3 hex colors)
-5) One-sentence visual layout description for an AI image generator
-
-Format as plain text sections labeled HEADLINE, INSIGHTS, CAPTION, COLORS, VISUAL.`;
+function buildAnalysisPrompt(store, campaign, content, options = {}) {
+  const built = buildGrokPrompt({
+    store,
+    campaign,
+    content: content || options.topic || '',
+    taskType: 'infographic',
+    pageId: options.pageId,
+    keywordTerm: options.keyword,
+    platform: options.platform,
+  });
+  return built;
 }
 
 function buildImaginePrompt(content, analysisText, style = 'modern') {
@@ -29,13 +26,30 @@ ${visualHint}
 Style: smart analysis dashboard, data-driven visual storytelling, precise labels, no watermark, no blurry text.`;
 }
 
-async function generateInfographic(store, userDataPath, payload = {}) {
+async function generateInfographic(store, userDataPath, payload = {}, getCampaignFn) {
   const content = payload.content || payload.topic || '';
   const style = payload.style || 'modern';
   const includeVideo = !!payload.includeVideo;
 
-  const analysisPrompt = buildAnalysisPrompt(content, payload);
-  const analysisResult = await grokBrowser.askGrokText(store, userDataPath, analysisPrompt, { newChat: true });
+  let campaign = {};
+  if (typeof getCampaignFn === 'function') {
+    campaign = getCampaignFn(store) || {};
+  } else {
+    try {
+      const activeId = store.getItem('activeCampaignId') || 'default';
+      campaign = JSON.parse(store.getItem('campaigns') || '[]').find((c) => c.id === activeId) || {};
+    } catch (e) {}
+  }
+
+  const built = buildAnalysisPrompt(store, campaign, content, payload);
+  const analysisResult = await grokBrowser.askGrokText(store, userDataPath, built.prompt, {
+    newChat: true,
+    meta: {
+      primaryKeyword: built.primaryKeyword,
+      matchedKeywords: built.matchedKeywords,
+      taskType: built.taskType,
+    },
+  });
   const analysisText = analysisResult.text || '';
 
   const imaginePrompt = buildImaginePrompt(content, analysisText, style);

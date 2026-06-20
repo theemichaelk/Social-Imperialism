@@ -16,13 +16,13 @@
   },
   {
     "feature": "Trending Topics",
-    "status": "OK",
-    "detail": "6 topics (e.g. daveigh chase)"
+    "status": "FAIL",
+    "detail": "No trending topics returned"
   },
   {
     "feature": "Live Feed (get-live-feed)",
-    "status": "OK",
-    "detail": "10 posts from Reddit, Twitter, Quora"
+    "status": "FAIL",
+    "detail": "Feed returned 0 posts — check keywords/APIs"
   },
   {
     "feature": "Linked Accounts",
@@ -32,17 +32,17 @@
   {
     "feature": "AI Draft Reply (generate-ai)",
     "status": "OK",
-    "detail": "Generated: \"You're welcome! Feel free to ask more marketing questions an\""
+    "detail": "Generated: \"You're welcome! Always here to help with marketing inquiries\""
   },
   {
     "feature": "Q&A Discovery (discover-best-questions)",
-    "status": "OK",
-    "detail": "18 questions"
+    "status": "PARTIAL",
+    "detail": "0 questions found — add keywords in Keywords page"
   },
   {
     "feature": "Reddit Prospector (scan-reddit)",
-    "status": "OK",
-    "detail": "8 leads"
+    "status": "FAIL",
+    "detail": "result is not defined"
   },
   {
     "feature": "Image Generation (generate-image)",

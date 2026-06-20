@@ -193,7 +193,46 @@ async function fetchSerpTrending(keys, limit = 6) {
   }
 }
 
-async function fetchTrendingTopics(platform, keys) {
+async function fetchNewsHeadlineTrends(keys, limit = 6) {
+  const newsKey = keys.newsApiKey || process.env.NEWS_API_KEY;
+  if (!newsKey) return [];
+  try {
+    const res = await axios.get('https://newsapi.org/v2/top-headlines', {
+      params: { category: 'technology', language: 'en', pageSize: limit, apiKey: newsKey },
+      timeout: 15000,
+    });
+    return (res.data?.articles || []).slice(0, limit).map((a) => ({
+      topic: (a.title || 'Trending headline').substring(0, 100),
+      searchVolume: 'Headline',
+      momentum: 'News',
+      url: a.url,
+      platform: 'News',
+    }));
+  } catch (e) {
+    console.warn('NewsAPI trending fallback:', e.message);
+    return [];
+  }
+}
+
+async function fetchBraveTrending(keyword, limit = 6) {
+  if (!keyword) return [];
+  try {
+    const { searchViaBrave } = require('./webDiscovery');
+    const hits = await searchViaBrave(`${keyword} trending`, '(?:reddit|quora|news)\\.com', limit);
+    return hits.map((h) => ({
+      topic: (h.title || '').substring(0, 100),
+      searchVolume: 'Web',
+      momentum: 'Discovered',
+      url: h.url,
+      platform: 'Web',
+    }));
+  } catch (e) {
+    console.warn('Brave trending fallback:', e.message);
+    return [];
+  }
+}
+
+async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
   const serpTrends = await fetchSerpTrending(keys, 6);
   if (serpTrends.length > 0) return serpTrends;
 
@@ -215,7 +254,26 @@ async function fetchTrendingTopics(platform, keys) {
     }
   }
 
-  return fetchRedditHot(6);
+  const redditTrends = await fetchRedditHot(6);
+  if (redditTrends.length > 0) return redditTrends;
+
+  const newsTrends = await fetchNewsHeadlineTrends(keys, 6);
+  if (newsTrends.length > 0) return newsTrends;
+
+  const seed = (Array.isArray(seedKeywords) ? seedKeywords : []).map((k) => String(k).trim()).filter(Boolean);
+  if (seed.length) {
+    const braveTrends = await fetchBraveTrending(seed[0], 6);
+    if (braveTrends.length > 0) return braveTrends;
+    return seed.slice(0, 6).map((term) => ({
+      topic: term,
+      searchVolume: 'Brand keyword',
+      momentum: 'Tracked',
+      url: null,
+      platform: 'Keywords',
+    }));
+  }
+
+  return newsTrends;
 }
 
 module.exports = {

@@ -10,8 +10,8 @@ body {
   color: #f8fafc; 
   margin: 0; 
   padding: 0; 
-  display: flex; 
-  height: 100vh;
+   
+  
   background: radial-gradient(circle at top right, #1e293b, #0f172a);
 }
 
@@ -43,6 +43,28 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
 .tab { padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; color: #94a3b8; transition: all 0.2s; }
 .tab:hover { background: rgba(30, 41, 59, 0.8); color: white; }
 .tab.active { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+
+.settings-subnav {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem; border-bottom: 1px solid #334155;
+}
+.settings-subnav button {
+  padding: 0.42rem 0.75rem !important; font-size: 0.76rem !important;
+  border-radius: 6px !important; text-transform: none !important;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  white-space: nowrap;
+}
+.settings-subnav button.primary {
+  background: rgba(56, 189, 248, 0.12) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  color: #38bdf8 !important;
+}
+.settings-subnav button.secondary {
+  background: rgba(15, 23, 42, 0.5) !important;
+  border: 1px solid #334155 !important;
+  color: #94a3b8 !important;
+}
+.settings-subnav button.secondary:hover { color: #e2e8f0 !important; border-color: #475569 !important; }
 
 /* Campaign List */
 .campaign-card { 
@@ -166,35 +188,6 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
 .billing-history th, .billing-history td { padding: 0.6rem; text-align: left; border-bottom: 1px solid #334155; color: #cbd5e1; }
 .billing-history th { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
 
-/* Sidebar Standardized Styles */
-
-
-
-
-
-.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
-
-
-.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
-.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
-.campaign-switcher-box select:hover { border-color: #38bdf8; }
-.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
-
-
-/* Sidebar Standardized Styles */
-.sidebar { width: 250px; background-color: #020617; color: white; padding: 2rem 1rem; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 100; }
-.sidebar-title-container { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
-.sidebar-logo { height: 48px; width: 48px; object-fit: contain; }
-.sidebar-title { font-size: 1.5rem; font-weight: bold; color: #38bdf8; text-align: left; letter-spacing: 1px; text-transform: uppercase; margin: 0; line-height: 1.2; }
-.nav-link { color: #94a3b8; text-decoration: none; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s ease; font-size: 0.95rem; }
-.nav-link i { width: 20px; text-align: center; font-size: 1.1rem; }
-.nav-link:hover { background-color: #1e293b; color: white; transform: translateX(2px); }
-.nav-link.active { background-color: #38bdf8; color: #020617; font-weight: 600; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); transform: translateX(2px); }
-.campaign-switcher-box { padding: 0 0.5rem 1.5rem 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
-.campaign-switcher-box select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s; }
-.campaign-switcher-box select:hover { border-color: #38bdf8; }
-.campaign-switcher-box select:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.2); }
-
 </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="sidebar-nav.css">
@@ -222,12 +215,12 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
     <div class="api-status-bar" id="settingsStatusBar"></div>
     
     <!-- Settings Sub-Navigation -->
-    <div style="display:flex; gap:10px; margin-bottom: 2rem;">
-      <button class="primary" id="btn-campaigns" onclick="switchSettingsView('campaignListView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-layer-group"></i> Campaigns</button>
-      <button class="secondary" id="btn-api-keys" onclick="switchSettingsView('apiKeysView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-key"></i> Global API Integrations</button>
-      <button class="secondary" id="btn-pricing" onclick="switchSettingsView('pricingView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-credit-card"></i> Pricing Plans & Billing</button>
-      <button class="secondary" id="btn-tutorials" onclick="switchSettingsView('tutorialView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-graduation-cap"></i> Setup / Tutorials</button>
-      <button class="secondary" id="btn-system-health" onclick="switchSettingsView('systemHealthView')" style="padding:0.5rem 1rem; font-size:0.85rem;"><i class="fas fa-heartbeat"></i> System Health</button>
+    <div class="settings-subnav">
+      <button class="primary" id="btn-campaigns" onclick="switchSettingsView('campaignListView')"><i class="fas fa-layer-group"></i> Campaigns</button>
+      <button class="secondary" id="btn-api-keys" onclick="switchSettingsView('apiKeysView')"><i class="fas fa-key"></i> API Keys</button>
+      <button class="secondary" id="btn-pricing" onclick="switchSettingsView('pricingView')"><i class="fas fa-credit-card"></i> Billing</button>
+      <button class="secondary" id="btn-tutorials" onclick="switchSettingsView('tutorialView')"><i class="fas fa-graduation-cap"></i> Tutorials</button>
+      <button class="secondary" id="btn-system-health" onclick="switchSettingsView('systemHealthView')"><i class="fas fa-heartbeat"></i> Health</button>
     </div>
 
     <!-- Campaign Selection View -->
@@ -374,6 +367,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
       </div>
     </div>
 
+    <div id="system-health"></div>
     <div id="systemHealthView" class="hidden">
       <div class="header">
         <h1><i class="fas fa-heartbeat"></i> System Health</h1>
@@ -703,7 +697,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
           <button type="button" class="secondary" id="grokSaveBtn"><i class="fas fa-save"></i> Save Grok Credentials</button>
           <button type="button" class="secondary" id="grokDisconnectBtn"><i class="fas fa-sign-out-alt"></i> Close Browser Session</button>
         </div>
-        <p style="grid-column:1/-1;margin:0;color:#64748b;font-size:0.78rem;">Opens a real Chrome window via Puppeteer. Session cookies are saved in your app data folder so you stay logged in. Use <strong>new chat</strong> for text and <strong>Imagine</strong> for infographic images/videos in Content Hub.</p>
+        <p style="grid-column:1/-1;margin:0;color:#64748b;font-size:0.78rem;">Opens a real Chrome window via Puppeteer. Grok receives <strong>keyword-driven prompts</strong> built from your active campaign, brand profile, and tracked keywords (Keywords page). Session cookies are saved locally. Use <strong>new chat</strong> for text and <strong>Imagine</strong> for visuals.</p>
       </div>
     </div>
     
@@ -2016,6 +2010,9 @@ wireTutorialCards();
 loadCampaigns();
 loadSettingsStatus();
 loadBillingUI();
+if (location.hash === '#system-health') {
+  switchSettingsView('systemHealthView');
+}
 </script>
 </body>
 </html>

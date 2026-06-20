@@ -1,0 +1,82 @@
+[
+  {
+    "feature": "Step 1 — Save project (save-settings + set-active-campaign)",
+    "status": "OK",
+    "detail": "Saved \"Acme Growth Labs\" (acmegrowth.com)"
+  },
+  {
+    "feature": "Step 1 — get-setup-status after project save",
+    "status": "OK",
+    "detail": "nextStep=2, campaign loaded"
+  },
+  {
+    "feature": "Step 1 — get-active-campaign returns saved brand",
+    "status": "OK",
+    "detail": "Acme Growth Labs"
+  },
+  {
+    "feature": "Step 2 — AI Suggest Keywords (generate-keywords)",
+    "status": "OK",
+    "detail": "6 keywords (e.g. acme raises)"
+  },
+  {
+    "feature": "Step 2 — Save keywords (save-keywords)",
+    "status": "OK",
+    "detail": "2 keywords saved"
+  },
+  {
+    "feature": "Step 2 — get-setup-status after keywords save",
+    "status": "OK",
+    "detail": "2 keywords, nextStep=3"
+  },
+  {
+    "feature": "Step 3 — Browse feed preview (get-live-feed)",
+    "status": "OK",
+    "detail": "13 posts, 13 with URLs"
+  },
+  {
+    "feature": "Step 3 — Feed filters (engagement + question)",
+    "status": "PARTIAL",
+    "detail": ">100 engagement filter empties feed (13 → 0) — wizard step 3 has same issue"
+  },
+  {
+    "feature": "Step 3 — Draft AI Reply (draft-post-reply)",
+    "status": "OK",
+    "detail": "\"Popular tools for social listening include Hootsuite, Sprout\""
+  },
+  {
+    "feature": "Step 4 — AI Auto-Fill global prompt (generate-global-custom-prompt)",
+    "status": "OK",
+    "detail": "At Acme Growth Labs, we believe in supercharging your business with cu…"
+  },
+  {
+    "feature": "Step 4 — Be-First monitors (save/get)",
+    "status": "OK",
+    "detail": "1 monitor(s)"
+  },
+  {
+    "feature": "Step 4 — Finish: save-auto-rules + auto-search settings",
+    "status": "OK",
+    "detail": "Auto-rules + search frequency saved"
+  },
+  {
+    "feature": "Step 4 — set-onboarding-complete",
+    "status": "OK",
+    "detail": "Setup marked complete"
+  },
+  {
+    "feature": "Wizard resume — get-setup-status nextStep=4 when complete",
+    "status": "OK",
+    "detail": "User can resume at step 4"
+  },
+  {
+    "feature": "Complementary — linked accounts check",
+    "status": "PARTIAL",
+    "detail": "No linked accounts — wizard should prompt Account Hub link"
+  },
+  {
+    "feature": "Complementary — API readiness panel data",
+    "status": "OK",
+    "detail": "twitter, reddit, linkedin, serp, ai"
+  }
+]

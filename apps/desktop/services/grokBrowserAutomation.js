@@ -230,78 +230,149 @@ async function startNewChat(page) {
   await delay(1000);
 }
 
+async function clearComposer(page) {
+  await page.evaluate(() => {
+    const el = document.querySelector(
+      'textarea:not([disabled]), [contenteditable="true"]:not([contenteditable="false"]), [role="textbox"]',
+    );
+    if (!el) return false;
+    el.focus();
+    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+      el.value = '';
+    } else {
+      el.textContent = '';
+      el.innerHTML = '';
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  });
+  await delay(200);
+}
+
 async function submitPrompt(page, prompt) {
+  await clearComposer(page);
+
   const typed = await tryFillInput(page, [
-    'textarea',
+    'textarea:not([disabled])',
     '[contenteditable="true"]',
-    'input[type="text"]',
     '[role="textbox"]',
+    'input[type="text"]',
   ], prompt);
 
   if (!typed) {
     await page.evaluate((text) => {
       const el = document.querySelector('textarea, [contenteditable="true"], [role="textbox"]');
       if (!el) return false;
+      el.focus();
       if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
         el.value = text;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
       } else {
         el.textContent = text;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
       }
+      el.dispatchEvent(new Event('input', { bubbles: true }));
       return true;
     }, prompt);
   }
 
-  await delay(400);
-  const sent = await clickByText(page, ['^send$', 'submit', 'ask grok', 'generate']);
+  await delay(600);
+  const sent = await clickByText(page, ['^send$', 'submit', 'ask grok', 'generate', '^go$']);
   if (!sent) {
     await page.keyboard.press('Enter');
   }
+  await delay(800);
 }
 
-async function waitForAssistantReply(page, timeoutMs = 120000) {
-  const start = Date.now();
-  let lastText = '';
+async function extractAssistantMessages(page, userPromptSnippet = '') {
+  return page.evaluate((promptSnippet) => {
+    const skipPatterns = [
+      /^sign in/i, /^new chat/i, /^imagine/i, /^grok$/i, /^send$/i,
+      /^ask grok/i, /^type a message/i, /^STRICT INSTRUCTIONS/i,
+      /^BRAND PROFILE/i, /^TRACKED KEYWORDS/i, /^USER CONTENT/i,
+    ];
+    const isNoise = (t) => {
+      if (!t || t.length < 8) return true;
+      if (promptSnippet && t.includes(promptSnippet.slice(0, 60))) return true;
+      return skipPatterns.some((re) => re.test(t.trim()));
+    };
 
-  while (Date.now() - start < timeoutMs) {
-    const text = await page.evaluate(() => {
-      const candidates = [
-        ...document.querySelectorAll('[data-testid*="message"], [class*="message"], article, .markdown, .prose'),
-      ];
-      const parts = candidates
-        .map((el) => (el.innerText || '').trim())
-        .filter((t) => t.length > 40);
-      if (parts.length) return parts[parts.length - 1];
-      const body = document.body?.innerText || '';
-      const lines = body.split('\n').map((l) => l.trim()).filter((l) => l.length > 20);
-      return lines.slice(-8).join('\n');
+    const selectors = [
+      '[data-testid*="assistant"]',
+      '[data-role="assistant"]',
+      '[class*="assistant"]',
+      '[class*="response"]',
+      '[data-testid*="message"]',
+      '[class*="message"]',
+      'article',
+      '.markdown',
+      '.prose',
+    ];
+
+    const blocks = [];
+    const seen = new Set();
+    selectors.forEach((sel) => {
+      document.querySelectorAll(sel).forEach((el) => {
+        const t = (el.innerText || '').trim();
+        if (isNoise(t) || seen.has(t)) return;
+        seen.add(t);
+        blocks.push(t);
+      });
     });
 
-    if (text && text.length > 30 && text !== lastText) {
-      lastText = text;
-      await delay(2500);
-      const again = await page.evaluate(() => {
-        const candidates = [...document.querySelectorAll('[data-testid*="message"], [class*="message"], article, .markdown, .prose')];
-        const parts = candidates.map((el) => (el.innerText || '').trim()).filter((t) => t.length > 40);
-        return parts.length ? parts[parts.length - 1] : '';
-      });
-      if (again === text || again.length >= text.length) return text;
+    if (blocks.length >= 2) {
+      return blocks[blocks.length - 1];
+    }
+    if (blocks.length === 1) return blocks[0];
+
+    const body = document.body?.innerText || '';
+    const lines = body.split('\n').map((l) => l.trim()).filter((l) => !isNoise(l) && l.length > 15);
+    return lines.slice(-6).join('\n');
+  }, userPromptSnippet.slice(0, 200));
+}
+
+async function waitForAssistantReply(page, timeoutMs = 120000, userPrompt = '') {
+  const start = Date.now();
+  let lastText = '';
+  let stableCount = 0;
+
+  while (Date.now() - start < timeoutMs) {
+    const text = await extractAssistantMessages(page, userPrompt);
+
+    if (text && text.length > 15) {
+      if (text === lastText) {
+        stableCount += 1;
+        if (stableCount >= 2) return text;
+      } else {
+        lastText = text;
+        stableCount = 0;
+      }
     }
     await delay(2000);
   }
 
   if (lastText) return lastText;
-  throw new Error('Timed out waiting for Grok text response.');
+  throw new Error('Timed out waiting for Grok text response. Check the Grok browser window.');
 }
 
-async function askGrokText(store, userDataPath, prompt, { newChat = true } = {}) {
+async function askGrokText(store, userDataPath, prompt, { newChat = true, meta = {} } = {}) {
   if (!prompt?.trim()) throw new Error('Prompt is required.');
   const page = await ensureSession(store, userDataPath);
   if (newChat) await startNewChat(page);
-  await submitPrompt(page, prompt.trim());
-  const text = await waitForAssistantReply(page);
-  return { success: true, text, source: 'grok-browser' };
+  const submitted = prompt.trim();
+  await submitPrompt(page, submitted);
+  let text = await waitForAssistantReply(page, 120000, submitted);
+  try {
+    const { stripPromptEcho } = require('./grokPromptBuilder');
+    text = stripPromptEcho(text, submitted);
+  } catch (e) { /* optional */ }
+  return {
+    success: true,
+    text,
+    source: 'grok-browser',
+    primaryKeyword: meta.primaryKeyword || null,
+    matchedKeywords: meta.matchedKeywords || [],
+    taskType: meta.taskType || null,
+  };
 }
 
 async function downloadAsset(url, destPath) {

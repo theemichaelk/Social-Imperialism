@@ -1,0 +1,415 @@
+{
+  "summary": {
+    "total": 18,
+    "ok": 18,
+    "warn": 0,
+    "broken": 0,
+    "navSections": 16,
+    "registeredIpcCount": 233,
+    "timestamp": "2026-06-19T23:18:29.986Z"
+  },
+  "pages": [
+    {
+      "file": "account-creator.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 20,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "account-hub.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 9,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "automations.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 11,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "calendar.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 16,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "content-hub.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 57,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "dashboard.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 50,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "engagement.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 8,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "extracted.html",
+      "status": "ok",
+      "hasSidebar": false,
+      "ipcCallCount": 0,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "history.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 7,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "keywords.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 10,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "login.html",
+      "status": "ok",
+      "hasSidebar": false,
+      "ipcCallCount": 1,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "onboarding.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 21,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "quora-traffic-ops.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 10,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "reddit-ai-suite.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 5,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "rules.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 15,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "scheduler.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 0,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "seo-tools.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 2,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "settings.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 22,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    }
+  ],
+  "navSections": [
+    {
+      "id": "dashboard",
+      "label": "Dashboard",
+      "html": "dashboard.html",
+      "hash": null,
+      "requiredKeys": [
+        "gemini",
+        "openrouter"
+      ],
+      "optionalKeys": [
+        "newsApiKey",
+        "serpApiKey",
+        "twitterBearer"
+      ],
+      "dataChecks": [
+        "activeCampaign",
+        "keywords"
+      ]
+    },
+    {
+      "id": "browse-posts",
+      "label": "Browse Posts",
+      "html": "dashboard.html",
+      "hash": "#browse-posts",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "twitterBearer",
+        "redditClientId"
+      ],
+      "dataChecks": [
+        "activeCampaign",
+        "keywords"
+      ]
+    },
+    {
+      "id": "onboarding",
+      "label": "Setup Wizard",
+      "html": "onboarding.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini",
+        "openrouter"
+      ],
+      "dataChecks": [
+        "campaigns"
+      ]
+    },
+    {
+      "id": "content-hub",
+      "label": "Content Hub",
+      "html": "content-hub.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini",
+        "falKey",
+        "unsplashAccessKey",
+        "grokEmail"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "engagement",
+      "label": "Engagement Lists",
+      "html": "engagement.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "linkedinAccessToken",
+        "gemini"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "history",
+      "label": "AI Replies",
+      "html": "history.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini",
+        "openrouter"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "keywords",
+      "label": "Keywords",
+      "html": "keywords.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "serpApiKey",
+        "gemini"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "seo-tools",
+      "label": "SEO Research Tools",
+      "html": "seo-tools.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "serpApiKey",
+        "gemini"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "reddit-ai",
+      "label": "AI Growth Lab",
+      "html": "reddit-ai-suite.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "redditClientId",
+        "gemini"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "quora-traffic",
+      "label": "Quora",
+      "html": "quora-traffic-ops.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "serpApiKey",
+        "openrouter",
+        "gemini"
+      ],
+      "dataChecks": [
+        "activeCampaign",
+        "linkedAccounts"
+      ]
+    },
+    {
+      "id": "automations",
+      "label": "Visual Builder",
+      "html": "automations.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini",
+        "falKey"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "rules",
+      "label": "Auto-Rules",
+      "html": "rules.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini",
+        "twitterBearer",
+        "linkedinAccessToken"
+      ],
+      "dataChecks": [
+        "activeCampaign",
+        "linkedAccounts"
+      ]
+    },
+    {
+      "id": "account-hub",
+      "label": "Linked Accounts",
+      "html": "account-hub.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "metaAccess",
+        "linkedinAccessToken",
+        "twitterBearer"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "account-creator",
+      "label": "Account Creator",
+      "html": "account-creator.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini",
+        "falKey"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "calendar",
+      "label": "Content Calendar",
+      "html": "calendar.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "metaAccess",
+        "linkedinAccessToken"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "settings",
+      "label": "Settings",
+      "html": "settings.html",
+      "requiredKeys": [],
+      "optionalKeys": [],
+      "dataChecks": [
+        "campaigns"
+      ]
+    }
+  ]
+}

@@ -575,16 +575,22 @@ function wireBar(bar, pageId) {
 
     try {
       if (action === 'grok-text') {
-        toast('Generating copy…', 'info');
+        toast('Generating keyword-driven copy…', 'info');
         let text = '';
         try {
           await ensureGrokReady(ipc);
-          const res = await ipc.invoke('grok-ask-text', { prompt: content, newChat: true });
+          const res = await ipc.invoke('grok-ask-text', {
+            content,
+            pageId,
+            newChat: true,
+          });
           if (res?.text) text = res.text;
           else if (!res?.success) throw new Error(res?.error || 'Grok returned no text');
+          const kwNote = res.matchedKeywords?.length ? ` (${res.matchedKeywords.join(', ')})` : '';
+          if (kwNote) toast(`Keywords used${kwNote}`, 'info');
         } catch (grokErr) {
           toast(`Grok unavailable — using app AI (${grokErr.message})`, 'info');
-          text = await ipc.invoke('generate-ai', `Write engaging social post copy for: ${content}`);
+          text = await ipc.invoke('generate-ai', `Write engaging social post copy using campaign keywords for: ${content}`);
           text = String(text || '').trim();
           if (!text) throw new Error('AI copy generation failed');
         }
@@ -595,7 +601,7 @@ function wireBar(bar, pageId) {
         toast('Generating visual…', 'info');
         try {
           await ensureGrokReady(ipc);
-          const res = await ipc.invoke('grok-imagine', { prompt: `Social visual for: ${content}` });
+          const res = await ipc.invoke('grok-imagine', { content, pageId });
           if (!res?.success) throw new Error(res?.error);
           lastResult = { imageAsset: res.primaryAsset, postText: '' };
         } catch (grokErr) {
@@ -609,7 +615,7 @@ function wireBar(bar, pageId) {
         toast('Generating infographic…', 'info');
         try {
           await ensureGrokReady(ipc);
-          const res = await ipc.invoke('grok-generate-infographic', { content, style: 'modern' });
+          const res = await ipc.invoke('grok-generate-infographic', { content, style: 'modern', pageId });
           if (!res?.success && !res?.imageAsset) throw new Error(res?.error || 'Grok infographic incomplete');
           lastResult = res;
         } catch (grokErr) {

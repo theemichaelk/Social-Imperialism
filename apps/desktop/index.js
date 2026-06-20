@@ -38,6 +38,7 @@ const { registerBillingPaymentHandlers } = require('./services/billingPaymentsIp
 const { registerAccountHandlers } = require('./services/accountIpc');
 const { registerAccountCreatorHandlers, processBrowserBatchQueue } = require('./services/accountCreatorIpc');
 const { registerGrokHandlers } = require('./services/grokIpc');
+const { registerRssCategoryHandlers } = require('./services/rssCategoryIpc');
 const { registerContentStudioHandlers } = require('./services/contentStudioIpc');
 const { registerRedditAiHandlers } = require('./services/redditAiIpc');
 const { registerThumbnailHandlers } = require('./services/thumbnailIpc');
@@ -71,6 +72,13 @@ function buildApiMetrics(keys) {
 const calendarApi = registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics, integrations });
 registerBackgroundRunHandlers({ ipcMain, store });
 registerGrokHandlers({ ipcMain, store, userDataPath: dataPath });
+registerRssCategoryHandlers({
+  ipcMain,
+  store,
+  resolveKeys,
+  generateAI: (prompt) => generateAI(prompt),
+  getFalKey: () => getGlobalKey('falKey') || process.env.FAL_KEY,
+});
 registerRedditAiHandlers({
   ipcMain,
   store,
@@ -195,8 +203,18 @@ ipcMain.handle('get-live-news', async (event, query = "technology") => {
 
 ipcMain.handle('get-trending-topics', async (event, platform = 'Twitter') => {
   try {
+    const activeCampaignId = store.getItem('activeCampaignId') || 'default';
+    ensureCampaignKeywords(activeCampaignId);
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const topics = await fetchTrendingTopics(platform, keys);
+    let seedKeywords = [];
+    try {
+      seedKeywords = JSON.parse(store.getItem('keywords') || '[]')
+        .filter((k) => k.campaignId === activeCampaignId)
+        .map((k) => k.term)
+        .filter(Boolean);
+    } catch (e) { /* ignore */ }
+    if (!seedKeywords.length) seedKeywords = seedKeywordsFromCampaign(activeCampaignId);
+    const topics = await fetchTrendingTopics(platform, keys, seedKeywords);
     return topics;
   } catch(e) {
     console.error("Trending Topics error:", e.message);
@@ -457,7 +475,12 @@ Rules for this brand:
 
 async function generateAIWithModel(prompt, modelId = 'gemini') {
   if (modelId === 'grok-browser') {
-    const res = await grokBrowserAutomation.askGrokText(store, dataPath, prompt, { newChat: true });
+    const { prepareGrokRequest } = require('./services/grokIpc');
+    const built = prepareGrokRequest(store, { content: prompt, taskType: 'social_post' });
+    const res = await grokBrowserAutomation.askGrokText(store, dataPath, built.prompt, {
+      newChat: built.newChat,
+      meta: built.meta,
+    });
     if (!res.success && !res.text) throw new Error(res.error || 'Grok text failed');
     return res.text || '';
   }
@@ -2473,7 +2496,26 @@ ipcMain.handle('run-content-scheduler-now', async () => {
     campaign,
     publishFn: (post, accountIds) => postCuratedToFanpages(post, accountIds),
   });
-  return { success: true, ...result };
+  const { runCategoryRssRouter } = require('./services/rssCategoryRouter');
+  const settingsRaw = store.getItem('autoContentSettings');
+  let publishMode = 'queue';
+  try {
+    const s = settingsRaw ? JSON.parse(settingsRaw) : {};
+    publishMode = s.publishMode || 'queue';
+  } catch (e) {}
+  const catResult = await runCategoryRssRouter({
+    store,
+    generateAI,
+    falKey: getGlobalKey('falKey') || process.env.FAL_KEY,
+    resolveKeys,
+    publishMode,
+  });
+  return {
+    success: true,
+    ...result,
+    categoryRouting: catResult,
+    processed: (result.processed || 0) + (catResult.processed || 0),
+  };
 });
 
 ipcMain.handle('get-fanpage-settings', () => integrations.getFanpageSettings(store));
@@ -2806,6 +2848,32 @@ async function workerLoop() {
                     }
                 }
             }
+            if (autoSettings.enabled && autoSettings.categoryRouting) {
+                const nowCat = Date.now();
+                const lastCatRun = parseInt(store.getItem('categoryRssLastRun') || '0');
+                let catFreqMs = 86400000;
+                if (autoSettings.frequency === 'hourly') catFreqMs = 3600000;
+                if (autoSettings.frequency === 'realtime') catFreqMs = 900000;
+                if (nowCat - lastCatRun > catFreqMs) {
+                    const { runCategoryRssRouter } = require('./services/rssCategoryRouter');
+                    const catResult = await runCategoryRssRouter({
+                        store,
+                        generateAI,
+                        falKey: getGlobalKey('falKey') || process.env.FAL_KEY,
+                        resolveKeys,
+                        publishMode: autoSettings.publishMode || 'queue',
+                    });
+                    if (catResult.processed > 0) {
+                        let tasks = JSON.parse(store.getItem('workerTasks') || '[]');
+                        tasks.unshift({
+                            time: new Date().toLocaleTimeString(),
+                            action: `Category RSS: ${catResult.processed} item(s) routed to matched communities`,
+                            platform: 'Multi',
+                        });
+                        store.setItem('workerTasks', JSON.stringify(tasks.slice(0, 10)));
+                    }
+                }
+            }
         } catch (e) { console.error('Auto content scheduler error:', e); }
 
         // Facebook Fanpage Hands-Free (2.7.6): auto-post + targeted fan acquisition
@@ -3112,6 +3180,13 @@ function startBrowserBatchPoller() {
 app.whenReady().then(() => {
   const readyDataPath = app.getPath('userData');
   registerGrokHandlers({ ipcMain, store, userDataPath: readyDataPath });
+  registerRssCategoryHandlers({
+    ipcMain,
+    store,
+    resolveKeys,
+    generateAI: (prompt) => generateAI(prompt),
+    getFalKey: () => getGlobalKey('falKey') || process.env.FAL_KEY,
+  });
   registerAllAccountHandlers();
   startWebhookServer();
   startBrowserBatchPoller();

@@ -77,17 +77,24 @@ async function discoverSitePosts({ site, hostPattern, keyword, keys, limit = 5, 
     hits.forEach((h) => {
       if (out.length >= limit || !h.url || seen.has(h.url)) return;
       seen.add(h.url);
+      const title = h.title || titleFromUrl(h.url);
+      const isQuora = platform === 'Quora';
+      const looksLikeQuestion = isQuora
+        || title.includes('?')
+        || /\b(how|what|why|when|where|should|can|is|are|does|do)\b/i.test(title);
+      const estEngagement = looksLikeQuestion ? 42 : 28;
       out.push({
         platform,
         externalId: `${platform.toLowerCase()}_${Buffer.from(h.url).toString('base64').slice(0, 20)}`,
-        content: h.title || titleFromUrl(h.url),
+        content: title,
         url: h.url,
         author: platform,
         time: 'recent',
         createdAt: Date.now(),
-        matchScore: 55,
+        matchScore: looksLikeQuestion ? 72 : 55,
         isWebDiscovery: true,
-        stats: { likes: 0, comments: 0, views: 0 },
+        postType: looksLikeQuestion ? 'question' : 'text',
+        stats: { likes: estEngagement, comments: looksLikeQuestion ? 3 : 0, views: 0 },
         matchedKeyword: keyword,
         snippet: h.snippet || '',
       });

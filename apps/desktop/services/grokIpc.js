@@ -1,5 +1,48 @@
 const grokBrowser = require('./grokBrowserAutomation');
 const infographicGenerator = require('./infographicGenerator');
+const { buildGrokPrompt } = require('./grokPromptBuilder');
+
+function getActiveCampaign(store) {
+  const activeId = store.getItem('activeCampaignId') || 'default';
+  try {
+    const campaigns = JSON.parse(store.getItem('campaigns') || '[]');
+    return campaigns.find((c) => c.id === activeId) || campaigns[0] || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function resolveGrokPayload(store, payload) {
+  if (typeof payload === 'string') {
+    return { content: payload, newChat: true };
+  }
+  return payload || {};
+}
+
+function prepareGrokRequest(store, payload) {
+  const p = resolveGrokPayload(store, payload);
+  const campaign = getActiveCampaign(store);
+  const built = buildGrokPrompt({
+    store,
+    campaign,
+    content: p.content || p.prompt || p.topic || '',
+    taskType: p.taskType,
+    pageId: p.pageId,
+    keywordTerm: p.keyword || p.keywordTerm,
+    userInstruction: p.userInstruction || p.instruction,
+    platform: p.platform,
+  });
+  return {
+    prompt: built.prompt,
+    meta: {
+      primaryKeyword: built.primaryKeyword,
+      matchedKeywords: built.matchedKeywords,
+      taskType: built.taskType,
+    },
+    newChat: p.newChat !== false,
+    rawContent: p.content || p.prompt || '',
+  };
+}
 
 function registerGrokHandlers({ ipcMain, store, userDataPath }) {
   const channels = [
@@ -12,6 +55,7 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
     'grok-imagine',
     'grok-generate-infographic',
     'grok-close-browser',
+    'grok-build-prompt-preview',
   ];
 
   channels.forEach((ch) => {
@@ -56,11 +100,29 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
     }
   });
 
+  ipcMain.handle('grok-build-prompt-preview', (event, payload) => {
+    try {
+      const campaign = getActiveCampaign(store);
+      const built = buildGrokPrompt({
+        store,
+        campaign,
+        content: payload?.content || payload?.prompt || '',
+        taskType: payload?.taskType,
+        pageId: payload?.pageId,
+        keywordTerm: payload?.keyword,
+        userInstruction: payload?.userInstruction,
+        platform: payload?.platform,
+      });
+      return { success: true, ...built };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
   ipcMain.handle('grok-ask-text', async (event, payload) => {
     try {
-      const prompt = typeof payload === 'string' ? payload : payload?.prompt;
-      const newChat = payload?.newChat !== false;
-      return await grokBrowser.askGrokText(store, userDataPath, prompt, { newChat });
+      const { prompt, meta, newChat } = prepareGrokRequest(store, payload);
+      return await grokBrowser.askGrokText(store, userDataPath, prompt, { newChat, meta });
     } catch (e) {
       return { success: false, error: e.message };
     }
@@ -68,7 +130,12 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
 
   ipcMain.handle('grok-imagine', async (event, payload) => {
     try {
-      const prompt = typeof payload === 'string' ? payload : payload?.prompt;
+      const p = resolveGrokPayload(store, payload);
+      const { prompt } = prepareGrokRequest(store, {
+        ...p,
+        content: p.content || p.prompt,
+        taskType: 'imagine',
+      });
       return await grokBrowser.generateGrokImagine(store, userDataPath, prompt);
     } catch (e) {
       return { success: false, error: e.message };
@@ -77,7 +144,7 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
 
   ipcMain.handle('grok-generate-infographic', async (event, payload) => {
     try {
-      return await infographicGenerator.generateInfographic(store, userDataPath, payload || {});
+      return await infographicGenerator.generateInfographic(store, userDataPath, payload || {}, getActiveCampaign);
     } catch (e) {
       return { success: false, error: e.message };
     }
@@ -89,7 +156,7 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
     return { success: true };
   });
 
-  console.log('[grokIpc] Registered Grok IPC handlers (ping, connect, status, text, imagine, infographic)');
+  console.log('[grokIpc] Registered Grok IPC handlers (keyword-aware prompts, connect, text, imagine, infographic)');
 }
 
-module.exports = { registerGrokHandlers };
+module.exports = { registerGrokHandlers, prepareGrokRequest, getActiveCampaign };

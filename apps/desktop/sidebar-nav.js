@@ -1,39 +1,33 @@
 /**
  * Shared sidebar navigation for all Social Imperialism app sections.
- * Usage in renderer (Electron):
- *   const { mountAppSidebar } = require('./sidebar-nav');
- *   mountAppSidebar(); // auto-detects active page from URL + hash
- *   mountAppSidebar('keywords', () => location.reload());
  */
-
 const NAV_ITEMS = [
   { id: 'dashboard', href: 'dashboard.html', icon: 'fa-home', label: 'Dashboard' },
   { id: 'browse-posts', href: 'dashboard.html#browse-posts', icon: 'fa-compass', label: 'Browse Posts' },
   { id: 'onboarding', href: 'onboarding.html', icon: 'fa-rocket', label: 'Setup Wizard' },
   { id: 'content-hub', href: 'content-hub.html', icon: 'fa-edit', label: 'Content Hub' },
-  { id: 'engagement', href: 'engagement.html', icon: 'fa-users', label: 'Engagement Lists' },
+  { id: 'calendar', href: 'calendar.html', icon: 'fa-calendar-alt', label: 'Calendar' },
+  { id: 'engagement', href: 'engagement.html', icon: 'fa-users', label: 'Engagement' },
   { id: 'history', href: 'history.html', icon: 'fa-history', label: 'AI Replies' },
   { id: 'keywords', href: 'keywords.html', icon: 'fa-tags', label: 'Keywords' },
-  { id: 'seo-tools', href: 'seo-tools.html', icon: 'fa-search-plus', label: 'SEO Research Tools' },
-  { id: 'reddit-ai', href: 'reddit-ai-suite.html', icon: 'fa-brain', label: 'AI Growth Lab' },
-  { id: 'quora-traffic', href: 'quora-traffic-ops.html', icon: 'fa-quora', label: 'Quora' },
+  { id: 'seo-tools', href: 'seo-tools.html', icon: 'fa-search-plus', label: 'SEO Tools' },
+  { id: 'reddit-ai', href: 'reddit-ai-suite.html', icon: 'fa-brain', label: 'Growth Lab' },
+  { id: 'quora-traffic', href: 'quora-traffic-ops.html', icon: 'fa-quora', label: 'Quora Ops' },
   { id: 'automations', href: 'automations.html', icon: 'fa-project-diagram', label: 'Visual Builder' },
   { id: 'rules', href: 'rules.html', icon: 'fa-cogs', label: 'Auto-Rules' },
-  { id: 'account-hub', href: 'account-hub.html', icon: 'fa-link', label: 'Linked Accounts' },
-  { id: 'account-creator', href: 'account-creator.html', icon: 'fa-user-plus', label: 'Account Creator' },
-  { id: 'calendar', href: 'calendar.html', icon: 'fa-calendar-alt', label: 'Content Calendar' },
+  { id: 'account-hub', href: 'account-hub.html', icon: 'fa-link', label: 'Accounts' },
+  { id: 'account-creator', href: 'account-creator.html', icon: 'fa-user-plus', label: 'Acct Creator' },
   { id: 'settings', href: 'settings.html', icon: 'fa-sliders-h', label: 'Settings' },
 ];
 
-/** Visual grouping — all 16 items remain navigable */
 const NAV_SECTIONS = [
-  { label: 'Mission Control', ids: ['dashboard', 'browse-posts'] },
-  { label: 'Create & Publish', ids: ['onboarding', 'content-hub', 'calendar'] },
-  { label: 'Discovery & Replies', ids: ['engagement', 'history', 'keywords', 'seo-tools'] },
-  { label: 'Growth Labs', ids: ['reddit-ai', 'quora-traffic'] },
-  { label: 'Automation', ids: ['automations', 'rules'] },
-  { label: 'Accounts', ids: ['account-hub', 'account-creator'] },
-  { label: 'System', ids: ['settings'] },
+  { id: 'mission', label: 'Mission Control', ids: ['dashboard', 'browse-posts'] },
+  { id: 'create', label: 'Create & Publish', ids: ['onboarding', 'content-hub', 'calendar'] },
+  { id: 'discovery', label: 'Discovery & Replies', ids: ['engagement', 'history', 'keywords', 'seo-tools'] },
+  { id: 'labs', label: 'Growth Labs', ids: ['reddit-ai', 'quora-traffic'] },
+  { id: 'automation', label: 'Automation', ids: ['automations', 'rules'] },
+  { id: 'accounts', label: 'Accounts', ids: ['account-hub', 'account-creator'] },
+  { id: 'system', label: 'System', ids: ['settings'] },
 ];
 
 const NAV_BY_ID = Object.fromEntries(NAV_ITEMS.map((item) => [item.id, item]));
@@ -57,6 +51,9 @@ const FILE_TO_PAGE_ID = {
   scheduler: 'calendar',
 };
 
+const COLLAPSE_KEY = 'siNavCollapsedSections';
+const SIDEBAR_COLLAPSED_KEY = 'siSidebarCollapsed';
+
 let _hashListenerBound = false;
 
 function detectActivePageId() {
@@ -69,19 +66,52 @@ function detectActivePageId() {
   return FILE_TO_PAGE_ID[base] || 'dashboard';
 }
 
+function getCollapsedSections() {
+  try {
+    const raw = localStorage.getItem(COLLAPSE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveCollapsedSections(map) {
+  try {
+    localStorage.setItem(COLLAPSE_KEY, JSON.stringify(map));
+  } catch (e) { /* ignore */ }
+}
+
+function sectionForPageId(pageId) {
+  const sec = NAV_SECTIONS.find((s) => s.ids.includes(pageId));
+  return sec?.id || null;
+}
+
 function buildNavHtml(activeId) {
   const active = activeId || detectActivePageId();
+  const collapsed = getCollapsedSections();
+  const activeSection = sectionForPageId(active);
+
   return NAV_SECTIONS.map((section) => {
     const links = section.ids
       .map((id) => NAV_BY_ID[id])
       .filter(Boolean)
       .map((item) => {
         const cls = item.id === active ? 'nav-link active' : 'nav-link';
-        return `<a href="${item.href}" class="${cls}" data-nav-id="${item.id}"><i class="fas ${item.icon}"></i> <span>${item.label}</span></a>`;
+        return `<a href="${item.href}" class="${cls}" data-nav-id="${item.id}" data-nav-label="${item.label.toLowerCase()}"><i class="fas ${item.icon}"></i><span>${item.label}</span></a>`;
       })
       .join('');
     if (!links) return '';
-    return `<div class="nav-section"><div class="nav-section-label">${section.label}</div>${links}</div>`;
+
+    const isCollapsed = collapsed[section.id] === true && section.id !== activeSection;
+    const collapsedCls = isCollapsed ? ' collapsed' : '';
+
+    return `<div class="nav-section${collapsedCls}" data-section-id="${section.id}">
+      <button type="button" class="nav-section-toggle" aria-expanded="${!isCollapsed}">
+        <span class="nav-section-label">${section.label}</span>
+        <i class="fas fa-chevron-down nav-section-chevron"></i>
+      </button>
+      <div class="nav-section-items">${links}</div>
+    </div>`;
   }).join('');
 }
 
@@ -91,6 +121,95 @@ function updateSidebarActiveState(activeId) {
   document.querySelectorAll('.sidebar-nav-links .nav-link').forEach((el) => {
     el.classList.toggle('active', el.dataset.navId === active);
   });
+
+  const secId = sectionForPageId(active);
+  if (secId) {
+    const collapsed = getCollapsedSections();
+    if (collapsed[secId]) {
+      collapsed[secId] = false;
+      saveCollapsedSections(collapsed);
+      const sec = document.querySelector(`.nav-section[data-section-id="${secId}"]`);
+      if (sec) {
+        sec.classList.remove('collapsed');
+        sec.querySelector('.nav-section-toggle')?.setAttribute('aria-expanded', 'true');
+      }
+    }
+  }
+}
+
+function bindSectionToggles() {
+  document.querySelectorAll('.nav-section-toggle').forEach((btn) => {
+    if (btn.dataset.bound === '1') return;
+    btn.addEventListener('click', () => {
+      const section = btn.closest('.nav-section');
+      if (!section) return;
+      const id = section.dataset.sectionId;
+      const collapsed = getCollapsedSections();
+      const willCollapse = !section.classList.contains('collapsed');
+      collapsed[id] = willCollapse;
+      saveCollapsedSections(collapsed);
+      section.classList.toggle('collapsed', willCollapse);
+      btn.setAttribute('aria-expanded', willCollapse ? 'false' : 'true');
+    });
+    btn.dataset.bound = '1';
+  });
+}
+
+function bindNavSearch() {
+  const input = document.getElementById('siNavSearch');
+  if (!input || input.dataset.bound === '1') return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.sidebar-nav-links .nav-link').forEach((link) => {
+      const label = link.dataset.navLabel || link.textContent.toLowerCase();
+      const show = !q || label.includes(q);
+      link.classList.toggle('nav-hidden', !show);
+      if (show) visible += 1;
+    });
+
+    document.querySelectorAll('.nav-section').forEach((sec) => {
+      const anyVisible = !!sec.querySelector('.nav-link:not(.nav-hidden)');
+      sec.style.display = anyVisible ? '' : 'none';
+      if (q && anyVisible) {
+        sec.classList.remove('collapsed');
+      }
+    });
+
+    const empty = document.getElementById('siNavNoResults');
+    if (empty) empty.classList.toggle('visible', q.length > 0 && visible === 0);
+  });
+
+  input.dataset.bound = '1';
+}
+
+function bindSidebarCollapse() {
+  const btn = document.getElementById('siSidebarCollapseBtn');
+  if (!btn || btn.dataset.bound === '1') return;
+
+  const apply = (collapsed) => {
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    const icon = btn.querySelector('i');
+    if (icon) {
+      icon.className = collapsed ? 'fas fa-angle-double-right' : 'fas fa-angle-double-left';
+    }
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
+    } catch (e) { /* ignore */ }
+  };
+
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+  } catch (e) { /* ignore */ }
+  apply(collapsed);
+
+  btn.addEventListener('click', () => {
+    collapsed = !document.body.classList.contains('sidebar-collapsed');
+    apply(collapsed);
+  });
+  btn.dataset.bound = '1';
 }
 
 function bindSidebarNavLinks() {
@@ -138,25 +257,76 @@ function renderAppSidebar(activeId) {
 
   el.className = 'sidebar app-sidebar';
   el.innerHTML = `
-    <div class="sidebar-title-container">
-      <img src="logo.png" alt="Social Imperialism" class="sidebar-logo" onerror="this.style.display='none'">
-      <h2 class="sidebar-title">Social<br>Imperialism</h2>
-    </div>
-    <div class="campaign-switcher-box">
-      <select id="sidebarCampaignSwitcher" aria-label="Active campaign">
-        <option value="">Loading Campaigns...</option>
-      </select>
+    <div class="si-sidebar-header">
+      <div class="sidebar-title-container">
+        <img src="logo.png" alt="Social Imperialism" class="sidebar-logo" onerror="this.style.display='none'">
+        <h2 class="sidebar-title">Social<br>Imperialism</h2>
+      </div>
+      <div class="si-sidebar-search">
+        <i class="fas fa-search"></i>
+        <input type="search" id="siNavSearch" placeholder="Filter menu…" autocomplete="off" aria-label="Filter navigation">
+      </div>
+      <div class="campaign-switcher-box">
+        <select id="sidebarCampaignSwitcher" aria-label="Active campaign">
+          <option value="">Loading campaigns…</option>
+        </select>
+      </div>
     </div>
     <nav class="sidebar-nav-links" aria-label="Main navigation">
       ${navHtml}
+      <div class="nav-no-results" id="siNavNoResults">No menu items match your search.</div>
     </nav>
-    <div class="sidebar-footer">
-      <a href="settings.html" class="sidebar-footer-link" data-nav-id="settings"><i class="fas fa-circle" style="font-size:0.45rem;color:#10b981;"></i> Live</a>
+    <div class="si-sidebar-footer">
+      <button type="button" class="si-collapse-btn" id="siSidebarCollapseBtn" title="Collapse sidebar">
+        <i class="fas fa-angle-double-left"></i><span>Collapse</span>
+      </button>
+      <a href="settings.html#system-health" class="sidebar-footer-link" id="siHealthLink" data-nav-id="settings" title="System health — open Settings">
+        <i class="fas fa-circle si-health-dot" id="siHealthDot" style="font-size:0.45rem;color:#10b981;"></i>
+        <span id="siHealthLabel">Checking…</span>
+      </a>
     </div>`;
 
   bindSidebarNavLinks();
   bindHashActiveSync();
+  bindSectionToggles();
+  bindNavSearch();
+  bindSidebarCollapse();
   return true;
+}
+
+async function initSidebarHealthBadge() {
+  if (typeof document === 'undefined') return;
+  const dot = document.getElementById('siHealthDot');
+  const label = document.getElementById('siHealthLabel');
+  if (!dot || !label) return;
+
+  let ipcRenderer;
+  try {
+    ({ ipcRenderer } = require('electron'));
+  } catch (e) {
+    label.textContent = 'Live';
+    return;
+  }
+
+  try {
+    const report = await ipcRenderer.invoke('get-page-health');
+    const s = report?.summary || {};
+    const broken = s.broken || 0;
+    const warn = s.warn || 0;
+    if (broken > 0) {
+      dot.style.color = '#f87171';
+      label.textContent = `${broken} broken`;
+    } else if (warn > 0) {
+      dot.style.color = '#fbbf24';
+      label.textContent = `${warn} need setup`;
+    } else {
+      dot.style.color = '#10b981';
+      label.textContent = `${s.ok || 0} pages ready`;
+    }
+  } catch (e) {
+    dot.style.color = '#94a3b8';
+    label.textContent = 'Live';
+  }
 }
 
 async function initSidebarCampaignSwitcher(onChange) {
@@ -177,7 +347,7 @@ async function initSidebarCampaignSwitcher(onChange) {
     if (!camps.length) {
       const o = document.createElement('option');
       o.value = '';
-      o.textContent = 'No campaigns — use Setup Wizard or Settings';
+      o.textContent = 'No campaigns — Setup Wizard';
       sel.appendChild(o);
     } else {
       camps.forEach((c) => {
@@ -241,6 +411,7 @@ function mountAppSidebar(activeId, onChange) {
     document.body.classList.add('app-shell');
     if (!renderAppSidebar(resolvedActive)) return;
     initSidebarCampaignSwitcher(onChange);
+    initSidebarHealthBadge();
     integratePageGrokAssist(resolvedActive);
     updateSidebarActiveState(resolvedActive);
   };
