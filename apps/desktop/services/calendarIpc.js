@@ -23,7 +23,8 @@ function registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics
     const activeCampaignId = store.getItem('activeCampaignId') || 'default';
     const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeCampaignId}`) || '[]');
 
-    const publishResult = await integrations.publishPost(postData, globalKeys, linkedAccounts, { humanLike: postData.humanLike !== false });
+    const humanLike = process.env.SI_TEST_QUICK === '1' ? false : postData.humanLike !== false;
+    const publishResult = await integrations.publishPost(postData, globalKeys, linkedAccounts, { humanLike });
     if (publishResult && publishResult.success === false) {
       throw new Error(publishResult.error || 'Platform publish failed');
     }

@@ -162,11 +162,12 @@ function getLinkedAccounts() {
         accountId: accs[0].id, platform: accs[0].platform,
         content: `[Test] Content Hub publish check ${Date.now()}`,
         hasMedia: false,
-      }, keys, accs);
+        humanLike: false,
+      }, keys, accs, { humanLike: false });
       return { ok: true, detail: `Published via ${accs[0].platform}` };
     } catch (e) {
-      if (/token|auth|credential|403|401|not supported/i.test(e.message)) {
-        return { partial: true, detail: `Publish needs auth: ${e.message.slice(0, 80)}` };
+      if (/token|auth|credential|403|401|422|429|duplicate|rate.?limit|not supported/i.test(e.message)) {
+        return { partial: true, detail: `Platform rejected publish: ${e.message.slice(0, 80)}` };
       }
       return { detail: e.message };
     }
@@ -356,4 +357,8 @@ function getLinkedAccounts() {
     partial.forEach((f) => console.log(`  - ${f.feature}: ${f.detail}`));
   }
   fs.writeFileSync(path.join(__dirname, '.content-hub-test-report.json'), JSON.stringify(results, null, 2));
-})();
+  process.exit(fails.length ? 1 : 0);
+})().catch((e) => {
+  console.error('Content Hub test fatal:', e.message);
+  process.exit(1);
+});

@@ -133,7 +133,7 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
     return true;
   });
 
-  const minDesired = 5;
+  const minDesired = process.env.SI_TEST_QUICK ? 8 : 5;
   if (deduped.length < minDesired && platformAllowed('Reddit', filters, allowedPlatforms)) {
     const fallbackLabel = queryList[0] || 'trending';
     const hotPosts = await fetchRedditHotFeed(15, fallbackLabel);
@@ -147,7 +147,8 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
   }
 
   if (deduped.length < minDesired && keys.newsApiKey) {
-    const newsPosts = await fetchNewsAsPosts(keys, queryList[0] || 'marketing', 8);
+    const newsLimit = process.env.SI_TEST_QUICK ? 8 : 8;
+    const newsPosts = await fetchNewsAsPosts(keys, queryList[0] || 'marketing', newsLimit);
     newsPosts.forEach((p) => {
       const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
       if (!seen.has(key)) {
@@ -157,14 +158,15 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
     });
   }
 
-  if (deduped.length < minDesired && queryList[0] && !process.env.SI_TEST_QUICK) {
+  if (deduped.length < minDesired && queryList[0]) {
     const { discoverRedditPosts, discoverQuoraPosts, discoverTwitterPosts } = require('./webDiscovery');
     const primary = queryList[0];
+    const quick = process.env.SI_TEST_QUICK === '1';
     const webReddit = platformAllowed('Reddit', filters, allowedPlatforms)
-      ? await discoverRedditPosts(primary, keys, 8) : [];
-    const webQuora = platformAllowed('Quora', filters, allowedPlatforms)
+      ? await discoverRedditPosts(primary, keys, quick ? 5 : 8) : [];
+    const webQuora = !quick && platformAllowed('Quora', filters, allowedPlatforms)
       ? await discoverQuoraPosts(primary, keys, 5) : [];
-    const webTwitter = platformAllowed('Twitter', filters, allowedPlatforms)
+    const webTwitter = !quick && platformAllowed('Twitter', filters, allowedPlatforms)
       ? await discoverTwitterPosts(primary, keys, 5) : [];
     [...webReddit, ...webQuora, ...webTwitter].forEach((p) => {
       const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
@@ -173,6 +175,21 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
         deduped.push(normalizePostStats(p));
       }
     });
+  }
+
+  if (deduped.length < minDesired && keys.newsApiKey) {
+    const categories = ['technology', 'business', 'general'];
+    for (const category of categories) {
+      if (deduped.length >= minDesired) break;
+      const extra = await fetchTopHeadlinesAsPosts(keys, minDesired - deduped.length, category);
+      extra.forEach((p) => {
+        const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push(normalizePostStats(p));
+        }
+      });
+    }
   }
 
   return sortPosts(deduped.map(normalizePostStats), filters?.sort);
@@ -215,6 +232,33 @@ async function fetchSerpTrending(keys, limit = 6) {
     }));
   } catch (e) {
     console.error('SerpAPI trends error:', e.message);
+    return [];
+  }
+}
+
+async function fetchTopHeadlinesAsPosts(keys, limit = 8, category = 'technology') {
+  const newsKey = keys.newsApiKey || process.env.NEWS_API_KEY;
+  if (!newsKey || limit <= 0) return [];
+  try {
+    const res = await axios.get('https://newsapi.org/v2/top-headlines', {
+      params: { category, language: 'en', pageSize: limit, apiKey: newsKey },
+      timeout: 15000,
+    });
+    return (res.data?.articles || []).slice(0, limit).map((a, i) => ({
+      platform: 'News',
+      author: a.source?.name || 'News',
+      time: 'recent',
+      createdAt: Date.now() - i * 60000,
+      matchScore: 45,
+      matchedKeyword: category,
+      content: a.title || 'Trending headline',
+      externalId: `news_${category}_${Buffer.from(a.url || a.title || String(i)).toString('base64').slice(0, 16)}`,
+      url: a.url,
+      stats: { likes: 0, comments: 0, views: 0 },
+      isNewsFallback: true,
+    }));
+  } catch (e) {
+    console.warn(`NewsAPI ${category} headlines:`, e.message);
     return [];
   }
 }
@@ -362,6 +406,8 @@ async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
 module.exports = {
   fetchRealFeed,
   fetchTrendingTopics,
+  fetchNewsAsPosts,
+  fetchTopHeadlinesAsPosts,
   normalizePlatform,
   normalizePostStats,
 };

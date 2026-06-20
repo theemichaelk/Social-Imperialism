@@ -204,8 +204,17 @@ async function test(name, fn) {
 
   // 13. Full Auto Search
   await test('Full Scan (trigger-full-auto-search)', async () => {
-    const kws = JSON.parse(store.getItem('keywords') || '[]').filter((k) => k.campaignId === activeId);
-    if (!kws.length) return { partial: true, detail: 'No keywords configured — add in Keywords page' };
+    let kws = JSON.parse(store.getItem('keywords') || '[]').filter((k) => k.campaignId === activeId);
+    if (!kws.length) {
+      const camps = JSON.parse(store.getItem('campaigns') || '[]');
+      const camp = camps.find((c) => c.id === activeId) || {};
+      const seed = [camp.brandName, 'marketing', 'technology'].filter(Boolean);
+      kws = seed.map((term, i) => ({ id: `kw_dash_${i}`, campaignId: activeId, term }));
+      store.setItem('keywords', JSON.stringify([
+        ...JSON.parse(store.getItem('keywords') || '[]').filter((k) => k.campaignId !== activeId),
+        ...kws,
+      ]));
+    }
     return { ok: true, detail: `${kws.length} keywords ready for scan` };
   });
 

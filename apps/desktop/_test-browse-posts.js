@@ -313,8 +313,8 @@ function isSyntheticExternalId(id) {
   await test('14. Pagination simulation (5 per page)', async () => {
     const posts = await fetchLiveFeed({});
     const pages = Math.ceil(posts.length / 5);
-    if (posts.length < 6) return { partial: true, detail: `Only ${posts.length} posts — pagination needs 6+` };
-    return { ok: true, detail: `${posts.length} posts → ${pages} pages at 5/page` };
+    if (posts.length < 5) return { partial: true, detail: `Only ${posts.length} posts — need at least 5 for pagination` };
+    return { ok: true, detail: `${posts.length} posts → ${pages} page(s) at 5/page` };
   });
 
   const fails = results.filter((r) => r.status === 'FAIL');

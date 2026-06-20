@@ -16,6 +16,9 @@ function defaultHumanSettings() {
 }
 
 async function waitBeforeAction(settings = {}) {
+  if (process.env.SI_TEST_QUICK === '1' || process.env.SI_SKIP_HUMAN_DELAY === '1') {
+    return 0;
+  }
   const merged = { ...defaultHumanSettings(), ...settings };
   const minMs = Math.max(0, (merged.humanDelayMin || 30) * 1000);
   const maxMs = Math.max(minMs, (merged.humanDelayMax || 120) * 1000);

@@ -99,12 +99,42 @@ function parseDuckDuckGoHtml(html, hostPattern, limit = 15) {
   return items.slice(0, limit);
 }
 
+async function searchViaRedditRss(keyword, limit = 15) {
+  try {
+    const res = await axios.get('https://www.reddit.com/search.rss', {
+      params: { q: keyword, limit: Math.min(limit, 25) },
+      headers: { 'User-Agent': SEARCH_UA },
+      timeout: 12000,
+      validateStatus: (s) => s < 500,
+    });
+    if (res.status !== 200) return [];
+    const xml = String(res.data || '');
+    const items = [];
+    const entryRe = /<entry>([\s\S]*?)<\/entry>/gi;
+    let m;
+    while ((m = entryRe.exec(xml)) && items.length < limit) {
+      const entry = m[1];
+      const title = ((entry.match(/<title[^>]*>([\s\S]*?)<\/title>/) || [])[1] || '')
+        .replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+      const link = ((entry.match(/<link[^>]*href="([^"]+)"/) || [])[1] || '').split('&')[0];
+      const author = ((entry.match(/<name>([\s\S]*?)<\/name>/) || [])[1] || 'reddit').trim();
+      if (!title || !link) continue;
+      items.push({ url: link, title, author });
+    }
+    return items;
+  } catch (e) {
+    console.warn('Reddit RSS discovery:', e.message);
+    return [];
+  }
+}
+
 async function searchViaDuckDuckGo(query, hostPattern, limit = 15) {
   const headers = { 'User-Agent': SEARCH_UA, Accept: 'text/html' };
+  const timeout = process.env.SI_TEST_QUICK === '1' ? 5000 : 8000;
   try {
     const res = await axios.post('https://html.duckduckgo.com/html/', `q=${encodeURIComponent(query)}`, {
       headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' },
-      timeout: 8000,
+      timeout,
       validateStatus: (s) => s < 500,
     });
     if (res.status !== 200) return [];
@@ -166,16 +196,17 @@ async function discoverSitePosts({ site, hostPattern, keyword, keys, limit = 5, 
     });
   };
 
+  const quick = process.env.SI_TEST_QUICK === '1';
   merge(await searchViaSerp(q, keys, limit));
-  if (out.length < limit) merge(await searchViaBrave(q, hostPattern, limit));
-  if (out.length < limit && !process.env.SI_TEST_QUICK) merge(await searchViaDuckDuckGo(q, hostPattern, limit));
-  if (out.length < limit) merge(await searchViaMojeek(q, hostPattern, limit));
+  if (out.length < limit && !quick) merge(await searchViaBrave(q, hostPattern, limit));
+  if (out.length < limit && !quick) merge(await searchViaDuckDuckGo(q, hostPattern, limit));
+  if (out.length < limit && !quick) merge(await searchViaMojeek(q, hostPattern, limit));
 
   return out.slice(0, limit);
 }
 
 async function discoverRedditPosts(keyword, keys, limit = 5) {
-  return discoverSitePosts({
+  const out = await discoverSitePosts({
     site: 'reddit.com',
     hostPattern: 'reddit\\.com',
     keyword,
@@ -183,6 +214,32 @@ async function discoverRedditPosts(keyword, keys, limit = 5) {
     limit,
     platform: 'Reddit',
   });
+  if (out.length >= limit) return out.slice(0, limit);
+
+  const seen = new Set(out.map((p) => p.url));
+  const rssHits = await searchViaRedditRss(keyword, limit - out.length);
+  rssHits.forEach((h) => {
+    if (out.length >= limit || !h.url || seen.has(h.url)) return;
+    seen.add(h.url);
+    const title = h.title || titleFromUrl(h.url);
+    const looksLikeQuestion = title.includes('?')
+      || /\b(how|what|why|recommend|best|help|tool)\b/i.test(title);
+    out.push({
+      platform: 'Reddit',
+      externalId: `reddit_rss_${Buffer.from(h.url).toString('base64').slice(0, 16)}`,
+      content: title,
+      url: h.url,
+      author: h.author || 'Reddit',
+      time: 'recent',
+      createdAt: Date.now(),
+      matchScore: looksLikeQuestion ? 70 : 55,
+      isWebDiscovery: true,
+      postType: looksLikeQuestion ? 'question' : 'text',
+      stats: { likes: looksLikeQuestion ? 20 : 10, comments: looksLikeQuestion ? 2 : 0, views: 0 },
+      matchedKeyword: keyword,
+    });
+  });
+  return out.slice(0, limit);
 }
 
 async function discoverQuoraPosts(keyword, keys, limit = 5) {
@@ -271,5 +328,6 @@ module.exports = {
   searchViaBrave,
   searchViaDuckDuckGo,
   searchViaMojeek,
+  searchViaRedditRss,
   searchViaSerp,
 };

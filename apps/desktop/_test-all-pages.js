@@ -39,7 +39,7 @@ TESTS.forEach(({ name, script, report }) => {
     cwd: ROOT,
     env,
     encoding: 'utf8',
-    timeout: quick ? 90000 : 300000,
+    timeout: quick ? 240000 : 300000,
   });
 
   if (result.stdout) process.stdout.write(result.stdout);
@@ -60,7 +60,9 @@ TESTS.forEach(({ name, script, report }) => {
     else fail += 1;
   });
 
-  const pageStatus = result.status !== 0 ? 'ERROR'
+  const timedOut = result.signal === 'SIGTERM';
+  const pageStatus = timedOut ? 'TIMEOUT'
+    : result.status !== 0 && result.status != null ? 'ERROR'
     : counts.FAIL > 0 ? 'FAIL'
     : counts.PARTIAL > 0 ? 'PARTIAL'
     : 'OK';

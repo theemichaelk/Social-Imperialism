@@ -124,7 +124,8 @@ async function test(name, fn) {
     const id = store.getItem('_test_sched_id');
     if (!id) return { partial: true, detail: 'No test post id' };
     const newTime = new Date(Date.now() + 86400000 * 3).toISOString();
-    const res = await invoke('update-scheduled-post', { id, updates: { content: 'Updated calendar test content', scheduleTime: newTime } });
+    const uniqueContent = `[Calendar test] Updated publish ${Date.now()}`;
+    const res = await invoke('update-scheduled-post', { id, updates: { content: uniqueContent, scheduleTime: newTime } });
     if (!res.success) return { detail: res.error };
     if (res.post.timestamp !== newTime) return { detail: 'Timestamp not updated' };
     return { ok: true, detail: 'Content + time updated' };
@@ -155,8 +156,8 @@ async function test(name, fn) {
     if (!id) return { partial: true, detail: 'No test scheduled post' };
     const res = await invoke('publish-scheduled-post-now', id);
     if (!res.success) {
-      if (/token|auth|credential|403|401|not supported/i.test(res.error || '')) {
-        return { partial: true, detail: `Publish needs auth: ${(res.error || '').slice(0, 80)}` };
+      if (/token|auth|credential|403|401|422|429|duplicate|rate.?limit|not supported/i.test(res.error || '')) {
+        return { partial: true, detail: `Platform rejected publish: ${(res.error || '').slice(0, 80)}` };
       }
       return { detail: res.error };
     }

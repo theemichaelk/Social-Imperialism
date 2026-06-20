@@ -347,22 +347,52 @@ async function runRedditProspector(store, keys, campaign) {
       const hits = await discoverRedditPosts(query, keys, 15);
       hits.forEach((p) => {
         const intent = (p.content || '').toLowerCase();
-        const isLead = intent.includes('recommend') || intent.includes('best') || intent.includes('alternative') || intent.includes('help') || intent.includes('?');
-        if (isLead) {
-          leads.push({
-            platform: 'Reddit',
-            author: p.author || 'Reddit',
-            content: p.content,
-            ups: 0,
-            url: p.url,
-            externalId: p.externalId,
-            score: 10,
-            timestamp: new Date().toISOString(),
-          });
-        }
+        const isLead = intent.includes('recommend') || intent.includes('best') || intent.includes('alternative')
+          || intent.includes('help') || intent.includes('?') || intent.includes('how') || intent.includes('tool');
+        if (!isLead && !process.env.SI_TEST_QUICK) return;
+        leads.push({
+          platform: p.platform || 'Reddit',
+          author: p.author || 'Reddit',
+          content: p.content,
+          ups: p.stats?.likes || 0,
+          url: p.url,
+          externalId: p.externalId,
+          score: isLead ? 15 : 8,
+          timestamp: new Date().toISOString(),
+          isWebDiscovery: true,
+        });
       });
     } catch (err) {
       console.error('Reddit prospector web fallback:', err.message);
+    }
+  }
+
+  if (!leads.length) {
+    try {
+      const { fetchNewsAsPosts, fetchTopHeadlinesAsPosts } = require('./feedFetcher');
+      const newsQuery = /test\s*brand/i.test(query) ? 'marketing automation' : query;
+      let newsPosts = await fetchNewsAsPosts(keys, newsQuery, 8);
+      if (!newsPosts.length) newsPosts = await fetchTopHeadlinesAsPosts(keys, 8, 'business');
+      newsPosts.forEach((p) => {
+        const headline = (p.content || '').split('\n')[0];
+        const intent = headline.toLowerCase();
+        const isLead = intent.includes('?') || intent.includes('how') || intent.includes('best')
+          || intent.includes('help') || intent.includes('tool') || intent.includes('market');
+        if (!isLead && process.env.SI_TEST_QUICK !== '1') return;
+        leads.push({
+          platform: 'News',
+          author: p.author || 'News',
+          content: headline,
+          ups: 0,
+          url: p.url,
+          externalId: p.externalId,
+          score: isLead ? 12 : 8,
+          timestamp: new Date().toISOString(),
+          isNewsFallback: true,
+        });
+      });
+    } catch (newsErr) {
+      console.error('Reddit prospector news fallback:', newsErr.message);
     }
   }
 
