@@ -26,7 +26,7 @@ export default function SettingsPage() {
       invoke<Record<string, unknown>>('get-billing-plan'),
       invoke<Record<string, unknown>>('get-grok-settings'),
       invoke<Record<string, unknown>>('get-payment-settings'),
-      invoke<unknown[]>('get-setup-tutorials'),
+      invoke<{ tutorials?: Array<{ id: string; title: string }>; completed?: string[] }>('get-setup-tutorials'),
       invoke<Record<string, unknown>>('get-settings-status'),
       invoke<Record<string, unknown>>('get-page-health'),
     ]).then(([k, a, c, b, g, p, t, ss]) => {
@@ -36,7 +36,7 @@ export default function SettingsPage() {
       setBilling(b);
       setGrok(g || {});
       setPayment(p || {});
-      setTutorials(t || []);
+      setTutorials((t as { tutorials?: unknown[] })?.tutorials || []);
       setSettingsStatus(ss || {});
     }).catch(console.error);
   }, []);

@@ -68,6 +68,17 @@ function registerQuoraTrafficOpsHandlers({
       quoraTrafficOps.saveSettings(store, campaignId(), settings);
       return { success: true, questions, count: questions.length };
     } catch (e) {
+      const settings = quoraTrafficOps.loadSettings(store, campaignId());
+      const cached = settings.cachedQuestions || [];
+      if (cached.length) {
+        return {
+          success: true,
+          questions: cached.slice(0, limit || 25),
+          count: Math.min(cached.length, limit || 25),
+          fallback: true,
+          warning: e.message,
+        };
+      }
       return { success: false, error: e.message };
     }
   });

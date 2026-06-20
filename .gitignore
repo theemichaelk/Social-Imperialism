@@ -32,3 +32,9 @@ tmp/
 
 # Test credential artifacts (never commit)
 .test-*
+
+# QA report artifacts (regenerable)
+apps/api/.*-report.json
+apps/api/.setup-wizard-qa-report.json
+apps/api/.dashboard-qa-report.json
+apps/api/.browse-posts-qa-report.json

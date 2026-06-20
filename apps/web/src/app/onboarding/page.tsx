@@ -1,122 +1,298 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { LivePulse, RingChart } from '@/components/DashboardViz';
 import { useRouter } from 'next/navigation';
+
+const PLATFORMS = ['Twitter', 'LinkedIn', 'Reddit', 'Facebook', 'Instagram', 'YouTube', 'Quora', 'TikTok'];
+const STEPS = ['Brand Profile', 'Keywords & Platforms', 'Feed Preview', 'Go Live'];
+
+type Keyword = { id?: string; term: string; platforms?: string[] };
+type Post = { platform: string; content: string; url?: string; matchScore?: number };
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [status, setStatus] = useState<Record<string, unknown>>({});
-  const [brand, setBrand] = useState({ brandName: '', domain: '', description: '', tone: 'Professional' });
-  const [feed, setFeed] = useState<Array<{ platform: string; content: string }>>([]);
+  const [apiMetrics, setApiMetrics] = useState<Record<string, string>>({});
+  const [brand, setBrand] = useState({
+    brandName: '', domain: '', description: '', tone: 'Professional', audience: '',
+  });
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [suggested, setSuggested] = useState<string[]>([]);
+  const [manualKw, setManualKw] = useState('');
+  const [platforms, setPlatforms] = useState<string[]>(['Twitter', 'LinkedIn', 'Reddit']);
+  const [feed, setFeed] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
 
-  useEffect(() => {
-    invoke<Record<string, unknown>>('get-setup-status').then((s) => {
-      setStatus(s);
-      setStep((s.nextStep as number) || 1);
-      const camp = s.campaign as Record<string, string> | undefined;
-      if (camp) setBrand({ brandName: camp.brandName || '', domain: camp.domain || '', description: camp.description || '', tone: camp.tone || 'Professional' });
-    }).catch(console.error);
+  const refreshStatus = useCallback(async () => {
+    const [s, api] = await Promise.all([
+      invoke<Record<string, unknown>>('get-setup-status'),
+      invoke<Record<string, string>>('check-api-status').catch(() => ({})),
+    ]);
+    setStatus(s);
+    setApiMetrics((s.apiMetrics as Record<string, string>) || api || {});
+    setStep((s.nextStep as number) || 1);
+    const camp = s.campaign as Record<string, string> | undefined;
+    if (camp) {
+      setBrand({
+        brandName: camp.brandName || '',
+        domain: camp.domain || '',
+        description: camp.description || '',
+        tone: camp.tone || 'Professional',
+        audience: camp.audience || '',
+      });
+    }
+    setKeywords((s.keywords as Keyword[]) || []);
   }, []);
 
+  useEffect(() => { refreshStatus().catch(console.error); }, [refreshStatus]);
+
+  const connectedCount = Object.values(apiMetrics).filter((v) => v === 'Connected').length;
+  const totalApis = Object.keys(apiMetrics).length || 1;
+
   async function saveBrand() {
-    const campaigns = await invoke<Array<Record<string, string>>>('get-settings') || [];
-    const id = (status.campaign as { id?: string })?.id || `camp_${Date.now()}`;
-    const updated = [{ id, ...brand, status: 'Active' }, ...campaigns.filter((c) => c.id !== id)];
-    await invoke('save-settings', updated);
-    await invoke('set-active-campaign', id);
-    const s = await invoke<Record<string, unknown>>('get-setup-status');
-    setStatus(s);
-    setStep(2);
-    setMsg('Brand saved');
+    if (!brand.brandName.trim() || !brand.domain.trim()) {
+      setMsg('Brand name and domain are required.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const campaigns = await invoke<Array<Record<string, string>>>('get-settings') || [];
+      const id = (status.campaign as { id?: string })?.id || `camp_${Date.now()}`;
+      const entry = { id, ...brand, status: 'Active' };
+      await invoke('save-settings', [entry, ...campaigns.filter((c) => c.id !== id)]);
+      await invoke('set-active-campaign', id);
+      await refreshStatus();
+      setStep(2);
+      setMsg('Brand integrated with AI');
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function suggestKeywords() {
-    const terms = await invoke<string[]>('generate-keywords', brand);
-    await invoke('save-keywords', terms.map((t) => ({ term: t })));
-    const s = await invoke<Record<string, unknown>>('get-setup-status');
-    setStatus(s);
-    setStep(3);
-    setMsg(`Added ${terms.length} keywords`);
+    setLoading(true);
+    setMsg('AI researching keywords…');
+    try {
+      const result = await invoke<string[] | { keywords?: string[]; error?: string }>('generate-keywords', brand);
+      const terms = Array.isArray(result) ? result : (result.keywords || []);
+      if (!terms.length) throw new Error((result as { error?: string }).error || 'No keywords returned');
+      setSuggested(terms);
+      setMsg(`${terms.length} keyword suggestions ready — click to add or save all`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  async function previewFeed() {
-    const posts = await invoke<Array<{ platform: string; content: string }>>('get-live-feed', {});
-    setFeed(posts.slice(0, 6));
-    setStep(4);
+  function addKeywords(terms: string[]) {
+    const existing = new Set(keywords.map((k) => k.term.toLowerCase()));
+    const added = terms.filter((t) => t.trim() && !existing.has(t.trim().toLowerCase()));
+    setKeywords((prev) => [...prev, ...added.map((term) => ({ term, platforms }))]);
+  }
+
+  async function saveKeywords() {
+    if (!keywords.length) {
+      setMsg('Add at least one keyword.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await invoke('save-keywords', keywords.map((k) => ({
+        term: k.term,
+        platforms: k.platforms?.length ? k.platforms : platforms,
+      })));
+      await refreshStatus();
+      setStep(3);
+      setMsg(`Saved ${keywords.length} keywords across ${platforms.length} platforms`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function previewFeed(full = false) {
+    setLoading(true);
+    setMsg(full ? 'Running full scan…' : 'Loading feed preview…');
+    try {
+      const posts = await invoke<Post[]>('get-live-feed', { quick: !full, refresh: full });
+      setFeed((posts || []).slice(0, 8));
+      setStep(3);
+      setMsg(`${(posts || []).length} posts discovered`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function runFirstScan() {
+    setLoading(true);
+    try {
+      await invoke('trigger-full-auto-search');
+      await previewFeed(true);
+    } catch (e) {
+      setMsg((e as Error).message);
+      setLoading(false);
+    }
   }
 
   async function finish() {
-    await invoke('set-onboarding-complete', true);
-    router.push('/dashboard');
+    setLoading(true);
+    try {
+      await invoke('set-onboarding-complete', true);
+      await invoke('start-worker').catch(() => null);
+      router.push('/dashboard');
+    } catch (e) {
+      setMsg((e as Error).message);
+      setLoading(false);
+    }
   }
 
-  const steps = ['Brand Profile', 'Keywords', 'Feed Preview', 'Go Live'];
+  function togglePlatform(p: string) {
+    setPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
+  }
+
+  const readiness = [
+    { label: 'Brand profile', done: !!(brand.brandName && brand.domain) },
+    { label: 'Keywords tracked', done: keywords.length > 0 },
+    { label: 'APIs connected', done: connectedCount >= 5 },
+    { label: 'Feed preview', done: feed.length > 0 },
+    { label: 'Linked accounts', done: Number(status.linkedAccountsCount || 0) > 0 },
+  ];
 
   return (
     <div>
-      <PageHeader title="Setup Wizard" subtitle={`Step ${step} of 4 — ${steps[step - 1]}`} />
+      <PageHeader
+        title="Setup Wizard"
+        subtitle="Integrate your brand, keywords, and social platforms — then go live"
+        actions={<LivePulse label="SETUP" />}
+      />
 
-      <div className="tabs" style={{ marginBottom: '1.5rem' }}>
-        {steps.map((label, i) => (
-          <button key={label} className={`tab ${step === i + 1 ? 'active' : ''}`} onClick={() => setStep(i + 1)}>{i + 1}. {label}</button>
+      <div className="dash-hero" style={{ marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}>
+          <RingChart percent={(connectedCount / totalApis) * 100} label="APIs Live" color="#22c55e" />
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 8 }}>Connection Status</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {Object.entries(apiMetrics).slice(0, 14).map(([name, st]) => (
+                <span key={name} className={`api-pill ${st === 'Connected' ? 'ok' : 'warn'}`}>{name}</span>
+              ))}
+            </div>
+          </div>
+          <div style={{ minWidth: 180 }}>
+            {readiness.map((r) => (
+              <div key={r.label} className={`readiness-row ${r.done ? 'done' : ''}`}>
+                <span>{r.label}</span>
+                <span>{r.done ? '✓' : '—'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="wizard-progress">
+        {STEPS.map((label, i) => (
+          <button
+            key={label}
+            type="button"
+            className={`wizard-step ${step === i + 1 ? 'active' : ''} ${(status.nextStep as number) > i + 1 ? 'done' : ''}`}
+            onClick={() => setStep(i + 1)}
+          >
+            {i + 1}. {label}
+          </button>
         ))}
       </div>
 
       {step === 1 && (
         <div className="card">
-          <h3>Brand Profile</h3>
-          <input className="input" placeholder="Brand name" value={brand.brandName} onChange={(e) => setBrand({ ...brand, brandName: e.target.value })} style={{ marginBottom: 8 }} />
-          <input className="input" placeholder="Domain (e.g. acme.com)" value={brand.domain} onChange={(e) => setBrand({ ...brand, domain: e.target.value })} style={{ marginBottom: 8 }} />
-          <textarea className="input" placeholder="Brand description" value={brand.description} onChange={(e) => setBrand({ ...brand, description: e.target.value })} style={{ marginBottom: 8 }} />
+          <h3>Brand Profile — AI Integration</h3>
+          <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Every reply, keyword, and analysis uses this profile.</p>
+          <input className="input" placeholder="Brand name *" value={brand.brandName} onChange={(e) => setBrand({ ...brand, brandName: e.target.value })} style={{ marginBottom: 8 }} />
+          <input className="input" placeholder="Domain * (e.g. acme.com)" value={brand.domain} onChange={(e) => setBrand({ ...brand, domain: e.target.value })} style={{ marginBottom: 8 }} />
+          <textarea className="input" placeholder="Brand description — what you do, who you help" value={brand.description} onChange={(e) => setBrand({ ...brand, description: e.target.value })} style={{ marginBottom: 8 }} />
+          <input className="input" placeholder="Target audience (optional)" value={brand.audience} onChange={(e) => setBrand({ ...brand, audience: e.target.value })} style={{ marginBottom: 8 }} />
           <select className="input" value={brand.tone} onChange={(e) => setBrand({ ...brand, tone: e.target.value })}>
-            <option>Professional</option>
-            <option>Casual</option>
-            <option>Bold</option>
-            <option>Educational</option>
+            <option>Professional</option><option>Casual</option><option>Bold</option><option>Educational</option><option>Friendly</option>
           </select>
-          <button className="btn primary" style={{ marginTop: 12 }} onClick={saveBrand}>Save & Continue →</button>
+          <button className="btn primary" style={{ marginTop: 12 }} onClick={saveBrand} disabled={loading}>Save & Integrate with AI →</button>
         </div>
       )}
 
       {step === 2 && (
         <div className="card">
-          <h3>Keywords</h3>
-          <p style={{ color: '#94a3b8' }}>AI will suggest high-intent keywords for {(brand.brandName || 'your brand')}.</p>
-          <p>Current: {(status.keywords as unknown[])?.length ?? 0} keywords</p>
-          <button className="btn primary" onClick={suggestKeywords}>AI Suggest Keywords →</button>
-          <button className="btn" style={{ marginLeft: 8 }} onClick={() => setStep(3)}>Skip →</button>
+          <h3>Keywords & Social Platforms</h3>
+          <button className="btn" onClick={suggestKeywords} disabled={loading} style={{ marginBottom: 12 }}>✨ AI Suggest Keywords</button>
+          {suggested.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                {suggested.map((t) => (
+                  <button key={t} className="badge" style={{ cursor: 'pointer' }} onClick={() => addKeywords([t])}>+ {t}</button>
+                ))}
+              </div>
+              <button className="btn primary" onClick={() => addKeywords(suggested)}>Add All Suggestions</button>
+            </div>
+          )}
+          <textarea className="input" placeholder="Manual keywords (comma or newline)" value={manualKw} onChange={(e) => setManualKw(e.target.value)} style={{ marginBottom: 8 }} />
+          <button className="btn" onClick={() => { addKeywords(manualKw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean)); setManualKw(''); }}>+ Add Manual</button>
+          <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: 16 }}>Track on platforms:</p>
+          <div className="grid grid-4" style={{ marginBottom: 12 }}>
+            {PLATFORMS.map((p) => (
+              <div key={p} className={`platform-chip ${platforms.includes(p) ? 'selected' : ''}`} onClick={() => togglePlatform(p)} role="button" tabIndex={0}>
+                {p}
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: '0.85rem' }}>Tracked ({keywords.length}): {keywords.map((k) => k.term).join(', ') || 'none yet'}</p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button className="btn primary" onClick={saveKeywords} disabled={loading || !keywords.length}>Save Keywords →</button>
+            <button className="btn" onClick={() => setStep(3)}>Skip →</button>
+          </div>
         </div>
       )}
 
       {step === 3 && (
         <div className="card">
           <h3>Feed Preview</h3>
-          <button className="btn primary" onClick={previewFeed}>Load Live Feed →</button>
+          <p style={{ color: '#94a3b8' }}>Posts matching your keywords from connected APIs and web discovery.</p>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <button className="btn primary" onClick={() => previewFeed(false)} disabled={loading}>Quick Preview</button>
+            <button className="btn" onClick={runFirstScan} disabled={loading}>Full First Scan</button>
+            <button className="btn" onClick={() => setStep(4)}>Continue →</button>
+          </div>
           {feed.map((p, i) => (
             <div key={i} className="post-card">
               <span className="badge">{p.platform}</span>
+              {p.matchScore != null && <span style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: 6 }}>score {p.matchScore}</span>}
               <div>{(p.content || '').slice(0, 200)}</div>
             </div>
           ))}
+          {!feed.length && !loading && <p style={{ color: '#94a3b8' }}>Click Quick Preview to load matching posts.</p>}
         </div>
       )}
 
       {step === 4 && (
         <div className="card">
           <h3>Ready to Go Live</h3>
-          <ul style={{ color: '#94a3b8' }}>
-            <li>Project: {brand.brandName || '—'}</li>
-            <li>Keywords: {(status.keywords as unknown[])?.length ?? 0}</li>
-            <li>Linked accounts: {String(status.linkedAccountsCount ?? 0)}</li>
-          </ul>
-          <button className="btn primary" onClick={finish}>Complete Setup → Dashboard</button>
+          <div className="dash-hero-grid" style={{ marginBottom: 16 }}>
+            <div className="metric-tile"><div className="metric-tile-val">{brand.brandName || '—'}</div><div className="metric-tile-label">Brand</div></div>
+            <div className="metric-tile"><div className="metric-tile-val">{keywords.length}</div><div className="metric-tile-label">Keywords</div></div>
+            <div className="metric-tile"><div className="metric-tile-val">{String(status.linkedAccountsCount ?? 0)}</div><div className="metric-tile-label">Accounts</div></div>
+            <div className="metric-tile"><div className="metric-tile-val">{connectedCount}</div><div className="metric-tile-label">APIs Live</div></div>
+          </div>
+          <p style={{ color: '#94a3b8' }}>Worker will start scanning for engagement opportunities automatically.</p>
+          <button className="btn primary" onClick={finish} disabled={loading}>Complete Setup → Dashboard</button>
         </div>
       )}
 
-      {msg && <p style={{ color: '#94a3b8' }}>{msg}</p>}
+      {msg && <p style={{ color: '#94a3b8', marginTop: 12 }}>{msg}</p>}
     </div>
   );
 }

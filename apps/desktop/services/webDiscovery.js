@@ -2,8 +2,28 @@
  * Free + SerpAPI web search fallbacks when platform APIs block or rate-limit.
  */
 const axios = require('axios');
+const { redditPostIdFromUrl } = require('./postIdUtils');
 
 const SEARCH_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+function redditPostFromHit(h, keyword, looksLikeQuestion) {
+  const postId = redditPostIdFromUrl(h.url);
+  const title = h.title || titleFromUrl(h.url);
+  return {
+    platform: 'Reddit',
+    externalId: postId || `reddit_rss_${Buffer.from(h.url).toString('base64').slice(0, 16)}`,
+    content: title,
+    url: h.url,
+    author: h.author || 'Reddit',
+    time: 'recent',
+    createdAt: Date.now(),
+    matchScore: looksLikeQuestion ? 70 : 55,
+    isWebDiscovery: !postId,
+    postType: looksLikeQuestion ? 'question' : 'text',
+    stats: { likes: looksLikeQuestion ? 20 : 10, comments: looksLikeQuestion ? 2 : 0, views: 0 },
+    matchedKeyword: keyword,
+  };
+}
 
 function titleFromUrl(url) {
   if (!url) return '';
@@ -178,16 +198,17 @@ async function discoverSitePosts({ site, hostPattern, keyword, keys, limit = 5, 
         || title.includes('?')
         || /\b(how|what|why|when|where|should|can|is|are|does|do)\b/i.test(title);
       const estEngagement = looksLikeQuestion ? 42 : 28;
+      const redditId = platform === 'Reddit' ? redditPostIdFromUrl(h.url) : null;
       out.push({
         platform,
-        externalId: `${platform.toLowerCase()}_${Buffer.from(h.url).toString('base64').slice(0, 20)}`,
+        externalId: redditId || `${platform.toLowerCase()}_${Buffer.from(h.url).toString('base64').slice(0, 20)}`,
         content: title,
         url: h.url,
         author: platform,
         time: 'recent',
         createdAt: Date.now(),
         matchScore: looksLikeQuestion ? 72 : 55,
-        isWebDiscovery: true,
+        isWebDiscovery: !redditId,
         postType: looksLikeQuestion ? 'question' : 'text',
         stats: { likes: estEngagement, comments: looksLikeQuestion ? 3 : 0, views: 0 },
         matchedKeyword: keyword,
@@ -224,20 +245,7 @@ async function discoverRedditPosts(keyword, keys, limit = 5) {
     const title = h.title || titleFromUrl(h.url);
     const looksLikeQuestion = title.includes('?')
       || /\b(how|what|why|recommend|best|help|tool)\b/i.test(title);
-    out.push({
-      platform: 'Reddit',
-      externalId: `reddit_rss_${Buffer.from(h.url).toString('base64').slice(0, 16)}`,
-      content: title,
-      url: h.url,
-      author: h.author || 'Reddit',
-      time: 'recent',
-      createdAt: Date.now(),
-      matchScore: looksLikeQuestion ? 70 : 55,
-      isWebDiscovery: true,
-      postType: looksLikeQuestion ? 'question' : 'text',
-      stats: { likes: looksLikeQuestion ? 20 : 10, comments: looksLikeQuestion ? 2 : 0, views: 0 },
-      matchedKeyword: keyword,
-    });
+    out.push(redditPostFromHit(h, keyword, looksLikeQuestion));
   });
   return out.slice(0, limit);
 }

@@ -32,6 +32,10 @@ const CHANNEL_ARGS = {
   'get-reddit-ai-queue': ['subreddit-ascent'],
   'run-seo-tool': [{ toolId: 'reddit-topics', payload: { keyword: 'marketing' } }],
   'get-upcoming-by-platform': [7],
+  'publish-post': [{ platform: 'LinkedIn', accountId: 'demo_li', content: 'Parity test post', hasMedia: false, humanLike: false }],
+  'schedule-post': [{ platform: 'LinkedIn', accountId: 'demo_li', content: 'Parity scheduled post', scheduleTime: new Date(Date.now() + 86400000).toISOString() }],
+  'shorten-url': ['https://example.com'],
+  'refresh-account-profile': ['demo_li'],
 };
 
 async function login() {

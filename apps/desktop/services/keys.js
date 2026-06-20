@@ -11,6 +11,10 @@ const ENV_ALIASES = {
   twBearer: ['TWITTER_BEARER_TOKEN', 'TWITTER_BEARER'],
   rdId: ['REDDIT_CLIENT_ID'],
   rdSecret: ['REDDIT_CLIENT_SECRET'],
+  redditUsername: ['REDDIT_USERNAME'],
+  redditPassword: ['REDDIT_PASSWORD'],
+  redditAccessToken: ['REDDIT_ACCESS_TOKEN'],
+  rdAccess: ['REDDIT_ACCESS_TOKEN'],
   liId: ['LINKEDIN_CLIENT_ID'],
   liSecret: ['LINKEDIN_CLIENT_SECRET'],
   linkedinAccessToken: ['LINKEDIN_ACCESS_TOKEN'],
@@ -38,8 +42,14 @@ const ENV_ALIASES = {
   openai: ['OPENAI_API_KEY', 'OPENAI_API_KEY_1'],
   newsApiKey: ['NEWS_API_KEY'],
   unsplashAccessKey: ['UNSPLASH_ACCESS_KEY'],
+  unsplashAppId: ['UNSPLASH_APPLICATION_ID'],
+  unsplashSecretKey: ['UNSPLASH_SECRET_KEY'],
   pexelsKey: ['PEXELS_API_KEY'],
   pixabayKey: ['PIXABAY_API_KEY'],
+  flickrKey: ['FLICKR_API_KEY', 'FLICKR_KEY'],
+  flickrSecret: ['FLICKR_SECRET'],
+  flickrKey2: ['FLICKR_API_KEY_2'],
+  flickrSecret2: ['FLICKR_SECRET_2'],
   falKey: ['FAL_KEY', 'FAL_API_KEY'],
   domDetailer: ['DOMDETAILER_API_KEY'],
   serpApiKey: ['SERP_API_KEY'],
@@ -49,7 +59,27 @@ const ENV_ALIASES = {
   playhtSecretKey: ['PLAYHT_SECRET_KEY'],
   contentfulSpaceId: ['CONTENTFUL_SPACE_ID'],
   contentfulAccessToken: ['CONTENTFUL_ACCESS_TOKEN'],
+  contentfulEnvironment: ['CONTENTFUL_ENVIRONMENT'],
+  contentStudioApiKey: ['CONTENT_STUDIO_API_KEY'],
+  mozAccessId: ['MOZ_ACCESS_ID'],
+  mozSecret: ['MOZ_SECRET_KEY'],
   advancedWorkflowKey: ['ADVANCED_WORKFLOW_KEY', 'GOOEY_API_KEY'],
+  twitchRtmpServer: ['TWITCH_RTMP_SERVER'],
+  twitchUsername: ['TWITCH_USERNAME'],
+  fbStreamingKey: ['FB_STREAMING_KEY', 'META_STREAMING_KEY'],
+  fbTechLauncherKey: ['FB_TECH_LAUNCHER_STREAM_KEY'],
+  fbStoneBuildersKey: ['FB_STONE_BUILDERS_STREAM_KEY'],
+  fbFunicsKey: ['FB_FUNICS_STREAM_KEY'],
+  fbRtmpServer: ['FB_RTMP_SERVER'],
+  ytStreamKeyTsbr: ['YOUTUBE_STREAM_KEY_TSBR'],
+  ytStreamKeyFunics: ['YOUTUBE_STREAM_KEY_FUNICS'],
+  streamrClientId: ['STREAMR_CLIENT_ID'],
+  streamrClientSecret: ['STREAMR_CLIENT_SECRET'],
+  streamingKeys: ['STREAMING_KEYS'],
+  instagramSessions: ['INSTAGRAM_SESSIONS'],
+  twitterKeys: ['TWITTER_KEYS_BUNDLE'],
+  googleClients: ['GOOGLE_CLIENTS_BUNDLE'],
+  openrouter2: ['OPENROUTER_API_KEY_2'],
 };
 
 const STORAGE_ALIASES = {
@@ -62,6 +92,10 @@ const STORAGE_ALIASES = {
   twBearer: ['twitterBearer', 'twitterBearer2', 'twBearer'],
   rdId: ['redditClientId', 'rdId'],
   rdSecret: ['redditClientSecret', 'rdSecret'],
+  redditUsername: ['redditUsername'],
+  redditPassword: ['redditPassword'],
+  redditAccessToken: ['redditAccessToken', 'rdAccess'],
+  rdAccess: ['redditAccessToken', 'rdAccess'],
   liId: ['linkedinClientId', 'liId'],
   liSecret: ['linkedinClientSecret', 'liSecret'],
   linkedinAccessToken: ['linkedinAccessToken'],
@@ -79,10 +113,40 @@ const STORAGE_ALIASES = {
   domDetailer: ['domDetailerKey', 'domDetailer'],
   newsApiKey: ['newsApiKey'],
   unsplashAccessKey: ['unsplashAccessKey'],
+  unsplashAppId: ['unsplashApplicationId'],
+  unsplashSecretKey: ['unsplashSecretKey'],
   pexelsKey: ['pexelsKey'],
   pixabayKey: ['pixabayKey'],
+  flickrKey: ['flickrKey'],
+  flickrSecret: ['flickrSecret'],
+  flickrKey2: ['flickrKey2'],
+  flickrSecret2: ['flickrSecret2'],
   serpApiKey: ['serpApiKey'],
   deeplKey: ['deeplKey'],
+  tinyurlApiKey: ['tinyurlApiKey'],
+  playhtUserId: ['playhtUserId'],
+  playhtSecretKey: ['playhtSecretKey'],
+  contentfulSpaceId: ['contentfulSpaceId'],
+  contentfulAccessToken: ['contentfulAccessToken'],
+  contentfulEnvironment: ['contentfulEnvironment'],
+  contentStudioApiKey: ['contentStudioApiKey'],
+  mozAccessId: ['mozAccessId'],
+  mozSecret: ['mozSecret'],
+  advancedWorkflowKey: ['advancedWorkflowKey', 'advancedWorkflow'],
+  fbStreamingKey: ['fbStreamingKey', 'metaAccess'],
+  fbTechLauncherKey: ['fbTechLauncherKey'],
+  fbStoneBuildersKey: ['fbStoneBuildersKey'],
+  fbFunicsKey: ['fbFunicsKey'],
+  fbRtmpServer: ['fbRtmpServer'],
+  ytStreamKeyTsbr: ['ytStreamKeyTsbr'],
+  ytStreamKeyFunics: ['ytStreamKeyFunics'],
+  streamrClientId: ['streamrClientId'],
+  streamrClientSecret: ['streamrClientSecret'],
+  streamingKeys: ['streamingKeys'],
+  instagramSessions: ['instagramSessions'],
+  twitterKeys: ['twitterKeys'],
+  googleClients: ['googleClients'],
+  openrouter2: ['openrouter2'],
   discordClientId: ['discordClientId', 'dcId'],
   discordClientSecret: ['discordClientSecret', 'dcSecret'],
   discordBotToken: ['discordBotToken'],
@@ -128,8 +192,29 @@ function resolveKeys(globalKeys = {}) {
   if (keys.falKey && !keys.fal) keys.fal = keys.falKey;
   if (keys.domDetailerKey && !keys.domDetailer) keys.domDetailer = keys.domDetailerKey;
   if (keys.advancedWorkflowKey && !keys.advancedWorkflow) keys.advancedWorkflow = keys.advancedWorkflowKey;
+  if (keys.youtubeClientId && !keys.ytId) keys.ytId = keys.youtubeClientId;
+  if (keys.youtubeClientSecret && !keys.ytSecret) keys.ytSecret = keys.youtubeClientSecret;
+  if (keys.redditClientId && !keys.rdId) keys.rdId = keys.redditClientId;
+  if (keys.redditClientSecret && !keys.rdSecret) keys.rdSecret = keys.redditClientSecret;
+  if (keys.domDetailerKey && !keys.domDetailer) keys.domDetailer = keys.domDetailerKey;
 
   return keys;
+}
+
+function hasMediaKeys(keys) {
+  return !!(keys.unsplashAccessKey || keys.pexelsKey || keys.pixabayKey || keys.flickrKey || keys.flickrKey2);
+}
+
+function hasAdvancedWorkflowKey(keys) {
+  return !!(keys.advancedWorkflowKey || keys.advancedWorkflow);
+}
+
+function hasContentStudioKey(keys) {
+  return !!keys.contentStudioApiKey;
+}
+
+function hasMozKeys(keys) {
+  return !!(keys.mozAccessId && keys.mozSecret);
 }
 
 function twitterConsumerKey(keys) {
@@ -243,5 +328,9 @@ module.exports = {
   hasTwitchKeys,
   resolveSettingsToken,
   hasStoredConnectToken,
+  hasMediaKeys,
+  hasAdvancedWorkflowKey,
+  hasContentStudioKey,
+  hasMozKeys,
   ENV_ALIASES,
 };

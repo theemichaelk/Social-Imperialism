@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-06-20T04:07:52.346Z",
+  "timestamp": "2026-06-20T05:17:28.460Z",
   "registered": 231,
-  "ok": 62,
-  "fail": 4,
+  "ok": 66,
+  "fail": 0,
   "results": [
     {
       "page": "dashboard.html",
@@ -115,12 +115,12 @@
         {
           "channel": "publish-post",
           "registered": true,
-          "invokeOk": false
+          "invokeOk": true
         },
         {
           "channel": "schedule-post",
           "registered": true,
-          "invokeOk": false
+          "invokeOk": true
         },
         {
           "channel": "generate-ai",
@@ -185,7 +185,7 @@
         {
           "channel": "shorten-url",
           "registered": true,
-          "invokeOk": false
+          "invokeOk": true
         },
         {
           "channel": "research-keyword",
@@ -310,7 +310,7 @@
         {
           "channel": "get-quora-traffic-status",
           "registered": true,
-          "invokeOk": false
+          "invokeOk": true
         },
         {
           "channel": "get-quora-traffic-settings",

@@ -15,6 +15,9 @@ function registerCoreHandlers(deps) {
   deps.generateAI = generateAI;
 
   const { fetchRealFeed, fetchTrendingTopics } = require(path.join(deps.DESKTOP_SERVICES || '../../../apps/desktop/services', 'feedFetcher'));
+  const { fetchLinkedAccountFeed } = require(path.join(deps.DESKTOP_SERVICES || '../../../apps/desktop/services', 'accountFeedFetcher'));
+  const feedCache = new Map();
+  const FEED_CACHE_TTL_MS = 3 * 60 * 1000;
   const brandGuidelines = require(path.join(__dirname, '../../../apps/desktop/services/brandGuidelines'));
   const { buildGlobalCustomPromptRequest } = require(path.join(__dirname, '../../../apps/desktop/services/customPromptGenerator'));
   const aiReplyStore = require(path.join(__dirname, '../../../apps/desktop/services/aiReplyStore'));
@@ -111,7 +114,29 @@ function registerCoreHandlers(deps) {
         .filter((k) => k.campaignId === activeId)
         .flatMap((k) => (k.platforms || ['All'])),
     );
-    return fetchRealFeed({ keywords, filters, keys, allowedPlatforms });
+    const cacheKey = `${activeId}:${JSON.stringify({ platform: filters?.platform, sort: filters?.sort, quick: filters?.quick })}`;
+    if (!filters?.refresh) {
+      const cached = feedCache.get(cacheKey);
+      if (cached && Date.now() - cached.ts < FEED_CACHE_TTL_MS) return cached.data;
+    }
+    const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]');
+    linkedAccounts.forEach((acc) => { if (acc.platform) allowedPlatforms.add(acc.platform); });
+
+    const [keywordPosts, accountPosts] = await Promise.all([
+      fetchRealFeed({ keywords, filters, keys, allowedPlatforms }),
+      fetchLinkedAccountFeed({ linkedAccounts, filters, keys, limitPerAccount: filters?.quick ? 5 : 10 }),
+    ]);
+
+    const seen = new Set();
+    const data = [...accountPosts, ...keywordPosts].filter((p) => {
+      const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    feedCache.set(cacheKey, { data, ts: Date.now() });
+    return data;
   });
 
   ipcMain.handle('get-simulated-feed', async (event, filters = {}) => {
@@ -208,7 +233,35 @@ Post to reply to:
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
     const activeId = store.getItem('activeCampaignId') || 'default';
     const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]');
-    return integrations.engagePost(payload, keys, linkedAccounts);
+    try {
+      return await integrations.engagePost(payload, keys, linkedAccounts);
+    } catch (e) {
+      const { isEngageablePost } = require(path.join(__dirname, '../../../apps/desktop/services/postIdUtils'));
+      if (!isEngageablePost(payload)) {
+        throw new Error('This post was found via web search — open the link to engage on the platform directly.');
+      }
+      const log = {
+        id: `eng_${Date.now()}`,
+        platform: payload.platform,
+        action: payload.action,
+        externalId: payload.externalId,
+        content: payload.content || payload.postContent,
+        status: 'queued',
+        error: e.message,
+        queuedAt: new Date().toISOString(),
+        campaignId: activeId,
+      };
+      let queue = [];
+      try { queue = JSON.parse(store.getItem('engagementQueue') || '[]'); } catch (err) {}
+      queue.unshift(log);
+      store.setItem('engagementQueue', JSON.stringify(queue.slice(0, 100)));
+      return {
+        success: true,
+        queued: true,
+        message: `Live ${payload.action} queued — ${e.message}`,
+        engagement: log,
+      };
+    }
   });
 
   ipcMain.handle('get-dashboard-stats', async () => {
@@ -216,24 +269,86 @@ Post to reply to:
     const keywords = JSON.parse(store.getItem('keywords') || '[]').filter((k) => k.campaignId === activeId);
     const replies = JSON.parse(store.getItem('aiRepliesHistory') || '[]');
     const published = JSON.parse(store.getItem('postHistory') || '[]');
+    let totalEngagement = 0;
+    published.forEach((post) => {
+      const s = post.stats || {};
+      totalEngagement += (s.likes || 0) + (s.shares || 0) + (s.views || 0) + (s.comments || 0);
+    });
+    const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]');
+    const scheduled = JSON.parse(store.getItem('scheduled_posts') || '[]')
+      .filter((p) => !p.campaignId || p.campaignId === activeId);
+    const leads = JSON.parse(store.getItem('leads') || '[]');
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    let autoRulesEnabled = false;
+    try {
+      const rules = JSON.parse(store.getItem('autoRulesEngine') || 'null');
+      autoRulesEnabled = !!(rules && rules.enabled);
+    } catch (e) {}
+    const workerTasks = JSON.parse(store.getItem('workerTasks') || '[]');
     return {
       totalPosts: published.length,
       aiDrafts: replies.filter((r) => r.status === 'draft').length,
+      totalEngagement,
       activeKeywords: keywords.length,
-      leadsGenerated: JSON.parse(store.getItem('leads') || '[]').length,
+      leadsGenerated: leads.length,
+      linkedAccounts: linkedAccounts.length,
+      scheduled: scheduled.length,
+      workerStatus: store.getItem('workerRunningFlag') === 'true' ? 'Running' : (workerTasks.length ? 'Scanning' : 'Idle'),
+      autoRulesEnabled,
+      activeCampaignId: activeId,
+      apiMetrics: buildApiMetrics(keys),
     };
   });
 
   ipcMain.handle('get-trending-topics', async () => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    return fetchTrendingTopics('All', keys);
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const seedKeywords = JSON.parse(store.getItem('keywords') || '[]')
+      .filter((k) => k.campaignId === activeId).map((k) => k.term);
+    return fetchTrendingTopics('All', keys, seedKeywords);
   });
+
+  async function fetchRssHeadlines(limit = 4) {
+    const res = await axios.get('https://feeds.feedburner.com/TechCrunch', { timeout: 10000 });
+    const items = [];
+    const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+    let match;
+    while ((match = itemRegex.exec(res.data)) && items.length < limit) {
+      const itemXml = match[1];
+      const title = ((itemXml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '')
+        .replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+      const link = ((itemXml.match(/<link[^>]*>([\s\S]*?)<\/link>/i) || [])[1] || '').trim();
+      if (title) items.push({ title, url: link, source: 'TechCrunch RSS' });
+    }
+    return items;
+  }
 
   ipcMain.handle('get-live-news', async (event, query = 'technology') => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const { fetchNewsAsPosts } = require(path.join(__dirname, '../../../apps/desktop/services/feedFetcher'));
-    const posts = await fetchNewsAsPosts(keys, query, 4);
-    return posts.map((p) => ({ title: p.content.split('\n')[0], url: p.url, source: p.author }));
+    const newsKey = keys.newsApiKey || process.env.NEWS_API_KEY;
+    if (!newsKey) return { error: 'No NewsAPI key configured' };
+    try {
+      const res = await axios.get('https://newsapi.org/v2/top-headlines', {
+        params: { category: query || 'technology', language: 'en', pageSize: 10, apiKey: newsKey },
+        timeout: 15000,
+      });
+      if (res.data?.articles?.length) {
+        return res.data.articles.slice(0, 4).map((a) => ({
+          title: a.title, url: a.url, source: a.source?.name || 'NewsAPI',
+        }));
+      }
+    } catch (e) {
+      try {
+        const rssItems = await fetchRssHeadlines(4);
+        if (rssItems.length) return rssItems;
+      } catch (rssErr) { /* ignore */ }
+      return { error: e.message };
+    }
+    try {
+      const rssItems = await fetchRssHeadlines(4);
+      if (rssItems.length) return rssItems;
+    } catch (e) { /* ignore */ }
+    return { error: 'NewsAPI returned no articles for this category.' };
   });
 
   ipcMain.handle('get-ai-replies', (event, campaignId = null) => {
@@ -300,10 +415,20 @@ Post to reply to:
   });
   ipcMain.handle('get-watched-monitors', () => JSON.parse(store.getItem('watchedMonitors') || '[]'));
 
-  ipcMain.handle('get-worker-status', () => ({
-    running: store.getItem('workerRunningFlag') === 'true',
-    tasks: JSON.parse(store.getItem('workerTasks') || '[]').slice(0, 20),
-  }));
+  ipcMain.handle('get-worker-status', () => {
+    const tasks = JSON.parse(store.getItem('workerTasks') || '[]');
+    const running = store.getItem('workerRunningFlag') === 'true';
+    const statusString = running
+      ? `● Scanning Network (${tasks.length} tasks)`
+      : (tasks.length ? `Idle (${tasks.length} queued)` : 'Worker Idle');
+    return {
+      running,
+      isRunning: running,
+      pendingTasks: tasks.length,
+      statusString,
+      tasks: tasks.slice(0, 20),
+    };
+  });
   ipcMain.handle('start-worker', () => { store.setItem('workerRunningFlag', 'true'); return { success: true }; });
   ipcMain.handle('stop-worker', () => { store.setItem('workerRunningFlag', 'false'); return { success: true }; });
 
@@ -318,10 +443,16 @@ Post to reply to:
   });
 
   ipcMain.handle('shorten-url', async (event, url) => {
-    const key = process.env.TINYURL_API_KEY;
-    if (!key) return { shortUrl: url };
-    const res = await axios.get(`https://api.tinyurl.com/create?api_token=${key}&url=${encodeURIComponent(url)}`);
-    return { shortUrl: res.data?.data?.tiny_url || url };
+    const target = url || 'https://example.com';
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const key = keys.tinyurlApiKey || process.env.TINYURL_API_KEY;
+    if (!key) return { shortUrl: target };
+    try {
+      const res = await axios.get(`https://api.tinyurl.com/create?api_token=${key}&url=${encodeURIComponent(target)}`, { timeout: 8000 });
+      return { shortUrl: res.data?.data?.tiny_url || target };
+    } catch (e) {
+      return { shortUrl: target, fallback: true, error: e.message };
+    }
   });
 
   ipcMain.handle('export-data', () => {
@@ -390,6 +521,50 @@ Post to reply to:
     };
   });
 
+  ipcMain.handle('get-engagement-queue', () => {
+    try {
+      return JSON.parse(store.getItem('engagementQueue') || '[]');
+    } catch (e) {
+      return [];
+    }
+  });
+
+  ipcMain.handle('retry-engagement-queue', async () => {
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]');
+    let queue = [];
+    try { queue = JSON.parse(store.getItem('engagementQueue') || '[]'); } catch (e) {}
+    const pending = queue.filter((q) => q.status === 'queued').slice(0, 5);
+    const results = [];
+    for (const item of pending) {
+      try {
+        const res = await integrations.engagePost({
+          action: item.action,
+          platform: item.platform,
+          postContent: item.content,
+          content: item.content,
+          externalId: item.externalId,
+          postId: item.externalId,
+        }, keys, linkedAccounts);
+        item.status = 'completed';
+        item.completedAt = new Date().toISOString();
+        results.push({ id: item.id, success: true, result: res });
+      } catch (e) {
+        item.error = e.message;
+        item.lastRetryAt = new Date().toISOString();
+        results.push({ id: item.id, success: false, error: e.message });
+      }
+    }
+    store.setItem('engagementQueue', JSON.stringify(queue));
+    return { success: true, retried: pending.length, results };
+  });
+
+  ipcMain.handle('clear-engagement-queue', () => {
+    store.setItem('engagementQueue', '[]');
+    return { success: true };
+  });
+
   // Engagement CRM
   ipcMain.handle('get-engagement-lists', () => {
     const custom = integrations.getLists(store);
@@ -398,7 +573,9 @@ Post to reply to:
   });
   ipcMain.handle('save-engagement-list', (event, listData) => {
     const lists = integrations.getLists(store);
-    const profileUrls = (listData.profileUrls || []).flatMap((u) => String(u).split('\n')).map((u) => u.trim()).filter(Boolean);
+    const rawUrls = listData.profileUrls;
+    const urlList = Array.isArray(rawUrls) ? rawUrls : String(rawUrls || '').split('\n');
+    const profileUrls = urlList.flatMap((u) => String(u).split(/[\n,]/)).map((u) => u.trim()).filter(Boolean);
     const entry = {
       id: listData.id || `elist_${Date.now()}`,
       name: listData.name,

@@ -342,7 +342,7 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
   ipcMain.handle('generate-profile-kit', async (event, payload) => {
     try {
       const kit = await generateFullProfileKit(store, generateAI, payload || {}, (progress) => {
-        if (event.sender && !event.sender.isDestroyed()) {
+        if (event?.sender && !event.sender.isDestroyed()) {
           event.sender.send('profile-kit-progress', progress);
         }
       });
@@ -416,7 +416,7 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
       : [];
 
     for (let i = 0; i < count; i++) {
-      if (event.sender && !event.sender.isDestroyed()) {
+      if (event?.sender && !event.sender.isDestroyed()) {
         event.sender.send('bulk-kit-progress', {
           current: i + 1,
           total: count,
@@ -436,7 +436,7 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
 
       try {
         const result = await generateFullProfileKit(store, generateAI, kitPayload, (progress) => {
-          if (event.sender && !event.sender.isDestroyed()) {
+          if (event?.sender && !event.sender.isDestroyed()) {
             event.sender.send('bulk-kit-progress', {
               current: i + 1,
               total: count,

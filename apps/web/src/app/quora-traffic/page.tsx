@@ -61,8 +61,13 @@ export default function QuoraTrafficPage() {
 
   async function scrapeQuora() {
     setMsg('Scraping Quora…');
-    const res = await invoke<Record<string, unknown>>('scrape-quora-questions', { keyword, limit: 10, enrich: false });
-    setMsg(JSON.stringify(res).slice(0, 150));
+    const res = await invoke<{ success?: boolean; questions?: Question[]; fallback?: boolean; warning?: string; error?: string }>('scrape-quora-questions', { keyword, limit: 10, enrich: false });
+    if (res.questions?.length) {
+      setQuestions(res.questions.map((q) => ({ content: q.content || (q as { title?: string }).title, url: q.url, platform: 'Quora', views: q.views })));
+      setMsg(res.fallback ? `Using cached questions (${res.warning || 'live scrape rate-limited'})` : `Found ${res.questions.length} questions`);
+    } else {
+      setMsg(res.error || 'No questions found — try keyword "marketing"');
+    }
   }
 
   async function generateQuoraAnswer() {

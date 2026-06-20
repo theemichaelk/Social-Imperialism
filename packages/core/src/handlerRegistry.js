@@ -22,21 +22,34 @@ function buildApiMetrics(resolveKeys, keys) {
   const status = (ok) => (ok ? 'Connected' : 'Not configured');
   const {
     hasTwitterKeys, hasRedditKeys, hasLinkedInKeys, hasMetaKeys,
-    hasYouTubeKeys, hasTikTokKeys, hasTwitchKeys,
+    hasYouTubeKeys, hasTikTokKeys, hasTwitchKeys, hasMediaKeys,
+    hasAdvancedWorkflowKey, hasContentStudioKey, hasMozKeys,
   } = require(path.join(DESKTOP_SERVICES, 'keys'));
   return {
     'Twitter / X': status(hasTwitterKeys(k)),
     'Reddit OAuth': status(hasRedditKeys(k)),
     'Reddit Feed': 'Live (public API)',
     LinkedIn: status(hasLinkedInKeys(k)),
-    'Meta / Facebook': status(hasMetaKeys(k)),
+    'Meta / Facebook': status(hasMetaKeys(k) || !!k.fbStreamingKey),
     YouTube: status(hasYouTubeKeys(k)),
     TikTok: status(hasTikTokKeys(k)),
-    Twitch: status(hasTwitchKeys(k)),
+    Twitch: status(!!k.twitchStreamKey || hasTwitchKeys(k)),
     NewsAPI: status(!!k.newsApiKey),
     SerpAPI: status(!!k.serpApiKey),
     'Gemini AI': status(!!k.gemini),
     OpenRouter: status(!!k.openrouter),
+    Unsplash: status(!!k.unsplashAccessKey),
+    'Stock Media': status(hasMediaKeys(k)),
+    'AI Workflows': status(hasAdvancedWorkflowKey(k)),
+    'Content Studio': status(hasContentStudioKey(k)),
+    DomDetailer: status(!!k.domDetailer),
+    PlayHT: status(!!(k.playhtUserId && k.playhtSecretKey)),
+    DeepL: status(!!k.deeplKey),
+    TinyURL: status(!!k.tinyurlApiKey),
+    MOZ: status(hasMozKeys(k)),
+    FAL: status(!!k.falKey),
+    Contentful: status(!!(k.contentfulSpaceId && k.contentfulAccessToken)),
+    Discord: status(!!k.discordBotToken),
   };
 }
 
@@ -95,8 +108,11 @@ async function registerAllHandlers(store, deps = {}) {
     getFalKey: () => getGlobalKey('falKey') || process.env.FAL_KEY,
   });
 
-  const { registerContentStudioHandlers } = require(path.join(DESKTOP_SERVICES, 'contentStudioIpc'));
-  registerContentStudioHandlers({ ipcMain, store, generateAI, calendarApi, integrations });
+  const generateAIWithModel = async (prompt, _modelId) => generateAI(prompt);
+  const getScheduledPostsStoreList = () => {
+    try { return JSON.parse(store.getItem('scheduled_posts') || '[]'); } catch (e) { return []; }
+  };
+  const saveScheduledPostsStoreList = (posts) => store.setItem('scheduled_posts', JSON.stringify(posts));
 
   const { registerRedditAiHandlers } = require(path.join(DESKTOP_SERVICES, 'redditAiIpc'));
   registerRedditAiHandlers({
@@ -154,6 +170,30 @@ async function registerAllHandlers(store, deps = {}) {
     buildApiMetrics: (k) => buildApiMetrics(resolveKeys, k),
     calendarApi,
     openExternal: (url) => { deps.pendingOAuthUrl = url; },
+  });
+
+  const axios = require('axios');
+  const generateImageForStudio = async (prompt) => {
+    const k = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const falKey = k.falKey || process.env.FAL_KEY;
+    if (!falKey) return { success: false, error: 'No FAL key configured.' };
+    try {
+      const response = await axios.post('https://fal.run/fal-ai/fast-sdxl', {
+        prompt, num_images: 1, image_size: 'square_hd', num_inference_steps: 4,
+      }, { headers: { Authorization: `Key ${falKey}`, 'Content-Type': 'application/json' }, timeout: 60000 });
+      if (response.data?.images?.length) return { success: true, imageUrl: response.data.images[0].url };
+      return { success: false, error: 'No image returned' };
+    } catch (e) { return { success: false, error: e.message }; }
+  };
+
+  const { registerContentStudioHandlers } = require(path.join(DESKTOP_SERVICES, 'contentStudioIpc'));
+  registerContentStudioHandlers({
+    ipcMain, store,
+    generateAIWithModel,
+    generateImage: generateImageForStudio,
+    getScheduledPosts: getScheduledPostsStoreList,
+    saveScheduledPosts: saveScheduledPostsStoreList,
+    publishPost: (postData) => calendarApi.executePublishPost(postData),
   });
 
   return { handlers, calendarApi, integrations, pendingOAuth: () => deps.pendingOAuthUrl };

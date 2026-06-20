@@ -1,7 +1,7 @@
 const axios = require('axios');
 const { discoverRedditPosts } = require('../webDiscovery');
 
-const UA = 'SocialImperialism/1.0 by SocialImperialismApp';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 function mapRedditChild(child, keyword) {
       const post = child.data;
@@ -131,10 +131,25 @@ async function publish(postData, keys, accessToken) {
   return res.data;
 }
 
+async function resolveRedditAccessToken(keys, accessToken) {
+  if (accessToken) return accessToken;
+  if (keys.rdAccess || keys.redditAccessToken) return keys.rdAccess || keys.redditAccessToken;
+  if (keys.rdId && keys.rdSecret && keys.redditUsername && keys.redditPassword) {
+    try {
+      const { redditPasswordGrant } = require('../credentialAuth');
+      const tok = await redditPasswordGrant(keys, keys.redditUsername, keys.redditPassword);
+      if (tok?.access_token) return tok.access_token;
+    } catch (e) {
+      console.error('Reddit password grant failed:', e.message);
+    }
+  }
+  return null;
+}
+
 async function engage(payload, keys, accessToken) {
   const { isSyntheticExternalId } = require('../postIdUtils');
-  const token = accessToken || keys.rdAccess || keys.redditAccessToken;
-  if (!token) throw new Error('Link a Reddit account in Account Hub to upvote or reply on Reddit.');
+  const token = await resolveRedditAccessToken(keys, accessToken);
+  if (!token) throw new Error('Link a Reddit account in Account Hub or add Reddit credentials in Settings to engage on Reddit.');
 
   const rawId = payload.postId || payload.externalId;
   if (!rawId || isSyntheticExternalId(rawId)) {

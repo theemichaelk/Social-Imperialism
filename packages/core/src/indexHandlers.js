@@ -358,11 +358,43 @@ function registerIndexHandlers(deps) {
     const unsplashKey = keys.unsplashAccessKey || process.env.UNSPLASH_ACCESS_KEY;
     if (unsplashKey) {
       try {
-        const res = await axios.get(`https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&client_id=${unsplashKey}`, { headers: { 'Accept-Version': 'v1' } });
-        if (res.data?.urls) return { success: true, imageUrl: res.data.urls.regular, source: 'Unsplash' };
-      } catch (e) { /* fallback */ }
+        const res = await axios.get(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=1&client_id=${unsplashKey}`, { headers: { 'Accept-Version': 'v1' } });
+        const photo = res.data?.results?.[0];
+        if (photo?.urls) {
+          return { success: true, imageUrl: photo.urls.regular, source: 'Unsplash', photographer: photo.user?.name || null };
+        }
+      } catch (e) { /* next source */ }
     }
-    return { success: true, imageUrl: `https://source.unsplash.com/800x600/?${encodeURIComponent(query)}`, source: 'Unsplash Source' };
+    const pexelsKey = keys.pexelsKey || process.env.PEXELS_API_KEY;
+    if (pexelsKey) {
+      try {
+        const res = await axios.get(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&size=medium`, {
+          headers: { Authorization: pexelsKey },
+        });
+        const p = res.data?.photos?.[0];
+        if (p) return { success: true, imageUrl: p.src.medium || p.src.original, source: 'Pexels', photographer: p.photographer || null };
+      } catch (e) { /* next */ }
+    }
+    const pixKey = keys.pixabayKey || process.env.PIXABAY_API_KEY;
+    if (pixKey) {
+      try {
+        const res = await axios.get(`https://pixabay.com/api/?key=${pixKey}&q=${encodeURIComponent(query)}&image_type=photo&per_page=3&min_width=640&safesearch=true`);
+        const h = res.data?.hits?.[0];
+        if (h) return { success: true, imageUrl: h.webformatURL || h.largeImageURL, source: 'Pixabay', photographer: h.user || null };
+      } catch (e) { /* next */ }
+    }
+    const flickrKey = keys.flickrKey || keys.flickrKey2 || process.env.FLICKR_API_KEY;
+    if (flickrKey) {
+      try {
+        const res = await axios.get(`https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=${flickrKey}&text=${encodeURIComponent(query)}&per_page=3&format=json&nojsoncallback=1&sort=relevance&license=4,5,6,7,8,9`);
+        const ph = res.data?.photos?.photo?.[0];
+        if (ph) {
+          const url = `https://farm${ph.farm}.staticflickr.com/${ph.server}/${ph.id}_${ph.secret}_c.jpg`;
+          return { success: true, imageUrl: url, source: 'Flickr', photographer: ph.owner || null };
+        }
+      } catch (e) { /* final */ }
+    }
+    return { success: true, imageUrl: `https://source.unsplash.com/800x600/?${encodeURIComponent(query)}`, source: 'Unsplash Source (fallback)' };
   });
   ipcMain.handle('upload-local-media', async (event, input) => {
     if (typeof input === 'string' && input.startsWith('data:')) return input;
@@ -379,7 +411,22 @@ function registerIndexHandlers(deps) {
   });
   ipcMain.handle('get-streaming-keys', () => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    return { success: true, keys: { streamingText: keys.streamingKeys || '', yt: keys.ytStreamKeyTsbr, fb: keys.fbStreamingKey, twitch: keys.twitchStreamKey } };
+    return {
+      success: true,
+      keys: {
+        streamingText: keys.streamingKeys || '',
+        yt: keys.ytStreamKeyTsbr ? `rtmp://a.rtmp.youtube.com/live2 / ${keys.ytStreamKeyTsbr}` : `rtmp://a.rtmp.youtube.com/live2 / ${keys.ytStreamKeyFunics || ''}`,
+        ytFunics: keys.ytStreamKeyFunics ? `rtmp://a.rtmp.youtube.com/live2 / ${keys.ytStreamKeyFunics}` : null,
+        fb: keys.fbStreamingKey ? `rtmps://live-api-s.facebook.com:443/rtmp/ / ${keys.fbStreamingKey}` : null,
+        fbTechLauncher: keys.fbTechLauncherKey || null,
+        fbStoneBuilders: keys.fbStoneBuildersKey || null,
+        fbFunics: keys.fbFunicsKey || null,
+        fbRtmpServer: keys.fbRtmpServer || 'rtmps://live-api-s.facebook.com:443/rtmp/',
+        twitch: keys.twitchStreamKey || null,
+        twitchServer: keys.twitchRtmpServer || 'rtmp://dfw.contribute.live-video.net/app/',
+        youtubeApiForLive: keys.youtubeApiKey || keys.ytId || null,
+      },
+    };
   });
   ipcMain.handle('get-youtube-channels', async () => {
     const key = getGlobalKey('youtubeApiKey') || process.env.YOUTUBE_API_KEY;
@@ -401,12 +448,23 @@ function registerIndexHandlers(deps) {
     } catch (e) { return { success: false, error: e.message }; }
   });
   ipcMain.handle('deepl-translate', async (event, text, targetLang = 'ES') => {
-    const key = getGlobalKey('deeplKey') || process.env.DEEPL_KEY;
+    const key = getGlobalKey('deeplKey') || process.env.DEEPL_API_KEY || process.env.DEEPL_KEY;
     if (!key) return { success: false, error: 'No DeepL key' };
-    try {
-      const res = await axios.post(`https://api-free.deepl.com/v2/translate?auth_key=${key}&text=${encodeURIComponent(text)}&target_lang=${targetLang}`);
-      return { success: true, translated: res.data.translations[0].text };
-    } catch (e) { return { success: false, error: e.message }; }
+    const endpoints = key.endsWith(':fx')
+      ? ['https://api-free.deepl.com/v2/translate', 'https://api.deepl.com/v2/translate']
+      : ['https://api.deepl.com/v2/translate', 'https://api-free.deepl.com/v2/translate'];
+    for (const base of endpoints) {
+      try {
+        const res = await axios.post(base, null, {
+          params: { auth_key: key, text, target_lang: targetLang },
+          timeout: 15000,
+        });
+        if (res.data?.translations?.[0]?.text) {
+          return { success: true, translated: res.data.translations[0].text };
+        }
+      } catch (e) { /* try next endpoint */ }
+    }
+    return { success: false, error: 'DeepL translation failed on all endpoints' };
   });
   ipcMain.handle('contentful-fetch', async () => {
     const space = getGlobalKey('contentfulSpaceId');

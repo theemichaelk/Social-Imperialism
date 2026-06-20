@@ -45,7 +45,8 @@ export default function EngagementPage() {
 
   async function createList() {
     if (!newName.trim()) return;
-    await invoke('save-engagement-list', { name: newName.trim(), profileUrls: newUrls, autoEngage: false });
+    const profileUrls = newUrls.split('\n').map((u) => u.trim()).filter(Boolean);
+    await invoke('save-engagement-list', { name: newName.trim(), profileUrls, type: 'linkedin-profiles', autoEngage: false });
     setNewName('');
     setNewUrls('');
     await refreshLists();

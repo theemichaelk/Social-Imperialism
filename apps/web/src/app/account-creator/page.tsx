@@ -41,7 +41,8 @@ export default function AccountCreatorPage() {
       name: kitName || `Kit ${Date.now()}`,
       platforms: ['Twitter', 'LinkedIn', 'Instagram'],
     });
-    setMsg(res.success === false ? String(res.error) : `Kit created: ${res.kit?.id || 'ok'}`);
+    if (res.success === false) setMsg(String(res.error));
+    else setMsg(`Kit created: ${res.kit?.name || res.kit?.id || 'ok'}`);
     refresh();
   }
 

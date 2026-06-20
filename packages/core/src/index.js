@@ -4,6 +4,10 @@ const { registerAllHandlers } = require('./handlerRegistry');
 
 const handlerCache = new Map();
 
+function clearHandlerCache() {
+  handlerCache.clear();
+}
+
 async function getHandlersForProject({ projectId, organizationId, userDataPath }) {
   const cacheKey = `${organizationId}:${projectId}`;
   if (handlerCache.has(cacheKey)) return handlerCache.get(cacheKey);
@@ -19,7 +23,11 @@ async function getHandlersForProject({ projectId, organizationId, userDataPath }
 
 async function syncProjectToStore(store, projectId) {
   const { prisma } = require('@si/db');
-  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  const { ensureProjectDefaults } = require('./projectDefaults');
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: { socialAccounts: true, keywords: true },
+  });
   if (!project) return;
 
   const campaign = {
@@ -38,11 +46,37 @@ async function syncProjectToStore(store, projectId) {
   else campaigns.push(campaign);
   store.setItem('campaigns', JSON.stringify(campaigns));
   store.setItem('activeCampaignId', project.id);
-  if (!store.getItem('globalApiKeys')) {
+  {
     const { resolveKeys } = require(path.join(__dirname, '../../../apps/desktop/services/keys'));
-    const envKeys = resolveKeys({});
-    store.setItem('globalApiKeys', JSON.stringify(envKeys));
+    let stored = {};
+    try { stored = JSON.parse(store.getItem('globalApiKeys') || '{}'); } catch (e) {}
+    const merged = resolveKeys(stored);
+    store.setItem('globalApiKeys', JSON.stringify(merged));
   }
+
+  ensureProjectDefaults(store, project);
+
+  const linkedKey = `linkedAccounts_${project.id}`;
+  if (project.socialAccounts?.length && !store.getItem(linkedKey)) {
+    const accounts = project.socialAccounts.map((a) => ({
+      id: a.id,
+      platform: a.platform,
+      handle: a.handle,
+      type: a.accountType,
+      ...(a.metadata ? JSON.parse(a.metadata) : {}),
+    }));
+    store.setItem(linkedKey, JSON.stringify(accounts));
+  }
+
+  if (project.keywords?.length && !store.getItem('keywords')) {
+    store.setItem('keywords', JSON.stringify(project.keywords.map((k) => ({
+      id: k.id,
+      term: k.term,
+      campaignId: project.id,
+      platforms: k.platformFlags ? JSON.parse(k.platformFlags) : [],
+    }))));
+  }
+
   await store.flush();
 }
 
@@ -72,4 +106,5 @@ module.exports = {
   invoke,
   listChannels,
   syncProjectToStore,
+  clearHandlerCache,
 };

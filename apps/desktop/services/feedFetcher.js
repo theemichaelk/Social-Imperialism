@@ -4,7 +4,7 @@ const reddit = require('./platforms/reddit');
 const quora = require('./platforms/quora');
 const { hasTwitterKeys } = require('./keys');
 
-const UA = 'SocialImperialism/1.0 by SocialImperialismApp';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 const PLATFORM_NORMALIZE = {
   'Twitter / X': 'Twitter',
@@ -95,8 +95,16 @@ async function fetchRedditHotFeed(limit = 15, matchedKeyword = 'trending') {
 async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
   const posts = [];
   const queryList = (Array.isArray(keywords) ? keywords : []).map((k) => String(k).trim()).filter(Boolean);
+  const { isEngageablePost } = require('./postIdUtils');
+  const quick = filters?.quick === true || filters?.light === true;
 
-  for (const keyword of queryList.slice(0, 5)) {
+  if (platformAllowed('Reddit', filters, allowedPlatforms)) {
+    const hotSeed = await fetchRedditHotFeed(quick ? 8 : 12, queryList[0] || 'trending');
+    posts.push(...hotSeed);
+  }
+
+  const keywordLimit = quick ? 2 : 5;
+  for (const keyword of queryList.slice(0, keywordLimit)) {
     if (platformAllowed('Reddit', filters, allowedPlatforms)) {
       const rdPosts = await reddit.searchPosts(keyword, keys, 5);
       posts.push(...rdPosts);
@@ -112,7 +120,7 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
       posts.push(...qPosts);
     }
 
-    if (!process.env.SI_TEST_QUICK) {
+    if (!process.env.SI_TEST_QUICK && !quick) {
       const { discoverAllPlatformPosts } = require('./webDiscovery');
       const webPosts = await discoverAllPlatformPosts({
         keyword,
@@ -192,7 +200,12 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
     }
   }
 
-  return sortPosts(deduped.map(normalizePostStats), filters?.sort);
+  const sorted = sortPosts(deduped.map(normalizePostStats), filters?.sort);
+  return sorted.sort((a, b) => {
+    const ae = isEngageablePost(a) ? 1 : 0;
+    const be = isEngageablePost(b) ? 1 : 0;
+    return be - ae;
+  });
 }
 
 async function fetchRedditHot(limit = 6) {
@@ -316,6 +329,34 @@ async function fetchNewsAsPosts(keys, keyword = 'technology', limit = 8) {
   }
 }
 
+async function fetchRssTrending(limit = 6) {
+  try {
+    const res = await axios.get('https://feeds.feedburner.com/TechCrunch', { timeout: 12000 });
+    const items = [];
+    const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+    let match;
+    while ((match = itemRegex.exec(res.data)) && items.length < limit) {
+      const itemXml = match[1];
+      const title = ((itemXml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '')
+        .replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+      const link = ((itemXml.match(/<link[^>]*>([\s\S]*?)<\/link>/i) || [])[1] || '').trim();
+      if (title) {
+        items.push({
+          topic: title.substring(0, 100),
+          searchVolume: 'RSS',
+          momentum: 'Tech',
+          url: link,
+          platform: 'TechCrunch',
+        });
+      }
+    }
+    return items;
+  } catch (e) {
+    console.warn('RSS trending fallback:', e.message);
+    return [];
+  }
+}
+
 async function fetchNewsHeadlineTrends(keys, limit = 6) {
   const newsKey = keys.newsApiKey || process.env.NEWS_API_KEY;
   if (!newsKey) return [];
@@ -360,15 +401,21 @@ async function fetchWebTrending(keyword, limit = 6) {
 }
 
 async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
-  const serpTrends = await fetchSerpTrending(keys, 6);
+  const seed = (Array.isArray(seedKeywords) ? seedKeywords : []).map((k) => String(k).trim()).filter(Boolean);
+
+  const [serpTrends, redditTrends, newsTrends, rssTrends] = await Promise.all([
+    fetchSerpTrending(keys, 6),
+    (platform === 'Reddit' || platform === 'All') ? fetchRedditHot(6) : Promise.resolve([]),
+    fetchNewsHeadlineTrends(keys, 6),
+    fetchRssTrending(6),
+  ]);
+
   if (serpTrends.length > 0) return serpTrends;
+  if (redditTrends.length > 0) return redditTrends;
+  if (newsTrends.length > 0) return newsTrends;
+  if (rssTrends.length > 0) return rssTrends;
 
-  if (platform === 'Reddit' || platform === 'All') {
-    const redditTrends = await fetchRedditHot(6);
-    if (redditTrends.length > 0) return redditTrends;
-  }
-
-  if (hasTwitterKeys(keys) && (platform === 'Twitter' || platform === 'Twitter / X')) {
+  if (hasTwitterKeys(keys) && (platform === 'Twitter' || platform === 'Twitter / X' || platform === 'All')) {
     const twPosts = await twitter.searchPosts('trending OR breaking news', keys, 6);
     if (twPosts.length > 0) {
       return twPosts.map((p) => ({
@@ -381,13 +428,6 @@ async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
     }
   }
 
-  const redditTrends = await fetchRedditHot(6);
-  if (redditTrends.length > 0) return redditTrends;
-
-  const newsTrends = await fetchNewsHeadlineTrends(keys, 6);
-  if (newsTrends.length > 0) return newsTrends;
-
-  const seed = (Array.isArray(seedKeywords) ? seedKeywords : []).map((k) => String(k).trim()).filter(Boolean);
   if (seed.length) {
     const webTrends = await fetchWebTrending(seed[0], 6);
     if (webTrends.length > 0) return webTrends;
@@ -400,12 +440,13 @@ async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
     }));
   }
 
-  return newsTrends;
+  return rssTrends;
 }
 
 module.exports = {
   fetchRealFeed,
   fetchTrendingTopics,
+  fetchRssTrending,
   fetchNewsAsPosts,
   fetchTopHeadlinesAsPosts,
   normalizePlatform,
