@@ -41,6 +41,10 @@ async function engagePost(payload, keys, linkedAccounts, rules = null, store = n
     case 'Facebook':
     case 'Facebook Group':
     case 'Facebook Page':
+    case 'Facebook Fanpage':
+      return meta.engage(payload, accessToken || keys.metaAccess);
+
+    case 'Instagram':
       return meta.engage(payload, accessToken || keys.metaAccess);
 
     case 'Reddit':

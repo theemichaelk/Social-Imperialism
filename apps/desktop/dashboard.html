@@ -579,6 +579,21 @@ body.dash-browse-mode .dash-title::after {
     <div class="dash-pill">Pending <span id="publishPendingSummary">—</span></div>
     <div class="dash-pill">Be-First <span id="beFirstSummary">—</span></div>
     <div class="dash-pill">Overrides <span id="platformOverrideSummary">—</span></div>
+    <label class="dash-pill" style="cursor:pointer;display:flex;align-items:center;gap:0.35rem;">
+      <input type="checkbox" id="dailyAutoSearchEnabled" checked style="width:auto;margin:0;">
+      Auto Search
+    </label>
+    <select id="dashboardAutoSearchFrequency" title="Scheduled auto-search frequency" style="background:rgba(15,23,42,0.9);border:1px solid #475569;color:#f8fafc;padding:2px 6px;border-radius:4px;font-size:0.68rem;">
+      <option value="5m">Every 5m</option>
+      <option value="10m">Every 10m</option>
+      <option value="15m">Every 15m</option>
+      <option value="30m">Every 30m</option>
+      <option value="hourly">Hourly</option>
+      <option value="daily" selected>Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+    </select>
+    <span id="dailyAutoSearchStatus" class="dash-pill" style="font-size:0.65rem;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span>
   </section>
 
   <section class="dash-intel-row">
@@ -2622,19 +2637,22 @@ async function loadAutoSearchSettings() {
     const s = await ipcRenderer.invoke('get-auto-search-settings');
     const cb = document.getElementById('dailyAutoSearchEnabled');
     if (cb) cb.checked = s.dailyEnabled !== false;
+    const freq = document.getElementById('dashboardAutoSearchFrequency');
+    if (freq && s.frequency) freq.value = s.frequency;
     const status = document.getElementById('dailyAutoSearchStatus');
     if (status) {
       const last = s.lastRun ? new Date(s.lastRun).toLocaleString() : 'never';
       const stats = await ipcRenderer.invoke('get-dashboard-stats').catch(() => ({}));
       const platformCount = stats.platformLastFetch ? Object.keys(stats.platformLastFetch).length : 0;
-      status.textContent = `Daily auto-search: ${s.dailyEnabled !== false ? 'ON' : 'OFF'} | Last full scan: ${last} | ${platformCount} platforms tracked since last run`;
+      status.textContent = `${s.dailyEnabled !== false ? 'ON' : 'OFF'} · ${s.frequency || 'daily'} · last ${last} · ${platformCount} platforms`;
     }
   } catch (e) {}
 }
 
 async function saveAutoSearchSettings() {
   const dailyEnabled = document.getElementById('dailyAutoSearchEnabled')?.checked !== false;
-  await ipcRenderer.invoke('save-auto-search-settings', { dailyEnabled });
+  const frequency = document.getElementById('dashboardAutoSearchFrequency')?.value || 'daily';
+  await ipcRenderer.invoke('save-auto-search-settings', { dailyEnabled, frequency });
   loadAutoSearchSettings();
 }
 
@@ -2648,6 +2666,8 @@ if (typeof loadSavedProfilesDropdown === 'function') loadSavedProfilesDropdown()
 loadQaPanelOnInit();
 const dailyCb = document.getElementById('dailyAutoSearchEnabled');
 if (dailyCb) dailyCb.addEventListener('change', saveAutoSearchSettings);
+const freqSel = document.getElementById('dashboardAutoSearchFrequency');
+if (freqSel) freqSel.addEventListener('change', saveAutoSearchSettings);
 saveQaSettingsFromDashboard();
 
 // Prefill the "Create Your Project" card from your active campaign so the full journey starts here (brand/domain/desc for AI integration)

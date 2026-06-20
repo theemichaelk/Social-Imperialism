@@ -1157,6 +1157,21 @@ CRITICAL SAFETY FILTERS:
 });
 
 // Keywords CRUD Logic (Per-Campaign & Per-Platform)
+ipcMain.handle('delete-keyword', (event, payload) => {
+  const { id, campaignId } = payload || {};
+  if (!id) return { success: false, error: 'Keyword id required' };
+  let allKeywords = [];
+  try { allKeywords = JSON.parse(store.getItem('keywords') || '[]'); } catch (e) {}
+  const before = allKeywords.length;
+  allKeywords = allKeywords.filter((k) => {
+    if (k.id !== id) return true;
+    if (campaignId && k.campaignId !== campaignId) return true;
+    return false;
+  });
+  store.setItem('keywords', JSON.stringify(allKeywords));
+  return { success: true, removed: before - allKeywords.length };
+});
+
 ipcMain.handle('save-keywords', (event, payload) => {
   // payload is { campaignId, keywords: [{term, platforms: []}, ...] }
   let allKeywords = [];
@@ -2280,6 +2295,13 @@ ipcMain.handle('search-stock-photo', async (event, query) => {
 
 // Notifications Webhook Dispatcher (Slack / Discord / Email webhook e.g. Zapier/Make)
 async function sendNotification(title, message) {
+    try {
+      const { Notification } = require('electron');
+      if (Notification?.isSupported?.()) {
+        new Notification({ title: String(title || 'Social Imperialism'), body: String(message || '').slice(0, 240) }).show();
+      }
+    } catch (e) { /* headless test */ }
+
     const slack = getGlobalKey('slackWebhook');
     const discord = getGlobalKey('discordWebhook');
     let qaSettings = {};

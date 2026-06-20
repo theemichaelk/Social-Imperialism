@@ -111,6 +111,18 @@ async function fetchRealFeed({ keywords, filters, keys, allowedPlatforms }) {
       const qPosts = await quora.searchPosts(keyword, keys, 5);
       posts.push(...qPosts);
     }
+
+    if (!process.env.SI_TEST_QUICK) {
+      const { discoverAllPlatformPosts } = require('./webDiscovery');
+      const webPosts = await discoverAllPlatformPosts({
+        keyword,
+        keys,
+        allowedPlatforms,
+        limitPerPlatform: 2,
+        platformFilter: filters?.platform,
+      });
+      posts.push(...webPosts.map(normalizePostStats));
+    }
   }
 
   const seen = new Set();

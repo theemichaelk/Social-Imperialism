@@ -120,5 +120,36 @@
 ## 5. Next Steps & Development Plan
 1. **[x] Auto-Rules Engine:** Build the scheduling and automation rules interface.
 2. **[x] Account Linking:** Build the OAuth/Token connection interface for the 10+ target platforms.
-3. **[x] Database Migration:** Move from localstorage to a robust relational database (Prisma) to support the complex data model.
-4. **[x] Worker Queues:** Implement background polling for real-time monitoring.
+3. **[~] Database Migration:** Prisma schema defined; runtime still uses `node-localstorage` via `entityStore.js`.
+4. **[~] Worker Queues:** In-process `workerLoop()` runs auto-search, be-first, RSS, fanpage; Redis/Bull queue is stub only.
+
+## 6. Blueprint Implementation Audit (June 2026)
+
+### Fully implemented
+- **Project setup:** brand name, domain, description, tone, audience, guidelines, affiliate/USPs (`onboarding.html`, `settings.html`)
+- **Keywords:** AI suggest, manual CRUD, per-platform selection, intent tags (brand/affiliate/client/qa), custom prompts (`keywords.html`)
+- **Browse Posts:** pagination, advanced filters, fetch profiles, view post, engage, AI reply preview (`dashboard.html`)
+- **AI Replies:** brand mention, global/keyword/post custom prompts, approval vs auto modes (`history.html`, `brandGuidelines.js`)
+- **Be First to Reply:** watch keyword/account/page/post, worker polling, delay jitter, rate limits (`workerMonitor.js`, `rules.html`)
+- **One-Click Auto Search:** manual + scheduled (5m–monthly), dashboard frequency control (`trigger-full-auto-search`)
+- **Q&A suite:** discover questions, answer composer, unanswered tracker, email/Slack/Discord notifications (`qaDiscovery.js`, `quora-traffic-ops.html`)
+- **Auto content:** AI text + FAL images + RSS curation + calendar scheduling (`content-hub.html`, `calendar.html`)
+- **Facebook Fanpage:** RSS auto-post, fan acquisition engagement, hands-free worker (`fanpageAutomation.js`)
+- **Agency multi-project:** campaign CRUD + per-campaign keywords/accounts (`settings.html`)
+- **All 14 platforms in UI:** Facebook, Instagram, WhatsApp, YouTube, TikTok, X, Pinterest, Snapchat, Threads, Twitch, LinkedIn, Reddit, Discord, Telegram (`platformCatalog.js`)
+
+### Partial — UI + connect/publish exist; depth varies by platform
+| Area | Status |
+|------|--------|
+| **Keyword feed/search** | API-native: Reddit, Twitter, Quora. Web-discovery: all 14 sites via `discoverAllPlatformPosts`. Linked-account timelines: Meta, YouTube. |
+| **Publish** | Working: Twitter, LinkedIn, Meta/IG, Reddit, YouTube, TikTok, Discord, Telegram, WhatsApp, Quora. Pinterest: board + image required. Threads/Snapchat/Twitch: connect only. |
+| **Engage (like/reply)** | Twitter, LinkedIn, Facebook, Instagram, Reddit, Quora. |
+| **WhatsApp** | Business API connect + publish; no public post search (by design). |
+| **Backend** | localStorage + in-process worker (not Prisma/Redis production stack). |
+
+### Remaining engineering (not omitted from blueprint — staged)
+1. Prisma runtime migration from localStorage
+2. Redis/Bull job queue for worker tasks
+3. Threads / Snapchat / Twitch native publish APIs
+4. Stripe billing (SaaS blueprint §3.1)
+5. Full API engage on web-discovered posts (platform API limits)

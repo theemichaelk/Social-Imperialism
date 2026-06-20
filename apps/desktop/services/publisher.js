@@ -72,7 +72,10 @@ async function publishPost(postData, keys, linkedAccounts, options = {}) {
       return tiktok.publish(payload, accessToken);
 
     case 'Pinterest':
-      throw new Error('Pinterest pin publishing requires board selection — use Content Hub scheduled post.');
+      return pinterest.publish({
+        ...payload,
+        boardId: account?.boardId || account?.id,
+      }, accessToken);
 
     case 'Telegram':
       return telegram.publish(payload, accessToken || keys.telegramBotToken, payload.chatId || account?.chatId || account?.id);

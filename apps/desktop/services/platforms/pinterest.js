@@ -62,4 +62,32 @@ async function discoverAccounts(accessToken, username) {
   return [{ platform: 'Pinterest', handle: username || 'Pinterest User', type: 'Profile', id: `pin_${Date.now()}` }];
 }
 
-module.exports = { getProfile, discoverAccounts, discoverBoards };
+async function publish(postData, accessToken) {
+  const token = accessToken || postData.accessToken;
+  if (!token) throw new Error('Pinterest access token required');
+  const boardId = postData.boardId || postData.pageId || postData.accountId;
+  if (!boardId) throw new Error('Pinterest board required — link a board in Account Hub');
+
+  const body = {
+    board_id: String(boardId),
+    title: (postData.title || postData.content || 'Pin').slice(0, 100),
+    description: (postData.content || '').slice(0, 500),
+    link: postData.url || postData.link || undefined,
+  };
+
+  if (postData.mediaUrl || postData.imageUrl) {
+    body.media_source = {
+      source_type: 'image_url',
+      url: postData.mediaUrl || postData.imageUrl,
+    };
+  } else {
+    throw new Error('Pinterest pins require an image URL (mediaUrl)');
+  }
+
+  const res = await axios.post(`${API}/pins`, body, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  return res.data;
+}
+
+module.exports = { getProfile, discoverAccounts, discoverBoards, publish };

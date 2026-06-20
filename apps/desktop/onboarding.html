@@ -245,7 +245,23 @@ button { font-family: inherit; cursor: pointer; border-radius: 6px; padding: 0.7
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:0.5rem;align-items:end;">
       <input type="text" id="watchTerm" placeholder="Keyword, @handle, or page name">
       <select id="watchType"><option value="keyword">Keyword</option><option value="account">Account / @handle</option><option value="page">Page / Community</option><option value="post">Specific post</option></select>
-      <select id="watchPlatform"><option value="All">All Platforms</option><option value="Twitter">Twitter</option><option value="Reddit">Reddit</option><option value="LinkedIn">LinkedIn</option></select>
+      <select id="watchPlatform">
+        <option value="All">All Platforms</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Instagram">Instagram</option>
+        <option value="WhatsApp">WhatsApp</option>
+        <option value="YouTube">YouTube</option>
+        <option value="TikTok">TikTok</option>
+        <option value="Twitter">X (Twitter)</option>
+        <option value="Pinterest">Pinterest</option>
+        <option value="Snapchat">Snapchat</option>
+        <option value="Threads">Threads</option>
+        <option value="Twitch">Twitch</option>
+        <option value="LinkedIn">LinkedIn</option>
+        <option value="Reddit">Reddit</option>
+        <option value="Discord">Discord</option>
+        <option value="Telegram">Telegram</option>
+      </select>
       <button class="btn-secondary" id="addWatchBtn">+ Watch</button>
     </div>
     <div class="monitor-list" id="monitorList"></div>

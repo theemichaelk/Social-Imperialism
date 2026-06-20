@@ -207,10 +207,67 @@ async function discoverTwitterPosts(keyword, keys, limit = 5) {
   });
 }
 
+/** All 14 blueprint platforms with web-search discovery targets */
+const PLATFORM_SITES = [
+  { platform: 'Facebook', site: 'facebook.com', hostPattern: 'facebook\\.com' },
+  { platform: 'Instagram', site: 'instagram.com', hostPattern: 'instagram\\.com' },
+  { platform: 'YouTube', site: 'youtube.com', hostPattern: '(?:youtube\\.com|youtu\\.be)' },
+  { platform: 'TikTok', site: 'tiktok.com', hostPattern: 'tiktok\\.com' },
+  { platform: 'Twitter', site: 'twitter.com', hostPattern: '(?:twitter|x)\\.com' },
+  { platform: 'Pinterest', site: 'pinterest.com', hostPattern: 'pinterest\\.com' },
+  { platform: 'Snapchat', site: 'snapchat.com', hostPattern: 'snapchat\\.com' },
+  { platform: 'Threads', site: 'threads.net', hostPattern: 'threads\\.net' },
+  { platform: 'Twitch', site: 'twitch.tv', hostPattern: 'twitch\\.tv' },
+  { platform: 'LinkedIn', site: 'linkedin.com', hostPattern: 'linkedin\\.com' },
+  { platform: 'Reddit', site: 'reddit.com', hostPattern: 'reddit\\.com' },
+  { platform: 'Quora', site: 'quora.com', hostPattern: 'quora\\.com' },
+  { platform: 'Discord', site: 'discord.com', hostPattern: 'discord\\.com' },
+  { platform: 'Telegram', site: 't.me', hostPattern: 't\\.me' },
+];
+
+function discoverPlatformPosts(platform, keyword, keys, limit = 4) {
+  const cfg = PLATFORM_SITES.find((p) => p.platform === platform);
+  if (!cfg) return Promise.resolve([]);
+  if (platform === 'Reddit') return discoverRedditPosts(keyword, keys, limit);
+  if (platform === 'Quora') return discoverQuoraPosts(keyword, keys, limit);
+  if (platform === 'Twitter') return discoverTwitterPosts(keyword, keys, limit);
+  return discoverSitePosts({ ...cfg, keyword, keys, limit, platform: cfg.platform });
+}
+
+async function discoverAllPlatformPosts({ keyword, keys, allowedPlatforms, limitPerPlatform = 3, platformFilter = null }) {
+  const { normalizePlatform } = require('./platformCatalog');
+  const allowed = new Set(
+    (allowedPlatforms && allowedPlatforms.size > 0)
+      ? Array.from(allowedPlatforms).map(normalizePlatform)
+      : PLATFORM_SITES.map((p) => p.platform),
+  );
+
+  const targets = PLATFORM_SITES.filter((cfg) => {
+    if (platformFilter && normalizePlatform(platformFilter) !== 'All' && normalizePlatform(platformFilter) !== cfg.platform) {
+      return false;
+    }
+    return allowed.has(cfg.platform);
+  });
+
+  const batchSize = process.env.SI_TEST_QUICK ? 6 : 4;
+  const out = [];
+  for (let i = 0; i < targets.length; i += batchSize) {
+    const batch = targets.slice(i, i + batchSize);
+    const chunks = await Promise.all(
+      batch.map((cfg) => discoverPlatformPosts(cfg.platform, keyword, keys, limitPerPlatform)),
+    );
+    chunks.forEach((posts) => out.push(...posts));
+  }
+  return out;
+}
+
 module.exports = {
+  PLATFORM_SITES,
   discoverRedditPosts,
   discoverQuoraPosts,
   discoverTwitterPosts,
+  discoverPlatformPosts,
+  discoverAllPlatformPosts,
   searchViaBrave,
   searchViaDuckDuckGo,
   searchViaMojeek,
