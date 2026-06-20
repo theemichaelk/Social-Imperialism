@@ -18,7 +18,15 @@ a:hover { text-decoration: underline; }
 
 .app-shell { display: flex; min-height: 100vh; }
 .sidebar { width: 260px; background: #0f172a; border-right: 1px solid var(--border); padding: 1rem 0; flex-shrink: 0; overflow-y: auto; }
-.sidebar-brand { padding: 0 1.25rem 1rem; font-weight: 700; font-size: 1.1rem; color: var(--accent); }
+.sidebar-brand { padding: 0.75rem 1rem 1rem; border-bottom: 1px solid rgba(56, 189, 248, 0.12); margin-bottom: 0.5rem; }
+.login-bg-grid {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.login-card { position: relative; z-index: 1; }
 .nav-section { margin-bottom: 0.5rem; }
 .nav-section-label { padding: 0.5rem 1.25rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .nav-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 1.25rem; color: var(--muted); font-size: 0.9rem; }

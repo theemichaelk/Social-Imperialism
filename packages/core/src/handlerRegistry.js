@@ -131,6 +131,7 @@ async function registerAllHandlers(store, deps = {}) {
     buildApiMetrics: (k) => buildApiMetrics(resolveKeys, k),
     calendarApi, FREQUENCY_OPTIONS, userDataPath,
     DESKTOP_SERVICES,
+    openExternal: (url) => { deps.pendingOAuthUrl = url; },
   });
 
   return { handlers, calendarApi, integrations, pendingOAuth: () => deps.pendingOAuthUrl };

@@ -17,7 +17,7 @@
   {
     "feature": "Step 2 — AI Suggest Keywords (generate-keywords)",
     "status": "OK",
-    "detail": "5 keywords (e.g. SaaS growth strategies)"
+    "detail": "5 keywords (e.g. SaaS marketing trends)"
   },
   {
     "feature": "Step 2 — Save keywords (save-keywords)",
@@ -31,23 +31,23 @@
   },
   {
     "feature": "Step 3 — Browse feed preview (get-live-feed)",
-    "status": "FAIL",
-    "detail": "0 posts in feed preview"
+    "status": "OK",
+    "detail": "8 posts, 8 with URLs"
   },
   {
     "feature": "Step 3 — Feed filters (engagement + question)",
-    "status": "OK",
-    "detail": "0/0 pass >100 engagement"
+    "status": "PARTIAL",
+    "detail": ">100 engagement filter empties feed (8 → 0) — wizard step 3 has same issue"
   },
   {
     "feature": "Step 3 — Draft AI Reply (draft-post-reply)",
     "status": "OK",
-    "detail": "\"Effective social listening tools include Hootsuite, Brandwat\""
+    "detail": "\"Social listening tools include Hootsuite, Sprout Social, Bra\""
   },
   {
     "feature": "Step 4 — AI Auto-Fill global prompt (generate-global-custom-prompt)",
     "status": "OK",
-    "detail": "\"At Acme Growth Labs, we believe in the transformative power of market…"
+    "detail": "“Engage with us at Acme Growth Labs to explore the power of marketing …"
   },
   {
     "feature": "Step 4 — Be-First monitors (save/get)",

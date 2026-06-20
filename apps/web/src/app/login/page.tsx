@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, setSession } from '@/lib/api';
+import { Logo } from '@/components/Logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,9 +32,14 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      <div className="login-bg-grid" aria-hidden />
       <div className="login-card">
-        <h1>Social Imperialism</h1>
-        <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '1.5rem' }}>SaaS — Full platform access</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <Logo size="lg" showText />
+          <p style={{ textAlign: 'center', color: '#94a3b8', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>
+            Social media automation — full platform access
+          </p>
+        </div>
         <div className="tabs" style={{ justifyContent: 'center' }}>
           <button type="button" className={`tab ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Sign In</button>
           <button type="button" className={`tab ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')}>Register</button>

@@ -4,6 +4,7 @@ import { AppShell } from '@/components/AppShell';
 export const metadata = {
   title: 'Social Imperialism',
   description: 'Social media automation SaaS',
+  icons: { icon: '/logo.png', apple: '/logo.png' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

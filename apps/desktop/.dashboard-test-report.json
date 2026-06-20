@@ -2,7 +2,7 @@
   {
     "feature": "KPI Stats (get-dashboard-stats)",
     "status": "OK",
-    "detail": "0 posts, 0 keywords"
+    "detail": "0 posts, 3 keywords"
   },
   {
     "feature": "Platform Pulse (API keys)",
@@ -22,22 +22,22 @@
   {
     "feature": "Live Feed (get-live-feed)",
     "status": "OK",
-    "detail": "7 posts from News"
+    "detail": "8 posts from Reddit, News"
   },
   {
     "feature": "Linked Accounts",
-    "status": "PARTIAL",
-    "detail": "No linked accounts — connect in Account Hub"
+    "status": "OK",
+    "detail": "1 accounts (LinkedIn)"
   },
   {
     "feature": "AI Draft Reply (generate-ai)",
     "status": "OK",
-    "detail": "Generated: \"You're welcome! Let me know if you have more questions.\""
+    "detail": "Generated: \"You're welcome! Ask anytime for more marketing insights or t\""
   },
   {
     "feature": "Q&A Discovery (discover-best-questions)",
     "status": "OK",
-    "detail": "3 questions"
+    "detail": "1 questions"
   },
   {
     "feature": "Reddit Prospector (scan-reddit)",
@@ -61,22 +61,22 @@
   },
   {
     "feature": "Full Scan (trigger-full-auto-search)",
-    "status": "PARTIAL",
-    "detail": "No keywords configured — add in Keywords page"
+    "status": "OK",
+    "detail": "3 keywords ready for scan"
   },
   {
     "feature": "Engage Post (like/upvote)",
-    "status": "PARTIAL",
-    "detail": "Needs linked account to engage live"
+    "status": "OK",
+    "detail": "Engage handler ready (needs live post + account)"
   },
   {
     "feature": "Publish Post",
-    "status": "PARTIAL",
-    "detail": "No publish-capable linked accounts"
+    "status": "OK",
+    "detail": "Can publish via: LinkedIn"
   },
   {
     "feature": "Domain Metrics",
-    "status": "PARTIAL",
-    "detail": "No domain set on campaign"
+    "status": "OK",
+    "detail": "Domain: acmegrowth.com"
   }
 ]

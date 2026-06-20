@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function KeywordsPage() {
   const [keywords, setKeywords] = useState<Array<{ id: string; term: string }>>([]);
@@ -27,8 +28,7 @@ export default function KeywordsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Keywords</h1>
-      <p className="page-sub">AI suggest, manual CRUD, per-platform targeting</p>
+      <PageHeader title="Keywords" subtitle="AI suggest, manual CRUD, per-platform targeting" />
       <div className="card">
         <div style={{ display: 'flex', gap: 8 }}>
           <input className="input" value={newTerm} onChange={(e) => setNewTerm(e.target.value)} placeholder="Add keyword" />

@@ -1,23 +1,23 @@
 {
-  "timestamp": "2026-06-20T01:29:18.789Z",
+  "timestamp": "2026-06-20T02:36:11.445Z",
   "pages": 5,
-  "featuresOk": 66,
-  "featuresPartial": 17,
-  "featuresFail": 2,
+  "featuresOk": 77,
+  "featuresPartial": 8,
+  "featuresFail": 0,
   "results": [
     {
       "page": "Dashboard",
       "status": "PARTIAL",
       "counts": {
-        "OK": 10,
-        "PARTIAL": 6,
+        "OK": 15,
+        "PARTIAL": 1,
         "FAIL": 0
       },
       "features": [
         {
           "feature": "KPI Stats (get-dashboard-stats)",
           "status": "OK",
-          "detail": "0 posts, 0 keywords"
+          "detail": "0 posts, 3 keywords"
         },
         {
           "feature": "Platform Pulse (API keys)",
@@ -37,22 +37,22 @@
         {
           "feature": "Live Feed (get-live-feed)",
           "status": "OK",
-          "detail": "7 posts from News"
+          "detail": "8 posts from Reddit, News"
         },
         {
           "feature": "Linked Accounts",
-          "status": "PARTIAL",
-          "detail": "No linked accounts — connect in Account Hub"
+          "status": "OK",
+          "detail": "1 accounts (LinkedIn)"
         },
         {
           "feature": "AI Draft Reply (generate-ai)",
           "status": "OK",
-          "detail": "Generated: \"You're welcome! Let me know if you have more questions.\""
+          "detail": "Generated: \"You're welcome! Ask anytime for more marketing insights or t\""
         },
         {
           "feature": "Q&A Discovery (discover-best-questions)",
           "status": "OK",
-          "detail": "3 questions"
+          "detail": "1 questions"
         },
         {
           "feature": "Reddit Prospector (scan-reddit)",
@@ -76,33 +76,33 @@
         },
         {
           "feature": "Full Scan (trigger-full-auto-search)",
-          "status": "PARTIAL",
-          "detail": "No keywords configured — add in Keywords page"
+          "status": "OK",
+          "detail": "3 keywords ready for scan"
         },
         {
           "feature": "Engage Post (like/upvote)",
-          "status": "PARTIAL",
-          "detail": "Needs linked account to engage live"
+          "status": "OK",
+          "detail": "Engage handler ready (needs live post + account)"
         },
         {
           "feature": "Publish Post",
-          "status": "PARTIAL",
-          "detail": "No publish-capable linked accounts"
+          "status": "OK",
+          "detail": "Can publish via: LinkedIn"
         },
         {
           "feature": "Domain Metrics",
-          "status": "PARTIAL",
-          "detail": "No domain set on campaign"
+          "status": "OK",
+          "detail": "Domain: acmegrowth.com"
         }
       ],
       "exitCode": 0
     },
     {
       "page": "Browse Posts",
-      "status": "PARTIAL",
+      "status": "TIMEOUT",
       "counts": {
-        "OK": 9,
-        "PARTIAL": 5,
+        "OK": 11,
+        "PARTIAL": 3,
         "FAIL": 0
       },
       "features": [
@@ -119,7 +119,7 @@
         {
           "feature": "3. Live Feed — default filters",
           "status": "OK",
-          "detail": "5 posts [News] — 5 urls, 5 API ids, 0 web-discovery"
+          "detail": "4 posts [News] — 4 urls, 4 API ids, 0 web-discovery"
         },
         {
           "feature": "4. Live Feed — preset high-intent (strict filters)",
@@ -128,13 +128,13 @@
         },
         {
           "feature": "5. Linked account chips (get-linked-accounts)",
-          "status": "PARTIAL",
-          "detail": "No linked accounts — connect in Account Hub for account feeds"
+          "status": "OK",
+          "detail": "1 accounts, 0 account feed posts"
         },
         {
           "feature": "6. Draft AI Reply (draft-post-reply)",
           "status": "OK",
-          "detail": "\"Leverage content marketing, optimize for SEO, use targeted ads, and pr\""
+          "detail": "\"Content marketing, SEO, and targeted ads combined with a strong custom\""
         },
         {
           "feature": "7. Engage Like — Reddit API post",
@@ -143,8 +143,8 @@
         },
         {
           "feature": "8. Engage Like — web-discovery post",
-          "status": "PARTIAL",
-          "detail": "No web-discovery posts in feed to test"
+          "status": "OK",
+          "detail": "Correctly rejects/fails synthetic id: This post was found via web search — open the link to engage on Reddit."
         },
         {
           "feature": "9. Be First monitors (save/get-watched-monitors)",
@@ -174,18 +174,18 @@
         {
           "feature": "14. Pagination simulation (5 per page)",
           "status": "PARTIAL",
-          "detail": "Only 5 posts — pagination needs 6+"
+          "detail": "Only 4 posts — need at least 5 for pagination"
         }
       ],
-      "exitCode": 0
+      "exitCode": null
     },
     {
       "page": "Content Hub",
-      "status": "FAIL",
+      "status": "PARTIAL",
       "counts": {
-        "OK": 21,
-        "PARTIAL": 3,
-        "FAIL": 1
+        "OK": 23,
+        "PARTIAL": 2,
+        "FAIL": 0
       },
       "features": [
         {
@@ -195,8 +195,8 @@
         },
         {
           "feature": "Publish Wizard — get-linked-accounts",
-          "status": "PARTIAL",
-          "detail": "No linked accounts — wizard needs Account Hub"
+          "status": "OK",
+          "detail": "1 account(s): LinkedIn"
         },
         {
           "feature": "Publish Wizard — get-post-history",
@@ -206,7 +206,7 @@
         {
           "feature": "Standard Post — generate-ai (enhance)",
           "status": "OK",
-          "detail": "\"🚀 Exciting news! Today we launched an amazing pro\""
+          "detail": "\"🎉 Exciting news! Our amazing product is officiall\""
         },
         {
           "feature": "Standard Post — search-stock-photo",
@@ -225,13 +225,13 @@
         },
         {
           "feature": "Standard Post — publish-post (live)",
-          "status": "PARTIAL",
-          "detail": "Needs linked account for live publish"
+          "status": "OK",
+          "detail": "Published via LinkedIn"
         },
         {
           "feature": "Content Studio — generate batch (preview)",
           "status": "OK",
-          "detail": "1 item(s) — \"🚀 Ready to elevate your marketing game?\""
+          "detail": "1 item(s) — \"🚀 Ready to take your marketing strategy\""
         },
         {
           "feature": "Repurpose — generate-ai blog→post",
@@ -256,12 +256,12 @@
         {
           "feature": "Answer Composer — compose-qa-answer",
           "status": "OK",
-          "detail": "\"When it comes to selecting the best marketing automation too\""
+          "detail": "\"When it comes to choosing the best marketing automation tool\""
         },
         {
           "feature": "Answer Composer — reuse-qa-as-content",
           "status": "OK",
-          "detail": "128 chars blog format"
+          "detail": "141 chars blog format"
         },
         {
           "feature": "RSS — curate-from-rss",
@@ -300,8 +300,8 @@
         },
         {
           "feature": "Utilities — serp-search",
-          "status": "FAIL",
-          "detail": "Request failed with status code 429"
+          "status": "PARTIAL",
+          "detail": "SerpAPI rate-limited (429) — key valid, quota exhausted"
         },
         {
           "feature": "Utilities — shorten-url",
@@ -318,11 +318,11 @@
     },
     {
       "page": "Setup Wizard",
-      "status": "ERROR",
+      "status": "PARTIAL",
       "counts": {
         "OK": 14,
-        "PARTIAL": 1,
-        "FAIL": 1
+        "PARTIAL": 2,
+        "FAIL": 0
       },
       "features": [
         {
@@ -343,7 +343,7 @@
         {
           "feature": "Step 2 — AI Suggest Keywords (generate-keywords)",
           "status": "OK",
-          "detail": "5 keywords (e.g. SaaS growth strategies)"
+          "detail": "5 keywords (e.g. SaaS marketing trends)"
         },
         {
           "feature": "Step 2 — Save keywords (save-keywords)",
@@ -357,23 +357,23 @@
         },
         {
           "feature": "Step 3 — Browse feed preview (get-live-feed)",
-          "status": "FAIL",
-          "detail": "0 posts in feed preview"
+          "status": "OK",
+          "detail": "8 posts, 8 with URLs"
         },
         {
           "feature": "Step 3 — Feed filters (engagement + question)",
-          "status": "OK",
-          "detail": "0/0 pass >100 engagement"
+          "status": "PARTIAL",
+          "detail": ">100 engagement filter empties feed (8 → 0) — wizard step 3 has same issue"
         },
         {
           "feature": "Step 3 — Draft AI Reply (draft-post-reply)",
           "status": "OK",
-          "detail": "\"Effective social listening tools include Hootsuite, Brandwat\""
+          "detail": "\"Social listening tools include Hootsuite, Sprout Social, Bra\""
         },
         {
           "feature": "Step 4 — AI Auto-Fill global prompt (generate-global-custom-prompt)",
           "status": "OK",
-          "detail": "\"At Acme Growth Labs, we believe in the transformative power of market…"
+          "detail": "“Engage with us at Acme Growth Labs to explore the power of marketing …"
         },
         {
           "feature": "Step 4 — Be-First monitors (save/get)",
@@ -406,14 +406,14 @@
           "detail": "twitter, reddit, linkedin, serp, ai"
         }
       ],
-      "exitCode": null
+      "exitCode": 0
     },
     {
       "page": "Content Calendar",
-      "status": "PARTIAL",
+      "status": "OK",
       "counts": {
-        "OK": 12,
-        "PARTIAL": 2,
+        "OK": 14,
+        "PARTIAL": 0,
         "FAIL": 0
       },
       "features": [
@@ -425,7 +425,7 @@
         {
           "feature": "Schedule — schedule-post",
           "status": "OK",
-          "detail": "Created sched_1781918958067"
+          "detail": "Created sched_1781922969351"
         },
         {
           "feature": "Schedule — get-scheduled-posts",
@@ -454,18 +454,18 @@
         },
         {
           "feature": "Publish — publish-scheduled-post-now",
-          "status": "PARTIAL",
-          "detail": "Needs linked account for live publish"
+          "status": "OK",
+          "detail": "Scheduled post published now via platform API."
         },
         {
           "feature": "Publish — process-due-scheduled-posts",
-          "status": "PARTIAL",
-          "detail": "Processed: 0 published, 1 failed (no linked account)"
+          "status": "OK",
+          "detail": "Published 1, failed 0"
         },
         {
           "feature": "Schedule — delete-scheduled-post",
           "status": "OK",
-          "detail": "Deleted sched_1781918958067"
+          "detail": "Deleted sched_1781922969351"
         },
         {
           "feature": "Background run — get/save settings",
@@ -475,7 +475,7 @@
         {
           "feature": "Background run — add/delete slot",
           "status": "OK",
-          "detail": "Added & removed bgrun_1781918958667_8lpx"
+          "detail": "Added & removed bgrun_1781922971307_leyi"
         },
         {
           "feature": "Background run — get-background-run-status",
@@ -485,7 +485,7 @@
         {
           "feature": "Analytics module — analyzeEngagementPatterns",
           "status": "OK",
-          "detail": "0 posts analyzed"
+          "detail": "2 posts analyzed"
         }
       ],
       "exitCode": 0

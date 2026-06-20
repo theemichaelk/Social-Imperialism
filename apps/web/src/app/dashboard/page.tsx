@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Record<string, number>>({});
@@ -32,8 +33,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="page-title">Dashboard</h1>
-      <p className="page-sub">Mission control — live feeds, KPIs, and trending intelligence</p>
+      <PageHeader title="Dashboard" subtitle="Mission control — live feeds, KPIs, and trending intelligence" />
 
       <div className="grid grid-4">
         <div className="card kpi"><div className="kpi-val">{stats.totalPosts ?? 0}</div><div className="kpi-label">Posts Published</div></div>

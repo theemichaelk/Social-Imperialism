@@ -28,7 +28,7 @@ npm run dev
 
 - **Web:** http://localhost:3000
 - **API:** http://localhost:4000
-- **Login:** admin@acmegrowth.com / admin123 (after seed)
+- **Login:** theesaintmichael@gmail.com / Kingme05$ (after seed)
 
 ## Feature Coverage
 

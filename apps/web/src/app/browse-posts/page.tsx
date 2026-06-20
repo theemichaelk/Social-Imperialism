@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function BrowsePostsPage() {
   const [posts, setPosts] = useState<Array<{ platform: string; content: string; url?: string }>>([]);
@@ -21,8 +22,7 @@ export default function BrowsePostsPage() {
 
   return (
     <div>
-      <h1 className="page-title">Browse Posts</h1>
-      <p className="page-sub">Filter, preview, and draft AI replies</p>
+      <PageHeader title="Browse Posts" subtitle="Filter, preview, and draft AI replies" />
       <div className="grid grid-2">
         <div className="card">
           <h3>Post Explorer ({posts.length})</h3>

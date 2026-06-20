@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { invoke } from '@/lib/api';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function ContentHubPage() {
   const [content, setContent] = useState('');
@@ -30,8 +31,7 @@ export default function ContentHubPage() {
 
   return (
     <div>
-      <h1 className="page-title">Content Hub</h1>
-      <p className="page-sub">Create, enhance, schedule, and publish content</p>
+      <PageHeader title="Content Hub" subtitle="Create, enhance, schedule, and publish content" />
       <div className="card">
         <h3>Standard Post</h3>
         <textarea className="input" rows={6} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write your post…" />

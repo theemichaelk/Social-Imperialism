@@ -3,14 +3,14 @@ const bcrypt = require('bcryptjs');
 const { prisma } = require('./index');
 
 async function main() {
-  const email = process.env.SEED_EMAIL || 'admin@acmegrowth.com';
-  const password = process.env.SEED_PASSWORD || 'admin123';
+  const email = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
+  const password = process.env.SEED_PASSWORD || 'Kingme05$';
   const hash = await bcrypt.hash(password, 10);
 
   const user = await prisma.user.upsert({
     where: { email },
-    update: {},
-    create: { email, passwordHash: hash, name: 'Admin' },
+    update: { passwordHash: hash, name: 'Michael Kaswatuka' },
+    create: { email, passwordHash: hash, name: 'Michael Kaswatuka' },
   });
 
   const org = await prisma.organization.upsert({

@@ -1,0 +1,557 @@
+{
+  "timestamp": "2026-06-20T03:53:22.562Z",
+  "passes": [
+    {
+      "ok": 43,
+      "partial": 0,
+      "fail": 0,
+      "results": [
+        {
+          "page": "Dashboard",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-dashboard-stats",
+              "status": "OK"
+            },
+            {
+              "channel": "get-live-feed",
+              "status": "OK"
+            },
+            {
+              "channel": "get-trending-topics",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Browse Posts",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-live-feed",
+              "status": "OK"
+            },
+            {
+              "channel": "draft-post-reply",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Content Hub",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-linked-accounts",
+              "status": "OK"
+            },
+            {
+              "channel": "generate-ai",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Setup Wizard",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-setup-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-active-campaign",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Calendar",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-scheduled-posts",
+              "status": "OK"
+            },
+            {
+              "channel": "get-calendar-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-best-post-times",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Engagement",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-engagement-lists",
+              "status": "OK"
+            },
+            {
+              "channel": "get-linked-accounts",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "AI Replies",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-ai-replies-hub",
+              "status": "OK"
+            },
+            {
+              "channel": "get-ai-replies",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Keywords",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-keywords",
+              "status": "OK"
+            },
+            {
+              "channel": "get-keyword-api-status",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "SEO Tools",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-seo-tools-list",
+              "status": "OK"
+            },
+            {
+              "channel": "run-seo-tool",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Growth Lab",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-reddit-ai-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-reddit-ai-queue",
+              "status": "OK"
+            },
+            {
+              "channel": "scan-reddit-now",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Quora Ops",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "discover-best-questions",
+              "status": "OK"
+            },
+            {
+              "channel": "get-unanswered-questions",
+              "status": "OK"
+            },
+            {
+              "channel": "get-qa-settings",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Automations",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-automation-flow",
+              "status": "OK"
+            },
+            {
+              "channel": "get-automation-templates",
+              "status": "OK"
+            },
+            {
+              "channel": "get-automation-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-automation-builder-data",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Auto-Rules",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-auto-rules",
+              "status": "OK"
+            },
+            {
+              "channel": "get-auto-rules-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-watched-monitors",
+              "status": "OK"
+            },
+            {
+              "channel": "get-worker-status",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Account Hub",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-linked-accounts",
+              "status": "OK"
+            },
+            {
+              "channel": "get-account-hub-status",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Acct Creator",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-profile-kits",
+              "status": "OK"
+            },
+            {
+              "channel": "get-proxy-pool",
+              "status": "OK"
+            },
+            {
+              "channel": "get-account-creator-status",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Settings",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-global-keys",
+              "status": "OK"
+            },
+            {
+              "channel": "check-api-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-billing-plan",
+              "status": "OK"
+            },
+            {
+              "channel": "get-settings",
+              "status": "OK"
+            }
+          ]
+        }
+      ],
+      "channelCount": 190
+    },
+    {
+      "ok": 43,
+      "partial": 0,
+      "fail": 0,
+      "results": [
+        {
+          "page": "Dashboard",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-dashboard-stats",
+              "status": "OK"
+            },
+            {
+              "channel": "get-live-feed",
+              "status": "OK"
+            },
+            {
+              "channel": "get-trending-topics",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Browse Posts",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-live-feed",
+              "status": "OK"
+            },
+            {
+              "channel": "draft-post-reply",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Content Hub",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-linked-accounts",
+              "status": "OK"
+            },
+            {
+              "channel": "generate-ai",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Setup Wizard",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-setup-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-active-campaign",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Calendar",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-scheduled-posts",
+              "status": "OK"
+            },
+            {
+              "channel": "get-calendar-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-best-post-times",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Engagement",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-engagement-lists",
+              "status": "OK"
+            },
+            {
+              "channel": "get-linked-accounts",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "AI Replies",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-ai-replies-hub",
+              "status": "OK"
+            },
+            {
+              "channel": "get-ai-replies",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Keywords",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-keywords",
+              "status": "OK"
+            },
+            {
+              "channel": "get-keyword-api-status",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "SEO Tools",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-seo-tools-list",
+              "status": "OK"
+            },
+            {
+              "channel": "run-seo-tool",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Growth Lab",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-reddit-ai-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-reddit-ai-queue",
+              "status": "OK"
+            },
+            {
+              "channel": "scan-reddit-now",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Quora Ops",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "discover-best-questions",
+              "status": "OK"
+            },
+            {
+              "channel": "get-unanswered-questions",
+              "status": "OK"
+            },
+            {
+              "channel": "get-qa-settings",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Automations",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-automation-flow",
+              "status": "OK"
+            },
+            {
+              "channel": "get-automation-templates",
+              "status": "OK"
+            },
+            {
+              "channel": "get-automation-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-automation-builder-data",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Auto-Rules",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-auto-rules",
+              "status": "OK"
+            },
+            {
+              "channel": "get-auto-rules-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-watched-monitors",
+              "status": "OK"
+            },
+            {
+              "channel": "get-worker-status",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Account Hub",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-linked-accounts",
+              "status": "OK"
+            },
+            {
+              "channel": "get-account-hub-status",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Acct Creator",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-profile-kits",
+              "status": "OK"
+            },
+            {
+              "channel": "get-proxy-pool",
+              "status": "OK"
+            },
+            {
+              "channel": "get-account-creator-status",
+              "status": "OK"
+            }
+          ]
+        },
+        {
+          "page": "Settings",
+          "status": "OK",
+          "channels": [
+            {
+              "channel": "get-global-keys",
+              "status": "OK"
+            },
+            {
+              "channel": "check-api-status",
+              "status": "OK"
+            },
+            {
+              "channel": "get-billing-plan",
+              "status": "OK"
+            },
+            {
+              "channel": "get-settings",
+              "status": "OK"
+            }
+          ]
+        }
+      ],
+      "channelCount": 190
+    }
+  ]
+}

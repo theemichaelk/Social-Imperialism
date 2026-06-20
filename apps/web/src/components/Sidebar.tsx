@@ -2,12 +2,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NAV_SECTIONS } from '@/lib/nav';
+import { Logo } from '@/components/Logo';
 
 export function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand">Social Imperialism</div>
+      <div className="sidebar-brand">
+        <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+          <Logo size="sm" showText />
+        </Link>
+      </div>
       {NAV_SECTIONS.map((section) => (
         <div key={section.id} className="nav-section">
           <div className="nav-section-label">{section.label}</div>
