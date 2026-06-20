@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { InvokePanel } from '@/components/InvokePanel';
 
 type ScheduledPost = { id: string; content: string; timestamp: string; platform: string; status?: string };
 
@@ -68,6 +69,13 @@ export default function CalendarPage() {
           ))}
           {!bestTimes.length && <p style={{ color: '#94a3b8' }}>Publish posts to build engagement patterns.</p>}
         </div>
+      </div>
+
+      <div className="grid grid-2">
+        <InvokePanel title="Upcoming by Platform" channel="get-upcoming-by-platform" args={[14]} buttonLabel="Load" />
+        <InvokePanel title="Calendar Settings" channel="get-calendar-settings" buttonLabel="Load" />
+        <InvokePanel title="Process Due Posts" channel="process-due-scheduled-posts" buttonLabel="Process Now" />
+        <InvokePanel title="Background Run" channel="get-background-run-settings" buttonLabel="Load" />
       </div>
 
       <div className="card">

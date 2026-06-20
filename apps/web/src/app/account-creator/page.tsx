@@ -87,6 +87,29 @@ export default function AccountCreatorPage() {
         </div>
       </div>
 
+      <div className="grid grid-2">
+        <div className="card">
+          <h3>Browser Automation Batch</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn" onClick={async () => { setMsg(JSON.stringify(await invoke('get-browser-batch-status'))); }}>Batch Status</button>
+            <button className="btn" onClick={async () => { setMsg(JSON.stringify(await invoke('schedule-browser-batch', { kitIds: kits.map((k) => k.id).slice(0, 1) }))); refresh(); }}>Schedule Batch</button>
+            <button className="btn primary" onClick={async () => { setMsg(JSON.stringify(await invoke('run-browser-batch-now', 'latest'))); }}>Run Batch Now</button>
+          </div>
+        </div>
+        <div className="card">
+          <h3>Kit Actions</h3>
+          {kits[0] && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn" onClick={async () => invoke('push-kit-schedule-to-calendar', { kitId: kits[0].id, launchDate: new Date().toISOString() })}>Push to Calendar</button>
+              <button className="btn" onClick={async () => invoke('export-profile-kit', { kitId: kits[0].id })}>Export Kit</button>
+              <button className="btn" onClick={async () => invoke('apply-kit-browser-automation', { kitId: kits[0].id, platforms: ['Twitter'], mode: 'headless' })}>Browser Auto</button>
+              <button className="btn" onClick={async () => invoke('upload-kit-to-linked-accounts', { kitId: kits[0].id, platforms: ['LinkedIn'] })}>Upload to Accounts</button>
+              <button className="btn" onClick={async () => { await invoke('delete-profile-kit', { kitId: kits[0].id }); refresh(); }}>Delete Kit</button>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="card">
         <h3>Creator Status</h3>
         <pre style={{ fontSize: '0.8rem' }}>{JSON.stringify(status, null, 2)}</pre>

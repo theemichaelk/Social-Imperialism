@@ -13,6 +13,9 @@ export default function QuoraTrafficPage() {
   const [keyword, setKeyword] = useState('marketing automation');
   const [msg, setMsg] = useState('');
   const [qaSettings, setQaSettings] = useState<Record<string, unknown>>({});
+  const [quoraSettings, setQuoraSettings] = useState<Record<string, unknown>>({});
+  const [savedAnswers, setSavedAnswers] = useState<unknown[]>([]);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
 
   async function refresh() {
     const [u, s] = await Promise.all([
@@ -23,7 +26,11 @@ export default function QuoraTrafficPage() {
     setQaSettings(s);
   }
 
-  useEffect(() => { refresh().catch(console.error); }, []);
+  useEffect(() => {
+    refresh().catch(console.error);
+    invoke<Record<string, unknown>>('get-quora-traffic-settings').then(setQuoraSettings).catch(console.error);
+    invoke<Record<string, unknown>>('get-quora-traffic-status').then((s) => setSavedAnswers((s as { answers?: unknown[] }).answers || [])).catch(console.error);
+  }, []);
 
   async function discover() {
     setMsg('Discovering best questions…');
@@ -58,6 +65,25 @@ export default function QuoraTrafficPage() {
     setMsg(JSON.stringify(res).slice(0, 150));
   }
 
+  async function generateQuoraAnswer() {
+    if (!selected) return;
+    setMsg('Generating…');
+    const res = await invoke<{ answer?: string }>('generate-quora-answer', { question: selected.content, keyword });
+    setAnswer(res.answer || '');
+    setMsg('Answer generated');
+  }
+
+  async function saveAnswer() {
+    await invoke('save-quora-traffic-answer', { content: answer, question: selected?.content, keyword });
+    setMsg('Answer saved');
+  }
+
+  async function publishQuora() {
+    setMsg('Publishing…');
+    const res = await invoke('publish-quora-answer', { answer, automated: false });
+    setMsg(JSON.stringify(res).slice(0, 120));
+  }
+
   return (
     <div>
       <PageHeader title="Quora Traffic Ops" subtitle="Research → Generate → Publish pipeline with answer frameworks" />
@@ -75,9 +101,16 @@ export default function QuoraTrafficPage() {
         <div className="card">
           <h3>Answer Composer</h3>
           <textarea className="input" rows={10} value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Select a question and compose" />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button className="btn primary" onClick={publish} disabled={!selected}>Publish Answer</button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            <button className="btn primary" onClick={publish} disabled={!selected}>Publish (Q&A)</button>
+            <button className="btn primary" onClick={publishQuora}>Publish (Quora Ops)</button>
+            <button className="btn" onClick={generateQuoraAnswer}>Generate Quora</button>
+            <button className="btn" onClick={saveAnswer}>Save Draft</button>
             {selected && <button className="btn" onClick={() => compose(selected)}>Regenerate</button>}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <input className="input" placeholder="YouTube URL for transcript" value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} />
+            <button className="btn" onClick={async () => setMsg(JSON.stringify(await invoke('fetch-youtube-transcript', { url: youtubeUrl })).slice(0, 150))}>Transcript</button>
           </div>
         </div>
       </div>

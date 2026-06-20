@@ -134,6 +134,14 @@ async function registerAllHandlers(store, deps = {}) {
     openExternal: (url) => { deps.pendingOAuthUrl = url; },
   });
 
+  const { registerIndexHandlers } = require('./indexHandlers');
+  registerIndexHandlers({
+    ipcMain, store, integrations, resolveKeys, generateAI,
+    buildApiMetrics: (k) => buildApiMetrics(resolveKeys, k),
+    calendarApi,
+    openExternal: (url) => { deps.pendingOAuthUrl = url; },
+  });
+
   return { handlers, calendarApi, integrations, pendingOAuth: () => deps.pendingOAuthUrl };
 }
 

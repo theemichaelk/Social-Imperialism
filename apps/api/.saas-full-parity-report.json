@@ -1,0 +1,378 @@
+{
+  "timestamp": "2026-06-20T04:07:52.346Z",
+  "registered": 231,
+  "ok": 62,
+  "fail": 4,
+  "results": [
+    {
+      "page": "dashboard.html",
+      "channels": [
+        {
+          "channel": "get-dashboard-stats",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-live-feed",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-trending-topics",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-live-news",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-setup-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-domain-metrics",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-project-metrics",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "analyze-topic",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "discover-best-questions",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-unanswered-questions",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-qa-settings",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-leads",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "scan-reddit-now",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-watched-monitors",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-worker-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "trigger-full-auto-search",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-fanpage-settings",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "curate-from-rss",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "export-data",
+          "registered": true,
+          "invokeOk": true
+        }
+      ]
+    },
+    {
+      "page": "content-hub.html",
+      "channels": [
+        {
+          "channel": "get-linked-accounts",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "publish-post",
+          "registered": true,
+          "invokeOk": false
+        },
+        {
+          "channel": "schedule-post",
+          "registered": true,
+          "invokeOk": false
+        },
+        {
+          "channel": "generate-ai",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "generate-image",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "search-stock-photo",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "curate-from-rss",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-content-queue",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-auto-content-settings",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "grok-get-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "compose-qa-answer",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-thumbnail-studio-config",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "run-content-studio",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-site-rss-sources",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "serp-search",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "shorten-url",
+          "registered": true,
+          "invokeOk": false
+        },
+        {
+          "channel": "research-keyword",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-post-history",
+          "registered": true,
+          "invokeOk": true
+        }
+      ]
+    },
+    {
+      "page": "account-creator.html",
+      "channels": [
+        {
+          "channel": "get-proxy-pool",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-profile-kits",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-account-creator-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "generate-profile-kit",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-browser-batch-status",
+          "registered": true,
+          "invokeOk": true
+        }
+      ]
+    },
+    {
+      "page": "account-hub.html",
+      "channels": [
+        {
+          "channel": "get-linked-accounts",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-account-hub-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "refresh-account-profile",
+          "registered": true,
+          "invokeOk": true
+        }
+      ]
+    },
+    {
+      "page": "calendar.html",
+      "channels": [
+        {
+          "channel": "get-scheduled-posts",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-calendar-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-best-post-times",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-background-run-settings",
+          "registered": true,
+          "invokeOk": true
+        }
+      ]
+    },
+    {
+      "page": "rules.html",
+      "channels": [
+        {
+          "channel": "get-auto-rules",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-auto-rules-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-watched-monitors",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-background-run-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-automation-targets",
+          "registered": true,
+          "invokeOk": true
+        }
+      ]
+    },
+    {
+      "page": "quora-traffic-ops.html",
+      "channels": [
+        {
+          "channel": "get-quora-traffic-status",
+          "registered": true,
+          "invokeOk": false
+        },
+        {
+          "channel": "get-quora-traffic-settings",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "scrape-quora-questions",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "generate-quora-answer",
+          "registered": true,
+          "invokeOk": true
+        }
+      ]
+    },
+    {
+      "page": "settings.html",
+      "channels": [
+        {
+          "channel": "get-global-keys",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "check-api-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-settings",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-billing-plan",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-grok-settings",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-payment-settings",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-settings-status",
+          "registered": true,
+          "invokeOk": true
+        },
+        {
+          "channel": "get-page-health",
+          "registered": true,
+          "invokeOk": true
+        }
+      ]
+    }
+  ]
+}

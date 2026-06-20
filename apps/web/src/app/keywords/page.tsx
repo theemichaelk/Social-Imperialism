@@ -26,6 +26,11 @@ export default function KeywordsPage() {
     refresh();
   }
 
+  const [research, setResearch] = useState<unknown>(null);
+  async function researchTerm(term: string) {
+    setResearch(await invoke('research-keyword', term));
+  }
+
   return (
     <div>
       <PageHeader title="Keywords" subtitle="AI suggest, manual CRUD, per-platform targeting" />
@@ -39,11 +44,20 @@ export default function KeywordsPage() {
       <div className="card">
         <h3>Active Keywords ({keywords.length})</h3>
         {keywords.map((k) => (
-          <div key={k.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
+          <div key={k.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
             <span>{k.term}</span>
-            <button className="btn" onClick={async () => { await invoke('delete-keyword', k.id); refresh(); }}>Delete</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn" onClick={() => researchTerm(k.term)}>Research</button>
+              <button className="btn" onClick={async () => { await invoke('delete-keyword', k.id); refresh(); }}>Delete</button>
+            </div>
           </div>
         ))}
+        {research != null && <pre style={{ fontSize: '0.75rem', marginTop: 12, overflow: 'auto' }}>{JSON.stringify(research, null, 2)}</pre>}
+      </div>
+      <div className="card">
+        <h3>Quantum Pages SEO</h3>
+        <button className="btn primary" onClick={async () => invoke('run-quantum-pages-full', { keyword: keywords[0]?.term || 'marketing' })}>Run Full Pipeline</button>
+        <button className="btn" style={{ marginLeft: 8 }} onClick={async () => invoke('get-quantum-pages-jobs')}>View Jobs</button>
       </div>
     </div>
   );

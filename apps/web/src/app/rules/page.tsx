@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { InvokePanel } from '@/components/InvokePanel';
 
 type Monitor = { id?: string; label?: string; type?: string; target?: string; enabled?: boolean };
 type AutoRules = { enabled?: boolean; replyMode?: string; spamFilter?: boolean; crisisMode?: boolean };
@@ -97,6 +98,16 @@ export default function RulesPage() {
             <button className="btn" onClick={async () => { await invoke('start-worker'); refresh(); }}>Start Worker</button>
             <button className="btn" onClick={async () => { await invoke('stop-worker'); refresh(); }}>Stop Worker</button>
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-2">
+        <InvokePanel title="Automation Targets" channel="get-automation-targets" buttonLabel="Load" />
+        <InvokePanel title="Background Run Status" channel="get-background-run-status" buttonLabel="Load" />
+        <InvokePanel title="Background Run Settings" channel="get-background-run-settings" buttonLabel="Load" />
+        <div className="card">
+          <h3>Background Run Slots</h3>
+          <button className="btn" onClick={async () => invoke('add-background-run-slot', { label: 'Overnight', hour: 2 })}>Add Slot</button>
         </div>
       </div>
 

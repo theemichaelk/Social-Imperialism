@@ -12,6 +12,10 @@ export default function SettingsPage() {
   const [apiStatus, setApiStatus] = useState<Record<string, string>>({});
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [billing, setBilling] = useState<Record<string, unknown>>({});
+  const [grok, setGrok] = useState<Record<string, unknown>>({});
+  const [payment, setPayment] = useState<Record<string, unknown>>({});
+  const [tutorials, setTutorials] = useState<unknown[]>([]);
+  const [settingsStatus, setSettingsStatus] = useState<Record<string, unknown>>({});
   const [newCamp, setNewCamp] = useState({ brandName: '', domain: '' });
 
   useEffect(() => {
@@ -20,11 +24,20 @@ export default function SettingsPage() {
       invoke<Record<string, string>>('check-api-status'),
       invoke<Campaign[]>('get-settings'),
       invoke<Record<string, unknown>>('get-billing-plan'),
-    ]).then(([k, a, c, b]) => {
+      invoke<Record<string, unknown>>('get-grok-settings'),
+      invoke<Record<string, unknown>>('get-payment-settings'),
+      invoke<unknown[]>('get-setup-tutorials'),
+      invoke<Record<string, unknown>>('get-settings-status'),
+      invoke<Record<string, unknown>>('get-page-health'),
+    ]).then(([k, a, c, b, g, p, t, ss]) => {
       setKeys(k);
       setApiStatus(a);
       setCampaigns(c || []);
       setBilling(b);
+      setGrok(g || {});
+      setPayment(p || {});
+      setTutorials(t || []);
+      setSettingsStatus(ss || {});
     }).catch(console.error);
   }, []);
 
@@ -101,6 +114,37 @@ export default function SettingsPage() {
           <p style={{ color: '#94a3b8' }}>{String(billing.priceLabel || '$49/mo')}</p>
           <pre style={{ fontSize: '0.75rem', overflow: 'auto' }}>{JSON.stringify((billing.limits as object) || {}, null, 2)}</pre>
         </div>
+      </div>
+
+      <div className="grid grid-2">
+        <div className="card">
+          <h3>Grok AI</h3>
+          <pre style={{ fontSize: '0.75rem' }}>{JSON.stringify(grok, null, 2)}</pre>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            <button className="btn" onClick={() => invoke('grok-connect')}>Connect</button>
+            <button className="btn" onClick={() => invoke('grok-get-status')}>Status</button>
+            <button className="btn" onClick={() => invoke('save-grok-settings', { enabled: true })}>Enable</button>
+          </div>
+        </div>
+        <div className="card">
+          <h3>Payments</h3>
+          <pre style={{ fontSize: '0.75rem' }}>{JSON.stringify(payment, null, 2)}</pre>
+          <button className="btn" style={{ marginTop: 8 }} onClick={() => invoke('test-payment-connections')}>Test</button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>Setup Tutorials ({tutorials.length})</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {(tutorials as Array<{ id: string; title: string }>).slice(0, 10).map((tut) => (
+            <button key={tut.id} className="btn" onClick={() => invoke('mark-tutorial-complete', tut.id)}>{tut.title}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>System Status</h3>
+        <pre style={{ fontSize: '0.75rem', overflow: 'auto' }}>{JSON.stringify(settingsStatus, null, 2)}</pre>
       </div>
 
       <div style={{ display: 'flex', gap: 8 }}>
