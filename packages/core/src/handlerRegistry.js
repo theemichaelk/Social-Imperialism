@@ -116,7 +116,21 @@ async function registerAllHandlers(store, deps = {}) {
   registerQuantumPagesHandlers({ ipcMain, store, generateAI });
 
   const { registerQuoraTrafficOpsHandlers } = require(path.join(DESKTOP_SERVICES, 'quoraTrafficOpsIpc'));
-  registerQuoraTrafficOpsHandlers({ ipcMain, store, generateAI, resolveKeys, userDataPath });
+  registerQuoraTrafficOpsHandlers({
+    ipcMain, store, generateAI, resolveKeys,
+    getCampaign: () => {
+      try {
+        const activeId = store.getItem('activeCampaignId') || 'default';
+        return JSON.parse(store.getItem('campaigns') || '[]').find((c) => c.id === activeId) || {};
+      } catch (e) { return {}; }
+    },
+    getLinkedAccounts: () => {
+      try {
+        const activeId = store.getItem('activeCampaignId') || 'default';
+        return JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]');
+      } catch (e) { return []; }
+    },
+  });
 
   const { registerSeoToolsHandlers } = require(path.join(DESKTOP_SERVICES, 'seoToolsIpc'));
   registerSeoToolsHandlers({ ipcMain, store, resolveKeys });
