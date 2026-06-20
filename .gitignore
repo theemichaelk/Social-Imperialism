@@ -12,6 +12,10 @@ apps/desktop/.test-*
 dist/
 out/
 release/
+apps/web/.next/
+packages/db/prisma/saas.db
+packages/db/prisma/saas.db-journal
+apps/api/.env
 
 # OS & editor
 .DS_Store

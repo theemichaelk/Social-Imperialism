@@ -1,0 +1,14 @@
+{
+  "name": "@si/core",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.js",
+  "dependencies": {
+    "@si/db": "*",
+    "@google/genai": "^1.42.0",
+    "axios": "^1.13.5",
+    "dotenv": "^17.3.1",
+    "form-data": "^4.0.2",
+    "twitter-api-v2": "^1.29.0"
+  }
+}

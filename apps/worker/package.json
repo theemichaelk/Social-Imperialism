@@ -1,0 +1,14 @@
+{
+  "name": "@si/worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node --watch src/worker.js",
+    "start": "node src/worker.js"
+  },
+  "dependencies": {
+    "@si/core": "*",
+    "@si/db": "*",
+    "dotenv": "^17.3.1"
+  }
+}
