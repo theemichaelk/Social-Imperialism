@@ -9,7 +9,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+        <Link href="/" style={{ textDecoration: 'none' }} title="Home">
           <Logo size="sm" showText />
         </Link>
       </div>

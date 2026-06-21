@@ -2,6 +2,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { BROWSE_PLATFORMS } from '@/lib/platforms';
+import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
+import { useIntelligence } from '@/hooks/useIntelligence';
+import { FetchProfilesPanel } from '@/components/FetchProfilesPanel';
+import { PostExplorerModal } from '@/components/PostExplorerModal';
+import { FetchProfileFilters, LANGUAGE_OPTIONS, LOCATION_OPTIONS } from '@/lib/fetchProfiles';
 
 type Post = {
   platform: string;
@@ -16,14 +22,16 @@ type Post = {
   matchScore?: number;
   postType?: string;
   createdAt?: number;
+  hasMedia?: boolean;
+  authorFollowers?: number;
   stats?: { likes?: number; comments?: number; views?: number };
 };
 type Keyword = { id: string; term: string };
-type LinkedAccount = { id: string; platform: string; handle?: string; status?: string };
+type LinkedAccount = { id: string; platform: string; handle?: string; status?: string; profile?: unknown; profileRefreshedAt?: string };
 type NewsItem = { title: string; url?: string; source?: string };
 type Monitor = { id: string; label: string; type?: string; target?: string; platform?: string };
 
-const PLATFORMS = ['All', 'Twitter', 'LinkedIn', 'Reddit', 'Facebook', 'Quora', 'Instagram', 'YouTube', 'News'];
+const PLATFORMS = [...BROWSE_PLATFORMS];
 const PAGE_SIZE = 8;
 
 function asArray<T>(data: unknown): T[] {
@@ -55,6 +63,8 @@ function applyFilters(posts: Post[], opts: {
   postType: string;
   exclude: string;
   accountId: string | null;
+  minFollowers?: number;
+  mediaOnly?: boolean;
 }): Post[] {
   const limits: Record<string, number> = { '15m': 15 * 60 * 1000, '1h': 3600000, '24h': 86400000 };
   const maxAge = limits[opts.time];
@@ -77,6 +87,11 @@ function applyFilters(posts: Post[], opts: {
         || /\b(how|what|why|when|should|can)\b/i.test(p.content || '');
       if (!isQ) return false;
     }
+    if (opts.mediaOnly) {
+      const hasMedia = p.hasMedia || /\.(jpg|jpeg|png|gif|webp|mp4)/i.test(p.url || '') || /\[media\]/i.test(p.content || '');
+      if (!hasMedia) return false;
+    }
+    if ((opts.minFollowers || 0) > 0 && p.authorFollowers != null && p.authorFollowers < (opts.minFollowers || 0)) return false;
     return true;
   });
 }
@@ -109,6 +124,7 @@ function mergeWithHistory(live: Post[], history: Array<{
 }
 
 export default function BrowsePostsPage() {
+  const { settings, accounts: intelAccounts, isSurfaceEnabled } = useIntelligence();
   const [rawPosts, setRawPosts] = useState<Post[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
@@ -129,13 +145,41 @@ export default function BrowsePostsPage() {
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [language, setLanguage] = useState('all');
+  const [location, setLocation] = useState('global');
+  const [minFollowers, setMinFollowers] = useState('0');
+  const [mediaOnly, setMediaOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
+  const [explorerPost, setExplorerPost] = useState<Post | null>(null);
+
+  const currentFetchFilters: FetchProfileFilters = {
+    platform, keyword, language, location, time, minEngage, postType,
+    excludeWords: exclude, sort, minFollowers, media: mediaOnly ? 'only' : 'all',
+  };
+
+  function applyFetchProfile(filters: FetchProfileFilters) {
+    if (filters.platform) setPlatform(filters.platform);
+    if (filters.keyword) setKeyword(filters.keyword);
+    if (filters.language) setLanguage(filters.language);
+    if (filters.location) setLocation(filters.location);
+    if (filters.time) setTime(filters.time);
+    if (filters.minEngage) setMinEngage(filters.minEngage);
+    if (filters.postType) setPostType(filters.postType);
+    if (filters.excludeWords) setExclude(filters.excludeWords);
+    if (filters.sort) setSort(filters.sort);
+    if (filters.minFollowers) setMinFollowers(filters.minFollowers);
+    if (filters.media === 'only') setMediaOnly(true);
+    setShowAdvanced(true);
+    setMsg('Profile loaded — refreshing feed');
+  }
 
   const filtered = useMemo(() => {
     let posts = applyFilters(rawPosts, {
       keyword, platform, time, minEngage: parseInt(minEngage, 10) || 0,
       postType, exclude, accountId: accountFilter,
+      minFollowers: parseInt(minFollowers, 10) || 0,
+      mediaOnly,
     });
     if (sort === 'engagement') {
       posts = [...posts].sort((a, b) => {
@@ -150,7 +194,7 @@ export default function BrowsePostsPage() {
     }
     posts.sort((a, b) => (isEngageablePost(b) ? 1 : 0) - (isEngageablePost(a) ? 1 : 0));
     return posts;
-  }, [rawPosts, keyword, platform, sort, time, minEngage, postType, exclude, accountFilter]);
+  }, [rawPosts, keyword, platform, sort, time, minEngage, postType, exclude, accountFilter, minFollowers, mediaOnly]);
 
   const pagePosts = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -184,6 +228,10 @@ export default function BrowsePostsPage() {
         sort,
         quick: !full,
         refresh: full,
+        language: language !== 'all' ? language : undefined,
+        location: location !== 'global' ? location : undefined,
+        minFollowers: parseInt(minFollowers, 10) || undefined,
+        media: mediaOnly ? 'only' : undefined,
       };
       const [live, history] = await Promise.all([
         invoke<Post[]>('get-live-feed', filters),
@@ -197,7 +245,7 @@ export default function BrowsePostsPage() {
     } finally {
       setLoading(false);
     }
-  }, [platform, sort, accounts]);
+  }, [platform, sort, accounts, language, location, minFollowers, mediaOnly]);
 
   useEffect(() => {
     loadMeta().then(() => loadFeed(false)).catch(console.error);
@@ -267,10 +315,14 @@ export default function BrowsePostsPage() {
     loadFeed(false);
   }
 
-  async function engage(action: 'like' | 'reply') {
+  async function engage(action: 'like' | 'reply' | 'share') {
     if (!selected) return;
-    if (!isEngageablePost(selected) && action === 'like') {
+    if (!isEngageablePost(selected) && (action === 'like' || action === 'share')) {
       setMsg('This post is view-only — open the link to engage on the platform.');
+      return;
+    }
+    if (action === 'reply' && !draft.trim()) {
+      setMsg('Write a reply first');
       return;
     }
     try {
@@ -360,11 +412,18 @@ export default function BrowsePostsPage() {
             <option value="relevance">Match Score</option>
           </select>
           <button className="btn" onClick={() => setShowAdvanced((v) => !v)}>{showAdvanced ? 'Hide Filters' : 'More Filters'}</button>
+          <FetchProfilesPanel currentFilters={currentFetchFilters} onApply={applyFetchProfile} />
           <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Page {page + 1}/{totalPages}</span>
         </div>
 
         {showAdvanced && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+            <select className="input" value={language} onChange={(e) => setLanguage(e.target.value)} style={{ maxWidth: 130 }}>
+              {LANGUAGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select className="input" value={location} onChange={(e) => setLocation(e.target.value)} style={{ maxWidth: 130 }}>
+              {LOCATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
             <select className="input" value={time} onChange={(e) => setTime(e.target.value)} style={{ maxWidth: 130 }}>
               <option value="all">Any Time</option>
               <option value="15m">Last 15 min</option>
@@ -381,6 +440,16 @@ export default function BrowsePostsPage() {
               <option value="question">Questions</option>
             </select>
             <input className="input" placeholder="Exclude words (comma)" value={exclude} onChange={(e) => setExclude(e.target.value)} style={{ maxWidth: 180 }} />
+            <select className="input" value={minFollowers} onChange={(e) => setMinFollowers(e.target.value)} style={{ maxWidth: 150 }}>
+              <option value="0">Any followers</option>
+              <option value="1000">&gt; 1K followers</option>
+              <option value="10000">&gt; 10K followers</option>
+              <option value="50000">&gt; 50K followers</option>
+            </select>
+            <label className="ac-check" style={{ alignSelf: 'center' }}>
+              <input type="checkbox" checked={mediaOnly} onChange={(e) => setMediaOnly(e.target.checked)} />
+              Media only
+            </label>
           </div>
         )}
 
@@ -403,6 +472,21 @@ export default function BrowsePostsPage() {
           <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
         </div>
       )}
+
+      {isSurfaceEnabled('browse-posts') && accountFilter && (() => {
+        const acc = intelAccounts.find((a) => a.id === accountFilter);
+        if (!acc) return null;
+        return (
+          <div className="card" style={{ marginBottom: 12 }}>
+            <IntelligenceRecommendations
+              account={acc}
+              settings={settings}
+              title={`Engagement intelligence — ${acc.handle || acc.platform}`}
+              maxItems={4}
+            />
+          </div>
+        );
+      })()}
 
       <div className="grid grid-2">
         <div className="card">
@@ -428,6 +512,7 @@ export default function BrowsePostsPage() {
                 ) : null}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                   <button className="btn primary" onClick={() => draftReply(p)}>Draft Reply</button>
+                  <button className="btn" onClick={() => setExplorerPost(p)}>View Post</button>
                   <button className="btn" onClick={() => watchPost(p)}>Watch</button>
                   {p.url && <a href={p.url} target="_blank" rel="noreferrer">View →</a>}
                 </div>
@@ -463,6 +548,7 @@ export default function BrowsePostsPage() {
               <button className="btn primary" onClick={saveDraft} disabled={!draft.trim()}>Save Inbox</button>
               <button className="btn" onClick={() => engage('reply')} disabled={!draft.trim() || !selected}>Reply & Engage</button>
               <button className="btn" onClick={() => engage('like')} disabled={!selected}>Like</button>
+              <button className="btn" onClick={() => engage('share')} disabled={!selected}>Share</button>
               <button className="btn" onClick={scheduleDraft} disabled={!draft.trim()}>Schedule</button>
               <button className="btn" onClick={postNow} disabled={!draft.trim()}>Post Now</button>
               <button className="btn" onClick={attachStockPhoto} disabled={!selected}>Stock Photo</button>
@@ -470,6 +556,12 @@ export default function BrowsePostsPage() {
           </div>
         </div>
       </div>
+
+      <PostExplorerModal
+        post={explorerPost}
+        onClose={() => setExplorerPost(null)}
+        onDraft={(text) => { setDraft(text); if (explorerPost) setSelected(explorerPost); }}
+      />
     </div>
   );
 }

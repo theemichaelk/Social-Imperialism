@@ -5,6 +5,12 @@ import { PageHeader } from '@/components/PageHeader';
 import { InvokePanel } from '@/components/InvokePanel';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow, platformBreakdown } from '@/components/DashboardViz';
+import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
+import { useIntelligence } from '@/hooks/useIntelligence';
+import { FetchProfilesPanel } from '@/components/FetchProfilesPanel';
+import { PostExplorerModal } from '@/components/PostExplorerModal';
+import { FetchProfileFilters } from '@/lib/fetchProfiles';
+import { QaSettingsPanel } from '@/components/QaSettingsPanel';
 
 type Post = {
   platform: string;
@@ -76,6 +82,7 @@ function isEngageablePost(post: Post): boolean {
 }
 
 export default function DashboardPage() {
+  const { settings, accounts, isSurfaceEnabled } = useIntelligence();
   const [stats, setStats] = useState<DashboardStats>({});
   const [setup, setSetup] = useState<Record<string, unknown>>({});
   const [feed, setFeed] = useState<Post[]>([]);
@@ -99,6 +106,11 @@ export default function DashboardPage() {
   const [curatedPosts, setCuratedPosts] = useState<Array<{ content?: string; platform?: string }>>([]);
   const [engagementQueue, setEngagementQueue] = useState<EngagementQueueItem[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
+  const [explorerPost, setExplorerPost] = useState<Post | null>(null);
+  const [feedLanguage, setFeedLanguage] = useState('all');
+  const [feedLocation, setFeedLocation] = useState('global');
+  const [feedTime, setFeedTime] = useState('all');
+  const [feedMinEngage, setFeedMinEngage] = useState('0');
 
   const loadFeed = useCallback(async (opts?: { refresh?: boolean; quick?: boolean }) => {
     setFeedLoading(true);
@@ -108,6 +120,10 @@ export default function DashboardPage() {
         sort: feedSort,
         quick: opts?.quick !== false,
         refresh: opts?.refresh === true,
+        language: feedLanguage !== 'all' ? feedLanguage : undefined,
+        location: feedLocation !== 'global' ? feedLocation : undefined,
+        time: feedTime !== 'all' ? feedTime : undefined,
+        minEngage: feedMinEngage !== '0' ? parseInt(feedMinEngage, 10) : undefined,
       });
       setFeed(asArray<Post>(f));
     } catch (e) {
@@ -115,7 +131,26 @@ export default function DashboardPage() {
     } finally {
       setFeedLoading(false);
     }
-  }, [feedPlatform, feedSort]);
+  }, [feedPlatform, feedSort, feedLanguage, feedLocation, feedTime, feedMinEngage]);
+
+  const currentFetchFilters: FetchProfileFilters = {
+    platform: feedPlatform !== 'All' ? feedPlatform : undefined,
+    sort: feedSort,
+    language: feedLanguage,
+    location: feedLocation,
+    time: feedTime,
+    minEngage: feedMinEngage,
+  };
+
+  function applyFetchProfile(filters: FetchProfileFilters) {
+    if (filters.platform) setFeedPlatform(filters.platform);
+    if (filters.sort) setFeedSort(filters.sort);
+    if (filters.language) setFeedLanguage(filters.language);
+    if (filters.location) setFeedLocation(filters.location);
+    if (filters.time) setFeedTime(filters.time);
+    if (filters.minEngage) setFeedMinEngage(filters.minEngage);
+    loadFeed({ refresh: false, quick: true });
+  }
 
   const refresh = useCallback(async (fullFeed = false) => {
     setLoading(true);
@@ -270,17 +305,28 @@ export default function DashboardPage() {
         }
       />
 
+      {isSurfaceEnabled('dashboard') && accounts[0] && (
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <IntelligenceRecommendations
+            account={accounts[0]}
+            settings={settings}
+            title="Account intelligence — recommended next actions"
+            maxItems={3}
+          />
+        </div>
+      )}
+
       <div className="dash-hero">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>
           <RingChart percent={(connectedApis / totalApis) * 100} label="APIs Connected" color="#22c55e" />
           <RingChart percent={Math.min(100, (stats.totalEngagement || 0) / 10)} label="Engagement Index" color="#38bdf8" />
           <div className="dash-hero-grid" style={{ flex: 1, minWidth: 240 }}>
-            <MetricTile label="Published" value={stats.totalPosts ?? 0} sub="live posts" />
-            <MetricTile label="AI Drafts" value={stats.aiDrafts ?? 0} accent="#a855f7" />
-            <MetricTile label="Keywords" value={stats.activeKeywords ?? 0} />
-            <MetricTile label="Leads" value={stats.leadsGenerated ?? 0} accent="#f59e0b" />
-            <MetricTile label="Scheduled" value={stats.scheduled ?? 0} />
-            <MetricTile label="Worker" value={worker.pendingTasks ?? workerTasks.length} sub={worker.running ? 'active' : 'idle'} accent={worker.running ? '#22c55e' : undefined} />
+            <MetricTile label="Published" value={stats.totalPosts ?? 0} sub="live posts" onClick={() => setTab('feed')} />
+            <MetricTile label="AI Drafts" value={stats.aiDrafts ?? 0} accent="#a855f7" onClick={() => setTab('feed')} />
+            <MetricTile label="Keywords" value={stats.activeKeywords ?? 0} onClick={() => window.location.assign('/keywords')} />
+            <MetricTile label="Leads" value={stats.leadsGenerated ?? 0} accent="#f59e0b" onClick={() => setTab('growth')} />
+            <MetricTile label="Scheduled" value={stats.scheduled ?? 0} onClick={() => window.location.assign('/calendar')} />
+            <MetricTile label="Worker" value={worker.pendingTasks ?? workerTasks.length} sub={worker.running ? 'active' : 'idle'} accent={worker.running ? '#22c55e' : undefined} onClick={() => setTab('worker')} />
           </div>
           <div>
             <LivePulse label={worker.running || worker.isRunning ? 'SCANNING' : 'STANDBY'} />
@@ -362,13 +408,14 @@ export default function DashboardPage() {
           <DataPanel title={`Live Feed (${feed.length})`} live>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{feedLoading ? 'Streaming…' : 'Real-time discovery'}</span>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <select className="input" style={{ width: 'auto', padding: '4px 8px' }} value={feedPlatform} onChange={(e) => setFeedPlatform(e.target.value)}>
                   {['All', 'Twitter', 'Reddit', 'LinkedIn', 'News'].map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
                 <select className="input" style={{ width: 'auto', padding: '4px 8px' }} value={feedSort} onChange={(e) => setFeedSort(e.target.value)}>
                   {['recent', 'engagement', 'relevance'].map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
+                <FetchProfilesPanel currentFilters={currentFetchFilters} onApply={applyFetchProfile} />
               </div>
             </div>
             {feed.length === 0 && <p style={{ color: '#94a3b8' }}>No posts yet — add keywords in Setup or run Full Auto Search.</p>}
@@ -392,10 +439,14 @@ export default function DashboardPage() {
                 ) : null}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                   <button className="btn primary" onClick={() => draftReply(p)}>Draft Reply</button>
+                  <button className="btn" onClick={() => setExplorerPost(p)}>View Post</button>
                   {engageable ? (
-                    <button className="btn" onClick={() => { setSelectedPost(p); engage('like'); }}>Like</button>
+                    <>
+                      <button className="btn" onClick={() => { setSelectedPost(p); engage('like'); }}>Like</button>
+                      <button className="btn" onClick={() => { setSelectedPost(p); engage('share'); }}>Share</button>
+                    </>
                   ) : null}
-                  {p.url && <a href={p.url} target="_blank" rel="noreferrer">View →</a>}
+                  {p.url && <a href={p.url} target="_blank" rel="noreferrer">Open →</a>}
                 </div>
               </div>
             );})}
@@ -423,6 +474,7 @@ export default function DashboardPage() {
             <textarea className="input" rows={10} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Draft a reply…" />
             <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
               <button className="btn primary" onClick={() => engage('reply')}>Save & Engage</button>
+              <button className="btn" onClick={() => engage('share')}>Share</button>
               <button className="btn" onClick={async () => {
                 if (!draft.trim()) return;
                 await invoke('save-ai-reply', { originalPost: selectedPost?.content || '', replyContent: draft, platform: selectedPost?.platform || 'Twitter', status: 'draft' });
@@ -451,7 +503,9 @@ export default function DashboardPage() {
             return <p>{q.length} questions found</p>;
           }} />
           <InvokePanel title="Unanswered Tracker" channel="get-unanswered-questions" buttonLabel="Load" />
-          <InvokePanel title="Q&A Settings" channel="get-qa-settings" buttonLabel="Load" />
+          <div style={{ gridColumn: '1 / -1' }}><QaSettingsPanel /></div>
+          <InvokePanel title="Social Ad Campaign Ideas" channel="get-qa-ad-suggestions" buttonLabel="Generate Ad Ideas" />
+          <InvokePanel title="Search Discovered Posts" channel="search-discovered-posts" args={[{ q: '', limit: 20 }]} buttonLabel="Search Index" />
           <div style={{ gridColumn: '1 / -1' }}>
             <DataPanel title={`Q&A Queue (${questions.length})`} live>
               {questions.slice(0, 8).map((q, i) => (
@@ -499,7 +553,27 @@ export default function DashboardPage() {
             setCuratedPosts(posts);
             return <p>{posts.length} curated posts ready</p>;
           }} />
-          <InvokePanel title="Fanpage Settings" channel="get-fanpage-settings" buttonLabel="Load" />
+          <div className="card">
+            <h3>Fanpage Automation</h3>
+            <label className="ac-check"><input type="checkbox" checked={!!(fanpage as { handsFree?: boolean }).handsFree} onChange={async (e) => {
+              const next = { ...fanpage, handsFree: e.target.checked, enabled: true };
+              setFanpage(next);
+              await invoke('save-fanpage-settings', next);
+            }} /> Hands-free growth mode</label>
+            <label className="ac-check"><input type="checkbox" checked={(fanpage as { autoPost?: boolean }).autoPost !== false} onChange={async (e) => {
+              const next = { ...fanpage, autoPost: e.target.checked };
+              setFanpage(next);
+              await invoke('save-fanpage-settings', next);
+            }} /> Auto-post curated RSS content</label>
+            <label className="ac-check"><input type="checkbox" checked={(fanpage as { targetedFan?: boolean }).targetedFan !== false} onChange={async (e) => {
+              const next = { ...fanpage, targetedFan: e.target.checked };
+              setFanpage(next);
+              await invoke('save-fanpage-settings', next);
+            }} /> Targeted fan acquisition</label>
+            <input className="input" placeholder="RSS feed URL" value={String((fanpage as { rssUrl?: string }).rssUrl || (fanpage as { rssUrls?: string[] }).rssUrls?.[0] || '')} onChange={(e) => setFanpage({ ...fanpage, rssUrls: [e.target.value], rssUrl: e.target.value })} style={{ marginTop: 8 }} />
+            <input className="input" placeholder="Acquisition keywords (comma-separated)" value={((fanpage as { acquisitionKeywords?: string[] }).acquisitionKeywords || []).join(', ')} onChange={(e) => setFanpage({ ...fanpage, acquisitionKeywords: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} style={{ marginTop: 8 }} />
+            <button className="btn primary" style={{ marginTop: 8 }} onClick={async () => { await invoke('save-fanpage-settings', fanpage); setActionMsg('Fanpage settings saved'); }}>Save Fanpage Settings</button>
+          </div>
           <InvokePanel title="Fanpage Metrics" channel="get-fanpage-metrics" args={[[]]} buttonLabel="Load" />
           <div className="card">
             <h3>Leads ({leads.length})</h3>
@@ -600,6 +674,15 @@ export default function DashboardPage() {
           <InvokePanel title="Serp Research" channel="serp-search" args={['social media automation']} buttonLabel="Search" />
         </div>
       )}
+
+      <PostExplorerModal
+        post={explorerPost}
+        onClose={() => setExplorerPost(null)}
+        onDraft={(text) => {
+          setDraft(text);
+          if (explorerPost) setSelectedPost(explorerPost);
+        }}
+      />
     </div>
   );
 }

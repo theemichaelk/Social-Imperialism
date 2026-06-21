@@ -1,6 +1,26 @@
 'use client';
 
-type BarItem = { label: string; value: number; color?: string };
+type BarItem = { label: string; value: number; color?: string; title?: string };
+
+/** Compact chart axis label — avoids upside-down truncation like "Twitt"/"Reddi". */
+export function chartShortLabel(name: string, max = 8): string {
+  const aliases: Record<string, string> = {
+    'Twitter / X': 'X / Twitter',
+    'Meta / Facebook': 'Meta',
+    'Reddit OAuth': 'Reddit',
+    'NewsAPI': 'News',
+    'SerpAPI': 'Serp',
+    'DomDetailer': 'DomDet',
+    'AI Workflows': 'Workflow',
+    'Content Studio': 'Content',
+    'OpenRouter': 'OpenRtr',
+  };
+  if (aliases[name]) return aliases[name];
+  if (name.length <= max) return name;
+  const words = name.split(/[\s/]+/).filter(Boolean);
+  if (words.length > 1) return words.map((w) => w[0]).join('').toUpperCase().slice(0, max);
+  return name.slice(0, max);
+}
 
 export function LivePulse({ label = 'LIVE' }: { label?: string }) {
   return (
@@ -11,9 +31,16 @@ export function LivePulse({ label = 'LIVE' }: { label?: string }) {
   );
 }
 
-export function MetricTile({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
+export function MetricTile({ label, value, sub, accent, onClick }: { label: string; value: string | number; sub?: string; accent?: string; onClick?: () => void }) {
   return (
-    <div className="metric-tile" style={accent ? { borderColor: accent } : undefined}>
+    <div
+      className={`metric-tile${onClick ? ' clickable' : ''}`}
+      style={accent ? { borderColor: accent } : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <div className="metric-tile-val" style={accent ? { color: accent } : undefined}>{value}</div>
       <div className="metric-tile-label">{label}</div>
       {sub && <div className="metric-tile-sub">{sub}</div>}
@@ -23,20 +50,28 @@ export function MetricTile({ label, value, sub, accent }: { label: string; value
 
 export function BarChart({ items, maxHeight = 120 }: { items: BarItem[]; maxHeight?: number }) {
   const max = Math.max(...items.map((i) => i.value), 1);
+  const labelH = 18;
+  const plotH = Math.max(40, maxHeight - labelH);
   return (
     <div className="bar-chart" style={{ height: maxHeight }}>
-      {items.map((item) => (
-        <div key={item.label} className="bar-chart-col" title={`${item.label}: ${item.value}`}>
-          <div
-            className="bar-chart-bar"
-            style={{
-              height: `${Math.max(8, (item.value / max) * 100)}%`,
-              background: item.color || 'linear-gradient(180deg, #38bdf8, #6366f1)',
-            }}
-          />
-          <span className="bar-chart-label">{item.label}</span>
-        </div>
-      ))}
+      {items.map((item) => {
+        const barPx = Math.max(6, Math.round((item.value / max) * plotH));
+        const tip = item.title || `${item.label}: ${item.value}`;
+        return (
+          <div key={item.label} className="bar-chart-col" title={tip}>
+            <div className="bar-chart-plot" style={{ height: plotH }}>
+              <div
+                className="bar-chart-bar"
+                style={{
+                  height: barPx,
+                  background: item.color || 'linear-gradient(180deg, #38bdf8, #6366f1)',
+                }}
+              />
+            </div>
+            <span className="bar-chart-label">{item.label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -2,8 +2,8 @@ import './globals.css';
 import { AppShell } from '@/components/AppShell';
 
 export const metadata = {
-  title: 'Social Imperialism',
-  description: 'Social media automation SaaS',
+  title: 'Social Imperialism — AI Social Media Automation',
+  description: 'Discover, engage, publish, and automate across 14+ platforms from one mission control dashboard.',
   icons: { icon: '/logo.png', apple: '/logo.png' },
 };
 

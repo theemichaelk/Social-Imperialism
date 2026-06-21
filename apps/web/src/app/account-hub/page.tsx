@@ -1,17 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { IntelligenceProfilePanel } from '@/components/IntelligenceProfilePanel';
+import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
+import { useIntelligence } from '@/hooks/useIntelligence';
+import { normalizeProfile } from '@/lib/intelligenceProfile';
+import { ALL_PLATFORMS } from '@/lib/platforms';
 
-const PLATFORMS = [
-  'Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'Reddit', 'YouTube',
-  'TikTok', 'Pinterest', 'Threads', 'Bluesky', 'Mastodon', 'Twitch', 'Quora', 'Discord', 'Telegram', 'WhatsApp',
-];
+const PLATFORMS = [...ALL_PLATFORMS];
 
 const PLATFORM_ICONS: Record<string, string> = {
   Twitter: '𝕏', LinkedIn: 'in', Facebook: 'f', Instagram: '📷', Reddit: 'r/',
-  YouTube: '▶', TikTok: '♪', Pinterest: 'P', Threads: '@', Bluesky: '🦋',
-  Mastodon: '🐘', Twitch: '📺', Quora: 'Q', Discord: '💬', Telegram: '✈', WhatsApp: '💚',
+  YouTube: '▶', TikTok: '♪', Pinterest: 'P', Threads: '@', Snapchat: '👻',
+  Twitch: '📺', Quora: 'Q', Discord: '💬', Telegram: '✈', WhatsApp: '💚',
 };
 
 type Account = {
@@ -43,6 +46,7 @@ type HubStatus = {
 };
 
 export default function AccountHubPage() {
+  const { settings, isSurfaceEnabled } = useIntelligence();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selected, setSelected] = useState<Account | null>(null);
   const [hubStatus, setHubStatus] = useState<HubStatus>({});
@@ -51,6 +55,7 @@ export default function AccountHubPage() {
   const [creds, setCreds] = useState({ email: '', username: '', password: '' });
   const [msg, setMsg] = useState('');
   const [pendingSelection, setPendingSelection] = useState<Account[]>([]);
+  const [selectionChecked, setSelectionChecked] = useState<Record<string, boolean>>({});
   const [showSelection, setShowSelection] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -83,6 +88,7 @@ export default function AccountHubPage() {
     });
     if (res.accounts?.length) {
       setPendingSelection(res.accounts);
+      setSelectionChecked(Object.fromEntries(res.accounts.map((a) => [a.id, true])));
       setShowSelection(true);
       setMsg(`Found ${res.accounts.length} account(s) — select which to link`);
     } else if (res.success === false) {
@@ -97,6 +103,7 @@ export default function AccountHubPage() {
     const res = await invoke<{ success?: boolean; error?: string }>('use-selected-accounts', selectedAccounts);
     setShowSelection(false);
     setPendingSelection([]);
+    setSelectionChecked({});
     setMsg(res.success ? `Linked ${selectedAccounts.length} account(s)` : (res.error || 'Link failed'));
     refresh();
   }
@@ -157,6 +164,7 @@ export default function AccountHubPage() {
   }
 
   const pk = hubStatus.platformKeys || {};
+  const profile = normalizeProfile(selected?.profile);
 
   return (
     <div>
@@ -239,10 +247,29 @@ export default function AccountHubPage() {
         <div className="grid grid-2" style={{ marginTop: '1rem' }}>
           <div className="card">
             <h3>Workspace — {selected.platform}{selected.type ? ` (${selected.type})` : ''}</h3>
-            <p style={{ color: '#94a3b8' }}>{selected.handle || selected.username}</p>
-            {selected.profile && (
-              <pre style={{ fontSize: '0.75rem', maxHeight: 120, overflow: 'auto' }}>{JSON.stringify(selected.profile, null, 2)}</pre>
+            <p className="ah-workspace-handle">{selected.handle || selected.username}</p>
+            {profile ? (
+              <>
+                <IntelligenceProfilePanel
+                  account={selected}
+                  profile={profile}
+                  refreshedAt={selected.profileRefreshedAt}
+                  showHeader={false}
+                />
+                {isSurfaceEnabled('account-hub') && (
+                  <IntelligenceRecommendations
+                    account={selected}
+                    profile={profile}
+                    settings={settings}
+                    title="Recommended actions"
+                    maxItems={5}
+                  />
+                )}
+              </>
+            ) : (
+              <p className="ip-empty">No intelligence profile yet — click Refresh Profile to pull live metrics.</p>
             )}
+            <Link href="/settings?tab=account-intelligence" className="btn" style={{ marginTop: 8 }}>Configure Intelligence →</Link>
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <button className="btn primary" disabled={refreshing} onClick={refreshProfile}>
                 {refreshing ? 'Refreshing…' : 'Refresh Profile'}
@@ -283,7 +310,10 @@ export default function AccountHubPage() {
               </label>
             ))}
             {targets.length > 0 && (
-              <button className="btn primary" style={{ marginTop: 8 }} onClick={saveTargets}>Save Automation Targets</button>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="btn" onClick={() => setTargets((prev) => prev.map((t) => ({ ...t, automationEnabled: true })))}>Enable All</button>
+                <button className="btn primary" onClick={saveTargets}>Save Automation Targets</button>
+              </div>
             )}
           </div>
         </div>
@@ -292,15 +322,28 @@ export default function AccountHubPage() {
       {showSelection && pendingSelection.length > 0 && (
         <div className="card" style={{ marginTop: '1rem', border: '1px solid #3b82f6' }}>
           <h3>Select Accounts to Link</h3>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <button className="btn" type="button" onClick={() => setSelectionChecked(Object.fromEntries(pendingSelection.map((a) => [a.id, true])))}>Select All</button>
+            <button className="btn" type="button" onClick={() => setSelectionChecked(Object.fromEntries(pendingSelection.map((a) => [a.id, false])))}>Select None</button>
+          </div>
           {pendingSelection.map((a) => (
             <label key={a.id} className="post-card" style={{ display: 'flex', gap: 8 }}>
-              <input type="checkbox" defaultChecked />
+              <input
+                type="checkbox"
+                checked={selectionChecked[a.id] !== false}
+                onChange={(e) => setSelectionChecked((prev) => ({ ...prev, [a.id]: e.target.checked }))}
+              />
               <span>{a.platform} — {a.handle || a.username || a.id} {a.type ? `(${a.type})` : ''}</span>
             </label>
           ))}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button className="btn primary" onClick={() => confirmSelection(pendingSelection)}>Link Selected</button>
-            <button className="btn" onClick={() => { setShowSelection(false); setPendingSelection([]); }}>Cancel</button>
+            <button
+              className="btn primary"
+              onClick={() => confirmSelection(pendingSelection.filter((a) => selectionChecked[a.id] !== false))}
+            >
+              Link Selected ({pendingSelection.filter((a) => selectionChecked[a.id] !== false).length})
+            </button>
+            <button className="btn" onClick={() => { setShowSelection(false); setPendingSelection([]); setSelectionChecked({}); }}>Cancel</button>
           </div>
         </div>
       )}

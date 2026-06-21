@@ -3,9 +3,20 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { InvokePanel } from '@/components/InvokePanel';
+import { IntelligenceProfilePanel } from '@/components/IntelligenceProfilePanel';
+import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
+import { useIntelligence } from '@/hooks/useIntelligence';
+import { normalizeProfile } from '@/lib/intelligenceProfile';
+import { PublishWizard } from '@/components/PublishWizard';
+import { ContentStudioPanel } from '@/components/ContentStudioPanel';
+import { ImperialContentStudio } from '@/components/ImperialContentStudio';
+import { SocialPostCard } from '@/components/SocialPostCard';
+import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
+import { AutoContentSettingsPanel } from '@/components/AutoContentSettingsPanel';
 
 const TABS = [
-  { id: 'standard', label: 'Post', group: 'Create' },
+  { id: 'studio', label: 'Create', group: 'Social Imperialism' },
+  { id: 'standard', label: 'Quick Post', group: 'Social Imperialism' },
   { id: 'media', label: 'Media', group: 'Create' },
   { id: 'wizard', label: 'Wizard', group: 'Create' },
   { id: 'repurpose', label: 'Repurpose', group: 'Transform' },
@@ -17,12 +28,14 @@ const TABS = [
   { id: 'analytics', label: 'Analytics', group: 'Insights' },
   { id: 'brand', label: 'Brand', group: 'Insights' },
   { id: 'comments', label: 'Comments', group: 'Insights' },
-  { id: 'studio', label: 'Content Studio', group: 'Insights' },
+  { id: 'batch', label: 'Batch Studio', group: 'Insights' },
   { id: 'queue', label: 'Queue', group: 'Insights' },
 ];
 
 export default function ContentHubPage() {
-  const [tab, setTab] = useState('standard');
+  const { settings, accounts: intelAccounts, isSurfaceEnabled } = useIntelligence();
+  const [tab, setTab] = useState('studio');
+  const [publishAccountId, setPublishAccountId] = useState('');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('');
   const [accounts, setAccounts] = useState<Array<{ id: string; platform: string; handle?: string }>>([]);
@@ -33,6 +46,11 @@ export default function ContentHubPage() {
   const [queue, setQueue] = useState<unknown[]>([]);
   const [replies, setReplies] = useState<unknown[]>([]);
   const [hubStatus, setHubStatus] = useState<Record<string, unknown>>({});
+  const [videoFormat, setVideoFormat] = useState('9:16');
+  const [videoCaption, setVideoCaption] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [commentDraft, setCommentDraft] = useState('');
+  const [commentPostUrl, setCommentPostUrl] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -40,7 +58,9 @@ export default function ContentHubPage() {
       invoke('get-dashboard-stats'),
       invoke('get-account-hub-status'),
     ]).then(([a, s, h]) => {
-      setAccounts(a as typeof accounts);
+      const list = a as typeof accounts;
+      setAccounts(list);
+      setPublishAccountId((prev) => prev || list[0]?.id || '');
       setHubStatus({ stats: s, hub: h });
     }).catch(console.error);
   }, []);
@@ -52,7 +72,7 @@ export default function ContentHubPage() {
   }
 
   async function publish() {
-    const acc = accounts[0];
+    const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
     if (!acc) { setStatus('Link an account first'); return; }
     setStatus('Publishing…');
     await invoke('publish-post', { accountId: acc.id, platform: acc.platform, content, hasMedia: !!mediaUrl, mediaUrl });
@@ -68,14 +88,27 @@ export default function ContentHubPage() {
 
   return (
     <div>
-      <PageHeader title="Content Hub" subtitle="Create, enhance, RSS, thumbnails, Grok, studio, queue — full desktop parity" />
+      <PageHeader title="Content Hub" subtitle="Social Imperialism — fast, on-brand posts: generate, design, approve, and publish across every platform" />
 
       <div className="card" style={{ marginBottom: '1rem' }}>
-        <div className="ch-readiness" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem' }}>
+        <div className="ch-readiness" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem', alignItems: 'center' }}>
           <span>Accounts: <strong>{accounts.length}</strong></span>
-          <span>Platforms: <strong>{accounts.map((a) => a.platform).join(', ') || 'none'}</strong></span>
+          <select className="input" style={{ maxWidth: 220, margin: 0 }} value={publishAccountId} onChange={(e) => setPublishAccountId(e.target.value)}>
+            {accounts.map((a) => <option key={a.id} value={a.id}>{a.platform} — {a.handle || a.id}</option>)}
+          </select>
           <button className="btn" onClick={async () => setAccounts(await invoke('get-linked-accounts'))}>Refresh Accounts</button>
         </div>
+        {isSurfaceEnabled('content-hub') && (() => {
+          const acc = intelAccounts.find((a) => a.id === publishAccountId) || intelAccounts[0];
+          const profile = normalizeProfile(acc?.profile);
+          if (!acc || !profile) return null;
+          return (
+            <div style={{ marginTop: 12 }}>
+              <IntelligenceProfilePanel account={acc} profile={profile} refreshedAt={acc.profileRefreshedAt} compact />
+              <IntelligenceRecommendations account={acc} profile={profile} settings={settings} title="Content recommendations" maxItems={3} />
+            </div>
+          );
+        })()}
       </div>
 
       {groups.map((group) => (
@@ -89,22 +122,89 @@ export default function ContentHubPage() {
         </div>
       ))}
 
+      {tab === 'studio' && <ImperialContentStudio />}
+
       {tab === 'standard' && (
-        <div className="card">
-          <h3>Standard Post</h3>
-          <textarea className="input" rows={8} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write your post…" />
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            <button className="btn" onClick={enhance}>AI Enhance</button>
-            <button className="btn" onClick={async () => setContent(await invoke('generate-ai', 'Write a viral LinkedIn post about social automation'))}>AI Generate</button>
-            <button className="btn" onClick={async () => { await invoke('schedule-post', { platform: accounts[0]?.platform, accountId: accounts[0]?.id, content, scheduleTime: new Date(Date.now() + 86400000).toISOString() }); setStatus('Scheduled'); }}>Schedule</button>
-            <button className="btn primary" onClick={publish}>Publish Now</button>
+        <div className="pw-compose-split">
+          <div className="card">
+            <h3>Quick Post</h3>
+            <textarea className="input" rows={8} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write on-brand copy — Social Imperialism enhances before publish…" />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <button className="btn" onClick={enhance}>AI Enhance</button>
+              <button className="btn" onClick={async () => setContent(await invoke('generate-ai', 'Write a professional on-brand LinkedIn post about social automation. Not generic AI tone.'))}>AI Generate</button>
+              <button className="btn" onClick={async () => { await invoke('schedule-post', { platform: accounts[0]?.platform, accountId: accounts[0]?.id, content, scheduleTime: new Date(Date.now() + 86400000).toISOString() }); setStatus('Scheduled'); }}>Schedule</button>
+              <button className="btn primary" onClick={publish}>Publish Now</button>
+            </div>
+            {status && <p style={{ marginTop: 12, color: '#94a3b8' }}>{status}</p>}
           </div>
-          {status && <p style={{ marginTop: 12, color: '#94a3b8' }}>{status}</p>}
+          <div className="card pw-live-preview">
+            <h3>Preview</h3>
+            <SocialPostCard post={enrichGeneratedItem({
+              id: 'quick',
+              type: 'post',
+              content: content || 'Preview updates as you type…',
+              platform: accounts.find((a) => a.id === publishAccountId)?.platform,
+              mediaUrl: mediaUrl || undefined,
+              templateId: mediaUrl ? 'promotional-ai-image' : 'promotional-design',
+              status: 'draft',
+            })} />
+          </div>
         </div>
       )}
 
       {tab === 'media' && (
         <div className="grid grid-2">
+          <div className="card">
+            <h3>Stories / Reels / Video</h3>
+            <select className="input" value={videoFormat} onChange={(e) => setVideoFormat(e.target.value)}>
+              <option value="9:16">Stories / Reels / Shorts (9:16)</option>
+              <option value="1:1">Square Video (1:1)</option>
+              <option value="16:9">Standard Video (16:9)</option>
+            </select>
+            <input type="file" accept="video/*" style={{ marginTop: 8 }} onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = async () => {
+                const dataUrl = await invoke<string>('upload-local-media', reader.result);
+                if (dataUrl) setVideoUrl(dataUrl);
+              };
+              reader.readAsDataURL(file);
+            }} />
+            {videoUrl && <video src={videoUrl} controls style={{ maxWidth: '100%', marginTop: 8, borderRadius: 8, aspectRatio: videoFormat.replace(':', '/') }} />}
+            <textarea className="input" rows={4} value={videoCaption} onChange={(e) => setVideoCaption(e.target.value)} placeholder="Reel / video caption…" style={{ marginTop: 8 }} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <button className="btn" onClick={async () => setVideoCaption(await invoke('generate-ai', `Write a viral ${videoFormat} caption: ${videoCaption || content}`))}>AI Caption</button>
+              <button className="btn primary" onClick={async () => {
+                const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
+                if (!acc) { setStatus('Link an account'); return; }
+                await invoke('publish-post', {
+                  accountId: acc.id,
+                  platform: acc.platform,
+                  content: videoCaption || content,
+                  hasMedia: true,
+                  mediaUrl: videoUrl,
+                  format: videoFormat,
+                  postType: videoFormat === '9:16' ? 'reel' : 'video',
+                });
+                setStatus(`Published ${videoFormat} video to ${acc.platform}`);
+              }}>Publish Video</button>
+              <button className="btn" onClick={async () => {
+                const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
+                if (!acc) return;
+                await invoke('schedule-post', {
+                  platform: acc.platform,
+                  accountId: acc.id,
+                  content: videoCaption || content,
+                  mediaUrl: videoUrl,
+                  hasMedia: true,
+                  format: videoFormat,
+                  scheduleTime: new Date(Date.now() + 86400000).toISOString(),
+                });
+                setStatus('Video scheduled');
+              }}>Schedule</button>
+            </div>
+          </div>
           <div className="card">
             <h3>Media & Stock</h3>
             <input className="input" placeholder="Search stock photos" onKeyDown={async (e) => {
@@ -137,11 +237,13 @@ export default function ContentHubPage() {
       )}
 
       {tab === 'wizard' && (
-        <div className="grid grid-2">
-          <InvokePanel title="Content Studio Config" channel="get-content-studio-config" buttonLabel="Load" />
-          <InvokePanel title="Run Content Studio" channel="run-content-studio" args={[{ types: ['post'], keywords: ['marketing'], count: 3 }]} buttonLabel="Run" />
-          <InvokePanel title="Generate Batch" channel="generate-content-batch" args={[{ topic: 'AI marketing', count: 3 }]} buttonLabel="Batch" />
-          <InvokePanel title="Schedule Batch" channel="schedule-content-batch" args={[{ items: [{ content: 'Sample scheduled post' }], scheduleConfig: { mode: 'daily' } }]} buttonLabel="Schedule" />
+        <div className="card">
+          <h3>Publish Wizard</h3>
+          <PublishWizard accounts={accounts} />
+          <div className="grid grid-2" style={{ marginTop: 16 }}>
+            <InvokePanel title="Run Content Studio" channel="run-content-studio" args={[{ types: ['post'], keywords: ['marketing'], count: 3 }]} buttonLabel="Run" />
+            <InvokePanel title="Schedule Batch" channel="schedule-content-batch" args={[{ items: [{ content: 'Sample scheduled post' }], scheduleConfig: { mode: 'daily' } }]} buttonLabel="Schedule" />
+          </div>
         </div>
       )}
 
@@ -165,6 +267,7 @@ export default function ContentHubPage() {
 
       {tab === 'rss' && (
         <div className="grid grid-2">
+          <div style={{ gridColumn: '1 / -1' }}><AutoContentSettingsPanel /></div>
           <div className="card">
             <h3>RSS Curation</h3>
             <input className="input" value={rssUrl} onChange={(e) => setRssUrl(e.target.value)} />
@@ -178,7 +281,6 @@ export default function ContentHubPage() {
           <InvokePanel title="RSS Sources" channel="get-site-rss-sources" buttonLabel="List" />
           <InvokePanel title="Category RSS Router" channel="run-category-rss-router" buttonLabel="Run Router" />
           <InvokePanel title="Auto Content Scheduler" channel="run-content-scheduler-now" buttonLabel="Run Now" />
-          <InvokePanel title="Auto Content Settings" channel="get-auto-content-settings" buttonLabel="Load" />
         </div>
       )}
 
@@ -232,42 +334,110 @@ export default function ContentHubPage() {
       )}
 
       {tab === 'comments' && (
-        <div className="card">
-          <h3>AI Replies Inbox</h3>
-          <button className="btn" onClick={refreshQueue} style={{ marginBottom: 8 }}>Refresh</button>
-          {(replies as Array<{ id: string; replyContent?: string; status?: string }>).map((r) => (
-            <div key={r.id} className="post-card">
-              <span className="badge">{r.status}</span>
-              <div>{(r.replyContent || '').slice(0, 200)}</div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button className="btn primary" onClick={() => invoke('publish-ai-reply', r.id)}>Publish</button>
-                <button className="btn" onClick={() => invoke('delete-ai-reply', r.id).then(refreshQueue)}>Delete</button>
-              </div>
+        <div className="grid grid-2">
+          <div className="card">
+            <h3>Engage on Post</h3>
+            <input className="input" placeholder="Post URL (LinkedIn, Reddit, etc.)" value={commentPostUrl} onChange={(e) => setCommentPostUrl(e.target.value)} />
+            <textarea className="input" rows={4} value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} placeholder="Your comment or reply…" />
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <button className="btn" onClick={async () => {
+                if (!commentPostUrl) return;
+                setCommentDraft(await invoke('draft-post-reply', {
+                  postContent: commentDraft || 'Engage with this post',
+                  platform: accounts.find((a) => a.id === publishAccountId)?.platform || 'LinkedIn',
+                  url: commentPostUrl,
+                }));
+              }}>Draft AI Reply</button>
+              <button className="btn primary" onClick={async () => {
+                const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
+                const res = await invoke<{ success?: boolean; message?: string }>('engage-post', {
+                  action: 'reply',
+                  platform: acc?.platform || 'LinkedIn',
+                  content: commentDraft,
+                  url: commentPostUrl,
+                });
+                setStatus(res.message || 'Reply sent');
+              }} disabled={!commentDraft.trim()}>Reply & Engage</button>
+              <button className="btn" onClick={async () => {
+                const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
+                await invoke('engage-post', { action: 'like', platform: acc?.platform || 'LinkedIn', url: commentPostUrl });
+                setStatus('Like sent');
+              }}>Like</button>
+              <button className="btn" onClick={async () => {
+                const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
+                await invoke('engage-post', { action: 'share', platform: acc?.platform || 'LinkedIn', url: commentPostUrl, content: commentDraft });
+                setStatus('Share sent');
+              }}>Share</button>
             </div>
-          ))}
+          </div>
+          <div className="card">
+            <h3>AI Replies Inbox</h3>
+            <button className="btn" onClick={refreshQueue} style={{ marginBottom: 8 }}>Refresh</button>
+            {(replies as Array<{ id: string; replyContent?: string; status?: string; platform?: string; originalPost?: string }>).map((r) => (
+              <div key={r.id} className="post-card">
+                <span className="badge">{r.status}</span>
+                {r.platform && <span className="badge">{r.platform}</span>}
+                {r.originalPost && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>Re: {(r.originalPost || '').slice(0, 80)}</div>}
+                <div>{(r.replyContent || '').slice(0, 200)}</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button className="btn primary" onClick={async () => { await invoke('publish-ai-reply', r.id); refreshQueue(); }}>Publish</button>
+                  <button className="btn" onClick={() => { setCommentDraft(r.replyContent || ''); setCommentPostUrl(''); }}>Use in Engage</button>
+                  <button className="btn" onClick={() => invoke('delete-ai-reply', r.id).then(refreshQueue)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {tab === 'studio' && (
-        <InvokePanel title="Run Auto-Rules" channel="run-auto-rules-now" buttonLabel="Run Worker" />
+      {tab === 'batch' && (
+        <div className="card">
+          <h3>Batch Studio (advanced)</h3>
+          <ContentStudioPanel />
+        </div>
       )}
 
       {tab === 'queue' && (
         <div className="card">
-          <h3>Content Review Queue</h3>
-          <button className="btn" onClick={refreshQueue} style={{ marginBottom: 8 }}>Refresh</button>
-          {(queue as Array<{ id: string; content?: string; format?: string; status?: string }>).map((item) => (
-            <div key={item.id} className="post-card">
-              <span className="badge">{item.format} · {item.status}</span>
-              <div>{(item.content || '').slice(0, 300)}</div>
-              <button className="btn" style={{ marginTop: 8 }} onClick={() => { setContent(item.content || ''); invoke('remove-content-queue-item', item.id).then(refreshQueue); }}>Use & Remove</button>
-            </div>
-          ))}
-          {!queue.length && <p style={{ color: '#94a3b8' }}>Queue empty — repurpose Q&A answers or run content studio.</p>}
+          <h3>Review Queue</h3>
+          <p className="settings-panel-desc">Approve, edit, or schedule queued content — same workflow as the Create studio.</p>
+          <button className="btn" onClick={refreshQueue} style={{ marginBottom: 12 }}>Refresh</button>
+          <div className="si-post-grid">
+            {(queue as Array<{ id: string; content?: string; format?: string; status?: string; type?: string; platform?: string; mediaUrl?: string }>).map((item, i) => (
+              <SocialPostCard
+                key={item.id}
+                post={enrichGeneratedItem({
+                  id: item.id,
+                  type: item.type || item.format || 'post',
+                  content: item.content || '',
+                  mediaUrl: item.mediaUrl,
+                  platform: item.platform,
+                  status: (item.status as 'draft') || 'draft',
+                }, i)}
+                onEdit={() => { setContent(item.content || ''); setTab('standard'); }}
+                onApprove={async () => {
+                  const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
+                  if (!acc) { setStatus('Link an account first'); return; }
+                  await invoke('schedule-post', {
+                    platform: acc.platform,
+                    accountId: acc.id,
+                    content: item.content,
+                    scheduleTime: new Date(Date.now() + 86400000).toISOString(),
+                  });
+                  await invoke('remove-content-queue-item', item.id);
+                  setStatus('Scheduled to calendar');
+                  refreshQueue();
+                }}
+              />
+            ))}
+          </div>
+          {!queue.length && <p style={{ color: '#94a3b8' }}>Queue empty — generate a batch in Create or curate from RSS.</p>}
         </div>
       )}
 
-      <pre style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '1rem' }}>{JSON.stringify(hubStatus)}</pre>
+      {status && tab !== 'standard' && tab !== 'wizard' && (
+        <p style={{ marginTop: 8, color: '#94a3b8', fontSize: '0.85rem' }}>{status}</p>
+      )}
     </div>
   );
 }

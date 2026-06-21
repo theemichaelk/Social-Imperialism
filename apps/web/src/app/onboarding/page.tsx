@@ -5,8 +5,12 @@ import { PageHeader } from '@/components/PageHeader';
 import { LivePulse, RingChart } from '@/components/DashboardViz';
 import { useRouter } from 'next/navigation';
 
-const PLATFORMS = ['Twitter', 'LinkedIn', 'Reddit', 'Facebook', 'Instagram', 'YouTube', 'Quora', 'TikTok'];
-const STEPS = ['Brand Profile', 'Keywords & Platforms', 'Feed Preview', 'Go Live'];
+import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
+
+const PLATFORMS = ALL_PLATFORMS;
+const STEPS = ['Brand Profile', 'Keywords & Platforms', 'Feed Preview', 'AI Replies & Be First'];
+
+type Monitor = { term?: string; platform?: string; type?: string; target?: string; added?: string };
 
 type Keyword = { id?: string; term: string; platforms?: string[] };
 type Post = { platform: string; content: string; url?: string; matchScore?: number };
@@ -18,6 +22,7 @@ export default function OnboardingPage() {
   const [apiMetrics, setApiMetrics] = useState<Record<string, string>>({});
   const [brand, setBrand] = useState({
     brandName: '', domain: '', description: '', tone: 'Professional', audience: '',
+    disallowedTopics: '', sampleMessages: '', affiliateLinks: '',
   });
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [suggested, setSuggested] = useState<string[]>([]);
@@ -26,6 +31,14 @@ export default function OnboardingPage() {
   const [feed, setFeed] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
+  const [globalPrompt, setGlobalPrompt] = useState('');
+  const [autoSearchFreq, setAutoSearchFreq] = useState('daily');
+  const [beFirstFreq, setBeFirstFreq] = useState('10m');
+  const [enableWorker, setEnableWorker] = useState(true);
+  const [monitors, setMonitors] = useState<Monitor[]>([]);
+  const [watchTerm, setWatchTerm] = useState('');
+  const [watchType, setWatchType] = useState('keyword');
+  const [watchPlatform, setWatchPlatform] = useState('All');
 
   const refreshStatus = useCallback(async () => {
     const [s, api] = await Promise.all([
@@ -35,7 +48,7 @@ export default function OnboardingPage() {
     setStatus(s);
     setApiMetrics((s.apiMetrics as Record<string, string>) || api || {});
     setStep((s.nextStep as number) || 1);
-    const camp = s.campaign as Record<string, string> | undefined;
+    const camp = s.campaign as Record<string, string> & { globalCustomPrompt?: string } | undefined;
     if (camp) {
       setBrand({
         brandName: camp.brandName || '',
@@ -43,9 +56,15 @@ export default function OnboardingPage() {
         description: camp.description || '',
         tone: camp.tone || 'Professional',
         audience: camp.audience || '',
+        disallowedTopics: camp.disallowedTopics || '',
+        sampleMessages: camp.sampleMessages || '',
+        affiliateLinks: camp.affiliateLinks || '',
       });
+      if (camp.globalCustomPrompt) setGlobalPrompt(camp.globalCustomPrompt);
     }
     setKeywords((s.keywords as Keyword[]) || []);
+    const mons = await invoke<Monitor[]>('get-watched-monitors').catch(() => []);
+    setMonitors(Array.isArray(mons) ? mons : []);
   }, []);
 
   useEffect(() => { refreshStatus().catch(console.error); }, [refreshStatus]);
@@ -65,6 +84,11 @@ export default function OnboardingPage() {
       const entry = { id, ...brand, status: 'Active' };
       await invoke('save-settings', [entry, ...campaigns.filter((c) => c.id !== id)]);
       await invoke('set-active-campaign', id);
+      await invoke('save-brand-guidelines', {
+        disallowedTopics: brand.disallowedTopics,
+        sampleMessages: brand.sampleMessages,
+        affiliateLinks: brand.affiliateLinks,
+      });
       await refreshStatus();
       setStep(2);
       setMsg('Brand integrated with AI');
@@ -144,11 +168,81 @@ export default function OnboardingPage() {
     }
   }
 
+  async function autoFillPrompt() {
+    setLoading(true);
+    setMsg('AI building global custom prompt…');
+    try {
+      const res = await invoke<{ success?: boolean; prompt?: string; error?: string }>('generate-global-custom-prompt');
+      if (res.prompt) {
+        setGlobalPrompt(res.prompt);
+        setMsg('Global prompt ready — review and finish setup');
+      } else {
+        setMsg(res.error || 'AI fill failed — add API keys in Settings');
+      }
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function addMonitor() {
+    if (!watchTerm.trim()) { setMsg('Enter a keyword, @handle, or page to watch'); return; }
+    const entry: Monitor = {
+      term: watchTerm.trim(),
+      platform: watchPlatform,
+      type: watchType,
+      target: watchType,
+      added: new Date().toISOString(),
+    };
+    const next = [entry, ...monitors].slice(0, 20);
+    await invoke('save-watched-monitors', next);
+    setMonitors(next);
+    setWatchTerm('');
+    setMsg('Monitor added');
+  }
+
+  async function removeMonitor(idx: number) {
+    const next = monitors.filter((_, i) => i !== idx);
+    await invoke('save-watched-monitors', next);
+    setMonitors(next);
+  }
+
   async function finish() {
     setLoading(true);
+    setMsg('Saving auto-rules and running initial scan…');
     try {
+      const rules = await invoke<Record<string, unknown>>('get-auto-rules').catch(() => ({}));
+      await invoke('save-auto-rules', {
+        ...rules,
+        customRulePrompt: globalPrompt,
+        enabled: enableWorker,
+        realTimeMonitoringEnabled: true,
+        beFirstDelay: true,
+        oneClickAutoSearchEnabled: true,
+        autoSearchFrequency: autoSearchFreq,
+        beFirstMonitorFrequency: beFirstFreq,
+        frequency: beFirstFreq,
+      });
+      await invoke('save-auto-search-settings', {
+        dailyEnabled: true,
+        frequency: autoSearchFreq,
+        beFirstMonitorFrequency: beFirstFreq,
+      });
+      if (globalPrompt.trim()) {
+        const id = (status.campaign as { id?: string })?.id;
+        if (id) {
+          const camps = await invoke<Array<Record<string, string>>>('get-settings') || [];
+          const idx = camps.findIndex((c) => c.id === id);
+          if (idx >= 0) {
+            camps[idx] = { ...camps[idx], globalCustomPrompt: globalPrompt };
+            await invoke('save-settings', camps);
+          }
+        }
+      }
+      await invoke('trigger-full-auto-search').catch(() => null);
+      if (enableWorker) await invoke('start-worker').catch(() => null);
       await invoke('set-onboarding-complete', true);
-      await invoke('start-worker').catch(() => null);
       router.push('/dashboard');
     } catch (e) {
       setMsg((e as Error).message);
@@ -222,6 +316,9 @@ export default function OnboardingPage() {
           <select className="input" value={brand.tone} onChange={(e) => setBrand({ ...brand, tone: e.target.value })}>
             <option>Professional</option><option>Casual</option><option>Bold</option><option>Educational</option><option>Friendly</option>
           </select>
+          <textarea className="input" placeholder="Disallowed topics (optional)" value={brand.disallowedTopics} onChange={(e) => setBrand({ ...brand, disallowedTopics: e.target.value })} style={{ marginTop: 8 }} />
+          <textarea className="input" placeholder="Sample messages / voice examples (optional)" value={brand.sampleMessages} onChange={(e) => setBrand({ ...brand, sampleMessages: e.target.value })} style={{ marginTop: 8 }} />
+          <input className="input" placeholder="Affiliate links / USPs (optional)" value={brand.affiliateLinks} onChange={(e) => setBrand({ ...brand, affiliateLinks: e.target.value })} style={{ marginTop: 8 }} />
           <button className="btn primary" style={{ marginTop: 12 }} onClick={saveBrand} disabled={loading}>Save & Integrate with AI →</button>
         </div>
       )}
@@ -246,7 +343,7 @@ export default function OnboardingPage() {
           <div className="grid grid-4" style={{ marginBottom: 12 }}>
             {PLATFORMS.map((p) => (
               <div key={p} className={`platform-chip ${platforms.includes(p) ? 'selected' : ''}`} onClick={() => togglePlatform(p)} role="button" tabIndex={0}>
-                {p}
+                {platformDisplayName(p)}
               </div>
             ))}
           </div>
@@ -280,15 +377,65 @@ export default function OnboardingPage() {
 
       {step === 4 && (
         <div className="card">
-          <h3>Ready to Go Live</h3>
-          <div className="dash-hero-grid" style={{ marginBottom: 16 }}>
+          <h3>AI Replies &amp; Be First Monitors</h3>
+          <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Configure global reply voice, scan frequency, and real-time monitors.</p>
+          <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Global Custom Prompt</label>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <textarea className="input" rows={4} value={globalPrompt} onChange={(e) => setGlobalPrompt(e.target.value)} placeholder="Always naturally mention our brand and domain…" style={{ flex: 1, margin: 0 }} />
+            <button className="btn" onClick={autoFillPrompt} disabled={loading}>✨ AI Auto-Fill</button>
+          </div>
+          <div className="grid grid-2" style={{ marginBottom: 12 }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Auto Search frequency</label>
+              <select className="input" value={autoSearchFreq} onChange={(e) => setAutoSearchFreq(e.target.value)}>
+                {['5m', '10m', '15m', '30m', 'hourly', 'daily', 'weekly', 'monthly'].map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Be-First monitor frequency</label>
+              <select className="input" value={beFirstFreq} onChange={(e) => setBeFirstFreq(e.target.value)}>
+                {['5m', '10m', '15m', '30m', 'hourly', 'daily', 'realtime'].map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Be-First Monitor — watch keyword, page, or account</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, marginBottom: 8 }}>
+            <input className="input" placeholder="Keyword, @handle, or page" value={watchTerm} onChange={(e) => setWatchTerm(e.target.value)} style={{ margin: 0 }} />
+            <select className="input" value={watchType} onChange={(e) => setWatchType(e.target.value)} style={{ margin: 0 }}>
+              <option value="keyword">Keyword</option>
+              <option value="account">Account</option>
+              <option value="page">Page</option>
+              <option value="post">Post</option>
+            </select>
+            <select className="input" value={watchPlatform} onChange={(e) => setWatchPlatform(e.target.value)} style={{ margin: 0 }}>
+              <option value="All">All Platforms</option>
+              {PLATFORMS.map((p) => <option key={p} value={p}>{platformDisplayName(p)}</option>)}
+            </select>
+            <button className="btn" onClick={addMonitor}>+ Watch</button>
+          </div>
+          {monitors.map((m, i) => (
+            <div key={i} className="post-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span><span className="badge">{m.type}</span> {m.term} · {m.platform}</span>
+              <button className="btn" onClick={() => removeMonitor(i)}>Remove</button>
+            </div>
+          ))}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, cursor: 'pointer' }}>
+            <input type="checkbox" checked={enableWorker} onChange={(e) => setEnableWorker(e.target.checked)} />
+            Enable background worker (Be First delay jitter in Auto-Rules)
+          </label>
+          <div className="dash-hero-grid" style={{ margin: '16px 0' }}>
             <div className="metric-tile"><div className="metric-tile-val">{brand.brandName || '—'}</div><div className="metric-tile-label">Brand</div></div>
             <div className="metric-tile"><div className="metric-tile-val">{keywords.length}</div><div className="metric-tile-label">Keywords</div></div>
-            <div className="metric-tile"><div className="metric-tile-val">{String(status.linkedAccountsCount ?? 0)}</div><div className="metric-tile-label">Accounts</div></div>
+            <div className="metric-tile"><div className="metric-tile-val">{monitors.length}</div><div className="metric-tile-label">Monitors</div></div>
             <div className="metric-tile"><div className="metric-tile-val">{connectedCount}</div><div className="metric-tile-label">APIs Live</div></div>
           </div>
-          <p style={{ color: '#94a3b8' }}>Worker will start scanning for engagement opportunities automatically.</p>
-          <button className="btn primary" onClick={finish} disabled={loading}>Complete Setup → Dashboard</button>
+          <button className="btn primary" onClick={finish} disabled={loading}>
+            {loading ? 'Finishing…' : 'Finish Setup → Dashboard'}
+          </button>
         </div>
       )}
 
