@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, setSession } from '@/lib/api';
 import { Logo } from '@/components/Logo';
+import { FooterCredit } from '@/components/FooterCredit';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function LoginPage() {
       <div className="login-bg-grid" aria-hidden />
       <div className="login-card">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <Logo size="lg" showText />
+          <a href="/" style={{ textDecoration: 'none' }}><Logo size="lg" showText /></a>
           <p style={{ textAlign: 'center', color: '#94a3b8', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>
             Social media automation — full platform access
           </p>
@@ -64,6 +65,7 @@ export default function LoginPage() {
             {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
+        <FooterCredit className="login-footer-credit" />
       </div>
     </div>
   );

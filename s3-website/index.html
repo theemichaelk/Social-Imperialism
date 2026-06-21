@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Imperialism — AI Social Growth Platform</title>
+  <meta name="description" content="Monitor 14+ platforms, discover keyword-matched posts, generate AI brand replies, and automate engagement." />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: rgba(15, 23, 42, 0.9);
+      --border: rgba(56, 189, 248, 0.3);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent2: #a855f7;
+      --success: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .grid-bg {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .orb {
+      position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0;
+    }
+    .orb-1 { width: 400px; height: 400px; background: rgba(56, 189, 248, 0.12); top: -100px; right: -100px; }
+    .orb-2 { width: 300px; height: 300px; background: rgba(168, 85, 247, 0.1); bottom: 10%; left: -80px; }
+    .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    header {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+      padding: 1rem 0 2rem; border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;
+    }
+    .brand h1 { font-size: 1.25rem; font-weight: 700; }
+    .brand p { font-size: 0.75rem; color: var(--muted); }
+    .badge {
+      display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 600;
+      border: 1px solid var(--border); color: var(--accent);
+    }
+    .badge.live { border-color: rgba(34, 197, 94, 0.5); color: var(--success); }
+    .hero { padding: 3rem 0 2rem; text-align: center; }
+    .hero h2 {
+      font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.15; margin-bottom: 1rem;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--accent2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero .sub { font-size: 1.1rem; color: var(--muted); max-width: 640px; margin: 0 auto 2rem; }
+    .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 8px;
+      font-weight: 600; font-size: 0.95rem; text-decoration: none; transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #0ea5e9);
+      color: #0b1220; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.35);
+    }
+    .btn-secondary {
+      background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    }
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 3rem;
+    }
+    .stat {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; text-align: center;
+    }
+    .stat .val { font-size: 1.75rem; font-weight: 800; color: var(--accent); }
+    .stat .lbl { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; text-align: center; }
+    .features {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 3rem;
+    }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem;
+    }
+    .card h3 { font-size: 1rem; margin-bottom: 6px; color: var(--accent); }
+    .card p { font-size: 0.85rem; color: var(--muted); }
+    .platforms {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 3rem;
+    }
+    .pill {
+      padding: 6px 12px; border-radius: 999px; font-size: 0.75rem;
+      background: rgba(56, 189, 248, 0.1); border: 1px solid var(--border); color: var(--muted);
+    }
+    .deploy-note {
+      background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.3);
+      border-radius: 12px; padding: 1.25rem; font-size: 0.9rem; color: var(--muted); margin-bottom: 2rem;
+    }
+    .deploy-note strong { color: var(--text); }
+    .deploy-note code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+    footer {
+      text-align: center; padding-top: 2rem; border-top: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--muted);
+    }
+    footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="brand-icon">SI</div>
+        <div>
+          <h1>Social Imperialism</h1>
+          <p>AI Social Growth Platform</p>
+        </div>
+      </div>
+      <span class="badge live">● S3 DEPLOYED</span>
+    </header>
+
+    <section class="hero">
+      <h2>Put Your Social Growth on Autopilot</h2>
+      <p class="sub">
+        Monitor 14+ platforms, discover keyword-matched posts and questions,
+        generate AI replies mentioning your brand, and automate engagement, content, and fanpage growth.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="http://localhost:3000/dashboard" target="_blank" rel="noopener">Open SaaS Dashboard →</a>
+        <a class="btn btn-secondary" href="http://localhost:3000/login" target="_blank" rel="noopener">Sign In</a>
+      </div>
+    </section>
+
+    <div class="deploy-note">
+      <strong>Static site + live app:</strong> This page is served from
+      <code>s3://social-imperialism</code>. The full interactive SaaS runs locally at
+      <code>http://localhost:3000</code> (API on port 4000). Start with
+      <code>npm run dev</code> in the project folder.
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="val">230+</div><div class="lbl">IPC Channels</div></div>
+      <div class="stat"><div class="val">14+</div><div class="lbl">Platforms</div></div>
+      <div class="stat"><div class="val">18</div><div class="lbl">App Modules</div></div>
+      <div class="stat"><div class="val">100+</div><div class="lbl">AI Models</div></div>
+    </div>
+
+    <h2 class="section-title">Core Capabilities</h2>
+    <div class="features">
+      <div class="card"><h3>Mission Control</h3><p>Live feeds, trending topics, Q&amp;A discovery, and real-time worker automation.</p></div>
+      <div class="card"><h3>AI Reply Engine</h3><p>Brand-mentioning replies with custom prompts, approval mode, and UTM tracking.</p></div>
+      <div class="card"><h3>Content Hub</h3><p>AI text + FAL images, RSS curation, calendar scheduling, and multi-platform publish.</p></div>
+      <div class="card"><h3>Auto-Rules</h3><p>Be-first monitoring, auto-like/share/follow, fanpage growth, and spam prevention.</p></div>
+      <div class="card"><h3>Account Hub</h3><p>OAuth connect for Facebook, X, LinkedIn, Reddit, YouTube, TikTok, and more.</p></div>
+      <div class="card"><h3>Agency Mode</h3><p>Multi-campaign switching, client brands, affiliate keywords, and export reports.</p></div>
+    </div>
+
+    <h2 class="section-title">Supported Platforms</h2>
+    <div class="platforms">
+      <span class="pill">Facebook</span><span class="pill">Instagram</span><span class="pill">X / Twitter</span>
+      <span class="pill">LinkedIn</span><span class="pill">Reddit</span><span class="pill">YouTube</span>
+      <span class="pill">TikTok</span><span class="pill">Pinterest</span><span class="pill">Discord</span>
+      <span class="pill">Telegram</span><span class="pill">WhatsApp</span><span class="pill">Quora</span>
+      <span class="pill">Threads</span><span class="pill">Twitch</span><span class="pill">Snapchat</span>
+    </div>
+
+    <footer>
+      <p>Social Imperialism &copy; 2026. All rights reserved.</p>
+      <p>Powered By <a href="https://tsbrenterprises.com">The Stone Builders Rejected</a> Michael K</p>
+    </footer>
+  </div>
+</body>
+</html>

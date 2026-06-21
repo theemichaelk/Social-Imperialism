@@ -1,0 +1,450 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { invoke } from '@/lib/api';
+import { PageHeader } from '@/components/PageHeader';
+import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
+import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { INTEGRATION_GROUPS, LIVE_INTEGRATION_TESTS } from '@/lib/integrationCatalog';
+import { PARTNER_CONNECTORS } from '@/lib/partnerConnectors';
+
+type TabId = 'connections' | 'probes' | 'partner-api' | 'webhooks' | 'connectors';
+type TestResult = { id: string; label: string; status: 'idle' | 'running' | 'pass' | 'fail' | 'warn'; ms?: number; summary?: string };
+type KeySources = { sources?: Record<string, string>; isAdminEnv?: boolean; envKeyCount?: number; message?: string };
+type PartnerConfig = {
+  partnerApiKey?: string; partnerApiKeyFull?: string | null;
+  inboundWebhookUrl?: string | null; inboundWebhookSecret?: string;
+  outboundWebhooks?: { id: string; url: string; enabled?: boolean; events?: string[] }[];
+  subscribedEvents?: string[];
+  outboundEvents?: { id: string; label: string; desc?: string }[];
+  apiBase?: string; usageCount?: number;
+};
+type EventLog = { id: string; type: string; at: string; ok?: boolean; [k: string]: unknown };
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'connections', label: 'Connections' },
+  { id: 'probes', label: 'Live Probes' },
+  { id: 'partner-api', label: 'Partner API' },
+  { id: 'webhooks', label: 'Webhooks' },
+  { id: 'connectors', label: 'App Connectors' },
+];
+
+function summarize(data: unknown): string {
+  if (data == null) return 'No data';
+  if (Array.isArray(data)) return `${data.length} items`;
+  if (typeof data === 'object') {
+    const d = data as Record<string, unknown>;
+    if (d.error) return String(d.error).slice(0, 80);
+    if (d.success === false) return String(d.error || 'Failed').slice(0, 80);
+    if (d.shortUrl) return String(d.shortUrl);
+    if (d.imageUrl) return 'Image found';
+    if (d.apiMetrics) {
+      const m = d.apiMetrics as Record<string, string>;
+      return `${Object.values(m).filter((v) => v === 'Connected').length}/${Object.keys(m).length} connected`;
+    }
+    if (d.data && Array.isArray(d.data)) return `${d.data.length} results`;
+    return 'OK';
+  }
+  return String(data).slice(0, 60);
+}
+
+function validateTest(id: string, data: unknown): 'pass' | 'fail' | 'warn' {
+  if (data == null) return 'fail';
+  const d = data as Record<string, unknown>;
+  const err = String(d.error || '');
+  if (err.includes('429') || err.includes('403') || err.includes('rate')) return 'warn';
+  switch (id) {
+    case 'status': {
+      const m = (d.apiMetrics || d.output) as Record<string, string> | undefined;
+      return m && Object.values(m).filter((v) => v === 'Connected').length >= 5 ? 'pass' : 'warn';
+    }
+    case 'news': return Array.isArray(data) && data.length > 0 ? 'pass' : 'warn';
+    case 'trending': return Array.isArray(data) ? 'pass' : 'fail';
+    case 'stock': return !!(d.imageUrl || d.success) ? 'pass' : 'warn';
+    case 'serp': return d.success !== false ? 'pass' : 'warn';
+    case 'domain': return d.success !== false && !d.error ? 'pass' : 'warn';
+    case 'youtube': return d.success !== false || err.includes('429') ? (err.includes('429') ? 'warn' : 'pass') : 'warn';
+    case 'tinyurl': return !!(d.shortUrl) ? 'pass' : 'warn';
+    case 'deepl': return d.success !== false ? 'pass' : 'warn';
+    case 'contentful': return d.success !== false ? 'pass' : 'warn';
+    case 'keyword': return typeof data === 'object' && !d.error ? 'pass' : 'warn';
+    case 'streaming': return typeof data === 'object' ? 'pass' : 'fail';
+    case 'payment':
+    case 'grok': return typeof data === 'object' ? 'pass' : 'fail';
+    default: return 'pass';
+  }
+}
+
+export default function IntegrationsPage() {
+  const [tab, setTab] = useState<TabId>('connections');
+  const [keys, setKeys] = useState<Record<string, string>>({});
+  const [keySources, setKeySources] = useState<KeySources>({});
+  const [apiStatus, setApiStatus] = useState<Record<string, string>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ ai: true });
+  const [results, setResults] = useState<TestResult[]>(
+    LIVE_INTEGRATION_TESTS.map((t) => ({ id: t.id, label: t.label, status: 'idle' })),
+  );
+  const [partner, setPartner] = useState<PartnerConfig>({});
+  const [newApiKey, setNewApiKey] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [testHookUrl, setTestHookUrl] = useState('');
+  const [eventLog, setEventLog] = useState<EventLog[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const refresh = useCallback(async () => {
+    const [k, ks, a, p, log] = await Promise.all([
+      invoke<Record<string, string>>('get-global-keys'),
+      invoke<KeySources>('get-key-sources'),
+      invoke<Record<string, string>>('check-api-status'),
+      invoke<PartnerConfig>('get-partner-integration-config'),
+      invoke<EventLog[]>('get-integration-events-log').catch(() => []),
+    ]);
+    setKeys(k || {});
+    setKeySources(ks || {});
+    setApiStatus(a || {});
+    setPartner(p || {});
+    setEventLog(log || []);
+  }, []);
+
+  useEffect(() => { refresh().catch(console.error); }, [refresh]);
+
+  const connected = Object.values(apiStatus).filter((v) => v === 'Connected').length;
+  const total = Object.keys(apiStatus).length || 1;
+  const keysSet = INTEGRATION_GROUPS.flatMap((g) => g.fields).filter((f) => keys[f.key]?.trim()).length;
+  const keysTotal = INTEGRATION_GROUPS.flatMap((g) => g.fields).length;
+  const passCount = results.filter((r) => r.status === 'pass').length;
+  const warnCount = results.filter((r) => r.status === 'warn').length;
+  const failCount = results.filter((r) => r.status === 'fail').length;
+
+  const categoryBars = useMemo(() => {
+    const cats: Record<string, { pass: number; total: number }> = {};
+    LIVE_INTEGRATION_TESTS.forEach((t) => {
+      if (!cats[t.category]) cats[t.category] = { pass: 0, total: 0 };
+      cats[t.category].total++;
+      const r = results.find((x) => x.id === t.id);
+      if (r?.status === 'pass' || r?.status === 'warn') cats[t.category].pass++;
+    });
+    return Object.entries(cats).map(([label, v]) => ({
+      label: label.slice(0, 6), value: v.pass,
+      color: v.pass === v.total ? '#22c55e' : v.pass > 0 ? '#38bdf8' : '#64748b',
+    }));
+  }, [results]);
+
+  async function saveKeys() {
+    setLoading(true);
+    try {
+      await invoke('save-global-keys', keys);
+      const [status, ks] = await Promise.all([
+        invoke<Record<string, string>>('check-api-status'),
+        invoke<KeySources>('get-key-sources'),
+      ]);
+      setApiStatus(status);
+      setKeySources(ks);
+      setMsg(`Saved — ${Object.values(status).filter((v) => v === 'Connected').length} APIs live`);
+    } catch (e) { setMsg((e as Error).message); }
+    finally { setLoading(false); }
+  }
+
+  async function runTest(testId: string) {
+    const test = LIVE_INTEGRATION_TESTS.find((t) => t.id === testId);
+    if (!test) return;
+    setResults((prev) => prev.map((r) => r.id === testId ? { ...r, status: 'running', summary: undefined } : r));
+    const start = Date.now();
+    try {
+      const data = await invoke<unknown>(test.channel, ...(test.args || []));
+      const st = validateTest(testId, data);
+      setResults((prev) => prev.map((r) => r.id === testId ? {
+        ...r, status: st, ms: Date.now() - start, summary: summarize(data),
+      } : r));
+    } catch (e) {
+      setResults((prev) => prev.map((r) => r.id === testId ? {
+        ...r, status: 'fail', ms: Date.now() - start, summary: (e as Error).message,
+      } : r));
+    }
+  }
+
+  async function runAll() {
+    setRunning(true);
+    for (const test of LIVE_INTEGRATION_TESTS) await runTest(test.id);
+    await refresh();
+    setRunning(false);
+    setMsg(`Scan done — ${passCount} pass, ${warnCount} warn, ${failCount} fail`);
+  }
+
+  async function genApiKey() {
+    const res = await invoke<{ partnerApiKey?: string }>('generate-partner-api-key');
+    setNewApiKey(res.partnerApiKey || '');
+    await refresh();
+    setMsg('Partner API key generated — copy now, shown once');
+  }
+
+  async function genInboundWebhook() {
+    const res = await invoke<{ inboundWebhookUrl?: string; inboundWebhookSecret?: string }>('regenerate-inbound-webhook');
+    setPartner((p) => ({ ...p, inboundWebhookUrl: res.inboundWebhookUrl, inboundWebhookSecret: res.inboundWebhookSecret }));
+    await refresh();
+    setMsg('Inbound webhook URL regenerated');
+  }
+
+  async function addOutboundWebhook() {
+    if (!webhookUrl.trim()) return;
+    const hooks = [...(partner.outboundWebhooks || []), {
+      id: `hook_${Date.now()}`, url: webhookUrl.trim(), enabled: true,
+      events: partner.subscribedEvents || ['integration.test'],
+    }];
+    await invoke('save-partner-integration-config', { outboundWebhooks: hooks });
+    setWebhookUrl('');
+    await refresh();
+    setMsg('Outbound webhook added');
+  }
+
+  const apiBars = Object.entries(apiStatus).slice(0, 14).map(([name, st]) => ({
+    label: chartShortLabel(name),
+    title: `${name}: ${st}`,
+    value: st === 'Connected' ? 5 : st === 'Configured' ? 2 : 1,
+    color: st === 'Connected' ? '#22c55e' : st === 'Configured' ? '#38bdf8' : '#64748b',
+  }));
+
+  const apiBase = partner.apiBase || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+  return (
+    <div className="integrations-page">
+      <PageHeader
+        title="Integrations Hub"
+        subtitle="Connect APIs, test live probes, Partner REST API, and webhooks for external apps"
+        actions={
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link href="/settings?tab=api-keys" className="btn">Settings →</Link>
+            <button className="btn" onClick={() => refresh()} disabled={loading}>Refresh</button>
+            <button className="btn primary" onClick={runAll} disabled={running}>{running ? 'Scanning…' : 'Run All Probes'}</button>
+          </div>
+        }
+      />
+
+      <div className="dash-hero integrations-hero">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>
+          <RingChart percent={(connected / total) * 100} label="APIs Live" color="#22c55e" />
+          <RingChart percent={LIVE_INTEGRATION_TESTS.length ? ((passCount + warnCount) / LIVE_INTEGRATION_TESTS.length) * 100 : 0} label="Probes OK" color="#38bdf8" />
+          <div className="dash-hero-grid" style={{ flex: 1, minWidth: 260 }}>
+            <MetricTile label="Connected" value={connected} sub={`of ${total}`} accent="#22c55e" />
+            <MetricTile label="Keys Set" value={`${keysSet}/${keysTotal}`} accent="#38bdf8" />
+            <MetricTile label="Pass" value={passCount} accent="#22c55e" />
+            <MetricTile label="Warn" value={warnCount} accent="#f59e0b" />
+            <MetricTile label="Partner API" value={partner.partnerApiKeyFull ? 'Active' : 'Setup'} accent="#a855f7" />
+            <MetricTile label="API Calls" value={partner.usageCount ?? 0} />
+          </div>
+          <LivePulse label={running ? 'SCANNING' : connected >= 10 ? 'LIVE' : 'PARTIAL'} />
+        </div>
+      </div>
+
+      {keySources.isAdminEnv && (
+        <div className="card admin-env-banner">
+          <p style={{ margin: 0 }}><strong>Admin .env active</strong> — {keySources.envKeyCount} keys auto-loaded. Clients must configure their own keys below.</p>
+        </div>
+      )}
+      {msg && <div className="card settings-msg-card"><p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p></div>}
+
+      <div className="tabs integrations-tabs">
+        {TABS.map((t) => (
+          <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab === 'connections' && (
+        <>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <button className="btn primary" onClick={saveKeys} disabled={loading}>Save All Keys</button>
+            <button className="btn" onClick={async () => {
+              const res = await invoke<{ apiMetrics?: Record<string, string> }>('test-all-connections');
+              setApiStatus(res.apiMetrics || {});
+              setMsg('Connection scan complete');
+            }}>Test Connections</button>
+          </div>
+          {INTEGRATION_GROUPS.map((group) => (
+            <div key={group.id} className={`integration-group-collapsible ${expandedGroups[group.id] ? 'open' : ''}`}>
+              <button type="button" className="integration-group-toggle" onClick={() => setExpandedGroups((p) => ({ ...p, [group.id]: !p[group.id] }))}>
+                <span>{group.icon} {group.title}</span>
+                <span className="integration-group-count">
+                  {group.fields.filter((f) => keys[f.key]?.trim()).length}/{group.fields.length}
+                </span>
+                <span>{expandedGroups[group.id] ? '▾' : '▸'}</span>
+              </button>
+              {expandedGroups[group.id] && (
+                <IntegrationKeyForm
+                  keys={keys}
+                  apiStatus={apiStatus}
+                  keySources={keySources.sources}
+                  onChange={(key, value) => setKeys((prev) => ({ ...prev, [key]: value }))}
+                  groupFilter={group.id}
+                />
+              )}
+            </div>
+          ))}
+          <button className="btn primary" style={{ marginTop: 12 }} onClick={saveKeys} disabled={loading}>Save All Keys</button>
+        </>
+      )}
+
+      {tab === 'probes' && (
+        <>
+          <div className="grid grid-2">
+            <DataPanel title="Connection Matrix" live>
+              <SparkRow items={[
+                { label: 'Live', value: connected, status: connected >= 8 ? 'ok' : 'warn' },
+                { label: 'Pass', value: passCount, status: 'ok' },
+                { label: 'Fail', value: failCount, status: failCount ? 'warn' : 'ok' },
+              ]} />
+              <BarChart items={apiBars} maxHeight={110} />
+            </DataPanel>
+            <DataPanel title="Probe Coverage" live>
+              <BarChart items={categoryBars} maxHeight={110} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                {Object.entries(apiStatus).map(([name, st]) => (
+                  <span key={name} className={`api-pill ${st === 'Connected' ? 'ok' : 'warn'}`}>{name}</span>
+                ))}
+              </div>
+            </DataPanel>
+          </div>
+          <DataPanel title="Live Integration Probes" live>
+            <div className="integration-probe-grid">
+              {LIVE_INTEGRATION_TESTS.map((test) => {
+                const result = results.find((r) => r.id === test.id);
+                const st = result?.status || 'idle';
+                return (
+                  <div key={test.id} className={`integration-probe-card probe-${st}`}>
+                    <div className="integration-probe-head">
+                      <span className="badge">{test.category}</span>
+                      {test.metric && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{test.metric}</span>}
+                    </div>
+                    <h4 style={{ margin: '8px 0 4px', fontSize: '0.95rem' }}>{test.label}</h4>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8', minHeight: 32 }}>
+                      {st === 'running' ? 'Probing…' : result?.summary || 'Click Test for live data'}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                      <span className={`probe-status probe-status-${st}`}>
+                        {st === 'pass' ? '✓ LIVE' : st === 'warn' ? '~ RATE' : st === 'fail' ? '✗ FAIL' : st === 'running' ? '…' : '—'}
+                      </span>
+                      {result?.ms != null && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{result.ms}ms</span>}
+                      <button className="btn" style={{ padding: '4px 10px', fontSize: '0.75rem' }} disabled={st === 'running'} onClick={() => runTest(test.id)}>Test</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </DataPanel>
+        </>
+      )}
+
+      {tab === 'partner-api' && (
+        <div className="grid grid-2">
+          <DataPanel title="Partner REST API" live>
+            <p className="settings-panel-desc">Connect any SaaS, website, or tool via REST. Auth with <code>X-SI-API-Key</code>.</p>
+            <div className="partner-key-box">
+              {newApiKey ? (
+                <code className="partner-key-display">{newApiKey}</code>
+              ) : partner.partnerApiKey ? (
+                <code className="partner-key-display">{partner.partnerApiKey}</code>
+              ) : (
+                <span className="settings-panel-desc">No key — generate one below</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <button className="btn primary" onClick={genApiKey}>Generate API Key</button>
+            </div>
+            <div className="partner-endpoints" style={{ marginTop: 16 }}>
+              <h4 style={{ color: 'var(--accent)', margin: '0 0 8px' }}>Endpoints</h4>
+              {[
+                { m: 'GET', p: `${apiBase}/api/v1/status`, d: 'Health + connection summary' },
+                { m: 'GET', p: `${apiBase}/api/v1/docs`, d: 'API catalog (public)' },
+                { m: 'POST', p: `${apiBase}/api/v1/invoke/:channel`, d: 'Execute whitelisted channel' },
+              ].map((ep) => (
+                <div key={ep.p} className="partner-endpoint-row">
+                  <span className="partner-method">{ep.m}</span>
+                  <code>{ep.p}</code>
+                  <span>{ep.d}</span>
+                </div>
+              ))}
+            </div>
+          </DataPanel>
+          <DataPanel title="Whitelisted Channels" live>
+            <div className="partner-channels-list">
+              {(partner as { partnerChannels?: string[] }).partnerChannels?.map((ch) => (
+                <span key={ch} className="api-pill ok">{ch}</span>
+              )) || ['check-api-status', 'get-live-news', 'serp-search', 'research-keyword'].map((ch) => (
+                <span key={ch} className="api-pill ok">{ch}</span>
+              ))}
+            </div>
+            <pre className="partner-code-sample">{`curl -X POST ${apiBase}/api/v1/invoke/check-api-status \\
+  -H "X-SI-API-Key: si_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{"args":[]}'`}</pre>
+            <SparkRow items={[
+              { label: 'Calls', value: partner.usageCount ?? 0 },
+              { label: 'Status', value: partner.partnerApiKeyFull ? 'Active' : 'Off', status: partner.partnerApiKeyFull ? 'ok' : 'warn' },
+            ]} />
+          </DataPanel>
+        </div>
+      )}
+
+      {tab === 'webhooks' && (
+        <div className="grid grid-2">
+          <DataPanel title="Inbound Webhook (receive)" live>
+            <p className="settings-panel-desc">External apps POST events to this URL to trigger automations.</p>
+            <code className="partner-key-display">{partner.inboundWebhookUrl || 'Generate inbound URL first'}</code>
+            {partner.inboundWebhookSecret && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 8 }}>
+                Secret header: <code>X-SI-Webhook-Secret</code> = {partner.inboundWebhookSecret.slice(0, 8)}…
+              </p>
+            )}
+            <button className="btn primary" style={{ marginTop: 12 }} onClick={genInboundWebhook}>Generate Inbound URL</button>
+          </DataPanel>
+          <DataPanel title="Outbound Webhooks (send)" live>
+            <input className="input" placeholder="https://hooks.zapier.com/..." value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button className="btn" onClick={addOutboundWebhook}>Add Webhook</button>
+              <button className="btn" onClick={async () => {
+                const res = await invoke<{ success?: boolean }>('test-outbound-webhook', { url: testHookUrl || webhookUrl, event: 'integration.test' });
+                setMsg(res.success ? 'Outbound test delivered' : 'Outbound test failed');
+                await refresh();
+              }}>Test Outbound</button>
+            </div>
+            <input className="input" style={{ marginTop: 8 }} placeholder="URL to test" value={testHookUrl} onChange={(e) => setTestHookUrl(e.target.value)} />
+            {(partner.outboundWebhooks || []).map((h) => (
+              <div key={h.id} className="post-card" style={{ marginTop: 8, fontSize: '0.82rem' }}>
+                <code>{h.url}</code>
+              </div>
+            ))}
+          </DataPanel>
+          <DataPanel title="Event Log" live className="grid-span-2">
+            <div className="event-log-list">
+              {eventLog.length === 0 && <p className="settings-panel-desc">No events yet — generate API key or test webhooks</p>}
+              {eventLog.slice(0, 20).map((e) => (
+                <div key={e.id} className="event-log-row">
+                  <span className="event-log-type">{e.type}</span>
+                  <span className="event-log-time">{new Date(e.at).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </DataPanel>
+        </div>
+      )}
+
+      {tab === 'connectors' && (
+        <DataPanel title="App Connectors" live>
+          <p className="settings-panel-desc">Pre-built integration paths for popular platforms — all use Partner API + Webhooks above.</p>
+          <div className="connector-grid">
+            {PARTNER_CONNECTORS.map((c) => (
+              <div key={c.id} className="connector-card" style={{ borderColor: c.color }}>
+                <span className="connector-icon">{c.icon}</span>
+                <strong>{c.name}</strong>
+                <p>{c.desc}</p>
+                <button className="btn" style={{ marginTop: 8, fontSize: '0.75rem' }} onClick={() => setTab('partner-api')}>Setup API →</button>
+              </div>
+            ))}
+          </div>
+        </DataPanel>
+      )}
+    </div>
+  );
+}

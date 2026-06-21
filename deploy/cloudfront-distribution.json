@@ -1,0 +1,57 @@
+{
+  "CallerReference": "si-cdn-social-imperialism-v1",
+  "Comment": "Social Imperialism static assets (S3 /static prefix)",
+  "Enabled": true,
+  "DefaultRootObject": "index.html",
+  "Origins": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "Id": "S3-social-imperialism-static",
+        "DomainName": "social-imperialism.s3.us-east-1.amazonaws.com",
+        "OriginPath": "/static",
+        "S3OriginConfig": {
+          "OriginAccessIdentity": ""
+        }
+      }
+    ]
+  },
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "S3-social-imperialism-static",
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "AllowedMethods": {
+      "Quantity": 2,
+      "Items": ["GET", "HEAD"],
+      "CachedMethods": {
+        "Quantity": 2,
+        "Items": ["GET", "HEAD"]
+      }
+    },
+    "ForwardedValues": {
+      "QueryString": false,
+      "Cookies": { "Forward": "none" }
+    },
+    "MinTTL": 0,
+    "DefaultTTL": 86400,
+    "MaxTTL": 31536000,
+    "Compress": true
+  },
+  "CustomErrorResponses": {
+    "Quantity": 2,
+    "Items": [
+      {
+        "ErrorCode": 404,
+        "ResponsePagePath": "/404.html",
+        "ResponseCode": "404",
+        "ErrorCachingMinTTL": 300
+      },
+      {
+        "ErrorCode": 403,
+        "ResponsePagePath": "/index.html",
+        "ResponseCode": "200",
+        "ErrorCachingMinTTL": 300
+      }
+    ]
+  },
+  "PriceClass": "PriceClass_100"
+}
