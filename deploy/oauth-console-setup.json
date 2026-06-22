@@ -1,0 +1,100 @@
+{
+  "productionRedirectUris": [
+    "https://www.socialimperialism.com/oauth/callback",
+    "https://socialimperialism.com/oauth/callback"
+  ],
+  "desktopRedirectUri": "social-imperialism://oauth-callback",
+  "websiteUrl": "https://www.socialimperialism.com",
+  "platforms": [
+    {
+      "id": "twitter",
+      "name": "X / Twitter",
+      "consoleUrl": "https://developer.x.com/en/portal/dashboard",
+      "appType": "Native App or Web App",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["tweet.read", "tweet.write", "users.read", "offline.access"],
+      "envKeys": ["TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET"]
+    },
+    {
+      "id": "linkedin",
+      "name": "LinkedIn",
+      "consoleUrl": "https://www.linkedin.com/developers/apps",
+      "appType": "Web application",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["openid", "profile", "email", "w_member_social", "w_organization_social", "r_organization_social"],
+      "envKeys": ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"]
+    },
+    {
+      "id": "meta",
+      "name": "Meta (Facebook / Instagram / Threads)",
+      "consoleUrl": "https://developers.facebook.com/apps",
+      "appType": "Business app — Facebook Login",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["public_profile", "email", "pages_show_list", "pages_read_engagement", "pages_manage_posts", "instagram_basic", "instagram_content_publish", "threads_basic", "threads_content_publish"],
+      "envKeys": ["META_APP_ID", "META_APP_SECRET"]
+    },
+    {
+      "id": "google",
+      "name": "YouTube (Google Cloud)",
+      "consoleUrl": "https://console.cloud.google.com/apis/credentials",
+      "appType": "Web application (NOT Desktop)",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.readonly"],
+      "envKeys": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
+    },
+    {
+      "id": "tiktok",
+      "name": "TikTok",
+      "consoleUrl": "https://developers.tiktok.com/",
+      "appType": "Web",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["user.info.basic", "video.publish", "video.upload"],
+      "envKeys": ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]
+    },
+    {
+      "id": "pinterest",
+      "name": "Pinterest",
+      "consoleUrl": "https://developers.pinterest.com/",
+      "appType": "Web",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["boards:read", "boards:write", "pins:read", "pins:write"],
+      "envKeys": ["PINTEREST_APP_ID", "PINTEREST_APP_SECRET"]
+    },
+    {
+      "id": "reddit",
+      "name": "Reddit",
+      "consoleUrl": "https://www.reddit.com/prefs/apps",
+      "appType": "web app (change from installed app)",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["identity", "submit", "read"],
+      "envKeys": ["REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET"]
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "consoleUrl": "https://discord.com/developers/applications",
+      "appType": "OAuth2",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["identify", "guilds"],
+      "envKeys": ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"]
+    },
+    {
+      "id": "twitch",
+      "name": "Twitch",
+      "consoleUrl": "https://dev.twitch.tv/console/apps",
+      "appType": "Web",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["user:read:email", "channel:read:stream_key"],
+      "envKeys": ["TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"]
+    },
+    {
+      "id": "snapchat",
+      "name": "Snapchat",
+      "consoleUrl": "https://kit.snapchat.com/portal",
+      "appType": "Login Kit — Web",
+      "redirectUris": ["https://www.socialimperialism.com/oauth/callback"],
+      "scopes": ["https://auth.snapchat.com/oauth2/api/user.display_name"],
+      "envKeys": ["SNAPCHAT_CLIENT_ID", "SNAPCHAT_CLIENT_SECRET"]
+    }
+  ]
+}

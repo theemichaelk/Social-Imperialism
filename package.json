@@ -14,6 +14,7 @@
     "build": "npm run build -w @si/db && npm run build -w @si/web",
     "db:generate": "npm run generate -w @si/db",
     "db:push": "npm run push -w @si/db",
+    "db:migrate": "npm run migrate:deploy -w @si/db",
     "db:seed": "npm run seed -w @si/db",
     "start:api": "npm run start -w @si/api",
     "start:web": "npm run start -w @si/web"

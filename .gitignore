@@ -16,6 +16,8 @@ apps/web/.next/
 packages/db/prisma/saas.db
 packages/db/prisma/saas.db-journal
 apps/api/.env
+deploy/rds-state.json
+deploy/rds-eb-options.json
 
 # OS & editor
 .DS_Store
@@ -38,3 +40,4 @@ apps/api/.*-report.json
 apps/api/.setup-wizard-qa-report.json
 apps/api/.dashboard-qa-report.json
 apps/api/.browse-posts-qa-report.json
+apps/api/.settings-qa-report.json

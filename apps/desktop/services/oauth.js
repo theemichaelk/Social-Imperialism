@@ -21,6 +21,12 @@ function getWebOAuthRedirect() {
   return `${web}/oauth/callback`;
 }
 
+function getOAuthRedirectUris() {
+  const web = getWebOAuthRedirect();
+  const apex = web.replace('://www.', '://');
+  return [...new Set([web, apex, REDIRECT_URI])];
+}
+
 function usesLoopbackRedirect(platform) {
   if (isSaasWebMode()) return false;
   return LOOPBACK_PLATFORMS.has(platform);
@@ -381,5 +387,7 @@ module.exports = {
   generatePkce,
   ensureOAuthLoopbackServer,
   getRedirectUri,
+  getOAuthRedirectUris,
+  getWebOAuthRedirect,
   usesLoopbackRedirect,
 };

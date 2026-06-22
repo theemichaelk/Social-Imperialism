@@ -20,6 +20,7 @@ New-Item -ItemType Directory -Path $Staging | Out-Null
 Write-Host "Staging deployment bundle..."
 $items = @(
   "package.json", "package-lock.json", "Procfile", ".ebextensions", "packages", "apps/api"
+# oauth-console-setup.json is under apps/api/src (bundled)
 )
 foreach ($item in $items) {
   $src = Join-Path $RepoRoot $item
@@ -33,10 +34,17 @@ Copy-Item (Join-Path $RepoRoot "apps\desktop\services") (Join-Path $Staging "app
 Copy-Item (Join-Path $RepoRoot "apps\desktop\saasAi.js") (Join-Path $Staging "apps\desktop\") -Force -ErrorAction SilentlyContinue
 
 # Secrets go in bundled .env files (EB option_settings has a 4096-char CloudFormation limit)
+$rdsStatePath = Join-Path $DeployDir "rds-state.json"
+$rdsDbUrl = $null
+if (Test-Path $rdsStatePath) {
+  $rdsState = Get-Content $rdsStatePath | ConvertFrom-Json
+  if ($rdsState.databaseUrl) { $rdsDbUrl = $rdsState.databaseUrl }
+}
+
 $envVars = [ordered]@{
   NODE_ENV = "production"
   PORT = "8080"
-  DATABASE_URL = "file:./packages/db/prisma/saas.db"
+  DATABASE_URL = $(if ($rdsDbUrl) { $rdsDbUrl } else { "postgresql://si_admin:CHANGE_ME@localhost:5432/socialimperialism?schema=public" })
   WEB_URL = $AmplifyUrl
   ALLOWED_ORIGINS = "$AmplifyUrl,https://d204r2r6gar3c8.amplifyapp.com,https://d2cu5rkstjz0rg.cloudfront.net,https://api.socialimperialism.com,https://socialimperialism.com,https://www.socialimperialism.com"
   AWS_S3_BUCKET_NAME = "social-imperialism"
@@ -44,6 +52,7 @@ $envVars = [ordered]@{
   AWS_S3_REGION = "us-east-1"
   DISABLE_SCHEDULER = "0"
   SAAS_MODE = "1"
+  SEED_ON_DEPLOY = $(if ($rdsDbUrl) { "1" } else { "0" })
 }
 function Merge-Env($path) {
   if (-not (Test-Path $path)) { return }
@@ -89,7 +98,7 @@ aws elasticbeanstalk create-application-version `
   --source-bundle S3Bucket=$Bucket,S3Key=$s3Key `
   --region $Region | Out-Null
 
-$ebEnvOnly = @("NODE_ENV","PORT","DATABASE_URL","WEB_URL","ALLOWED_ORIGINS","AWS_S3_BUCKET_NAME","AWS_S3_UPLOAD_PREFIX","AWS_S3_REGION","DISABLE_SCHEDULER")
+$ebEnvOnly = @("NODE_ENV","PORT","DATABASE_URL","WEB_URL","ALLOWED_ORIGINS","AWS_S3_BUCKET_NAME","AWS_S3_UPLOAD_PREFIX","AWS_S3_REGION","DISABLE_SCHEDULER","SAAS_MODE","SEED_ON_DEPLOY")
 $optionSettings = @(
   @{ Namespace = "aws:autoscaling:launchconfiguration"; OptionName = "IamInstanceProfile"; Value = "SocialImperialismEbInstanceProfile" },
   @{ Namespace = "aws:elasticbeanstalk:environment"; OptionName = "ServiceRole"; Value = "aws-elasticbeanstalk-service-role" }

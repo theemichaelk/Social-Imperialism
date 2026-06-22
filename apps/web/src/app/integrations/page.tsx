@@ -8,6 +8,7 @@ import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
 import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { INTEGRATION_GROUPS, LIVE_INTEGRATION_TESTS } from '@/lib/integrationCatalog';
 import { PARTNER_CONNECTORS } from '@/lib/partnerConnectors';
+import { OAUTH_PLATFORM_SETUP, OAUTH_PRIMARY_REDIRECT } from '@/lib/oauthConfig';
 
 type TabId = 'connections' | 'probes' | 'partner-api' | 'webhooks' | 'connectors';
 type TestResult = { id: string; label: string; status: 'idle' | 'running' | 'pass' | 'fail' | 'warn'; ms?: number; summary?: string };
@@ -222,6 +223,29 @@ export default function IntegrationsPage() {
           </div>
         }
       />
+
+      <DataPanel title="OAuth Console Setup (register in each provider)" live>
+        <p className="settings-panel-desc" style={{ marginBottom: 12 }}>
+          Add this <strong>Redirect URI</strong> in every social platform developer console before connecting accounts:
+        </p>
+        <div className="post-card" style={{ fontFamily: 'monospace', fontSize: '0.85rem', wordBreak: 'break-all' }}>
+          {OAUTH_PRIMARY_REDIRECT}
+        </div>
+        <p className="settings-panel-desc" style={{ marginTop: 12 }}>
+          Also add keys in Settings → API Keys. Then connect platforms in Account Hub.
+        </p>
+        <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+          {OAUTH_PLATFORM_SETUP.map((p) => (
+            <div key={p.platform} className="post-card" style={{ fontSize: '0.82rem' }}>
+              <strong>{p.platform}</strong> — {p.appType}
+              <div style={{ color: '#94a3b8', marginTop: 4 }}>
+                <a href={p.console} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>Open console →</a>
+                {' · '}{p.keys}
+              </div>
+            </div>
+          ))}
+        </div>
+      </DataPanel>
 
       <div className="dash-hero integrations-hero">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>

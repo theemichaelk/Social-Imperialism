@@ -42,6 +42,21 @@ app.use(express.json({ limit: '25mb' }));
 app.get('/', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', health: '/health', api: '/api' }));
 app.get('/health', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', s3: s3.getS3Status() }));
 
+app.get('/api/oauth/setup', (req, res) => {
+  try {
+    const oauth = require(path.join(__dirname, '../../desktop/services/oauth'));
+    const setup = require(path.join(__dirname, 'oauth-console-setup.json'));
+    res.json({
+      redirectUris: oauth.getOAuthRedirectUris(),
+      primaryRedirect: oauth.getWebOAuthRedirect(),
+      websiteUrl: process.env.WEB_URL || 'https://www.socialimperialism.com',
+      platforms: setup.platforms,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/oauth/callback', (req, res) => {
   try {
     const oauth = require(path.join(__dirname, '../../desktop/services/oauth'));
