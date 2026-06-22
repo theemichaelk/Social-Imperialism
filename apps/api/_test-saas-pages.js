@@ -26,6 +26,8 @@ const PAGES = [
   { name: 'Auto-Rules', channels: ['get-auto-rules', 'get-auto-rules-status', 'get-watched-monitors', 'get-worker-status'] },
   { name: 'Account Hub', channels: ['get-linked-accounts', 'get-account-hub-status'] },
   { name: 'Acct Creator', channels: ['get-profile-kits', 'get-proxy-pool', 'get-account-creator-status'] },
+  { name: 'Integrations', channels: ['check-api-status', 'get-payment-settings', 'test-all-connections'] },
+  { name: 'Scheduler', channels: ['get-scheduled-posts', 'get-background-run-settings', 'get-background-run-status'] },
   { name: 'Settings', channels: ['get-global-keys', 'check-api-status', 'get-billing-plan', 'get-settings'] },
 ];
 

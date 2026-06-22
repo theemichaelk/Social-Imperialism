@@ -12,11 +12,22 @@ const LOOPBACK_PLATFORMS = new Set(['YouTube', 'Reddit']);
 const pendingFlows = new Map();
 let loopbackServer = null;
 
+function isSaasWebMode() {
+  return !!(process.env.WEB_URL || process.env.SAAS_MODE === '1' || process.env.NODE_ENV === 'production');
+}
+
+function getWebOAuthRedirect() {
+  const web = (process.env.WEB_URL || 'https://www.socialimperialism.com').replace(/\/$/, '');
+  return `${web}/oauth/callback`;
+}
+
 function usesLoopbackRedirect(platform) {
+  if (isSaasWebMode()) return false;
   return LOOPBACK_PLATFORMS.has(platform);
 }
 
 function getRedirectUri(platform) {
+  if (isSaasWebMode()) return getWebOAuthRedirect();
   return usesLoopbackRedirect(platform) ? GOOGLE_LOOPBACK_REDIRECT_URI : REDIRECT_URI;
 }
 
@@ -359,6 +370,8 @@ module.exports = {
   GOOGLE_LOOPBACK_REDIRECT_URI,
   GOOGLE_LOCALHOST_REDIRECT_URI,
   OAUTH_LOOPBACK_PORT,
+  oauthErrorHtml,
+  oauthSuccessHtml,
   buildAuthUrl,
   exchangeToken,
   handleOAuthCallback,

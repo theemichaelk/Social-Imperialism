@@ -81,7 +81,8 @@ async function syncProjectToStore(store, projectId) {
 }
 
 async function invoke({ projectId, organizationId, channel, args = [] }) {
-  const { handlers, store } = await getHandlersForProject({ projectId, organizationId });
+  const entry = await getHandlersForProject({ projectId, organizationId });
+  const { handlers, store, pendingOAuth } = entry;
   const handler = handlers[channel];
   if (!handler) {
     const err = new Error(`Unknown channel: ${channel}`);
@@ -90,7 +91,12 @@ async function invoke({ projectId, organizationId, channel, args = [] }) {
   }
   const result = await handler(null, ...args);
   await store.flush();
-  return result;
+  const oauthUrl = typeof pendingOAuth === 'function' ? pendingOAuth() : null;
+  if (!oauthUrl) return result;
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    return { ...result, pendingOAuthUrl: oauthUrl };
+  }
+  return { success: true, data: result, pendingOAuthUrl: oauthUrl };
 }
 
 function listChannels(projectId, organizationId) {

@@ -3,8 +3,19 @@ const { loadPaymentSettings, loadMerchantKeys, getPaymentStatus } = require('./p
 const stripeBilling = require('./stripeBilling');
 const paypalBilling = require('./paypalBilling');
 
-const PROTOCOL_SUCCESS = 'social-imperialism://payment-success';
-const PROTOCOL_CANCEL = 'social-imperialism://payment-cancel';
+function webBillingBase() {
+  return (process.env.WEB_URL || '').replace(/\/$/, '');
+}
+function billingSuccessUrl(planId, provider) {
+  const base = webBillingBase();
+  if (base) return `${base}/billing/success?provider=${provider}&plan=${planId}`;
+  return `social-imperialism://payment-success?provider=${provider}&plan=${planId}`;
+}
+function billingCancelUrl(planId, provider) {
+  const base = webBillingBase();
+  if (base) return `${base}/billing/cancel?provider=${provider}&plan=${planId}`;
+  return `social-imperialism://payment-cancel?provider=${provider}&plan=${planId}`;
+}
 
 function activatePlanAfterPayment(store, { planId, billingEmail, provider, externalId, note }) {
   const catalog = PLAN_CATALOG[planId] || PLAN_CATALOG.starter;
@@ -96,16 +107,16 @@ function registerBillingPaymentHandlers({ ipcMain, store, shell, onPaymentComple
           mode,
           plan,
           billingEmail,
-          returnUrl: `${PROTOCOL_SUCCESS}?provider=paypal&plan=${planId}`,
-          cancelUrl: `${PROTOCOL_CANCEL}?provider=paypal&plan=${planId}`,
+          returnUrl: billingSuccessUrl(planId, 'paypal'),
+          cancelUrl: billingCancelUrl(planId, 'paypal'),
         });
       } else {
         checkout = await stripeBilling.createSubscriptionCheckout({
           secretKey: keys.stripeSecretKey,
           plan,
           billingEmail,
-          successUrl: `${PROTOCOL_SUCCESS}?provider=stripe&plan=${planId}&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${PROTOCOL_CANCEL}?provider=stripe&plan=${planId}`,
+          successUrl: `${billingSuccessUrl(planId, 'stripe')}&session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: billingCancelUrl(planId, 'stripe'),
         });
       }
 

@@ -117,6 +117,15 @@ function SettingsContent() {
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
+  useEffect(() => {
+    const plan = searchParams.get('plan');
+    if (searchParams.get('tab') === 'billing' && plan && (plan === 'starter' || plan === 'growth')) {
+      setTab('billing');
+      checkoutPlan(plan);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const connected = Object.values(apiStatus).filter((v) => v === 'Connected').length;
   const totalApis = Object.keys(apiStatus).length || 1;
   const keysSet = INTEGRATION_GROUPS.flatMap((g) => g.fields).filter((f) => keys[f.key]?.trim()).length;
@@ -193,6 +202,23 @@ function SettingsContent() {
     const res = await invoke<BillingPlan>('save-billing-plan', planId);
     setBilling(res);
     setMsg(`Plan updated to ${res.planName || planId}`);
+  }
+
+  async function checkoutPlan(planId: string) {
+    setLoading(true);
+    setMsg(`Starting checkout for ${planId}…`);
+    try {
+      const res = await invoke<{ success?: boolean; error?: string; checkoutUrl?: string }>(
+        'create-subscription-checkout',
+        { planId, billingEmail },
+      );
+      if (res.success === false) setMsg(res.error || 'Checkout failed');
+      else if (!res.checkoutUrl) await selectPlan(planId);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function saveBillingEmail() {
@@ -401,9 +427,14 @@ function SettingsContent() {
                 <ul style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '8px 0' }}>
                   {plan.features.slice(0, 4).map((f) => <li key={f}>{f}</li>)}
                 </ul>
-                <button className="btn primary" onClick={() => selectPlan(plan.id)} disabled={billing.plan === plan.id}>
-                  {billing.plan === plan.id ? 'Current' : 'Select'}
-                </button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="btn primary" onClick={() => checkoutPlan(plan.id)} disabled={billing.plan === plan.id || loading}>
+                    {billing.plan === plan.id ? 'Current' : 'Subscribe'}
+                  </button>
+                  <button className="btn" onClick={() => selectPlan(plan.id)} disabled={billing.plan === plan.id}>
+                    Select (no payment)
+                  </button>
+                </div>
               </div>
             ))}
           </DataPanel>

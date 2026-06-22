@@ -39,7 +39,25 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '25mb' }));
 
+app.get('/', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', health: '/health', api: '/api' }));
 app.get('/health', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', s3: s3.getS3Status() }));
+
+app.get('/api/oauth/callback', (req, res) => {
+  try {
+    const oauth = require(path.join(__dirname, '../../desktop/services/oauth'));
+    const webBase = (process.env.WEB_URL || 'https://www.socialimperialism.com').replace(/\/$/, '');
+    const qs = new URLSearchParams(req.query).toString();
+    const callbackUrl = `${webBase}/oauth/callback${qs ? `?${qs}` : ''}`;
+    const result = oauth.handleOAuthCallback(callbackUrl);
+    if (result?.error) {
+      return res.status(400).type('html').send(oauth.oauthErrorHtml(result.error));
+    }
+    return res.redirect(302, `${webBase}/account-hub?oauth=success`);
+  } catch (e) {
+    console.error('OAuth callback:', e.message);
+    res.status(500).type('text/plain').send('OAuth callback failed');
+  }
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/orgs', requireAuth, orgRoutes);
@@ -65,7 +83,10 @@ app.post('/api/invoke/:channel', requireAuth, async (req, res) => {
       channel: req.params.channel,
       args,
     });
-    res.json({ success: true, data: result });
+    const data = result && typeof result === 'object' ? result : { value: result };
+    const pendingOAuthUrl = data.pendingOAuthUrl || null;
+    if (pendingOAuthUrl) delete data.pendingOAuthUrl;
+    res.json({ success: true, data, pendingOAuthUrl });
   } catch (e) {
     if (e.code === 'UNKNOWN_CHANNEL') return res.status(404).json({ error: e.message });
     console.error(`invoke/${req.params.channel}:`, e.message);

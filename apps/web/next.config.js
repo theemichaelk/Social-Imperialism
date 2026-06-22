@@ -21,6 +21,10 @@ const nextConfig = {
               source: '/health',
               destination: `${apiOrigin}/health`,
             },
+            {
+              source: '/oauth/callback',
+              destination: `${apiOrigin}/api/oauth/callback`,
+            },
           ];
         },
       }),

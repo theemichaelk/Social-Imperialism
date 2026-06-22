@@ -41,6 +41,14 @@ export async function invoke<T = unknown>(channel: string, ...args: unknown[]): 
     method: 'POST',
     body: JSON.stringify({ args }),
   });
+  const oauthUrl = res.pendingOAuthUrl as string | undefined;
+  if (oauthUrl && typeof window !== 'undefined') {
+    window.open(oauthUrl, 'si_oauth', 'noopener,noreferrer,width=520,height=720');
+  }
+  const checkoutUrl = (res.data as { checkoutUrl?: string } | undefined)?.checkoutUrl;
+  if (checkoutUrl && typeof window !== 'undefined') {
+    window.location.href = checkoutUrl;
+  }
   return res.data as T;
 }
 

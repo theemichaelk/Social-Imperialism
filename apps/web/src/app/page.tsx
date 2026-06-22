@@ -126,7 +126,7 @@ export default function HomePage() {
           <p className="home-section-sub">18 modules — from discovery to publish to growth automation.</p>
           <div className="home-feature-grid">
             {allFeatures.map((f) => (
-              <NavAnchor key={f.id} href="/dashboard" className="home-feature-card home-feature-glow">
+              <NavAnchor key={f.id} href={f.href} className="home-feature-card home-feature-glow">
                 <span className="home-feature-icon">{f.icon}</span>
                 <div className="home-feature-text">
                   <div className="home-feature-section">{f.section}</div>
@@ -216,7 +216,7 @@ export default function HomePage() {
                 <ul>
                   {plan.features.map((f) => <li key={f}>{f}</li>)}
                 </ul>
-                <NavAnchor href="/login" className={`btn home-btn-block ${plan.highlight ? 'primary home-btn-glow' : 'home-btn-glass'}`}>
+                <NavAnchor href={plan.id === 'enterprise' ? '/login' : `/settings?tab=billing&plan=${plan.id}`} className={`btn home-btn-block ${plan.highlight ? 'primary home-btn-glow' : 'home-btn-glass'}`}>
                   {plan.id === 'enterprise' ? 'Contact Sales' : 'Choose Plan'}
                 </NavAnchor>
               </div>
@@ -243,7 +243,7 @@ export default function HomePage() {
           <p>Join teams using AI-powered social automation with full API connectivity.</p>
           <div className="home-hero-cta center">
             <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">Create Account</NavAnchor>
-            <NavAnchor href="/dashboard" className="btn home-cta-lg home-btn-glass">Explore Integrations</NavAnchor>
+            <NavAnchor href="/integrations" className="btn home-cta-lg home-btn-glass">Explore Integrations</NavAnchor>
           </div>
         </div>
       </section>

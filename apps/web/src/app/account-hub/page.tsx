@@ -78,6 +78,15 @@ export default function AccountHubPage() {
   useEffect(() => { refresh().catch(console.error); }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('oauth') === 'success') {
+      setMsg('OAuth complete — refresh accounts or finish account selection.');
+      refresh().catch(console.error);
+    }
+  }, []);
+
+  useEffect(() => {
     if (selected?.id) loadTargets(selected.id).catch(console.error);
   }, [selected?.id]);
 

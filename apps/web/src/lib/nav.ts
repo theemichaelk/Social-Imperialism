@@ -7,6 +7,7 @@ export const NAV_SECTIONS = [
     { id: 'onboarding', href: '/onboarding', icon: '🚀', label: 'Setup Wizard' },
     { id: 'content-hub', href: '/content-hub', icon: '✏️', label: 'Content Hub' },
     { id: 'calendar', href: '/calendar', icon: '📅', label: 'Calendar' },
+    { id: 'scheduler', href: '/scheduler', icon: '⏱️', label: 'Scheduler' },
   ]},
   { id: 'discovery', label: 'Discovery & Replies', items: [
     { id: 'engagement', href: '/engagement', icon: '👥', label: 'Engagement' },

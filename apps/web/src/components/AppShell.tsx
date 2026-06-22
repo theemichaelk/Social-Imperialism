@@ -5,7 +5,7 @@ import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
 import { getToken } from '@/lib/api';
 
-const PUBLIC_PATHS = new Set(['/', '/login', '/founder']);
+const PUBLIC_PATHS = new Set(['/', '/login', '/founder', '/oauth/callback', '/billing/success', '/billing/cancel']);
 
 function isPublicPath(pathname: string) {
   const normalized = pathname.replace(/\/+$/, '') || '/';
