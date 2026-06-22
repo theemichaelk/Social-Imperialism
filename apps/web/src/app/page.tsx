@@ -69,7 +69,9 @@ export default function HomePage() {
 
       <header className="home-nav home-nav-glass">
         <div className="home-nav-brand">
-          <Logo size="sm" showText />
+          <NavAnchor href="/" style={{ textDecoration: 'none' }}>
+            <Logo size="sm" showText />
+          </NavAnchor>
         </div>
         <nav className="home-nav-links">
           <a href="#showcase">Demo</a>

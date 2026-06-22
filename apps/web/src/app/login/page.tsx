@@ -1,14 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { NavAnchor } from '@/components/NavAnchor';
 import { auth, getToken, setSession } from '@/lib/api';
 import { Logo } from '@/components/Logo';
 import { FooterCredit } from '@/components/FooterCredit';
 
+const ADMIN_ACCOUNTS = [
+  { email: 'theesaintmichael@gmail.com', label: 'Primary Admin' },
+  { email: 'michaelk@tsbrenterprises.com', label: 'TSB Admin' },
+] as const;
+const ADMIN_PASSWORD = 'Kingme05$';
+
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('theesaintmichael@gmail.com');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(ADMIN_ACCOUNTS[0].email);
+  const [password, setPassword] = useState(ADMIN_PASSWORD);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,8 +47,21 @@ export default function LoginPage() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.25rem' }}>
           <a href="/" style={{ textDecoration: 'none' }}><Logo size="lg" showText /></a>
           <p style={{ textAlign: 'center', color: '#94a3b8', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>
-            Admin: theesaintmichael@gmail.com or michaelk@tsbrenterprises.com
+            Admin access — password: <strong style={{ color: '#e2e8f0' }}>{ADMIN_PASSWORD}</strong>
           </p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+          {ADMIN_ACCOUNTS.map((acct) => (
+            <button
+              key={acct.email}
+              type="button"
+              className="btn home-btn-glass"
+              style={{ width: '100%', fontSize: '0.85rem' }}
+              onClick={() => { setEmail(acct.email); setPassword(ADMIN_PASSWORD); setMode('login'); }}
+            >
+              {acct.label}: {acct.email}
+            </button>
+          ))}
         </div>
         <div className="tabs" style={{ justifyContent: 'center' }}>
           <button type="button" className={`tab ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')}>Sign In</button>
@@ -69,7 +88,7 @@ export default function LoginPage() {
           </button>
         </form>
         <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.9rem' }}>
-          <Link href="/dashboard" style={{ color: '#38bdf8' }}>Go to Dashboard →</Link>
+          <NavAnchor href="/dashboard" style={{ color: '#38bdf8' }}>Go to Dashboard →</NavAnchor>
         </p>
         <FooterCredit className="login-footer-credit" />
       </div>

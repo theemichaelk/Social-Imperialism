@@ -7,11 +7,16 @@ import { getToken } from '@/lib/api';
 
 const PUBLIC_PATHS = new Set(['/', '/login', '/founder']);
 
+function isPublicPath(pathname: string) {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  return PUBLIC_PATHS.has(normalized);
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [checked, setChecked] = useState(false);
 
-  const isPublic = PUBLIC_PATHS.has(pathname);
+  const isPublic = isPublicPath(pathname);
 
   useEffect(() => {
     const token = getToken();

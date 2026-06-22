@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { NavAnchor } from '@/components/NavAnchor';
 import { FounderPortrait } from '@/components/FounderPortrait';
 import { Logo } from '@/components/Logo';
 import { HomeFooter } from '@/components/HomeFooter';
@@ -15,15 +15,15 @@ export default function FounderPage() {
 
       <header className="home-nav home-nav-glass">
         <div className="home-nav-brand">
-          <Link href="/"><Logo size="sm" showText /></Link>
+          <NavAnchor href="/" style={{ textDecoration: 'none' }}><Logo size="sm" showText /></NavAnchor>
         </div>
         <nav className="home-nav-links">
-          <Link href="/">Home</Link>
-          <Link href="/#showcase">Demo</Link>
-          <Link href="/integrations">Integrations</Link>
+          <a href="/">Home</a>
+          <a href="/#showcase">Demo</a>
+          <NavAnchor href="/dashboard">Integrations</NavAnchor>
         </nav>
         <div className="home-nav-actions">
-          <Link href="/login" className="btn primary home-btn-glow">Get Started</Link>
+          <NavAnchor href="/login" className="btn primary home-btn-glow">Get Started</NavAnchor>
         </div>
       </header>
 
@@ -94,8 +94,8 @@ export default function FounderPage() {
           <h2>Built by Michael K. Ready for your team.</h2>
           <p>Start automating social growth with the platform he designed from the ground up.</p>
           <div className="home-hero-cta center">
-            <Link href="/login" className="btn primary home-cta-lg home-btn-glow">Create Account</Link>
-            <Link href="/" className="btn home-cta-lg home-btn-glass">← Back to Home</Link>
+            <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">Create Account</NavAnchor>
+            <NavAnchor href="/" className="btn home-cta-lg home-btn-glass">← Back to Home</NavAnchor>
           </div>
         </div>
       </section>
