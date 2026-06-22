@@ -1,1 +1,1 @@
-web: npm run db:generate && npm run start:api
+web: npm run start:api
