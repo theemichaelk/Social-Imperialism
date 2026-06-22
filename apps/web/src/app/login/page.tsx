@@ -13,8 +13,8 @@ const ADMIN_PASSWORD = 'Kingme05$';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState(ADMIN_ACCOUNTS[0].email);
-  const [password, setPassword] = useState(ADMIN_PASSWORD);
+  const [email, setEmail] = useState<string>(ADMIN_ACCOUNTS[0].email);
+  const [password, setPassword] = useState<string>(ADMIN_PASSWORD);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
