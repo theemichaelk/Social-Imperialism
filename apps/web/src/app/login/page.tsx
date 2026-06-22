@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, setSession } from '@/lib/api';
+import Link from 'next/link';
+import { auth, getToken, setSession } from '@/lib/api';
 import { Logo } from '@/components/Logo';
 import { FooterCredit } from '@/components/FooterCredit';
 
@@ -13,6 +14,10 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (getToken()) router.replace('/dashboard');
+  }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,6 +70,9 @@ export default function LoginPage() {
             {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
+        <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.9rem' }}>
+          <Link href="/dashboard" style={{ color: '#38bdf8' }}>Go to Dashboard →</Link>
+        </p>
         <FooterCredit className="login-footer-credit" />
       </div>
     </div>

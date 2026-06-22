@@ -9,16 +9,16 @@ type Props = {
   links?: { href: string; label: string }[];
 };
 
-const DEFAULT_LINKS = (loggedIn: boolean) => [
-  { href: '/login', label: 'Sign In' },
-  { href: loggedIn ? '/onboarding' : '/login', label: 'Setup' },
-  { href: loggedIn ? '/integrations' : '/login', label: 'Integrations' },
-  { href: loggedIn ? '/settings' : '/login', label: 'Settings' },
+const DEFAULT_LINKS = () => [
+  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/dashboard', label: 'Setup' },
+  { href: '/dashboard', label: 'Integrations' },
+  { href: '/dashboard', label: 'Settings' },
   { href: '/founder', label: 'Founder' },
 ];
 
 export function HomeFooter({ loggedIn = false, links }: Props) {
-  const items = links ?? DEFAULT_LINKS(loggedIn);
+  const items = links ?? DEFAULT_LINKS();
 
   return (
     <footer className="home-footer">

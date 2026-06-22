@@ -52,8 +52,7 @@ export default function HomePage() {
 
   useEffect(() => {
     setLoggedIn(!!getToken());
-    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    fetch(`${base}/health`)
+    fetch('/health')
       .then((r) => r.json())
       .then((d) => setApiOk(!!d?.ok))
       .catch(() => setApiOk(false));
@@ -81,14 +80,8 @@ export default function HomePage() {
           <Link href="/founder">Founder</Link>
         </nav>
         <div className="home-nav-actions">
-          {loggedIn ? (
-            <Link href="/dashboard" className="btn primary home-btn-glow">Open Dashboard</Link>
-          ) : (
-            <>
-              <Link href="/login" className="btn home-btn-glass">Sign In</Link>
-              <Link href="/login" className="btn primary home-btn-glow">Get Started</Link>
-            </>
-          )}
+          <Link href="/dashboard" className="btn home-btn-glass">Sign In</Link>
+          <Link href="/dashboard" className="btn primary home-btn-glow">Open Dashboard</Link>
         </div>
       </header>
 
@@ -131,7 +124,7 @@ export default function HomePage() {
           <p className="home-section-sub">18 modules — from discovery to publish to growth automation.</p>
           <div className="home-feature-grid">
             {allFeatures.map((f) => (
-              <Link key={f.id} href={loggedIn ? f.href : '/login'} className="home-feature-card home-feature-glow">
+              <Link key={f.id} href="/dashboard" className="home-feature-card home-feature-glow">
                 <span className="home-feature-icon">{f.icon}</span>
                 <div className="home-feature-text">
                   <div className="home-feature-section">{f.section}</div>
@@ -163,8 +156,8 @@ export default function HomePage() {
                 'Visual automation builder & auto-rules',
               ].map((t) => <li key={t}>{t}</li>)}
             </ul>
-            <Link href={loggedIn ? '/dashboard' : '/login'} className="btn primary home-cta-lg home-btn-glow">
-              {loggedIn ? 'Open Mission Control' : 'See It Live'}
+            <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">
+              Open Mission Control
             </Link>
           </div>
           <div className="home-stats-panel home-glass-panel">
@@ -196,8 +189,8 @@ export default function HomePage() {
             ))}
           </div>
           <div className="home-center-cta">
-            <Link href={loggedIn ? '/onboarding' : '/login'} className="btn primary home-cta-lg home-btn-glow">
-              {loggedIn ? 'Launch Setup Wizard →' : 'Get Started →'}
+            <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">
+              Get Started →
             </Link>
           </div>
         </div>
@@ -221,7 +214,7 @@ export default function HomePage() {
                 <ul>
                   {plan.features.map((f) => <li key={f}>{f}</li>)}
                 </ul>
-                <Link href={loggedIn ? '/settings' : '/login'} className={`btn home-btn-block ${plan.highlight ? 'primary home-btn-glow' : 'home-btn-glass'}`}>
+                <Link href="/dashboard" className={`btn home-btn-block ${plan.highlight ? 'primary home-btn-glow' : 'home-btn-glass'}`}>
                   {plan.id === 'enterprise' ? 'Contact Sales' : 'Choose Plan'}
                 </Link>
               </div>
@@ -247,8 +240,8 @@ export default function HomePage() {
           <h2>Ready to dominate your niche?</h2>
           <p>Join teams using AI-powered social automation with full API connectivity.</p>
           <div className="home-hero-cta center">
-            <Link href="/login" className="btn primary home-cta-lg home-btn-glow">Create Account</Link>
-            <Link href={loggedIn ? '/integrations' : '/login'} className="btn home-cta-lg home-btn-glass">Explore Integrations</Link>
+            <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">Create Account</Link>
+            <Link href="/dashboard" className="btn home-cta-lg home-btn-glass">Explore Integrations</Link>
           </div>
         </div>
       </section>

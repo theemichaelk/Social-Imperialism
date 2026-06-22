@@ -1,4 +1,8 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+/** Browser uses same-origin /api rewrite (Amplify SSR). Server uses API_URL. */
+export function getApiBase(): string {
+  if (typeof window !== 'undefined') return '';
+  return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+}
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -25,7 +29,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
   if (projectId) headers['x-project-id'] = projectId;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || res.statusText);
   return json;

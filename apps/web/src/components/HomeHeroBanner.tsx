@@ -74,17 +74,8 @@ export function HomeHeroBanner({ loggedIn, apiLabel }: Props) {
             <h1 className="home-banner-title">{slide.title}</h1>
             <p className="home-banner-sub">{slide.subtitle}</p>
             <div className="home-hero-cta">
-              {loggedIn ? (
-                <>
-                  <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">Mission Control →</Link>
-                  <Link href="/onboarding" className="btn home-cta-lg home-btn-glass">Setup Wizard</Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/login" className="btn primary home-cta-lg home-btn-glow">Start Free Trial</Link>
-                  <a href="#showcase" className="btn home-cta-lg home-btn-glass">Watch Demo</a>
-                </>
-              )}
+              <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">Open Dashboard</Link>
+              <a href="#showcase" className="btn home-cta-lg home-btn-glass">Watch Demo</a>
             </div>
             <div className="home-hero-controls">
               <button type="button" className="home-hero-arrow" onClick={prev} aria-label="Previous slide">‹</button>
