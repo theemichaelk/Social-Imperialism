@@ -33,6 +33,7 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
     'save-bulk-account-automation',
     'get-account-automation-targets',
     'save-automation-target-selection',
+    'set-account-proxy',
     'publish-to-group',
   ];
 
@@ -195,6 +196,37 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
       success: true,
       children: getChildAccounts(accounts, accountId),
     };
+  });
+
+  const proxyManager = require('./proxyManager');
+
+  ipcMain.handle('set-account-proxy', (event, payload) => {
+    const { accountId, proxyId, useProxy } = payload || {};
+    if (!accountId) return { success: false, error: 'accountId required' };
+    const accounts = getLinkedAccounts(store);
+    const idx = accounts.findIndex((a) => a.id === accountId);
+    if (idx < 0) return { success: false, error: 'Account not found' };
+
+    proxyManager.releaseProxyForAccount(store, accountId);
+
+    if (useProxy === false || !proxyId) {
+      accounts[idx].proxyId = null;
+      accounts[idx].useProxy = false;
+      saveLinkedAccounts(store, null, accounts);
+      return { success: true, account: accounts[idx] };
+    }
+
+    const proxy = proxyManager.findProxyById(store, proxyId);
+    if (!proxy) return { success: false, error: 'Proxy not found' };
+    if (!proxyManager.isProxyAvailable(proxy) && proxy.assignedAccountId !== accountId) {
+      return { success: false, error: 'Proxy is already assigned to another account or kit' };
+    }
+
+    proxyManager.assignProxyToAccount(store, proxyId, accountId);
+    accounts[idx].proxyId = proxyId;
+    accounts[idx].useProxy = true;
+    saveLinkedAccounts(store, null, accounts);
+    return { success: true, account: accounts[idx], proxy: { id: proxy.id, label: proxy.label, host: proxy.host, port: proxy.port } };
   });
 
   ipcMain.handle('save-account-automation-settings', (event, { accountId, settings }) => {

@@ -113,6 +113,77 @@ function registerIndexHandlers(deps) {
     } catch (e) { return { error: e.message }; }
   });
 
+  ipcMain.handle('get-site-traffic-health', async (event, payload) => {
+    const { domains = [], keyword = '' } = payload || {};
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const domKey = keys.domDetailer || process.env.DOMDETAILER_API_KEY;
+    const serpKey = keys.serpApiKey || process.env.SERP_API_KEY;
+    const siteList = (Array.isArray(domains) ? domains : [domains]).filter(Boolean).slice(0, 8);
+
+    const sites = await Promise.all(siteList.map(async (domain) => {
+      const clean = String(domain).replace(/^https?:\/\//, '').split('/')[0].trim();
+      if (!clean) return { domain: domain, error: 'Invalid domain' };
+      if (!domKey) return { domain: clean, error: 'DomDetailer key not configured', health: 'unknown' };
+      try {
+        const url = `http://domdetailer.com/api/checkDomain.php?domain=${encodeURIComponent(clean)}&app=SocialImperialism&apikey=${encodeURIComponent(domKey)}`;
+        const res = await axios.get(url, { timeout: 12000 });
+        const data = res.data || {};
+        if (data.error || data.error_message) {
+          return { domain: clean, error: data.error || data.error_message, health: 'error' };
+        }
+        const da = data.mozDA ?? data.da ?? 0;
+        const pa = data.mozPA ?? data.pa ?? 0;
+        const tf = data.majesticTF ?? data.trustFlow ?? 0;
+        const cf = data.majesticCF ?? data.citationFlow ?? 0;
+        const health = da >= 30 && tf >= 15 ? 'strong' : da >= 15 ? 'moderate' : 'building';
+        return {
+          domain: clean, success: true, da, pa, tf, cf, health,
+          backlinks: data.backlinks ?? data.majesticLinks ?? null,
+          indexed: data.indexed ?? null,
+          raw: data,
+        };
+      } catch (e) {
+        return { domain: clean, error: e.message, health: 'error' };
+      }
+    }));
+
+    let keywordResearch = null;
+    let serpResults = null;
+    const kw = String(keyword || '').trim();
+    if (kw) {
+      try {
+        keywordResearch = await integrations.researchSingleKeyword(kw, keys);
+      } catch (e) {
+        keywordResearch = { error: e.message };
+      }
+      if (serpKey) {
+        try {
+          const res = await axios.get(`https://serpapi.com/search.json?q=${encodeURIComponent(kw)}&api_key=${serpKey}`, { timeout: 12000 });
+          serpResults = {
+            success: true,
+            total: (res.data.organic_results || []).length,
+            results: (res.data.organic_results || []).slice(0, 8).map((r) => ({
+              title: r.title, link: r.link, position: r.position, snippet: r.snippet,
+            })),
+          };
+        } catch (e) {
+          serpResults = { success: false, error: e.message };
+        }
+      } else {
+        serpResults = { success: false, error: 'SerpAPI key not configured' };
+      }
+    }
+
+    return {
+      success: true,
+      keyword: kw,
+      sites,
+      keywordResearch,
+      serp: serpResults,
+      timestamp: new Date().toISOString(),
+    };
+  });
+
   ipcMain.handle('get-domdetailer-metrics', async (event, targetDomain) => {
     const domain = (targetDomain || getCampaign().domain || '').trim();
     if (!domain) return { error: 'No domain provided.' };
@@ -180,6 +251,29 @@ function registerIndexHandlers(deps) {
     return { success: true, profiles };
   });
 
+  const defaultIntelligenceSettings = () => ({
+    enabled: true,
+    surfaces: ['account-hub', 'dashboard', 'calendar', 'content-hub', 'browse-posts', 'rules', 'account-creator'],
+    autoSuggestScheduling: true,
+    autoSuggestNiches: true,
+    autoSuggestCommunities: true,
+  });
+
+  ipcMain.handle('get-intelligence-settings', () => {
+    try {
+      const raw = JSON.parse(store.getItem('intelligenceSettings') || 'null');
+      return { ...defaultIntelligenceSettings(), ...(raw || {}) };
+    } catch (e) {
+      return defaultIntelligenceSettings();
+    }
+  });
+
+  ipcMain.handle('save-intelligence-settings', (event, payload) => {
+    const next = { ...defaultIntelligenceSettings(), ...(payload || {}) };
+    store.setItem('intelligenceSettings', JSON.stringify(next));
+    return { success: true, settings: next };
+  });
+
   // Account hub extras
   ipcMain.handle('refresh-account-profile', async (event, accountId) => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
@@ -192,10 +286,17 @@ function registerIndexHandlers(deps) {
     }
     const loginEmail = (selectedAccounts[0]?.loginEmail || selectedAccounts[0]?.email || 'oauth').trim().toLowerCase();
     const connectionId = selectedAccounts[0]?.connectionId || `conn_${Date.now()}`;
+    const proxyId = selectedAccounts[0]?.proxyId || null;
+    const useProxy = selectedAccounts[0]?.useProxy === true || !!proxyId;
     const { linked, profileAccountId } = await integrations.linkAllDiscoveredAccounts({
       store, integrations, keys: globalKeys,
-      discovered: selectedAccounts.map((a) => ({ ...a, loginEmail, connectionId })),
-      meta: { loginEmail, connectionId },
+      discovered: selectedAccounts.map((a) => ({
+        ...a,
+        loginEmail,
+        connectionId,
+        proxyId: useProxy ? (a.proxyId || proxyId) : null,
+      })),
+      meta: { loginEmail, connectionId, proxyId: useProxy ? proxyId : null },
     });
     return { success: true, linked: linked.length, profileAccountId };
   });

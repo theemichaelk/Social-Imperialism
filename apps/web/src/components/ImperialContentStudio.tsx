@@ -275,7 +275,7 @@ export function ImperialContentStudio() {
       {step === 'review' && (
         <div className="ics-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <h3 style={{ margin: 0 }}>Edit &amp; approve — what a month of content looks like</h3>
+            <h3 style={{ margin: 0 }}>Edit in Visual Builder &amp; approve — what a month of content looks like</h3>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="btn" onClick={() => setPosts((prev) => prev.map((p) => ({ ...p, status: 'approved' })))}>Approve All</button>
               <button type="button" className="btn primary" onClick={() => setStep('publish')} disabled={!approved.length}>

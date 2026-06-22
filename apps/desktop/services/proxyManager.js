@@ -36,6 +36,7 @@ function normalizeProxy(input = {}) {
     country: String(input.country || '').trim() || null,
     status: input.status === 'inactive' ? 'inactive' : 'active',
     assignedKitId: input.assignedKitId || null,
+    assignedAccountId: input.assignedAccountId || null,
     notes: String(input.notes || '').trim() || null,
     createdAt: input.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -86,14 +87,51 @@ function assignProxyToKit(store, proxyId, kitId) {
   const idx = proxies.findIndex((p) => p.id === proxyId);
   if (idx >= 0) {
     proxies[idx].assignedKitId = kitId || null;
+    if (kitId) proxies[idx].assignedAccountId = null;
     proxies[idx].updatedAt = new Date().toISOString();
   }
   saveProxyPool(store, proxies);
   return proxies[idx] || null;
 }
 
+function assignProxyToAccount(store, proxyId, accountId) {
+  const proxies = getProxyPool(store);
+  proxies.forEach((p) => {
+    if (p.assignedAccountId === accountId && p.id !== proxyId) {
+      p.assignedAccountId = null;
+      p.updatedAt = new Date().toISOString();
+    }
+  });
+  const idx = proxies.findIndex((p) => p.id === proxyId);
+  if (idx >= 0) {
+    proxies[idx].assignedAccountId = accountId || null;
+    if (accountId) proxies[idx].assignedKitId = null;
+    proxies[idx].updatedAt = new Date().toISOString();
+  }
+  saveProxyPool(store, proxies);
+  return proxies[idx] || null;
+}
+
+function releaseProxyForAccount(store, accountId) {
+  if (!accountId) return;
+  const proxies = getProxyPool(store);
+  let changed = false;
+  proxies.forEach((p) => {
+    if (p.assignedAccountId === accountId) {
+      p.assignedAccountId = null;
+      p.updatedAt = new Date().toISOString();
+      changed = true;
+    }
+  });
+  if (changed) saveProxyPool(store, proxies);
+}
+
+function isProxyAvailable(proxy) {
+  return proxy.status === 'active' && !proxy.assignedKitId && !proxy.assignedAccountId;
+}
+
 function getAvailableProxies(store) {
-  return getProxyPool(store).filter((p) => p.status === 'active' && !p.assignedKitId);
+  return getProxyPool(store).filter((p) => isProxyAvailable(p));
 }
 
 function findProxyById(store, id) {
@@ -111,6 +149,9 @@ module.exports = {
   updateProxy,
   deleteProxy,
   assignProxyToKit,
+  assignProxyToAccount,
+  releaseProxyForAccount,
+  isProxyAvailable,
   getAvailableProxies,
   findProxyById,
 };

@@ -14,13 +14,17 @@ function registerCoreHandlers(deps) {
   const { generateAI } = createAiEngine(store);
   deps.generateAI = generateAI;
 
-  const { fetchRealFeed, fetchTrendingTopics } = require(path.join(deps.DESKTOP_SERVICES || '../../../apps/desktop/services', 'feedFetcher'));
-  const { fetchLinkedAccountFeed } = require(path.join(deps.DESKTOP_SERVICES || '../../../apps/desktop/services', 'accountFeedFetcher'));
+  const desktopServicesPath = deps.DESKTOP_SERVICES || path.join(__dirname, '../../../apps/desktop/services');
+  const { fetchRealFeed, fetchTrendingTopics } = require(path.join(desktopServicesPath, 'feedFetcher'));
+  const { fetchLinkedAccountFeed } = require(path.join(desktopServicesPath, 'accountFeedFetcher'));
   const feedCache = new Map();
   const FEED_CACHE_TTL_MS = 3 * 60 * 1000;
   const brandGuidelines = require(path.join(__dirname, '../../../apps/desktop/services/brandGuidelines'));
   const { buildGlobalCustomPromptRequest } = require(path.join(__dirname, '../../../apps/desktop/services/customPromptGenerator'));
   const aiReplyStore = require(path.join(__dirname, '../../../apps/desktop/services/aiReplyStore'));
+  const { runFullAutoSearch, getAutoSearchSettings, saveAutoSearchSettings } = require(path.join(__dirname, '../../../apps/desktop/services/fullAutoSearch'));
+  const saasNotifications = require(path.join(__dirname, '../../../apps/desktop/services/saasNotifications'));
+  const sendNotification = (payload) => saasNotifications.sendNotification(store, payload);
 
   const getCampaign = () => {
     const activeId = store.getItem('activeCampaignId') || 'default';
@@ -41,6 +45,16 @@ function registerCoreHandlers(deps) {
   ipcMain.handle('save-global-keys', (event, keys) => {
     store.setItem('globalApiKeys', JSON.stringify(keys));
     return true;
+  });
+
+  const s3Upload = require(path.join(desktopServicesPath, 's3Upload'));
+
+  ipcMain.handle('get-s3-status', () => s3Upload.getS3Status());
+  ipcMain.handle('list-s3-uploads', async (event, payload = {}) => s3Upload.listUploads(payload));
+  ipcMain.handle('upload-to-s3', async (event, payload = {}) => {
+    const { dataUrl, filename, folder } = payload || {};
+    if (!dataUrl) throw new Error('dataUrl required');
+    return s3Upload.uploadDataUrl(dataUrl, filename, folder);
   });
 
   ipcMain.handle('get-global-keys', () => {
@@ -122,18 +136,27 @@ function registerCoreHandlers(deps) {
     const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]');
     linkedAccounts.forEach((acc) => { if (acc.platform) allowedPlatforms.add(acc.platform); });
 
+    let discovered = [];
+    try {
+      discovered = JSON.parse(store.getItem('discoveredPostsCache') || '[]')
+        .filter((p) => !p.campaignId || p.campaignId === activeId);
+    } catch (e) { /* ignore */ }
+
     const [keywordPosts, accountPosts] = await Promise.all([
       fetchRealFeed({ keywords, filters, keys, allowedPlatforms }),
       fetchLinkedAccountFeed({ linkedAccounts, filters, keys, limitPerAccount: filters?.quick ? 5 : 10 }),
     ]);
 
     const seen = new Set();
-    const data = [...accountPosts, ...keywordPosts].filter((p) => {
+    let data = [...discovered, ...accountPosts, ...keywordPosts].filter((p) => {
       const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    const { applyFeedFilters } = require(path.join(desktopServicesPath, 'feedFilters'));
+    data = applyFeedFilters(data, filters);
 
     feedCache.set(cacheKey, { data, ts: Date.now() });
     return data;
@@ -152,17 +175,26 @@ function registerCoreHandlers(deps) {
 
   ipcMain.handle('save-keywords', (event, payload) => {
     const activeId = store.getItem('activeCampaignId') || 'default';
+    const merge = payload?.merge === true;
     const incoming = Array.isArray(payload) ? payload : (payload?.keywords || []);
-    let all = JSON.parse(store.getItem('keywords') || '[]').filter((k) => k.campaignId !== activeId);
+    let all = JSON.parse(store.getItem('keywords') || '[]');
+    if (!merge) all = all.filter((k) => k.campaignId !== activeId);
     incoming.forEach((kw) => {
-      all.push({
+      const term = (kw.term || kw || '').toString().trim();
+      if (!term) return;
+      const intentTags = kw.intentTags || (kw.intent ? [kw.intent] : []);
+      const entry = {
         id: kw.id || `kw_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        term: kw.term || kw,
+        term,
         campaignId: activeId,
-        platforms: kw.platforms || ['All'],
-        intentTags: kw.intentTags || [],
+        platforms: kw.platforms?.length ? kw.platforms : ['All'],
+        intentTags,
+        intent: kw.intent || intentTags[0] || 'mentions',
         customPrompt: kw.customPrompt || '',
-      });
+      };
+      const idx = all.findIndex((k) => k.campaignId === activeId && (kw.id ? k.id === kw.id : k.term.toLowerCase() === term.toLowerCase()));
+      if (idx >= 0) all[idx] = { ...all[idx], ...entry };
+      else all.push(entry);
     });
     store.setItem('keywords', JSON.stringify(all));
     return { success: true, count: incoming.length };
@@ -191,12 +223,17 @@ function registerCoreHandlers(deps) {
       enabled: settings?.enabled !== false,
       updatedAt: new Date().toISOString(),
     };
+    if (settings?.replyMode) {
+      merged.autoReplyMode = settings.replyMode === 'mentions' ? 'mentions_only'
+        : settings.replyMode === 'all' ? 'all_matching' : 'draft_only';
+      merged.replyMode = settings.replyMode;
+    }
     store.setItem('autoRulesEngine', JSON.stringify(merged));
     integrations.syncRulesSideEffects(store, merged);
     return { success: true, rules: merged };
   });
   ipcMain.handle('get-auto-rules-status', () => integrations.getAutoRulesStatus(store));
-  ipcMain.handle('run-auto-rules-now', async () => integrations.runWorkerCycle({ store, generateAI, sendNotification: () => {} }));
+  ipcMain.handle('run-auto-rules-now', async () => integrations.runWorkerCycle({ store, generateAI, sendNotification }));
 
   ipcMain.handle('generate-ai', async (event, userPrompt) => generateAI(userPrompt));
   ipcMain.handle('draft-post-reply', async (event, payload) => {
@@ -212,12 +249,64 @@ function registerCoreHandlers(deps) {
 Post to reply to:
 "${postContent}"
 `;
-    return generateAI(systemPrompt + '\n\nUser requested reply for this post:\n' + postContent);
+    const raw = await generateAI(systemPrompt + '\n\nUser requested reply for this post:\n' + postContent);
+    const { injectUtmInReply } = require(path.join(desktopServicesPath, 'utmLinks'));
+    return injectUtmInReply(raw, settings).text;
+  });
+
+  ipcMain.handle('search-discovered-posts', (event, query = {}) => {
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const q = (query.q || query.keyword || '').toString().toLowerCase().trim();
+    const platform = query.platform;
+    let posts = [];
+    try {
+      posts = JSON.parse(store.getItem('discoveredPostsCache') || '[]')
+        .filter((p) => !p.campaignId || p.campaignId === activeId);
+    } catch (e) { /* ignore */ }
+    if (platform && platform !== 'All') {
+      posts = posts.filter((p) => (p.platform || '').toLowerCase().includes(platform.toLowerCase()));
+    }
+    if (q) {
+      posts = posts.filter((p) => `${p.content || ''} ${p.author || ''} ${p.matchedKeyword || ''}`.toLowerCase().includes(q));
+    }
+    const limit = Math.min(parseInt(query.limit, 10) || 50, 200);
+    return posts.slice(0, limit);
+  });
+
+  ipcMain.handle('get-qa-ad-suggestions', async () => {
+    const campaign = getCampaign();
+    let questions = [];
+    try { questions = JSON.parse(store.getItem('bestQuestionsForBusiness') || '[]'); } catch (e) {}
+    if (!questions.length) {
+      try {
+        const unanswered = JSON.parse(store.getItem('unansweredQuestions') || '[]');
+        questions = unanswered.slice(0, 5);
+      } catch (e) { /* ignore */ }
+    }
+    const top = questions.slice(0, 5).map((q) => q.content || q.question || '').filter(Boolean);
+    if (!top.length) {
+      return { suggestions: [], message: 'Discover questions first to generate ad campaign ideas.' };
+    }
+    const prompt = `Brand: ${campaign.brandName || 'Brand'} (${campaign.domain || ''})
+Top Q&A questions for inbound marketing:
+${top.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+Suggest 3 social ad campaign concepts (Meta, X, LinkedIn) targeting these questions.
+Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "cta": "..." }]`;
+    try {
+      const text = await generateAI(prompt);
+      const match = text.match(/\[[\s\S]*\]/);
+      const suggestions = match ? JSON.parse(match[0]) : [];
+      return { suggestions, questionsUsed: top.length };
+    } catch (e) {
+      return { suggestions: [], error: e.message };
+    }
   });
 
   ipcMain.handle('generate-global-custom-prompt', async () => {
     const campaign = getCampaign();
-    return generateAI(buildGlobalCustomPromptRequest(campaign));
+    const prompt = await generateAI(buildGlobalCustomPromptRequest(campaign));
+    return { success: true, prompt, customPrompt: prompt };
   });
 
   ipcMain.handle('get-linked-accounts', (event, campaignId) => {
@@ -403,10 +492,28 @@ Post to reply to:
   });
 
   ipcMain.handle('get-schedule-frequency-options', () => FREQUENCY_OPTIONS);
-  ipcMain.handle('get-auto-search-settings', () => JSON.parse(store.getItem('autoSearchSettings') || '{}'));
-  ipcMain.handle('save-auto-search-settings', (event, s) => {
-    store.setItem('autoSearchSettings', JSON.stringify(s));
-    return { success: true };
+  ipcMain.handle('get-auto-search-settings', () => getAutoSearchSettings(store));
+  ipcMain.handle('save-auto-search-settings', (event, s) => saveAutoSearchSettings(store, integrations, s));
+
+  ipcMain.handle('get-notifications', () => saasNotifications.getNotifications(store));
+  ipcMain.handle('mark-notification-read', (event, id) => saasNotifications.markNotificationRead(store, id));
+  ipcMain.handle('get-notification-settings', () => saasNotifications.getNotificationSettings(store));
+  ipcMain.handle('save-notification-settings', (event, s) => saasNotifications.saveNotificationSettings(store, s));
+
+  ipcMain.handle('save-brand-guidelines', (event, payload) => {
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const campaigns = JSON.parse(store.getItem('campaigns') || '[]');
+    const idx = campaigns.findIndex((c) => c.id === activeId);
+    if (idx < 0) return { success: false, error: 'No active campaign' };
+    campaigns[idx] = {
+      ...campaigns[idx],
+      brandGuidelines: payload?.brandGuidelines || campaigns[idx].brandGuidelines || {},
+      disallowedTopics: payload?.disallowedTopics ?? campaigns[idx].disallowedTopics,
+      sampleMessages: payload?.sampleMessages ?? campaigns[idx].sampleMessages,
+      affiliateLinks: payload?.affiliateLinks ?? campaigns[idx].affiliateLinks,
+    };
+    store.setItem('campaigns', JSON.stringify(campaigns));
+    return { success: true, campaign: campaigns[idx] };
   });
 
   ipcMain.handle('save-watched-monitors', (event, monitors) => {
@@ -437,9 +544,23 @@ Post to reply to:
     return buildApiMetrics(keys);
   });
 
-  ipcMain.handle('get-page-health', async () => {
-    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    return { ok: true, apiMetrics: buildApiMetrics(keys), pages: 18 };
+  ipcMain.handle('get-key-sources', () => {
+    let stored = {};
+    try { stored = JSON.parse(store.getItem('globalApiKeys') || '{}'); } catch (e) {}
+    const servicesPath = deps.DESKTOP_SERVICES || path.join(__dirname, '../../../apps/desktop/services');
+    const { getKeySources } = require(path.join(servicesPath, 'keys'));
+    const sources = getKeySources(stored);
+    const envCount = Object.values(sources).filter((s) => s === 'env').length;
+    const userCount = Object.values(sources).filter((s) => s === 'user').length;
+    return {
+      sources,
+      isAdminEnv: envCount > 0,
+      envKeyCount: envCount,
+      userKeyCount: userCount,
+      message: envCount > 0
+        ? 'Admin .env keys loaded — clients must configure their own credentials to run features.'
+        : 'No .env keys detected — configure credentials below to enable live features.',
+    };
   });
 
   ipcMain.handle('shorten-url', async (event, url) => {
@@ -639,6 +760,8 @@ Post to reply to:
     const activeId = store.getItem('activeCampaignId') || 'default';
     let accounts = [];
     try { accounts = JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]'); } catch (e) {}
+    const proxyManager = require(path.join(desktopServicesPath, 'proxyManager'));
+    proxyManager.releaseProxyForAccount(store, accountId);
     accounts = accounts.filter((a) => a.id !== accountId);
     store.setItem(`linkedAccounts_${activeId}`, JSON.stringify(accounts));
     return { success: true };
@@ -735,10 +858,27 @@ Post to reply to:
   });
 
   ipcMain.handle('trigger-full-auto-search', async () => {
-    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const result = await integrations.runWorkerCycle({ store, generateAI, sendNotification: () => {} });
-    await integrations.scanUnansweredQuestions(store, keys, getCampaign(), generateAI);
-    return { success: true, ...result };
+    try {
+      const { fetchRealFeed } = require(path.join(deps.DESKTOP_SERVICES || '../../../apps/desktop/services', 'feedFetcher'));
+      const result = await runFullAutoSearch(store, {
+        integrations,
+        resolveKeys,
+        fetchRealFeed,
+        generateAI,
+        scanUnansweredQuestions: integrations.scanUnansweredQuestions,
+        runRedditProspector: integrations.runRedditProspector,
+      });
+      sendNotification({
+        type: 'auto-search',
+        title: 'Full Auto Search Complete',
+        body: result.message || `${result.newPostCount} new posts found`,
+        link: '/browse-posts',
+      });
+      return result;
+    } catch (e) {
+      console.error('trigger-full-auto-search:', e.message);
+      return { success: false, error: e.message };
+    }
   });
 
 }

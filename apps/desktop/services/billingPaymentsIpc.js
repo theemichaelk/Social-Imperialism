@@ -1,3 +1,6 @@
+const PROTOCOL_SUCCESS = 'payment-success';
+const PROTOCOL_CANCEL = 'payment-cancel';
+
 const { PLAN_CATALOG, buildBillingResponse, loadBillingState } = require('./settingsIpc');
 const { loadPaymentSettings, loadMerchantKeys, getPaymentStatus } = require('./paymentConfig');
 const stripeBilling = require('./stripeBilling');

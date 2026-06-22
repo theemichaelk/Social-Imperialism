@@ -13,8 +13,10 @@ import { ImperialContentStudio } from '@/components/ImperialContentStudio';
 import { SocialPostCard } from '@/components/SocialPostCard';
 import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
 import { AutoContentSettingsPanel } from '@/components/AutoContentSettingsPanel';
+import { ContentHubOverview } from '@/components/ContentHubOverview';
 
 const TABS = [
+  { id: 'overview', label: 'Overview', group: 'Social Imperialism' },
   { id: 'studio', label: 'Create', group: 'Social Imperialism' },
   { id: 'standard', label: 'Quick Post', group: 'Social Imperialism' },
   { id: 'media', label: 'Media', group: 'Create' },
@@ -34,7 +36,7 @@ const TABS = [
 
 export default function ContentHubPage() {
   const { settings, accounts: intelAccounts, isSurfaceEnabled } = useIntelligence();
-  const [tab, setTab] = useState('studio');
+  const [tab, setTab] = useState('overview');
   const [publishAccountId, setPublishAccountId] = useState('');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('');
@@ -88,7 +90,7 @@ export default function ContentHubPage() {
 
   return (
     <div>
-      <PageHeader title="Content Hub" subtitle="Social Imperialism — fast, on-brand posts: generate, design, approve, and publish across every platform" />
+      <PageHeader title="Content Hub" subtitle="Social Imperialism — create, Visual Builder, publish, collaborate, and analyze from one hub" />
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="ch-readiness" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem', alignItems: 'center' }}>
@@ -121,6 +123,8 @@ export default function ContentHubPage() {
           </div>
         </div>
       ))}
+
+      {tab === 'overview' && <ContentHubOverview onStartStudio={() => setTab('studio')} />}
 
       {tab === 'studio' && <ImperialContentStudio />}
 

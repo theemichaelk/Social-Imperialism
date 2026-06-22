@@ -17,6 +17,16 @@ const PLATFORM_ICONS: Record<string, string> = {
   Twitch: '📺', Quora: 'Q', Discord: '💬', Telegram: '✈', WhatsApp: '💚',
 };
 
+type Proxy = {
+  id: string;
+  label: string;
+  host: string;
+  port: number;
+  protocol?: string;
+  assignedAccountId?: string | null;
+  assignedKitId?: string | null;
+};
+
 type Account = {
   id: string;
   platform: string;
@@ -24,6 +34,8 @@ type Account = {
   username?: string;
   type?: string;
   loginEmail?: string;
+  proxyId?: string | null;
+  useProxy?: boolean;
   profile?: Record<string, unknown>;
   profileRefreshedAt?: string;
 };
@@ -58,6 +70,31 @@ export default function AccountHubPage() {
   const [selectionChecked, setSelectionChecked] = useState<Record<string, boolean>>({});
   const [showSelection, setShowSelection] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [proxies, setProxies] = useState<Proxy[]>([]);
+  const [useProxyOnConnect, setUseProxyOnConnect] = useState(false);
+  const [connectProxyId, setConnectProxyId] = useState('');
+  const [accountProxyId, setAccountProxyId] = useState('');
+
+  async function loadProxies() {
+    try {
+      const pool = await invoke<Proxy[]>('get-proxy-pool');
+      setProxies(pool || []);
+    } catch {
+      setProxies([]);
+    }
+  }
+
+  function proxyLabel(id?: string | null) {
+    if (!id) return null;
+    const p = proxies.find((x) => x.id === id);
+    return p ? `${p.label} (${p.host}:${p.port})` : id;
+  }
+
+  function availableProxies(excludeAccountId?: string) {
+    return proxies.filter(
+      (p) => !p.assignedKitId && (!p.assignedAccountId || p.assignedAccountId === excludeAccountId),
+    );
+  }
 
   async function refresh() {
     const [a, s] = await Promise.all([
@@ -75,7 +112,10 @@ export default function AccountHubPage() {
     setTargets(res.targets || []);
   }
 
-  useEffect(() => { refresh().catch(console.error); }, []);
+  useEffect(() => {
+    refresh().catch(console.error);
+    loadProxies().catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -90,21 +130,45 @@ export default function AccountHubPage() {
     if (selected?.id) loadTargets(selected.id).catch(console.error);
   }, [selected?.id]);
 
+  useEffect(() => {
+    setAccountProxyId(selected?.proxyId || '');
+  }, [selected?.id, selected?.proxyId]);
+
+  function attachProxyMeta<T extends Record<string, unknown>>(items: T[]): T[] {
+    if (!useProxyOnConnect || !connectProxyId) {
+      return items.map((a) => ({ ...a, useProxy: false, proxyId: null }));
+    }
+    return items.map((a) => ({ ...a, useProxy: true, proxyId: connectProxyId }));
+  }
+
   async function connect(method: 'oauth' | 'credentials') {
+    if (useProxyOnConnect && !connectProxyId) {
+      setMsg('Select a proxy from the pool or connect without proxy');
+      return;
+    }
     setMsg(`Connecting ${connectPlatform}…`);
-    const res = await invoke<{ success?: boolean; error?: string; accounts?: Account[]; pendingOAuthUrl?: string }>('link-account', {
-      platform: connectPlatform, method, ...creds,
+    const res = await invoke<Account[] | { success?: boolean; error?: string; accounts?: Account[] }>('link-account', {
+      platform: connectPlatform,
+      method,
+      ...creds,
+      useProxy: useProxyOnConnect,
+      proxyId: useProxyOnConnect ? connectProxyId : null,
     });
-    if (res.accounts?.length) {
-      setPendingSelection(res.accounts);
-      setSelectionChecked(Object.fromEntries(res.accounts.map((a) => [a.id, true])));
+    const discovered = Array.isArray(res) ? res : (res?.accounts || []);
+    if (discovered.length > 1) {
+      const withProxy = attachProxyMeta(discovered as Account[]);
+      setPendingSelection(withProxy);
+      setSelectionChecked(Object.fromEntries(withProxy.map((a) => [a.id, true])));
       setShowSelection(true);
-      setMsg(`Found ${res.accounts.length} account(s) — select which to link`);
-    } else if (res.success === false) {
+      setMsg(`Found ${withProxy.length} account(s) — select which to link${useProxyOnConnect ? ' (proxy will apply to root account)' : ''}`);
+    } else if (discovered.length === 1) {
+      await confirmSelection(attachProxyMeta(discovered as Account[]));
+    } else if (res && !Array.isArray(res) && res.success === false) {
       setMsg(String(res.error));
     } else {
       setMsg('Connected — complete OAuth in popup if prompted');
       refresh();
+      loadProxies();
     }
   }
 
@@ -115,6 +179,20 @@ export default function AccountHubPage() {
     setSelectionChecked({});
     setMsg(res.success ? `Linked ${selectedAccounts.length} account(s)` : (res.error || 'Link failed'));
     refresh();
+    loadProxies();
+  }
+
+  async function saveAccountProxy() {
+    if (!selected) return;
+    const useProxy = !!accountProxyId;
+    const res = await invoke<{ success?: boolean; error?: string }>('set-account-proxy', {
+      accountId: selected.id,
+      proxyId: accountProxyId || null,
+      useProxy,
+    });
+    setMsg(res.success ? (useProxy ? `Proxy assigned: ${proxyLabel(accountProxyId)}` : 'Direct connection (no proxy)') : (res.error || 'Proxy update failed'));
+    refresh();
+    loadProxies();
   }
 
   async function refreshProfile() {
@@ -214,6 +292,9 @@ export default function AccountHubPage() {
                 <span className="badge">{PLATFORM_ICONS[a.platform] || '?'} {a.platform}</span>
                 {' '}{a.handle || a.username || a.id}
                 {a.type && <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}> · {a.type}</span>}
+                {a.useProxy && a.proxyId && (
+                  <span className="badge" style={{ marginLeft: 6, fontSize: '0.7rem' }}>Proxy</span>
+                )}
               </div>
               <button className="btn" onClick={async (e) => { e.stopPropagation(); await invoke('unlink-account', a.id); refresh(); }}>Disconnect</button>
             </div>
@@ -244,6 +325,34 @@ export default function AccountHubPage() {
           <input className="input" placeholder="Email (optional)" value={creds.email} onChange={(e) => setCreds({ ...creds, email: e.target.value })} style={{ marginBottom: 8 }} />
           <input className="input" placeholder="Username (optional)" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} style={{ marginBottom: 8 }} />
           <input className="input" type="password" placeholder="Password (credentials flow)" value={creds.password} onChange={(e) => setCreds({ ...creds, password: e.target.value })} style={{ marginBottom: 8 }} />
+
+          <div className="card" style={{ marginBottom: 12, padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.45)' }}>
+            <h4 style={{ margin: '0 0 8px', fontSize: '0.9rem' }}>Connection route (Proxy / IP)</h4>
+            <label className="post-card" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, cursor: 'pointer' }}>
+              <input type="radio" name="proxyMode" checked={!useProxyOnConnect} onChange={() => setUseProxyOnConnect(false)} />
+              <span>Direct connection — use server IP as-is</span>
+            </label>
+            <label className="post-card" style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+              <input type="radio" name="proxyMode" checked={useProxyOnConnect} onChange={() => setUseProxyOnConnect(true)} />
+              <span>Route through proxy / IP from pool</span>
+            </label>
+            {useProxyOnConnect && (
+              <>
+                <select className="input" value={connectProxyId} onChange={(e) => setConnectProxyId(e.target.value)} style={{ marginTop: 8 }}>
+                  <option value="">Select proxy…</option>
+                  {availableProxies().map((p) => (
+                    <option key={p.id} value={p.id}>{p.label} — {p.host}:{p.port}</option>
+                  ))}
+                </select>
+                {!availableProxies().length && (
+                  <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 6 }}>
+                    No free proxies — add IPs in <Link href="/account-creator">Account Creator → Proxy Pool</Link>.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn primary" onClick={() => connect('oauth')}>OAuth Connect</button>
             <button className="btn" onClick={() => connect('credentials')}>Credentials</button>
@@ -279,6 +388,23 @@ export default function AccountHubPage() {
               <p className="ip-empty">No intelligence profile yet — click Refresh Profile to pull live metrics.</p>
             )}
             <Link href="/settings?tab=account-intelligence" className="btn" style={{ marginTop: 8 }}>Configure Intelligence →</Link>
+
+            <div className="card" style={{ marginTop: 12, padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.45)' }}>
+              <h4 style={{ margin: '0 0 8px', fontSize: '0.9rem' }}>Proxy / IP for this account</h4>
+              <p className="settings-panel-desc" style={{ margin: '0 0 8px' }}>
+                {selected.useProxy && selected.proxyId
+                  ? `Currently routed via ${proxyLabel(selected.proxyId) || selected.proxyId}`
+                  : 'Currently using direct connection (no proxy).'}
+              </p>
+              <select className="input" value={accountProxyId} onChange={(e) => setAccountProxyId(e.target.value)}>
+                <option value="">Direct connection (no proxy)</option>
+                {availableProxies(selected.id).map((p) => (
+                  <option key={p.id} value={p.id}>{p.label} — {p.host}:{p.port}</option>
+                ))}
+              </select>
+              <button className="btn primary" style={{ marginTop: 8 }} onClick={saveAccountProxy}>Save connection route</button>
+            </div>
+
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <button className="btn primary" disabled={refreshing} onClick={refreshProfile}>
                 {refreshing ? 'Refreshing…' : 'Refresh Profile'}

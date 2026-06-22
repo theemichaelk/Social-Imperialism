@@ -364,7 +364,9 @@ async function linkAllDiscoveredAccounts({
     parentAccountId = null,
     sharedTokens = null,
     encryptedPassword = null,
+    proxyId = null,
   } = meta;
+  const proxyManager = require('./proxyManager');
 
   let profileAccountId = parentAccountId;
   let youtubePrimaryId = null;
@@ -425,6 +427,15 @@ async function linkAllDiscoveredAccounts({
 
     if (encryptedPassword && isRoot) {
       entry.encryptedPassword = encryptedPassword;
+    }
+
+    const accountProxyId = acc.proxyId || (isRoot ? proxyId : null);
+    if (accountProxyId) {
+      entry.proxyId = accountProxyId;
+      entry.useProxy = true;
+      proxyManager.assignProxyToAccount(store, accountProxyId, newId);
+    } else {
+      entry.useProxy = false;
     }
 
     if (acc.platform === 'YouTube' && acc.type === 'Channel') {
