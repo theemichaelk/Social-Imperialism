@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { NavAnchor } from '@/components/NavAnchor';
 import { SHOWCASE_SLIDES } from '@/lib/homeMedia';
 
 type Props = { loggedIn: boolean };
@@ -55,9 +55,9 @@ export function HomeShowcaseSlider({ loggedIn }: Props) {
             <div className="home-showcase-card-body">
               <h3 key={slide.id}>{slide.title}</h3>
               <p>{slide.caption}</p>
-              <Link href="/dashboard" className="btn primary home-cta-sm">
+              <NavAnchor href="/dashboard" className="btn primary home-cta-sm">
                 Open Module →
-              </Link>
+              </NavAnchor>
             </div>
           </div>
 

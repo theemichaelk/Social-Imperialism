@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { NavAnchor } from '@/components/NavAnchor';
 import { HomeHeroBanner } from '@/components/HomeHeroBanner';
 import { HomeShowcaseSlider } from '@/components/HomeShowcaseSlider';
 import { HomeTicker } from '@/components/HomeTicker';
 import { HomeFounderSection } from '@/components/HomeFounderSection';
 import { HomeFooter } from '@/components/HomeFooter';
-import { getToken } from '@/lib/api';
+import { getApiBase, getToken } from '@/lib/api';
 import { NAV_SECTIONS } from '@/lib/nav';
 
 const PLATFORMS = [
@@ -52,7 +52,7 @@ export default function HomePage() {
 
   useEffect(() => {
     setLoggedIn(!!getToken());
-    fetch('/health')
+    fetch(`${getApiBase()}/health`)
       .then((r) => r.json())
       .then((d) => setApiOk(!!d?.ok))
       .catch(() => setApiOk(false));
@@ -77,11 +77,11 @@ export default function HomePage() {
           <a href="#platforms">Platforms</a>
           <a href="#how-it-works">How It Works</a>
           <a href="#pricing">Pricing</a>
-          <Link href="/founder">Founder</Link>
+          <NavAnchor href="/founder">Founder</NavAnchor>
         </nav>
         <div className="home-nav-actions">
-          <Link href="/dashboard" className="btn home-btn-glass">Sign In</Link>
-          <Link href="/dashboard" className="btn primary home-btn-glow">Open Dashboard</Link>
+          <NavAnchor href="/login" className="btn home-btn-glass">Sign In</NavAnchor>
+          <NavAnchor href="/dashboard" className="btn primary home-btn-glow">Open Dashboard</NavAnchor>
         </div>
       </header>
 
@@ -124,13 +124,13 @@ export default function HomePage() {
           <p className="home-section-sub">18 modules — from discovery to publish to growth automation.</p>
           <div className="home-feature-grid">
             {allFeatures.map((f) => (
-              <Link key={f.id} href="/dashboard" className="home-feature-card home-feature-glow">
+              <NavAnchor key={f.id} href="/dashboard" className="home-feature-card home-feature-glow">
                 <span className="home-feature-icon">{f.icon}</span>
                 <div className="home-feature-text">
                   <div className="home-feature-section">{f.section}</div>
                   <div className="home-feature-title">{f.label}</div>
                 </div>
-              </Link>
+              </NavAnchor>
             ))}
           </div>
         </div>
@@ -156,9 +156,9 @@ export default function HomePage() {
                 'Visual automation builder & auto-rules',
               ].map((t) => <li key={t}>{t}</li>)}
             </ul>
-            <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">
+            <NavAnchor href="/dashboard" className="btn primary home-cta-lg home-btn-glow">
               Open Mission Control
-            </Link>
+            </NavAnchor>
           </div>
           <div className="home-stats-panel home-glass-panel">
             {DASH_STATS.map((s) => (
@@ -189,9 +189,9 @@ export default function HomePage() {
             ))}
           </div>
           <div className="home-center-cta">
-            <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">
+            <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">
               Get Started →
-            </Link>
+            </NavAnchor>
           </div>
         </div>
       </section>
@@ -214,9 +214,9 @@ export default function HomePage() {
                 <ul>
                   {plan.features.map((f) => <li key={f}>{f}</li>)}
                 </ul>
-                <Link href="/dashboard" className={`btn home-btn-block ${plan.highlight ? 'primary home-btn-glow' : 'home-btn-glass'}`}>
+                <NavAnchor href="/login" className={`btn home-btn-block ${plan.highlight ? 'primary home-btn-glow' : 'home-btn-glass'}`}>
                   {plan.id === 'enterprise' ? 'Contact Sales' : 'Choose Plan'}
-                </Link>
+                </NavAnchor>
               </div>
             ))}
           </div>
@@ -240,8 +240,8 @@ export default function HomePage() {
           <h2>Ready to dominate your niche?</h2>
           <p>Join teams using AI-powered social automation with full API connectivity.</p>
           <div className="home-hero-cta center">
-            <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">Create Account</Link>
-            <Link href="/dashboard" className="btn home-cta-lg home-btn-glass">Explore Integrations</Link>
+            <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">Create Account</NavAnchor>
+            <NavAnchor href="/dashboard" className="btn home-cta-lg home-btn-glass">Explore Integrations</NavAnchor>
           </div>
         </div>
       </section>

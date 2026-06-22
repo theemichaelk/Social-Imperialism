@@ -1,7 +1,7 @@
-/** Browser uses same-origin /api rewrite (Amplify SSR). Server uses API_URL. */
 export function getApiBase(): string {
-  if (typeof window !== 'undefined') return '';
-  return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const configured = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || '';
+  if (typeof window !== 'undefined') return configured || '';
+  return process.env.API_URL || configured || 'http://localhost:4000';
 }
 
 export function getToken(): string | null {

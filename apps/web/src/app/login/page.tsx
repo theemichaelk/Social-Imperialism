@@ -1,13 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { auth, getToken, setSession } from '@/lib/api';
 import { Logo } from '@/components/Logo';
 import { FooterCredit } from '@/components/FooterCredit';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('theesaintmichael@gmail.com');
   const [password, setPassword] = useState('');
@@ -16,8 +14,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (getToken()) router.replace('/dashboard');
-  }, [router]);
+    if (getToken()) window.location.replace('/dashboard');
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +26,7 @@ export default function LoginPage() {
         ? await auth.login(email, password)
         : await auth.register({ email, password, name });
       setSession(res);
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -43,7 +41,7 @@ export default function LoginPage() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.25rem' }}>
           <a href="/" style={{ textDecoration: 'none' }}><Logo size="lg" showText /></a>
           <p style={{ textAlign: 'center', color: '#94a3b8', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>
-            Social media automation — full platform access
+            Admin: theesaintmichael@gmail.com or michaelk@tsbrenterprises.com
           </p>
         </div>
         <div className="tabs" style={{ justifyContent: 'center' }}>

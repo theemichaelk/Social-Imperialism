@@ -1,23 +1,36 @@
 'use client';
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
 import { getToken } from '@/lib/api';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
+const PUBLIC_PATHS = new Set(['/', '/login', '/founder']);
 
-  const isPublic = pathname === '/login' || pathname === '/' || pathname === '/founder';
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [checked, setChecked] = useState(false);
+
+  const isPublic = PUBLIC_PATHS.has(pathname);
 
   useEffect(() => {
-    if (!getToken() && !isPublic) {
-      router.replace('/login');
+    const token = getToken();
+    if (!token && !isPublic) {
+      window.location.replace('/login');
+      return;
     }
-  }, [pathname, router, isPublic]);
+    setChecked(true);
+  }, [pathname, isPublic]);
 
   if (isPublic) return <>{children}</>;
+
+  if (!checked) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#94a3b8' }}>
+        Loading…
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">

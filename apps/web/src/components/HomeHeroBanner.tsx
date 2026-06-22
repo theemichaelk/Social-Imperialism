@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
+import { NavAnchor } from '@/components/NavAnchor';
 import { HERO_SLIDES } from '@/lib/homeMedia';
 
 type Props = {
@@ -74,7 +74,7 @@ export function HomeHeroBanner({ loggedIn, apiLabel }: Props) {
             <h1 className="home-banner-title">{slide.title}</h1>
             <p className="home-banner-sub">{slide.subtitle}</p>
             <div className="home-hero-cta">
-              <Link href="/dashboard" className="btn primary home-cta-lg home-btn-glow">Open Dashboard</Link>
+              <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">Open Dashboard</NavAnchor>
               <a href="#showcase" className="btn home-cta-lg home-btn-glass">Watch Demo</a>
             </div>
             <div className="home-hero-controls">

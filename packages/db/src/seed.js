@@ -13,16 +13,14 @@ async function upsertProjectSetting(projectId, key, value) {
   });
 }
 
+const ADMIN_EMAILS = [
+  process.env.SEED_EMAIL || 'theesaintmichael@gmail.com',
+  'michaelk@tsbrenterprises.com',
+];
+
 async function main() {
-  const email = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
   const password = process.env.SEED_PASSWORD || 'Kingme05$';
   const hash = await bcrypt.hash(password, 10);
-
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: { passwordHash: hash, name: 'Michael Kaswatuka' },
-    create: { email, passwordHash: hash, name: 'Michael Kaswatuka' },
-  });
 
   const org = await prisma.organization.upsert({
     where: { slug: 'acme-growth' },
@@ -30,11 +28,23 @@ async function main() {
     create: { name: 'Acme Growth Labs', slug: 'acme-growth', plan: 'growth' },
   });
 
-  await prisma.organizationMember.upsert({
-    where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
-    update: { role: 'owner' },
-    create: { organizationId: org.id, userId: user.id, role: 'owner' },
-  });
+  let primaryUser = null;
+  for (const email of [...new Set(ADMIN_EMAILS)]) {
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: { passwordHash: hash, name: 'Michael Kaswatuka' },
+      create: { email, passwordHash: hash, name: 'Michael Kaswatuka' },
+    });
+    if (!primaryUser) primaryUser = user;
+
+    await prisma.organizationMember.upsert({
+      where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
+      update: { role: 'owner' },
+      create: { organizationId: org.id, userId: user.id, role: 'owner' },
+    });
+  }
+
+  const user = primaryUser;
 
   let project = await prisma.project.findFirst({ where: { organizationId: org.id } });
   if (!project) {
@@ -159,7 +169,7 @@ async function main() {
     });
   }
 
-  console.log('Seeded:', { email, password, org: org.slug, projectId: project.id, accounts: accounts.length, keywords: keywords.length });
+  console.log('Seeded:', { admins: [...new Set(ADMIN_EMAILS)], org: org.slug, projectId: project.id, accounts: accounts.length, keywords: keywords.length });
 }
 
 main()
