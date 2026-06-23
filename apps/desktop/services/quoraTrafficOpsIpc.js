@@ -112,7 +112,8 @@ function registerQuoraTrafficOpsHandlers({
     }
   });
 
-  ipcMain.handle('fetch-youtube-transcript', async (event, { url }) => {
+  ipcMain.handle('fetch-youtube-transcript', async (event, arg) => {
+    const url = typeof arg === 'string' ? arg : arg?.url;
     try {
       const data = await quoraTrafficOps.fetchYouTubeTranscript(url);
       return { success: true, ...data };

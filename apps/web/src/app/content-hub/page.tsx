@@ -15,6 +15,7 @@ import { SocialPostCard } from '@/components/SocialPostCard';
 import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
 import { AutoContentSettingsPanel } from '@/components/AutoContentSettingsPanel';
 import { ContentHubDashboard } from '@/components/ContentHubDashboard';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 const TABS = [
   { id: 'home', label: 'Hub', group: 'Workflow' },
   { id: 'studio', label: 'Generate', group: 'Workflow' },
@@ -73,7 +74,13 @@ export default function ContentHubPage() {
     const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
     if (!acc) { setStatus('Link an account first'); return; }
     setStatus('Publishing…');
-    await invoke('publish-post', { accountId: acc.id, platform: acc.platform, content, hasMedia: !!mediaUrl, mediaUrl });
+    const res = await invoke<{ success?: boolean; error?: string }>('publish-post', {
+      accountId: acc.id, platform: acc.platform, content, hasMedia: !!mediaUrl, mediaUrl, humanLike: false,
+    });
+    if (res?.success === false) {
+      setStatus(res.error || 'Publish failed — check Account Hub token');
+      return;
+    }
     setStatus(`Published via ${acc.platform}`);
   }
 
@@ -97,6 +104,8 @@ export default function ContentHubPage() {
           </>
         }
       />
+
+      <SectionLivePanel section="content-hub" />
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="ch-readiness" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem', alignItems: 'center' }}>

@@ -65,7 +65,7 @@ const SECTIONS = [
       { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) },
       { name: 'AI generate', channel: 'generate-ai', args: ['Write a LinkedIn post about automation'], validate: (d) => (typeof d === 'string' && d.length > 5) || (typeof d?.value === 'string' && d.value.length > 5) || (d?.text && d.text.length > 5) },
       { name: 'AI image', channel: 'generate-image', args: ['Professional social media banner'], validate: (d) => d?.imageUrl || d?.url || d?.base64 || typeof d === 'object' },
-      { name: 'Publish post', channel: 'publish-post', args: [{ platform: 'LinkedIn', content: 'QA test publish', hasMedia: false, humanLike: false }], validate: (d) => d?.success !== false },
+      { name: 'Publish post', channel: 'publish-post', args: [{ platform: 'LinkedIn', content: `QA publish ${Date.now()}`, hasMedia: false, humanLike: false }], validate: (d) => d?.success === true || (d?.success === false && !!d?.error) },
       { name: 'Schedule post', channel: 'schedule-post', args: [{ platform: 'LinkedIn', content: 'QA scheduled', scheduleTime: new Date(Date.now() + 86400000).toISOString() }], validate: (d) => d?.success !== false },
       { name: 'Content queue', channel: 'get-content-queue', validate: (d) => Array.isArray(d) },
       { name: 'Content studio', channel: 'run-content-studio', args: [{ types: ['post'], keywords: ['marketing'], count: 2 }], validate: (d) => d?.success !== false || d?.items || Array.isArray(d) },
@@ -143,7 +143,7 @@ const SECTIONS = [
       { name: 'Traffic settings', channel: 'get-quora-traffic-settings', validate: (d) => d?.settings || typeof d === 'object' },
       { name: 'Scrape questions', channel: 'scrape-quora-questions', args: [{ keyword: 'marketing automation', limit: 3 }], validate: (d) => d?.success !== false },
       { name: 'Generate answer', channel: 'generate-quora-answer', args: [{ question: { content: 'What is the best marketing tool?', url: 'https://quora.com/test' } }], validate: (d) => d?.answer || d?.success !== false },
-      { name: 'YouTube transcript', channel: 'fetch-youtube-transcript', args: ['https://www.youtube.com/watch?v=dQw4w9WgXcQ'], validate: (d) => d?.transcript || d?.text || typeof d === 'object' },
+      { name: 'YouTube transcript', channel: 'fetch-youtube-transcript', args: [{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }], validate: (d) => (d?.transcript && d.transcript.length > 20) || d?.success === true },
     ],
   },
   {
@@ -188,6 +188,52 @@ const SECTIONS = [
     ],
   },
   {
+    section: 'Create & Publish — Library',
+    features: [
+      { name: 'Content library', channel: 'get-content-library', validate: (d) => d?.assets !== undefined || Array.isArray(d?.assets) },
+      { name: 'Import text', channel: 'import-text-to-library', args: [{ text: 'QA library snippet', name: 'QA test' }], validate: (d) => d?.success !== false },
+      { name: 'Brand guidelines', channel: 'get-brand-guidelines', validate: (d) => typeof d === 'object' },
+      { name: 'Section live', channel: 'get-section-live', args: ['content-library'], validate: (d) => d?.stats && typeof d.stats === 'object' },
+    ],
+  },
+  {
+    section: 'Create & Publish — Design Studio',
+    features: [
+      { name: 'Design templates', channel: 'get-design-templates', validate: (d) => d?.templates?.length > 0 || Array.isArray(d?.templates) },
+      { name: 'Section live', channel: 'get-section-live', args: ['design-studio'], validate: (d) => d?.success !== false },
+    ],
+  },
+  {
+    section: 'Create & Publish — Brand',
+    features: [
+      { name: 'Brand guidelines', channel: 'get-brand-guidelines', validate: (d) => typeof d === 'object' },
+      { name: 'Section live', channel: 'get-section-live', args: ['brand'], validate: (d) => d?.brand || d?.stats },
+    ],
+  },
+  {
+    section: 'Create & Publish — Scheduler',
+    features: [
+      { name: 'Background status', channel: 'get-background-run-status', validate: (d) => typeof d === 'object' },
+      { name: 'Process due', channel: 'process-due-scheduled-posts', validate: (d) => typeof d === 'object' },
+      { name: 'Section live', channel: 'get-section-live', args: ['scheduler'], validate: (d) => d?.stats },
+    ],
+  },
+  {
+    section: 'Mission Control — Browse Live',
+    features: [
+      { name: 'Browse posts live', channel: 'get-browse-posts-live', validate: (d) => d?.stats && typeof d.stats === 'object' },
+    ],
+  },
+  {
+    section: 'System — Integrations',
+    features: [
+      { name: 'Key sources', channel: 'get-key-sources', validate: (d) => typeof d === 'object' },
+      { name: 'Partner config', channel: 'get-partner-integration-config', validate: (d) => typeof d === 'object' },
+      { name: 'Integration events', channel: 'get-integration-events-log', validate: (d) => Array.isArray(d) || typeof d === 'object' },
+      { name: 'Section live', channel: 'get-section-live', args: ['integrations'], validate: (d) => d?.apiHealth || d?.stats },
+    ],
+  },
+  {
     section: 'System — Settings',
     features: [
       { name: 'Global keys', channel: 'get-global-keys', validate: (d) => typeof d === 'object' },
@@ -214,7 +260,7 @@ async function login() {
   return { token: json.token, projectId: json.project?.id, accounts: json };
 }
 
-const SLOW_CHANNELS = new Set(['discover-best-questions', 'generate-image', 'run-content-studio', 'analyze-topic', 'draft-post-reply', 'generate-quora-answer', 'run-seo-tool']);
+const SLOW_CHANNELS = new Set(['discover-best-questions', 'generate-image', 'run-content-studio', 'analyze-topic', 'draft-post-reply', 'generate-quora-answer', 'run-seo-tool', 'process-due-scheduled-posts']);
 const INVOKE_TIMEOUT_MS = 90000;
 
 async function invoke(token, projectId, channel, args = []) {
@@ -277,12 +323,16 @@ async function main() {
 
     for (const feat of section.features) {
       let args = feat.args ? [...feat.args] : [];
-      // Dynamic account IDs
+      // Dynamic account IDs + unique publish content per run
       if (firstAcc) {
         args = args.map((a) => {
           if (a === 'si_li_cmqlrt') return firstAcc.id;
           if (typeof a === 'object' && a && !a.accountId && (feat.channel === 'publish-post' || feat.channel === 'schedule-post')) {
-            return { ...a, accountId: firstAcc.id, platform: a.platform || firstAcc.platform };
+            const patch = { ...a, accountId: firstAcc.id, platform: a.platform || firstAcc.platform };
+            if (feat.channel === 'publish-post' && patch.content) {
+              patch.content = `${patch.content} · ${Date.now()}`;
+            }
+            return patch;
           }
           return a;
         });

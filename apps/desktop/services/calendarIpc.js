@@ -24,10 +24,16 @@ function registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics
     const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeCampaignId}`) || '[]');
 
     const humanLike = process.env.SI_TEST_QUICK === '1' ? false : postData.humanLike !== false;
-    const publishResult = await integrations.publishPost(postData, globalKeys, linkedAccounts, { humanLike });
-    if (publishResult && publishResult.success === false) {
-      throw new Error(publishResult.error || 'Platform publish failed');
+    try {
+      const publishResult = await integrations.publishPost(postData, globalKeys, linkedAccounts, { humanLike });
+      if (publishResult && publishResult.success === false) {
+        return { success: false, error: publishResult.error || 'Platform publish failed', platform: postData.platform };
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.response?.statusText || err.message;
+      return { success: false, error: msg, statusCode: err?.response?.status, platform: postData.platform };
     }
+
     if (postData.accountId && integrations.recordAccountAction) {
       integrations.recordAccountAction(store, postData.accountId);
     }
@@ -56,17 +62,26 @@ function registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics
 
   async function processDueScheduledPosts() {
     const posts = getScheduledPostsStore();
-    if (!posts.length) return { published: 0, failed: 0 };
+    if (!posts.length) return { published: 0, failed: 0, skipped: 0 };
 
     const now = Date.now();
     let published = 0;
     let failed = 0;
+    let skipped = 0;
     const remaining = [];
+    const maxBatch = parseInt(process.env.SI_SCHEDULER_BATCH_MAX || '8', 10);
+    let processed = 0;
 
     for (const sched of posts) {
-      const dueAt = new Date(sched.timestamp).getTime();
+      const dueAt = new Date(sched.timestamp || sched.scheduleTime).getTime();
       if (Number.isNaN(dueAt) || dueAt > now) {
         remaining.push(sched);
+        continue;
+      }
+
+      if (processed >= maxBatch) {
+        remaining.push(sched);
+        skipped++;
         continue;
       }
 
@@ -74,7 +89,7 @@ function registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics
       if (sched.campaignId) store.setItem('activeCampaignId', sched.campaignId);
 
       try {
-        await executePublishPost({
+        const result = await executePublishPost({
           accountId: sched.accountId,
           platform: sched.platform,
           content: sched.content,
@@ -83,14 +98,24 @@ function registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics
           isVideo: !!sched.isVideo,
           videoPath: sched.videoPath || null,
           title: sched.title || sched.content?.slice(0, 100),
+          humanLike: false,
         });
-        published++;
+        if (result?.success === false) {
+          sched.lastError = result.error || 'Publish failed';
+          sched.status = 'failed';
+          remaining.push(sched);
+          failed++;
+        } else {
+          published++;
+        }
+        processed++;
       } catch (err) {
         console.error('Scheduled publish failed:', sched.id, err.message);
         sched.lastError = err.message;
         sched.status = 'failed';
         remaining.push(sched);
         failed++;
+        processed++;
       } finally {
         if (sched.campaignId) {
           if (prevCampaign != null) store.setItem('activeCampaignId', prevCampaign);
@@ -100,7 +125,7 @@ function registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics
     }
 
     saveScheduledPostsStore(remaining);
-    return { published, failed };
+    return { published, failed, skipped, processed };
   }
 
   const channels = [

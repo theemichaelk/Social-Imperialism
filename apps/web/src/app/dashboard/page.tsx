@@ -11,6 +11,7 @@ import { FetchProfilesPanel } from '@/components/FetchProfilesPanel';
 import { PostExplorerModal } from '@/components/PostExplorerModal';
 import { FetchProfileFilters } from '@/lib/fetchProfiles';
 import { QaSettingsPanel } from '@/components/QaSettingsPanel';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 
 type Post = {
   platform: string;
@@ -304,6 +305,8 @@ export default function DashboardPage() {
           </div>
         }
       />
+
+      <SectionLivePanel section="dashboard" className="dash-section-live" />
 
       {isSurfaceEnabled('dashboard') && accounts[0] && (
         <div className="card" style={{ marginBottom: '1rem' }}>

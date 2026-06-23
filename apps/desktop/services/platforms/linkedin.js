@@ -103,14 +103,25 @@ async function publish(postData, accessToken) {
     visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
   };
 
-  const res = await axios.post('https://api.linkedin.com/v2/ugcPosts', payload, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'X-Restli-Protocol-Version': '2.0.0',
-    },
-  });
-  return res.data;
+  try {
+    const res = await axios.post('https://api.linkedin.com/v2/ugcPosts', payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+      },
+    });
+    return { success: true, data: res.data, platform: 'LinkedIn' };
+  } catch (e) {
+    const status = e.response?.status;
+    const detail = e.response?.data?.message || e.response?.data?.error || e.message;
+    return {
+      success: false,
+      error: status === 422 ? `LinkedIn rejected post (${detail}). Try unique content or wait before republishing.` : detail,
+      statusCode: status,
+      platform: 'LinkedIn',
+    };
+  }
 }
 
 async function getActorUrn(token) {

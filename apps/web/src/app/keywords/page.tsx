@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { BarChart, DataPanel, LivePulse, SparkRow } from '@/components/DashboardViz';
 import { ALL_PLATFORMS, INTENT_TAGS, platformDisplayName } from '@/lib/platforms';
 import { QuantumPagesPanel } from '@/components/QuantumPagesPanel';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 
 type Keyword = {
   id: string;
@@ -133,6 +134,8 @@ export default function KeywordsPage() {
         subtitle="AI suggestions, manual keywords, per-platform targeting, intent tags, and custom prompts"
         actions={<LivePulse label="TRACKING" />}
       />
+
+      <SectionLivePanel section="keywords" showAccounts={false} />
 
       {msg && <div className="card ac-msg-card"><p style={{ margin: 0 }}>{msg}</p></div>}
 
