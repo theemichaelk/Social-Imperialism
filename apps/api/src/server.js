@@ -150,6 +150,11 @@ app.post('/api/invoke/:channel', requireAuth, async (req, res) => {
       organizationId: req.user.orgId,
       channel: req.params.channel,
       args,
+      userContext: {
+        userId: req.user.userId,
+        email: req.user.email,
+        orgId: req.user.orgId,
+      },
     });
     let data = result;
     let pendingOAuthUrl = null;

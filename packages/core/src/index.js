@@ -115,9 +115,10 @@ async function afterInvoke({ entry, channel, args, result }) {
   }
 }
 
-async function invoke({ projectId, organizationId, channel, args = [] }) {
+async function invoke({ projectId, organizationId, channel, args = [], userContext = null }) {
   const entry = await getHandlersForProject({ projectId, organizationId });
   const { handlers, store, pendingOAuth } = entry;
+  if (userContext) store._invokeContext = userContext;
   const handler = handlers[channel];
   if (!handler) {
     const err = new Error(`Unknown channel: ${channel}`);

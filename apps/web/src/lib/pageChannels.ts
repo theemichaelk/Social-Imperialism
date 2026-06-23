@@ -24,6 +24,7 @@ export const PAGE_CHANNELS = {
     'run-auto-rules-now', 'get-post-history', 'get-dashboard-stats',
     'get-content-studio-live', 'get-content-library', 'get-brand-guidelines',
     'seed-brand-from-website', 'get-design-templates', 'render-design-post',
+    'get-dns-sites', 'get-dns-records', 'save-dns-record', 'apply-dns-records', 'sync-dns-sites',
     'generate-from-library-assets', 'schedule-content-batch',
   ],
   browsePosts: [

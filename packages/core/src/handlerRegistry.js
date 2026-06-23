@@ -164,6 +164,9 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerEmailCampaignHandlers } = require(path.join(DESKTOP_SERVICES, 'emailCampaignIpc'));
   registerEmailCampaignHandlers({ ipcMain, store });
 
+  const { registerDnsHandlers } = require(path.join(DESKTOP_SERVICES, 'dnsIpc'));
+  registerDnsHandlers({ ipcMain, store });
+
   // Core index.js handlers
   const { registerCoreHandlers } = require('./coreHandlers');
   registerCoreHandlers({

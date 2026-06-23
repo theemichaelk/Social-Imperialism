@@ -4,7 +4,7 @@
  */
 const { prisma } = require('@si/db');
 
-const ORG_KEYS = new Set(['globalApiKeys', 'billingPlan', 'paymentHistory']);
+const ORG_KEYS = new Set(['globalApiKeys', 'billingPlan', 'paymentHistory', 'org_dnsStore']);
 
 class PrismaStore {
   constructor({ projectId, organizationId }) {
