@@ -8,6 +8,7 @@ import { useIntelligence } from '@/hooks/useIntelligence';
 import { FetchProfilesPanel } from '@/components/FetchProfilesPanel';
 import { PostExplorerModal } from '@/components/PostExplorerModal';
 import { BrowsePostsLivePanel } from '@/components/BrowsePostsLivePanel';
+import { AccountSelectField } from '@/components/AccountSelectField';
 import { FetchProfileFilters, LANGUAGE_OPTIONS, LOCATION_OPTIONS } from '@/lib/fetchProfiles';
 
 type Post = {
@@ -579,13 +580,7 @@ export default function BrowsePostsPage() {
             <h3>AI Draft Reply</h3>
             {selected && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Replying on {selected.platform}</p>}
 
-            <label className="ac-label">Publish via account</label>
-            <select className="input" value={publishAccountId} onChange={(e) => setPublishAccountId(e.target.value)} style={{ marginBottom: 8 }}>
-              {!accounts.length && <option value="">No accounts linked</option>}
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.platform} — {a.handle || a.id}</option>
-              ))}
-            </select>
+            <AccountSelectField value={publishAccountId} onChange={setPublishAccountId} label="Publish via account" />
 
             <input className="input" placeholder="Custom prompt override (optional)" value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} style={{ marginBottom: 8 }} />
             <textarea className="input" value={draft} onChange={(e) => setDraft(e.target.value)} rows={8} placeholder="Select a post and click Draft Reply" />

@@ -13,6 +13,7 @@ import { SettingsHealthPanel } from '@/components/SettingsHealthPanel';
 import { IntelligenceSettingsPanel } from '@/components/IntelligenceSettingsPanel';
 import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { INTEGRATION_GROUPS } from '@/lib/integrationCatalog';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 
 type Campaign = {
   id: string; brandName?: string; domain?: string; status?: string;
@@ -261,6 +262,8 @@ function SettingsContent() {
           </div>
         }
       />
+
+      <SectionLivePanel section="settings" showAccounts={false} />
 
       <div className="dash-hero">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>

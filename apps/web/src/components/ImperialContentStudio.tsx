@@ -14,6 +14,7 @@ import {
 import { SocialPostCard, TemplatePicker } from '@/components/SocialPostCard';
 import { PostEditorModal } from '@/components/PostEditorModal';
 import { ContentStudioLivePanel } from '@/components/ContentStudioLivePanel';
+import { AccountSelectField } from '@/components/AccountSelectField';
 
 type Campaign = {
   brandName?: string;
@@ -49,6 +50,8 @@ export function ImperialContentStudio() {
   const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const [useLibrary, setUseLibrary] = useState(true);
+  const [publishAccountId, setPublishAccountId] = useState('');
+  const [defaultMediaUrl, setDefaultMediaUrl] = useState('');
 
   const refresh = useCallback(async () => {
     const [camp, accs, cfg, kws, lib] = await Promise.all([
@@ -61,6 +64,7 @@ export function ImperialContentStudio() {
     setLibraryAssets(lib.assets || []);
     setCampaign(camp || {});
     setAccounts(accs || []);
+    setPublishAccountId((prev) => prev || accs?.[0]?.id || '');
     setConfig(cfg || {});
     if (cfg.models?.[0] && !model) setModel(cfg.models[0].id);
     const terms = (kws || []).map((k) => k.term).filter(Boolean);
@@ -132,25 +136,24 @@ export function ImperialContentStudio() {
     setMsg(scheduleMode === 'now' ? 'Publishing…' : 'Scheduling to calendar…');
     try {
       if (scheduleMode === 'now') {
-        const targets = accounts.length ? accounts : [{ id: '', platform: 'LinkedIn' }];
+        const acc = accounts.find((a) => a.id === publishAccountId) || accounts[0];
+        if (!acc) throw new Error('Link an account in Account Hub before publishing');
         let published = 0;
         for (const item of approved) {
-          const itemTargets = item.accountId
-            ? targets.filter((a) => a.id === item.accountId)
-            : targets;
-          for (const acc of itemTargets) {
-            await invoke('publish-post', {
-              accountId: acc.id,
-              platform: item.platform || acc.platform,
-              content: item.content,
-              mediaUrl: item.mediaUrl,
-              hasMedia: !!item.mediaUrl,
-              isVideo: !!item.isVideo,
-            });
-            published += 1;
-          }
+          const mediaUrl = item.mediaUrl || defaultMediaUrl || undefined;
+          const res = await invoke<{ success?: boolean; error?: string }>('publish-post', {
+            accountId: item.accountId || acc.id,
+            platform: item.platform || acc.platform,
+            content: item.content,
+            mediaUrl,
+            hasMedia: !!mediaUrl,
+            isVideo: !!item.isVideo,
+            humanLike: false,
+          });
+          if (res?.success === false) throw new Error(res.error || 'Publish failed');
+          published += 1;
         }
-        setMsg(`Published ${published} post(s) across ${targets.length} connected account(s)`);
+        setMsg(`Published ${published} post(s) via ${acc.platform}`);
       } else {
         const sched = await invoke<{ message?: string; count?: number }>('schedule-content-batch', {
           items: approved,
@@ -347,7 +350,10 @@ export function ImperialContentStudio() {
           <p className="settings-panel-desc">
             {approved.length} approved post(s) ready. Auto-schedule across your calendar or publish immediately.
           </p>
-          <div className="grid grid-2">
+          <AccountSelectField value={publishAccountId} onChange={setPublishAccountId} label="Publish via account" />
+          <label className="ac-label" style={{ marginTop: 8 }}>Default media URL (optional)</label>
+          <input className="input" value={defaultMediaUrl} onChange={(e) => setDefaultMediaUrl(e.target.value)} placeholder="https://… image or video for all posts" />
+          <div className="grid grid-2" style={{ marginTop: 12 }}>
             <div>
               <label className="ac-label">Delivery mode</label>
               <select className="input" value={scheduleMode} onChange={(e) => setScheduleMode(e.target.value as typeof scheduleMode)}>

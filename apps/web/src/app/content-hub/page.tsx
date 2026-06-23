@@ -16,6 +16,7 @@ import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
 import { AutoContentSettingsPanel } from '@/components/AutoContentSettingsPanel';
 import { ContentHubDashboard } from '@/components/ContentHubDashboard';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { AccountSelectField } from '@/components/AccountSelectField';
 const TABS = [
   { id: 'home', label: 'Hub', group: 'Workflow' },
   { id: 'studio', label: 'Generate', group: 'Workflow' },
@@ -110,9 +111,7 @@ export default function ContentHubPage() {
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="ch-readiness" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem', alignItems: 'center' }}>
           <span>Accounts: <strong>{accounts.length}</strong></span>
-          <select className="input" style={{ maxWidth: 220, margin: 0 }} value={publishAccountId} onChange={(e) => setPublishAccountId(e.target.value)}>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.platform} — {a.handle || a.id}</option>)}
-          </select>
+          <AccountSelectField value={publishAccountId} onChange={setPublishAccountId} label="Publish via account" />
           <button className="btn" onClick={async () => setAccounts(await invoke('get-linked-accounts'))}>Refresh Accounts</button>
         </div>
         {isSurfaceEnabled('content-hub') && (() => {

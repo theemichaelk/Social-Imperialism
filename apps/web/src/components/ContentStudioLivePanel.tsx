@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { BarChart, DataPanel, LivePulse, MetricTile, SparkRow } from '@/components/DashboardViz';
+import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 
 type LiveData = {
   updatedAt?: string;
@@ -14,6 +14,7 @@ type LiveData = {
     published7d?: number;
     keywords?: number;
     brandReady?: boolean;
+    published?: number;
   };
   platformSchedule?: Record<string, number>;
   engagementByDay?: Record<string, number>;
@@ -85,7 +86,16 @@ export function ContentStudioLivePanel() {
           <MetricTile label="Queue" value={stats.queue ?? 0} sub="review" accent="#f59e0b" />
           <MetricTile label="Scheduled" value={stats.scheduled ?? 0} sub="calendar" accent="#a855f7" />
           <MetricTile label="Published 7d" value={stats.published7d ?? 0} sub="live" accent="#22c55e" />
+          <MetricTile label="Keywords" value={stats.keywords ?? 0} sub="tracked" accent="#38bdf8" />
           <MetricTile label="Brand" value={stats.brandReady ? 'Ready' : 'Seed'} sub={stats.brandReady ? 'on-brand' : 'setup'} accent={stats.brandReady ? '#22c55e' : '#f59e0b'} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+          <RingChart percent={stats.accounts ? Math.min(100, (stats.scheduled || 0) * 8 + 20) : 0} label="Pipeline" color="#a855f7" />
+          <RingChart percent={stats.brandReady ? 92 : 35} label="Brand fit" color={stats.brandReady ? '#22c55e' : '#f59e0b'} />
+          <LivePulse label={loading ? 'SYNCING' : 'LIVE'} />
+          {data.updatedAt && (
+            <span className="settings-panel-desc" style={{ margin: 0 }}>Updated {new Date(data.updatedAt).toLocaleTimeString()}</span>
+          )}
         </div>
       </div>
 

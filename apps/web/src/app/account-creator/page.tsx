@@ -6,6 +6,7 @@ import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import {
   CREATOR_ENGINE_KEYS,
   PLATFORM_CONNECTIONS,
@@ -523,6 +524,8 @@ export default function AccountCreatorPage() {
           </div>
         }
       />
+
+      <SectionLivePanel section="account-creator" />
 
       <div className="dash-hero ac-hero">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>

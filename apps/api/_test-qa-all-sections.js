@@ -38,6 +38,7 @@ const SECTIONS = [
       { name: 'Export data', channel: 'export-data', validate: (d) => typeof d === 'object' },
       { name: 'RSS curate', channel: 'curate-from-rss', args: [{ rssUrl: 'https://feeds.feedburner.com/TechCrunch', numItems: 1 }], validate: (d) => Array.isArray(d) || d?.posts || d?.items },
       { name: 'Stock photo search', channel: 'search-stock-photo', args: ['technology marketing'], validate: (d) => d?.imageUrl || d?.url || typeof d === 'object' },
+      { name: 'Section live', channel: 'get-section-live', args: ['dashboard'], validate: (d) => d?.stats && typeof d.stats === 'object' },
     ],
   },
   {

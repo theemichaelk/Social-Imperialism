@@ -85,14 +85,14 @@ function registerContentStudioHandlers({
     });
 
     const last7 = published.filter((p) => {
-      const ts = p.publishedAt || p.createdAt;
+      const ts = p.publishedAt || p.createdAt || p.timestamp;
       if (!ts) return false;
       return Date.now() - new Date(ts).getTime() < 7 * 86400000;
     });
 
     const engagementByDay = {};
     last7.forEach((p) => {
-      const day = (p.publishedAt || p.createdAt || '').slice(0, 10) || 'unknown';
+      const day = (p.publishedAt || p.createdAt || p.timestamp || '').slice(0, 10) || 'unknown';
       const s = p.stats || {};
       engagementByDay[day] = (engagementByDay[day] || 0) + (s.likes || 0) + (s.comments || 0) + (s.shares || 0);
     });

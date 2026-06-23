@@ -6,6 +6,7 @@ import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
 import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { INTEGRATION_GROUPS, LIVE_INTEGRATION_TESTS } from '@/lib/integrationCatalog';
 import { PARTNER_CONNECTORS } from '@/lib/partnerConnectors';
 import { OAUTH_PLATFORM_SETUP, OAUTH_PRIMARY_REDIRECT } from '@/lib/oauthConfig';
@@ -223,6 +224,8 @@ export default function IntegrationsPage() {
           </div>
         }
       />
+
+      <SectionLivePanel section="integrations" showAccounts={false} />
 
       <DataPanel title="OAuth Console Setup (register in each provider)" live>
         <p className="settings-panel-desc" style={{ marginBottom: 12 }}>
