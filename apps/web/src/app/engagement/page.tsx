@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { AccountSelectField } from '@/components/AccountSelectField';
 
 type EngList = { id: string; name: string; type?: string; autoEngage?: boolean; profileUrls?: string[]; supporterCount?: number };
 type FeedPost = {
@@ -38,6 +40,7 @@ export default function EngagementPage() {
   const [status, setStatus] = useState('');
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [postMeta, setPostMeta] = useState<Record<number, { tone: string; type: string; custom: string }>>({});
+  const [linkedInAccountId, setLinkedInAccountId] = useState('');
 
   async function refreshLists() {
     const data = await invoke<EngList[]>('get-engagement-lists');
@@ -127,6 +130,7 @@ Keep it under 300 characters, human, and compliant with LinkedIn norms. Return o
     setStatus('Posting…');
     const res = await invoke<{ success?: boolean; error?: string }>('post-linkedin-comment', {
       comment, url: post.url, author: post.author, postContent: post.content,
+      accountId: linkedInAccountId || undefined,
     });
     setStatus(res.success ? 'Posted to LinkedIn' : (res.error || 'Failed'));
   }
@@ -137,6 +141,7 @@ Keep it under 300 characters, human, and compliant with LinkedIn norms. Return o
       await invoke('engage-post', {
         action: 'like',
         platform: 'LinkedIn',
+        accountId: linkedInAccountId || undefined,
         urn: post.urn,
         url: post.url,
         externalId: post.urn || post.externalId,
@@ -154,6 +159,12 @@ Keep it under 300 characters, human, and compliant with LinkedIn norms. Return o
   return (
     <div>
       <PageHeader title="Engagement CRM" subtitle="LinkedIn lists, per-post AI comments, quick like, auto-engage" />
+
+      <SectionLivePanel section="engagement" />
+
+      <div className="card" style={{ marginBottom: '1rem' }}>
+        <AccountSelectField value={linkedInAccountId} onChange={setLinkedInAccountId} label="LinkedIn account for comments" platformFilter="LinkedIn" />
+      </div>
 
       <div className="grid grid-2">
         <div className="card">

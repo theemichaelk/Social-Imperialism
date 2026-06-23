@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { BarChart } from '@/components/DashboardViz';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { buildCsvExport, downloadCsv } from '@/lib/csvExport';
 
 type Reply = {
@@ -152,12 +153,7 @@ export default function HistoryPage() {
         }
       />
 
-      <div className="grid grid-4">
-        <div className="card kpi"><div className="kpi-val">{dashStats.totalPosts ?? 0}</div><div className="kpi-label">Posts Published</div></div>
-        <div className="card kpi"><div className="kpi-val">{dashStats.aiDrafts ?? stats.byStatus?.draft ?? 0}</div><div className="kpi-label">AI Drafts</div></div>
-        <div className="card kpi"><div className="kpi-val">{dashStats.totalEngagement ?? 0}</div><div className="kpi-label">Total Engagement</div></div>
-        <div className="card kpi"><div className="kpi-val">{dashStats.activeKeywords ?? 0}</div><div className="kpi-label">Active Keywords</div></div>
-      </div>
+      <SectionLivePanel section="history" />
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem' }}>

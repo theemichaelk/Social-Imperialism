@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SocialPostCard } from '@/components/SocialPostCard';
 import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
 import Link from 'next/link';
@@ -96,6 +97,8 @@ export default function DesignStudioPage() {
         subtitle="Visual Builder — pick a template, fill slots from your library, generate on-brand graphics and captions"
         actions={<Link href="/content-library" className="btn">Content Library →</Link>}
       />
+
+      <SectionLivePanel section="design-studio" />
 
       <div className="grid grid-2">
         <div className="card">

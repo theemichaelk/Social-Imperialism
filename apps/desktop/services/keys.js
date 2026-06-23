@@ -311,8 +311,26 @@ function hasStoredConnectToken(platform, keys) {
   return !!resolveSettingsToken(platform, keys);
 }
 
+function getKeySources(globalKeys = {}) {
+  const sources = {};
+  const allCanonical = new Set([
+    ...Object.keys(ENV_ALIASES),
+    ...Object.keys(STORAGE_ALIASES),
+  ]);
+  for (const canonical of allCanonical) {
+    const fromEnv = firstDefined(process.env, ENV_ALIASES[canonical] || []);
+    const storageNames = STORAGE_ALIASES[canonical] || [canonical];
+    const fromStorage = firstDefined(globalKeys, storageNames);
+    if (fromEnv) sources[canonical] = 'env';
+    else if (fromStorage) sources[canonical] = 'user';
+    else sources[canonical] = 'empty';
+  }
+  return sources;
+}
+
 module.exports = {
   resolveKeys,
+  getKeySources,
   twitterConsumerKey,
   twitterConsumerSecret,
   hasTwitterKeys,

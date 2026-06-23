@@ -160,7 +160,30 @@ function registerSettingsHandlers({ ipcMain, store }) {
     return { success: true, completed };
   });
 
-  console.log('[settingsIpc] Registered: get-billing-plan, save-billing-plan, save-billing-email, get-setup-tutorials, mark-tutorial-complete');
+  ipcMain.handle('get-site-playbook-config', () => {
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const key = `sitePlaybookConfig_${activeId}`;
+    try {
+      return JSON.parse(store.getItem(key) || '{}');
+    } catch (e) {
+      return {};
+    }
+  });
+
+  ipcMain.handle('save-site-playbook-config', (event, config) => {
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const key = `sitePlaybookConfig_${activeId}`;
+    const payload = {
+      keywords: String(config?.keywords || '').trim(),
+      description: String(config?.description || '').trim(),
+      expandedPlaybooks: config?.expandedPlaybooks || {},
+      updatedAt: new Date().toISOString(),
+    };
+    store.setItem(key, JSON.stringify(payload));
+    return { success: true, ...payload };
+  });
+
+  console.log('[settingsIpc] Registered: billing, tutorials, site-playbook-config');
 }
 
 module.exports = { registerSettingsHandlers, PLAN_CATALOG, SETUP_TUTORIALS, buildBillingResponse };

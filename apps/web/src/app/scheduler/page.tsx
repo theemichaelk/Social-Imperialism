@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { DataPanel } from '@/components/DashboardViz';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 
 type ScheduledPost = {
   id: string;
@@ -89,6 +90,7 @@ export default function SchedulerPage() {
         title="Post Scheduler"
         subtitle="Queue management, due-post processing, and background run windows"
       />
+      <SectionLivePanel section="scheduler" />
       {msg && <p className="page-msg">{msg}</p>}
 
       <div className="grid grid-3" style={{ marginBottom: '1rem' }}>

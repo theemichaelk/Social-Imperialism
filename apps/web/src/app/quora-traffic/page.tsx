@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { RichTextEditor } from '@/components/RichTextEditor';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 
 type Framework = { id: string; name: string; description: string };
 type Angle = {
@@ -259,6 +260,8 @@ export default function QuoraTrafficPage() {
         title="Quora Traffic Ops"
         subtitle="Research → Generate → Publish — real traffic data, brand angles, proven frameworks"
       />
+
+      <SectionLivePanel section="quora-traffic" />
 
       <div className="quora-hero card">
         <div className="feature-pills">

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { getSeoToolForm, SeoToolResults } from '@/components/SeoToolResults';
 
 type SeoTool = { id: string; name: string; desc?: string; needsSerp?: boolean };
@@ -63,6 +64,8 @@ export default function SeoToolsPage() {
   return (
     <div>
       <PageHeader title="SEO Research Tools" subtitle="KGR, scrapers, autocomplete, indexing, Reddit & Quora discovery" />
+
+      <SectionLivePanel section="seo-tools" showAccounts={false} />
 
       <div className="card" style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

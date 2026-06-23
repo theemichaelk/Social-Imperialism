@@ -7,6 +7,7 @@ import { DataPanel, SparkRow } from '@/components/DashboardViz';
 import { AutomationMatrixPanel } from '@/components/AutomationMatrixPanel';
 import { RulesEngineStatus } from '@/components/RulesEngineStatus';
 import { BackgroundRunPanel } from '@/components/BackgroundRunPanel';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
 
 type Monitor = {
@@ -185,6 +186,8 @@ export default function RulesPage() {
         title="Auto-Rules Engine"
         subtitle="Worker control, Be First monitors, crisis moderation, per-connection automation"
       />
+
+      <SectionLivePanel section="rules" />
 
       <RulesEngineStatus onMsg={setMsg} refreshKey={refreshKey} />
 

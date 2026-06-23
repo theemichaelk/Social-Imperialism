@@ -203,7 +203,7 @@ function scheduleToCalendarPosts(schedule, kit, campaignId, launchDate, accountM
       id: `sched_kit_${kit.id}_${idx}_${Date.now()}`,
       campaignId,
       platform: item.platform,
-      accountId: typeof accountId === 'object' ? accountId.id : accountId,
+      accountId: accountId && typeof accountId === 'object' ? accountId.id : accountId,
       content: item.content,
       mediaUrl: ytId ? `https://www.youtube.com/watch?v=${ytId}` : (item.mediaUrl || null),
       hasMedia: !!(ytId || item.mediaUrl),

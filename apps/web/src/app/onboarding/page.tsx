@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { LivePulse, RingChart } from '@/components/DashboardViz';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { useRouter } from 'next/navigation';
 
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
@@ -269,6 +270,8 @@ export default function OnboardingPage() {
         subtitle="Integrate your brand, keywords, and social platforms — then go live"
         actions={<LivePulse label="SETUP" />}
       />
+
+      <SectionLivePanel section="onboarding" />
 
       <div className="dash-hero" style={{ marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}>

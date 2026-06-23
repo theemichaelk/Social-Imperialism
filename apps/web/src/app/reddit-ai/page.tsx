@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 
 const MODULES = [
   { id: 'subreddit-ascent', name: 'Subreddit Ascent', color: '#f97316', icon: '🚀', tagline: 'Organic Reddit presence — browse, vote, comment on autopilot.', benefits: ['Effortless growth', 'Genuine engagement', 'Increased visibility'] },
@@ -156,6 +157,8 @@ export default function RedditAiPage() {
   return (
     <div>
       <PageHeader title="AI Growth Lab" subtitle="Six Reddit growth modules — configure, enable, run, approve" />
+
+      <SectionLivePanel section="reddit-ai" />
 
       <div className="card lab-bridge-card" style={{ marginBottom: 12, cursor: 'pointer' }}>
         <Link href="/quora-traffic" style={{ textDecoration: 'none', color: 'inherit' }}>

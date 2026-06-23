@@ -7,6 +7,7 @@ import { IntelligenceProfilePanel } from '@/components/IntelligenceProfilePanel'
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
 import { useIntelligence } from '@/hooks/useIntelligence';
 import { normalizeProfile } from '@/lib/intelligenceProfile';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { ALL_PLATFORMS } from '@/lib/platforms';
 
 const PLATFORMS = [...ALL_PLATFORMS];
@@ -256,6 +257,8 @@ export default function AccountHubPage() {
   return (
     <div>
       <PageHeader title="Account Hub" subtitle="Connect 16 platforms — OAuth, credentials, sub-accounts, automation targets" />
+
+      <SectionLivePanel section="account-hub" />
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.85rem' }}>

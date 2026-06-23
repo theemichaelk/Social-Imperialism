@@ -84,6 +84,9 @@ Brand Profile:
 - Target Audience: ${campaign.audience || 'Everyone'}
 - Tone of Voice: ${campaign.tone || 'Professional & Authoritative'}
 ${guidelines}${rulesPrompt}${kwBlock}${userOverride}
+UTM Tracking:
+- When including the brand domain/URL, use trackable links with utm_source=${campaign.utmSource || 'social_imperialism'} and utm_medium=${campaign.utmMedium || 'ai_reply'} when possible.
+
 Requirements:
 - CRITICAL BRAND REQUIREMENT: Naturally include the brand name "${campaign.brandName || 'your brand'}" and reference "${campaign.domain || 'your domain'}" or the primary CTA in every reply unless the user override explicitly forbids it.
 - Naturally includes your brand and key messages — never post a generic reply that omits the brand when engaging on behalf of this project.

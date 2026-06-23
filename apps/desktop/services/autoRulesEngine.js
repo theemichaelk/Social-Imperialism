@@ -203,6 +203,21 @@ async function applyEngagementActions({ post, replyText, rules, keys, linkedAcco
       pushTask(store, `Follow skipped (${post.platform} API)`, post.platform);
     }
   }
+
+  if (rules?.autoUnfollow && post.author) {
+    try {
+      await engagePost(
+        { action: 'unfollow', platform: post.platform, author: post.author, externalId: post.externalId, accountId: engageAccount?.id },
+        keys,
+        accounts,
+        rules,
+        store
+      );
+      pushTask(store, `Auto-unfollow ${post.author}`, post.platform);
+    } catch (e) {
+      pushTask(store, `Unfollow skipped (${post.platform} API)`, post.platform);
+    }
+  }
 }
 
 function syncRulesSideEffects(store, rules) {

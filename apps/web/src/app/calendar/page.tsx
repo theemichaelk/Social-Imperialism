@@ -7,6 +7,8 @@ import { IntelligenceRecommendations } from '@/components/IntelligenceRecommenda
 import { useIntelligence } from '@/hooks/useIntelligence';
 import { normalizeProfile } from '@/lib/intelligenceProfile';
 import { CalendarGrid } from '@/components/CalendarGrid';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { AccountSelectField } from '@/components/AccountSelectField';
 
 type ScheduledPost = { id: string; content: string; timestamp: string; platform: string; status?: string };
 type BestTimeSuggestion = { day?: string; hour?: number; label?: string; score?: number; reason?: string; avg?: number };
@@ -39,6 +41,8 @@ export default function CalendarPage() {
   const [content, setContent] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
   const [platform, setPlatform] = useState('');
+  const [accountId, setAccountId] = useState('');
+  const [mediaUrl, setMediaUrl] = useState('');
   const [calStatus, setCalStatus] = useState<Record<string, unknown>>({});
   const [bestTimes, setBestTimes] = useState<BestTimesAnalysis>({ suggestions: [] });
   const [msg, setMsg] = useState('');
@@ -59,12 +63,14 @@ export default function CalendarPage() {
 
   async function schedule() {
     const accs = await invoke<Array<{ id: string; platform: string }>>('get-linked-accounts');
-    const acc = accs.find((a) => !platform || a.platform === platform) || accs[0];
+    const acc = accs.find((a) => a.id === accountId) || accs.find((a) => !platform || a.platform === platform) || accs[0];
     if (!acc) return alert('Link an account first in Account Hub');
     await invoke('schedule-post', {
       platform: acc.platform,
       accountId: acc.id,
       content,
+      mediaUrl: mediaUrl || undefined,
+      hasMedia: !!mediaUrl,
       scheduleTime: scheduleTime || new Date(Date.now() + 86400000).toISOString(),
     });
     setContent('');
@@ -113,19 +119,18 @@ export default function CalendarPage() {
     <div>
       <PageHeader title="Content Calendar" subtitle="Schedule, edit, publish, and optimize post timing" />
 
-      <div className="grid grid-4">
-        <div className="card kpi"><div className="kpi-val">{posts.length}</div><div className="kpi-label">Scheduled</div></div>
-        <div className="card kpi"><div className="kpi-val">{String((calStatus as { dueNow?: number }).dueNow ?? '—')}</div><div className="kpi-label">Due Now</div></div>
-        <div className="card kpi"><div className="kpi-val">{bestTimes.suggestions?.length || '—'}</div><div className="kpi-label">Best Slots</div></div>
-        <div className="card kpi"><div className="kpi-val status-ok">Active</div><div className="kpi-label">Calendar</div></div>
-      </div>
+      <SectionLivePanel section="calendar" />
 
       <div className="grid grid-2">
         <div className="card">
           <h3>Schedule New Post</h3>
+          <AccountSelectField value={accountId} onChange={setAccountId} label="Publish via account" />
           <textarea className="input" value={content} onChange={(e) => setContent(e.target.value)} rows={4} placeholder="Post content…" />
+          <label className="ac-label" style={{ marginTop: 8 }}>Media URL (optional)</label>
+          <input className="input" placeholder="https://… image or video" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} />
           <input className="input" placeholder="Platform filter (optional)" value={platform} onChange={(e) => setPlatform(e.target.value)} style={{ marginTop: 8 }} />
-          <input className="input" type="datetime-local" style={{ marginTop: 8 }} onChange={(e) => setScheduleTime(new Date(e.target.value).toISOString())} />
+          <label className="ac-label" style={{ marginTop: 8 }}>Schedule time</label>
+          <input className="input" type="datetime-local" style={{ marginTop: 4 }} onChange={(e) => setScheduleTime(new Date(e.target.value).toISOString())} />
           <button className="btn primary" style={{ marginTop: 8 }} onClick={schedule}>Schedule Post</button>
         </div>
         <div className="card">

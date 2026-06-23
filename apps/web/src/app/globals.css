@@ -1685,6 +1685,7 @@ textarea.input { min-height: 100px; resize: vertical; }
 .ics-live-grid .ics-live-wide { grid-column: 1 / -1; }
 .ics-live-grid .dash-hero { margin: 0; }
 .browse-live-grid { margin-bottom: 1rem; }
+.section-live-grid { margin-bottom: 1rem; }
 .ics-hero {
   display: flex;
   justify-content: space-between;

@@ -215,6 +215,15 @@ async function registerAllHandlers(store, deps = {}) {
     fetchTrendingTopics,
   });
 
+  const { registerSectionLiveHandlers } = require(path.join(DESKTOP_SERVICES, 'sectionLiveIpc'));
+  registerSectionLiveHandlers({
+    ipcMain,
+    store,
+    resolveKeys,
+    buildApiMetrics: (k) => buildApiMetrics(resolveKeys, k),
+    fetchTrendingTopics,
+  });
+
   return { handlers, calendarApi, integrations, pendingOAuth: () => deps.pendingOAuthUrl };
 }
 

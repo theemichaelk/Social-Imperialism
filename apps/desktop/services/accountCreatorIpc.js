@@ -3,8 +3,18 @@
  */
 const axios = require('axios');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const { app } = require('electron');
+
+function getProfileKitsExportDir() {
+  try {
+    const { app } = require('electron');
+    if (app?.getPath) return path.join(app.getPath('userData'), 'profile-kits');
+  } catch (e) { /* SaaS / headless — no Electron */ }
+  const dir = path.join(os.tmpdir(), 'si-saas', 'profile-kits');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
 const proxyManager = require('./proxyManager');
 const accountCreator = require('./accountCreator');
 const { resolveKeys } = require('./keys');
@@ -239,6 +249,7 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
     'save-proxy',
     'delete-proxy',
     'test-proxy',
+    'import-proxies-bulk',
     'get-profile-kits',
     'get-profile-kit',
     'save-profile-kit',
@@ -285,31 +296,123 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
     }
   });
 
+  function parseProxyImportLine(line, defaultProtocol = 'http') {
+    let raw = String(line || '').trim();
+    if (!raw || raw.startsWith('#')) return null;
+    let label = null;
+    if (raw.includes('|')) {
+      const parts = raw.split('|');
+      label = parts[0].trim();
+      raw = parts.slice(1).join('|').trim();
+    }
+    let username = null;
+    let password = null;
+    if (raw.includes('@')) {
+      const at = raw.lastIndexOf('@');
+      const auth = raw.slice(0, at);
+      raw = raw.slice(at + 1);
+      const colon = auth.indexOf(':');
+      if (colon >= 0) {
+        username = auth.slice(0, colon);
+        password = auth.slice(colon + 1);
+      } else username = auth;
+    }
+    const lastColon = raw.lastIndexOf(':');
+    if (lastColon < 0) throw new Error(`Invalid format: ${line}`);
+    const host = raw.slice(0, lastColon).trim();
+    const port = parseInt(raw.slice(lastColon + 1), 10);
+    if (!host || Number.isNaN(port)) throw new Error(`Invalid host:port — ${line}`);
+    return {
+      label: label || `${host}:${port}`,
+      host,
+      port,
+      protocol: defaultProtocol,
+      username,
+      password,
+    };
+  }
+
+  ipcMain.handle('import-proxies-bulk', (event, payload = {}) => {
+    const text = String(payload.text || payload.lines || '');
+    const protocol = ['http', 'https', 'socks5'].includes(payload.protocol) ? payload.protocol : 'http';
+    const imported = [];
+    const errors = [];
+    text.split(/\r?\n/).forEach((line, i) => {
+      try {
+        const parsed = parseProxyImportLine(line, protocol);
+        if (!parsed) return;
+        imported.push(proxyManager.addProxy(store, parsed));
+      } catch (e) {
+        errors.push({ line: i + 1, error: e.message });
+      }
+    });
+    return {
+      success: imported.length > 0,
+      imported,
+      count: imported.length,
+      errors,
+    };
+  });
+
   ipcMain.handle('test-proxy', async (event, proxyId) => {
     const proxy = proxyManager.findProxyById(store, proxyId);
     if (!proxy) return { success: false, error: 'Proxy not found.' };
     const url = proxyManager.formatProxyUrl(proxy);
     try {
       const start = Date.now();
-      const res = await axios.get('https://api.ipify.org?format=json', {
-        proxy: false,
-        timeout: 8000,
-        headers: { 'User-Agent': 'Social-Imperialism/1.0' },
-      });
+      let res;
+      if (proxy.protocol === 'socks5') {
+        try {
+          const { SocksProxyAgent } = require('socks-proxy-agent');
+          const agent = new SocksProxyAgent(url);
+          res = await axios.get('https://api.ipify.org?format=json', {
+            httpAgent: agent,
+            httpsAgent: agent,
+            timeout: 15000,
+            headers: { 'User-Agent': 'Social-Imperialism/1.0' },
+          });
+        } catch (socksErr) {
+          return {
+            success: false,
+            error: `SOCKS5 test unavailable (${socksErr.message}). Proxy is saved — assign to a kit and verify during signup.`,
+          };
+        }
+      } else {
+        res = await axios.get('https://api.ipify.org?format=json', {
+          proxy: {
+            host: proxy.host,
+            port: proxy.port,
+            auth: proxy.username
+              ? { username: proxy.username, password: proxy.password || '' }
+              : undefined,
+          },
+          timeout: 15000,
+          headers: { 'User-Agent': 'Social-Imperialism/1.0' },
+        });
+      }
       const proxies = proxyManager.getProxyPool(store);
       const idx = proxies.findIndex((p) => p.id === proxyId);
       if (idx >= 0) {
         proxies[idx].lastCheckedAt = new Date().toISOString();
-        proxies[idx].lastCheckNote = `Direct IP check OK (${res.data?.ip}). Proxy URL stored: ${url ? 'yes' : 'no'}`;
+        proxies[idx].lastCheckNote = `Egress IP via proxy: ${res.data?.ip || 'unknown'}`;
+        proxies[idx].status = 'active';
         proxyManager.saveProxyPool(store, proxies);
       }
       return {
         success: true,
-        message: `Proxy saved. Your direct IP: ${res.data?.ip}. Assign this proxy to a profile kit before account signup.`,
+        message: `Proxy OK — egress IP: ${res.data?.ip || 'unknown'} (${Date.now() - start}ms)`,
+        ip: res.data?.ip,
         latencyMs: Date.now() - start,
         proxyUrl: url,
       };
     } catch (e) {
+      const proxies = proxyManager.getProxyPool(store);
+      const idx = proxies.findIndex((p) => p.id === proxyId);
+      if (idx >= 0) {
+        proxies[idx].lastCheckedAt = new Date().toISOString();
+        proxies[idx].lastCheckNote = `Test failed: ${e.message}`;
+        proxyManager.saveProxyPool(store, proxies);
+      }
       return { success: false, error: e.message };
     }
   });
@@ -352,12 +455,18 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
     }
   });
 
-  ipcMain.handle('push-kit-schedule-to-calendar', (event, { kitId, campaignId, launchDate }) => {
+  ipcMain.handle('push-kit-schedule-to-calendar', (event, payload) => {
+    const { kitId, campaignId, launchDate } = payload || {};
+    if (!kitId) return { success: false, error: 'kitId is required.' };
     const cid = campaignId || store.getItem('activeCampaignId') || 'default';
     const kit = accountCreator.getKitById(store, cid, kitId);
     if (!kit) return { success: false, error: 'Profile kit not found.' };
     if (!kit.contentSchedule?.length) return { success: false, error: 'Kit has no content schedule.' };
-    return pushKitScheduleToStore(store, kit, cid, launchDate);
+    try {
+      return pushKitScheduleToStore(store, kit, cid, launchDate);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
   });
 
   ipcMain.handle('save-kit-account-map', (event, { kitId, campaignId, accountMap }) => {
@@ -382,8 +491,7 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
       proxy: proxy ? { ...proxy, password: proxy.password ? '***' : null } : null,
     };
 
-    const dir = path.join(app.getPath('userData'), 'profile-kits');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const dir = getProfileKitsExportDir();
     const filePath = path.join(dir, `${kit.id}_export.json`);
     fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2), 'utf8');
     return { success: true, filePath, data: exportData };

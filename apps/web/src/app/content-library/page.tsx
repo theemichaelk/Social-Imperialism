@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import Link from 'next/link';
 
 type Asset = {
@@ -102,6 +103,8 @@ export default function ContentLibraryPage() {
         subtitle="Central hub for images, video, copy, and imports — drag assets into Create or Design Studio"
         actions={<Link href="/content-hub?tab=studio" className="btn primary">Open Create →</Link>}
       />
+
+      <SectionLivePanel section="content-library" />
 
       <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
         <div className="card">

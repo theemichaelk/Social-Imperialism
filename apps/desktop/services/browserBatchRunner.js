@@ -51,7 +51,7 @@ function enqueueBatch(store, payload = {}) {
     headless: payload.headless !== false,
     runAt: parseRunAt(payload.runAt, payload.overnightHour),
     status: 'queued',
-    alsoUploadApi: !!payload.alsoUploadApi,
+    alsoUploadApi: !!(payload.alsoUploadApi || payload.alsoApiUpload),
     alsoPushCalendar: !!payload.alsoPushCalendar,
     delayBetweenKitsMs: Math.max(30000, parseInt(payload.delayBetweenKitsMs, 10) || 120000),
     delayBetweenPlatformsMs: Math.max(5000, parseInt(payload.delayBetweenPlatformsMs, 10) || 30000),
@@ -202,7 +202,11 @@ async function processBrowserBatchQueue(store, deps, onProgress) {
 
 function runBatchNow(store, batchId) {
   const queue = getQueue(store);
-  const job = queue.find((j) => j.id === batchId);
+  let job = queue.find((j) => j.id === batchId);
+  if (!job && (batchId === 'latest' || batchId === 'next')) {
+    job = [...queue].reverse().find((j) => j.status === 'queued')
+      || [...queue].reverse().find((j) => j.status !== 'running');
+  }
   if (!job) return { success: false, error: 'Batch not found.' };
   if (job.status === 'running') return { success: false, error: 'Batch is already running.' };
   job.runAt = new Date().toISOString();
