@@ -98,10 +98,14 @@ app.post('/api/invoke/:channel', requireAuth, async (req, res) => {
       channel: req.params.channel,
       args,
     });
-    const data = result && typeof result === 'object' ? result : { value: result };
-    const pendingOAuthUrl = data.pendingOAuthUrl || null;
-    if (pendingOAuthUrl) delete data.pendingOAuthUrl;
-    res.json({ success: true, data, pendingOAuthUrl });
+    let data = result;
+    let pendingOAuthUrl = null;
+    if (data && typeof data === 'object' && data.pendingOAuthUrl) {
+      pendingOAuthUrl = data.pendingOAuthUrl;
+      const { pendingOAuthUrl: _po, ...rest } = data;
+      data = rest;
+    }
+    res.json({ success: true, data: data ?? null, pendingOAuthUrl });
   } catch (e) {
     if (e.code === 'UNKNOWN_CHANNEL') return res.status(404).json({ error: e.message });
     console.error(`invoke/${req.params.channel}:`, e.message);

@@ -139,6 +139,8 @@ export default function ContentHubPage() {
           <div className="card">
             <h3>Quick Post</h3>
             <textarea className="input" rows={8} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write on-brand copy — Social Imperialism enhances before publish…" />
+            <label className="ac-label" style={{ marginTop: 12 }}>Media URL (optional)</label>
+            <input className="input" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://… image or video" />
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <button className="btn" onClick={enhance}>AI Enhance</button>
               <button className="btn" onClick={async () => setContent(await invoke('generate-ai', 'Write a professional on-brand LinkedIn post about social automation. Not generic AI tone.'))}>AI Generate</button>

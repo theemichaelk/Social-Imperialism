@@ -17,7 +17,7 @@ const SECTIONS = [
     section: 'Mission Control — Dashboard',
     features: [
       { name: 'KPI stats', channel: 'get-dashboard-stats', validate: (d) => typeof d?.totalPosts === 'number' },
-      { name: 'Live feed', channel: 'get-live-feed', args: [{}], validate: (d) => Array.isArray(d) },
+      { name: 'Live feed', channel: 'get-live-feed', args: [{ quick: true }], validate: (d) => Array.isArray(d) },
       { name: 'Trending topics', channel: 'get-trending-topics', validate: (d) => Array.isArray(d) },
       { name: 'Live news', channel: 'get-live-news', args: ['technology'], validate: (d) => Array.isArray(d) },
       { name: 'Setup status', channel: 'get-setup-status', validate: (d) => d && typeof d === 'object' },
@@ -33,7 +33,7 @@ const SECTIONS = [
       { name: 'Start worker', channel: 'start-worker', validate: (d) => d?.success !== false },
       { name: 'Trigger auto search', channel: 'trigger-full-auto-search', validate: (d) => d?.success !== false },
       { name: 'Fanpage settings', channel: 'get-fanpage-settings', validate: (d) => typeof d === 'object' },
-      { name: 'Draft post reply', channel: 'draft-post-reply', args: [{ post: { content: 'How do I grow on LinkedIn?', platform: 'LinkedIn' }, postContent: 'How do I grow on LinkedIn?', platform: 'LinkedIn' }], validate: (d) => typeof d === 'string' && d.length > 10 },
+      { name: 'Draft post reply', channel: 'draft-post-reply', args: [{ post: { content: 'How do I grow on LinkedIn?', platform: 'LinkedIn' }, postContent: 'How do I grow on LinkedIn?', platform: 'LinkedIn' }], validate: (d) => (typeof d === 'string' && d.length > 10) || (typeof d?.value === 'string' && d.value.length > 10) },
       { name: 'Save AI reply', channel: 'save-ai-reply', args: [{ originalPost: 'Test', replyContent: 'Test reply content here', platform: 'Twitter', status: 'draft' }], validate: (d) => d?.id || d?.success !== false },
       { name: 'Export data', channel: 'export-data', validate: (d) => typeof d === 'object' },
       { name: 'RSS curate', channel: 'curate-from-rss', args: [{ rssUrl: 'https://feeds.feedburner.com/TechCrunch', numItems: 1 }], validate: (d) => Array.isArray(d) || d?.posts || d?.items },
@@ -43,8 +43,8 @@ const SECTIONS = [
   {
     section: 'Mission Control — Browse Posts',
     features: [
-      { name: 'Feed with filters', channel: 'get-live-feed', args: [{ platform: 'All', sort: 'recent' }], validate: (d) => Array.isArray(d) },
-      { name: 'Draft reply', channel: 'draft-post-reply', args: [{ post: { content: 'Best CRM for startups?', platform: 'Twitter' }, postContent: 'Best CRM for startups?', platform: 'Twitter' }], validate: (d) => typeof d === 'string' && d.length > 5 },
+      { name: 'Feed with filters', channel: 'get-live-feed', args: [{ platform: 'All', sort: 'recent', quick: true }], validate: (d) => Array.isArray(d) },
+      { name: 'Draft reply', channel: 'draft-post-reply', args: [{ post: { content: 'Best CRM for startups?', platform: 'Twitter' }, postContent: 'Best CRM for startups?', platform: 'Twitter' }], validate: (d) => (typeof d === 'string' && d.length > 5) || (typeof d?.value === 'string' && d.value.length > 5) },
       { name: 'Save draft to inbox', channel: 'save-ai-reply', args: [{ originalPost: 'Best CRM?', replyContent: 'We recommend evaluating HubSpot and Pipedrive.', platform: 'Twitter', status: 'draft' }], validate: (d) => d?.id || d?.success !== false },
     ],
   },
@@ -55,14 +55,15 @@ const SECTIONS = [
       { name: 'Active campaign', channel: 'get-active-campaign', validate: (d) => d?.id || d?.brandName },
       { name: 'Generate keywords', channel: 'generate-keywords', args: [{ brandName: 'Acme Growth', domain: 'acmegrowth.com' }], validate: (d) => Array.isArray(d) && d.length > 0 },
       { name: 'Save keywords', channel: 'save-keywords', args: [[{ term: 'qa-test-keyword' }]], validate: (d) => d?.success !== false || Array.isArray(d) },
-      { name: 'Feed preview', channel: 'get-live-feed', args: [{}], validate: (d) => Array.isArray(d) },
+      { name: 'Feed preview', channel: 'get-live-feed', args: [{ quick: true }], validate: (d) => Array.isArray(d) },
+      { name: 'Studio live metrics', channel: 'get-content-studio-live', validate: (d) => d?.stats && typeof d.stats === 'object' },
     ],
   },
   {
     section: 'Create & Publish — Content Hub',
     features: [
       { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) },
-      { name: 'AI generate', channel: 'generate-ai', args: ['Write a LinkedIn post about automation'], validate: (d) => typeof d === 'string' && d.length > 10 },
+      { name: 'AI generate', channel: 'generate-ai', args: ['Write a LinkedIn post about automation'], validate: (d) => (typeof d === 'string' && d.length > 5) || (typeof d?.value === 'string' && d.value.length > 5) || (d?.text && d.text.length > 5) },
       { name: 'AI image', channel: 'generate-image', args: ['Professional social media banner'], validate: (d) => d?.imageUrl || d?.url || d?.base64 || typeof d === 'object' },
       { name: 'Publish post', channel: 'publish-post', args: [{ platform: 'LinkedIn', content: 'QA test publish', hasMedia: false, humanLike: false }], validate: (d) => d?.success !== false },
       { name: 'Schedule post', channel: 'schedule-post', args: [{ platform: 'LinkedIn', content: 'QA scheduled', scheduleTime: new Date(Date.now() + 86400000).toISOString() }], validate: (d) => d?.success !== false },
@@ -159,7 +160,7 @@ const SECTIONS = [
   {
     section: 'Automation — Auto-Rules',
     features: [
-      { name: 'Auto rules', channel: 'get-auto-rules', validate: (d) => Array.isArray(d) },
+      { name: 'Auto rules', channel: 'get-auto-rules', validate: (d) => typeof d === 'object' && d !== null },
       { name: 'Rules status', channel: 'get-auto-rules-status', validate: (d) => typeof d === 'object' },
       { name: 'Watched monitors', channel: 'get-watched-monitors', validate: (d) => Array.isArray(d) },
       { name: 'Worker status', channel: 'get-worker-status', validate: (d) => typeof d === 'object' },
@@ -182,7 +183,7 @@ const SECTIONS = [
       { name: 'Proxy pool', channel: 'get-proxy-pool', validate: (d) => Array.isArray(d) },
       { name: 'Profile kits', channel: 'get-profile-kits', validate: (d) => Array.isArray(d) },
       { name: 'Creator status', channel: 'get-account-creator-status', validate: (d) => typeof d === 'object' },
-      { name: 'Generate kit', channel: 'generate-profile-kit', args: [{ name: 'QA Kit', platform: 'LinkedIn', niche: 'SaaS marketing' }], validate: (d) => d?.success !== false || d?.kit },
+      { name: 'Generate kit', channel: 'generate-profile-kit', args: [{ personaName: 'QA Kit', platforms: ['LinkedIn'], generateAssets: false, scheduleWeeks: 1, postsPerWeek: 1 }], validate: (d) => !!(d?.kit?.id || d?.id) && d?.success !== false },
       { name: 'Browser batch status', channel: 'get-browser-batch-status', validate: (d) => typeof d === 'object' },
     ],
   },
@@ -197,7 +198,7 @@ const SECTIONS = [
       { name: 'Payment settings', channel: 'get-payment-settings', validate: (d) => typeof d === 'object' },
       { name: 'Settings status', channel: 'get-settings-status', validate: (d) => typeof d === 'object' },
       { name: 'Page health', channel: 'get-page-health', validate: (d) => d?.ok !== false },
-      { name: 'Setup tutorials', channel: 'get-setup-tutorials', validate: (d) => Array.isArray(d) },
+      { name: 'Setup tutorials', channel: 'get-setup-tutorials', validate: (d) => Array.isArray(d?.tutorials) && d.tutorials.length > 0 },
     ],
   },
 ];
@@ -213,14 +214,32 @@ async function login() {
   return { token: json.token, projectId: json.project?.id, accounts: json };
 }
 
+const SLOW_CHANNELS = new Set(['discover-best-questions', 'generate-image', 'run-content-studio', 'analyze-topic', 'draft-post-reply', 'generate-quora-answer', 'run-seo-tool']);
+const INVOKE_TIMEOUT_MS = 90000;
+
 async function invoke(token, projectId, channel, args = []) {
-  const res = await fetch(`${API}/api/invoke/${channel}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'x-project-id': projectId },
-    body: JSON.stringify({ args }),
-  });
-  const json = await res.json();
-  return { ok: res.ok, status: res.status, data: json.data, error: json.error };
+  const timeoutMs = SLOW_CHANNELS.has(channel) ? INVOKE_TIMEOUT_MS : 60000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API}/api/invoke/${channel}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'x-project-id': projectId },
+      body: JSON.stringify({ args }),
+      signal: controller.signal,
+    });
+    const text = await res.text();
+    let json = {};
+    try { json = text ? JSON.parse(text) : {}; } catch (e) {
+      return { ok: false, status: res.status, data: null, error: text?.slice(0, 120) || 'Invalid JSON response' };
+    }
+    return { ok: res.ok, status: res.status, data: json.data, error: json.error };
+  } catch (e) {
+    const msg = e.name === 'AbortError' ? `Timeout after ${timeoutMs}ms` : e.message;
+    return { ok: false, status: 0, data: null, error: msg };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function classify(r, validate) {

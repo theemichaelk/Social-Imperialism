@@ -13,6 +13,7 @@ import {
 } from '@/lib/imperialContentTemplates';
 import { SocialPostCard, TemplatePicker } from '@/components/SocialPostCard';
 import { PostEditorModal } from '@/components/PostEditorModal';
+import { ContentStudioLivePanel } from '@/components/ContentStudioLivePanel';
 
 type Campaign = {
   brandName?: string;
@@ -131,17 +132,25 @@ export function ImperialContentStudio() {
     setMsg(scheduleMode === 'now' ? 'Publishing…' : 'Scheduling to calendar…');
     try {
       if (scheduleMode === 'now') {
+        const targets = accounts.length ? accounts : [{ id: '', platform: 'LinkedIn' }];
+        let published = 0;
         for (const item of approved) {
-          await invoke('publish-post', {
-            accountId: item.accountId || accounts[0]?.id,
-            platform: item.platform || accounts[0]?.platform,
-            content: item.content,
-            mediaUrl: item.mediaUrl,
-            hasMedia: !!item.mediaUrl,
-            isVideo: !!item.isVideo,
-          });
+          const itemTargets = item.accountId
+            ? targets.filter((a) => a.id === item.accountId)
+            : targets;
+          for (const acc of itemTargets) {
+            await invoke('publish-post', {
+              accountId: acc.id,
+              platform: item.platform || acc.platform,
+              content: item.content,
+              mediaUrl: item.mediaUrl,
+              hasMedia: !!item.mediaUrl,
+              isVideo: !!item.isVideo,
+            });
+            published += 1;
+          }
         }
-        setMsg(`Published ${approved.length} post(s) across your connected accounts`);
+        setMsg(`Published ${published} post(s) across ${targets.length} connected account(s)`);
       } else {
         const sched = await invoke<{ message?: string; count?: number }>('schedule-content-batch', {
           items: approved,
@@ -188,6 +197,8 @@ export function ImperialContentStudio() {
 
   return (
     <div className="imperial-content-studio">
+      <ContentStudioLivePanel />
+
       <div className="ics-hero">
         <div>
           <h2 style={{ margin: '0 0 6px' }}>Fast, quality content for your socials</h2>

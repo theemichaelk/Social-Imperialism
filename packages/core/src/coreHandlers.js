@@ -19,6 +19,9 @@ function registerCoreHandlers(deps) {
   const { fetchLinkedAccountFeed } = require(path.join(desktopServicesPath, 'accountFeedFetcher'));
   const feedCache = new Map();
   const FEED_CACHE_TTL_MS = 3 * 60 * 1000;
+  const qaDiscoveryCache = { data: null, ts: 0 };
+  const QA_DISCOVERY_CACHE_TTL_MS = 10 * 60 * 1000;
+  const { withTimeout } = require(path.join(desktopServicesPath, 'asyncUtils'));
   const brandGuidelines = require(path.join(__dirname, '../../../apps/desktop/services/brandGuidelines'));
   const { buildGlobalCustomPromptRequest } = require(path.join(__dirname, '../../../apps/desktop/services/customPromptGenerator'));
   const aiReplyStore = require(path.join(__dirname, '../../../apps/desktop/services/aiReplyStore'));
@@ -128,8 +131,12 @@ function registerCoreHandlers(deps) {
         .filter((k) => k.campaignId === activeId)
         .flatMap((k) => (k.platforms || ['All'])),
     );
-    const cacheKey = `${activeId}:${JSON.stringify({ platform: filters?.platform, sort: filters?.sort, quick: filters?.quick })}`;
-    if (!filters?.refresh) {
+    const effFilters = {
+      ...filters,
+      quick: filters?.quick !== false && filters?.refresh !== true,
+    };
+    const cacheKey = `${activeId}:${JSON.stringify({ platform: effFilters?.platform, sort: effFilters?.sort, quick: effFilters?.quick })}`;
+    if (!effFilters?.refresh) {
       const cached = feedCache.get(cacheKey);
       if (cached && Date.now() - cached.ts < FEED_CACHE_TTL_MS) return cached.data;
     }
@@ -142,21 +149,38 @@ function registerCoreHandlers(deps) {
         .filter((p) => !p.campaignId || p.campaignId === activeId);
     } catch (e) { /* ignore */ }
 
-    const [keywordPosts, accountPosts] = await Promise.all([
-      fetchRealFeed({ keywords, filters, keys, allowedPlatforms }),
-      fetchLinkedAccountFeed({ linkedAccounts, filters, keys, limitPerAccount: filters?.quick ? 5 : 10 }),
-    ]);
+    const feedTimeoutMs = effFilters.quick ? 22000 : 48000;
+    const buildFeed = async () => {
+      const [keywordPosts, accountPosts] = await Promise.all([
+        fetchRealFeed({ keywords, filters: effFilters, keys, allowedPlatforms }),
+        fetchLinkedAccountFeed({ linkedAccounts, filters: effFilters, keys, limitPerAccount: effFilters?.quick ? 5 : 8 }),
+      ]);
 
-    const seen = new Set();
-    let data = [...discovered, ...accountPosts, ...keywordPosts].filter((p) => {
-      const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+      const seen = new Set();
+      let data = [...discovered, ...accountPosts, ...keywordPosts].filter((p) => {
+        const key = `${p.platform}:${p.externalId || p.url || p.content?.substring(0, 50)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
-    const { applyFeedFilters } = require(path.join(desktopServicesPath, 'feedFilters'));
-    data = applyFeedFilters(data, filters);
+      const { applyFeedFilters } = require(path.join(desktopServicesPath, 'feedFilters'));
+      data = applyFeedFilters(data, effFilters);
+      return data;
+    };
+
+    let data = await withTimeout(buildFeed(), feedTimeoutMs, null);
+    if (!data || !data.length) {
+      const stale = feedCache.get(cacheKey);
+      if (stale?.data?.length) return stale.data;
+      if (discovered.length) return discovered;
+      data = await fetchRealFeed({
+        keywords: keywords.length ? keywords.slice(0, 2) : ['marketing'],
+        filters: { ...effFilters, quick: true },
+        keys,
+        allowedPlatforms: new Set(['All']),
+      }).catch(() => []);
+    }
 
     feedCache.set(cacheKey, { data, ts: Date.now() });
     return data;
@@ -168,9 +192,23 @@ function registerCoreHandlers(deps) {
   });
 
   ipcMain.handle('generate-keywords', async (event, brandData) => {
-    const prompt = `Suggest 8 high-intent social media keywords for brand "${brandData?.brandName || 'brand'}" domain ${brandData?.domain || ''}. Return comma-separated only.`;
-    const text = await generateAI(prompt);
-    return text.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const fastKeywords = async () => {
+      const prompt = `Suggest 8 high-intent social media keywords for brand "${brandData?.brandName || 'brand'}" domain ${brandData?.domain || ''}. Return comma-separated only.`;
+      const text = await withTimeout(generateAI(prompt), 22000, '');
+      return String(text || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
+    };
+    try {
+      const result = await withTimeout(
+        integrations.researchBrandKeywords(brandData, keys, generateAI),
+        28000,
+        null,
+      );
+      if (result && Array.isArray(result.keywords) && result.keywords.length) return result.keywords;
+      return await fastKeywords();
+    } catch (e) {
+      return await fastKeywords();
+    }
   });
 
   ipcMain.handle('save-keywords', (event, payload) => {
@@ -251,7 +289,8 @@ Post to reply to:
 `;
     const raw = await generateAI(systemPrompt + '\n\nUser requested reply for this post:\n' + postContent);
     const { injectUtmInReply } = require(path.join(desktopServicesPath, 'utmLinks'));
-    return injectUtmInReply(raw, settings).text;
+    const text = injectUtmInReply(String(raw || ''), settings).text || String(raw || '').trim();
+    return text || 'Thanks for sharing — we would love to connect and explore how we can help.';
   });
 
   ipcMain.handle('search-discovered-posts', (event, query = {}) => {
@@ -474,8 +513,29 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   });
 
   ipcMain.handle('discover-best-questions', async () => {
+    if (qaDiscoveryCache.data && Date.now() - qaDiscoveryCache.ts < QA_DISCOVERY_CACHE_TTL_MS) {
+      return qaDiscoveryCache.data;
+    }
+    try {
+      const stored = JSON.parse(store.getItem('bestQuestionsForBusiness') || '[]');
+      if (Array.isArray(stored) && stored.length) {
+        qaDiscoveryCache.data = stored;
+        qaDiscoveryCache.ts = Date.now();
+      }
+    } catch (e) { /* ignore */ }
+
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    return integrations.discoverQuestions(store, keys, getCampaign(), generateAI);
+    const result = await withTimeout(
+      integrations.discoverQuestions(store, keys, getCampaign(), generateAI),
+      45000,
+      null,
+    );
+    if (Array.isArray(result) && result.length) {
+      qaDiscoveryCache.data = result;
+      qaDiscoveryCache.ts = Date.now();
+      return result;
+    }
+    return qaDiscoveryCache.data || [];
   });
 
   ipcMain.handle('scan-reddit-now', async () => {
@@ -895,17 +955,25 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     return { success: true, answer, formatted, platform };
   });
   ipcMain.handle('get-unanswered-questions', async () => {
+    const readStored = () => {
+      try {
+        return JSON.parse(store.getItem('unansweredQuestions') || '[]').slice(0, 80)
+          .map((q) => ({ ...q, networkSize: q.networkSize || '30M+' }));
+      } catch (e) { return []; }
+    };
+
     const campaign = getCampaign();
     const lastScan = parseInt(store.getItem('qaLastScan') || '0', 10);
     if (Date.now() - lastScan > 300000) {
       const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-      await integrations.scanUnansweredQuestions(store, keys, campaign, generateAI);
-      store.setItem('qaLastScan', Date.now().toString());
+      const scanned = await withTimeout(
+        integrations.scanUnansweredQuestions(store, keys, campaign, generateAI),
+        35000,
+        null,
+      );
+      if (scanned !== null) store.setItem('qaLastScan', Date.now().toString());
     }
-    try {
-      return JSON.parse(store.getItem('unansweredQuestions') || '[]').slice(0, 80)
-        .map((q) => ({ ...q, networkSize: q.networkSize || '30M+' }));
-    } catch (e) { return []; }
+    return readStored();
   });
   ipcMain.handle('publish-qa-answer', async (event, payload) => {
     const { question, answer, platform } = payload || {};
@@ -933,7 +1001,7 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   ipcMain.handle('trigger-full-auto-search', async () => {
     try {
       const { fetchRealFeed } = require(path.join(deps.DESKTOP_SERVICES || '../../../apps/desktop/services', 'feedFetcher'));
-      const result = await runFullAutoSearch(store, {
+      const runSearch = () => runFullAutoSearch(store, {
         integrations,
         resolveKeys,
         fetchRealFeed,
@@ -941,6 +1009,18 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
         scanUnansweredQuestions: integrations.scanUnansweredQuestions,
         runRedditProspector: integrations.runRedditProspector,
       });
+      const result = await withTimeout(runSearch(), 42000, null);
+      if (!result) {
+        runSearch().then((r) => {
+          sendNotification({
+            type: 'auto-search',
+            title: 'Full Auto Search Complete',
+            body: r?.message || `${r?.newPostCount || 0} new posts found`,
+            link: '/browse-posts',
+          });
+        }).catch((e) => console.error('trigger-full-auto-search background:', e.message));
+        return { success: true, message: 'Auto search started — refresh Browse Posts in a moment', background: true };
+      }
       sendNotification({
         type: 'auto-search',
         title: 'Full Auto Search Complete',

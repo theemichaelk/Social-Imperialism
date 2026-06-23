@@ -1676,6 +1676,14 @@ textarea.input { min-height: 100px; resize: vertical; }
 .si-template-chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 .imperial-content-studio { margin-bottom: 1.5rem; }
+.ics-live-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 1.25rem;
+}
+.ics-live-grid .ics-live-wide { grid-column: 1 / -1; }
+.ics-live-grid .dash-hero { margin: 0; }
 .ics-hero {
   display: flex;
   justify-content: space-between;
@@ -1804,5 +1812,6 @@ textarea.input { min-height: 100px; resize: vertical; }
   .si-editor-layout { grid-template-columns: 1fr; }
   .pw-compose-split { grid-template-columns: 1fr; }
   .ics-brand-grid { grid-template-columns: 1fr; }
+  .ics-live-grid { grid-template-columns: 1fr; }
   .rules-charts-row { flex-direction: column; }
 }

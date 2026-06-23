@@ -22,6 +22,9 @@ export const PAGE_CHANNELS = {
     'serp-search', 'shorten-url', 'deepl-translate', 'play-tts', 'contentful-fetch',
     'get-streaming-keys', 'get-youtube-channels', 'generate-carousel-fal', 'research-keyword',
     'run-auto-rules-now', 'get-post-history', 'get-dashboard-stats',
+    'get-content-studio-live', 'get-content-library', 'get-brand-guidelines',
+    'seed-brand-from-website', 'get-design-templates', 'render-design-post',
+    'generate-from-library-assets', 'schedule-content-batch',
   ],
   accountCreator: [
     'get-proxy-pool', 'save-proxy', 'delete-proxy', 'test-proxy', 'get-profile-kits',

@@ -293,8 +293,8 @@ async function discoverQuestions(store, keys, campaign, generateAI) {
   try {
     const { fetchRealFeed } = require('./feedFetcher');
     const feedPosts = await fetchRealFeed({
-      keywords: keywords.length ? keywords.slice(0, 3) : [brand],
-      filters: { sort: 'engagement' },
+      keywords: keywords.length ? keywords.slice(0, 2) : [brand],
+      filters: { sort: 'engagement', quick: true },
       keys,
       allowedPlatforms: new Set(),
     });
@@ -317,9 +317,15 @@ async function discoverQuestions(store, keys, campaign, generateAI) {
     console.error('Feed Q&A discovery error:', e.message);
   }
 
+  const questionCandidates = rawCandidates.filter((c) => isQuestionHeuristic(c.content));
   const questions = [];
-  for (const cand of rawCandidates) {
-    const classification = await classifyQuestion(cand.content, generateAI);
+  let aiClassifications = 0;
+  const AI_CLASSIFY_LIMIT = 12;
+  for (const cand of questionCandidates) {
+    const classification = (generateAI && aiClassifications < AI_CLASSIFY_LIMIT)
+      ? await classifyQuestion(cand.content, generateAI)
+      : { isQuestion: true, confidence: 0.78, method: 'heuristic' };
+    if (generateAI && aiClassifications < AI_CLASSIFY_LIMIT) aiClassifications += 1;
     if (!classification.isQuestion) continue;
 
     const brandAnswered = hasBrandAnswered(cand, brand, history);
