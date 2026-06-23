@@ -31,14 +31,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!checked) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#94a3b8' }}>
-        Loading…
+      <div className="dash-loading">
+        <div className="dash-bg-grid" aria-hidden />
+        <div className="dash-orb dash-orb-1" aria-hidden />
+        <div className="dash-orb dash-orb-2" aria-hidden />
+        <div className="dash-loading-inner">
+          <div className="dash-loading-ring" />
+          <p>Initializing mission control…</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="app-shell">
+      <div className="dash-bg-grid" aria-hidden />
+      <div className="dash-orb dash-orb-1" aria-hidden />
+      <div className="dash-orb dash-orb-2" aria-hidden />
+      <div className="dash-scanlines" aria-hidden />
       <Sidebar />
       <main className="main">
         {children}
