@@ -1,9 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
 import { getToken } from '@/lib/api';
+
+const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
 const PUBLIC_PATHS = new Set(['/', '/login', '/founder', '/oauth/callback', '/billing/success', '/billing/cancel']);
 
@@ -18,7 +20,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isPublic = isPublicPath(pathname);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const token = getToken();
     if (!token && !isPublic) {
       window.location.replace('/login');
@@ -53,6 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="main">
         {children}
         <FooterCredit className="app-footer-credit" />
+        <div className="build-stamp" title="Deployed build">{BUILD_STAMP.slice(0, 7)}</div>
       </main>
     </div>
   );

@@ -9,6 +9,7 @@ applications:
             - npm install
         build:
           commands:
+            - export NEXT_PUBLIC_BUILD_SHA=${AWS_COMMIT_ID:-manual}
             - npm run build -w @si/web
       artifacts:
         baseDirectory: apps/web/.next

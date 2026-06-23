@@ -136,6 +136,11 @@ a:hover { text-decoration: underline; }
   border-top: 1px solid rgba(56, 189, 248, 0.12);
   font-size: 0.75rem; color: #64748b; text-align: center;
 }
+.build-stamp {
+  position: fixed; bottom: 6px; right: 10px; z-index: 50;
+  font-size: 0.62rem; letter-spacing: 0.06em; color: #475569;
+  font-family: ui-monospace, monospace; pointer-events: none; opacity: 0.85;
+}
 .app-footer-credit a { color: var(--muted); }
 .app-footer-credit a:hover { color: var(--accent); }
 
