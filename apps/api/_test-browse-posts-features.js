@@ -45,8 +45,8 @@ const FEATURES = [
   { area: 'Engage', name: 'Save watched monitor', channel: 'save-watched-monitors',
     args: [[{ id: 'mon_browse_test', label: 'Browse test', type: 'keyword', target: 'marketing', platform: 'Reddit' }]],
     validate: (d) => d?.success !== false },
-  { area: 'Publish', name: 'Schedule post', channel: 'schedule-post',
-    args: [{ platform: 'LinkedIn', accountId: 'demo_li', content: 'Browse QA scheduled post', scheduleTime: new Date(Date.now() + 86400000).toISOString() }],
+  { area: 'Publish', name: 'Schedule post', channel: 'schedule-post', needsAccount: true,
+    args: [{ platform: 'LinkedIn', content: 'Browse QA scheduled post', scheduleTime: new Date(Date.now() + 86400000).toISOString() }],
     validate: (d) => d?.id || d?.success !== false },
   { area: 'Sidebar', name: 'Live news', channel: 'get-live-news', args: ['technology'],
     validate: (d) => Array.isArray(d) && (d.length === 0 || d[0].title) },
@@ -62,9 +62,9 @@ const FEATURES = [
     validate: (d) => Array.isArray(d) },
   { area: 'Feed', name: 'Live feed (media only)', channel: 'get-live-feed', args: [{ quick: true, media: 'only' }],
     validate: (d) => Array.isArray(d) },
-  { area: 'Publish', name: 'Publish with media', channel: 'publish-post',
-    args: [{ platform: 'LinkedIn', content: 'Browse QA with media', hasMedia: true, mediaUrl: 'https://images.unsplash.com/photo-1611162617474-5b21e939e966' }],
-    validate: (d) => d?.success !== false },
+  { area: 'Publish', name: 'Schedule with media', channel: 'schedule-post', needsAccount: true,
+    args: [{ platform: 'LinkedIn', content: 'Browse QA with media', hasMedia: true, mediaUrl: 'https://images.unsplash.com/photo-1611162617474-5b21e939e966', scheduleTime: new Date(Date.now() + 172800000).toISOString() }],
+    validate: (d) => d?.id || d?.success !== false },
 ];
 
 async function login() {
@@ -94,11 +94,20 @@ async function main() {
   if (!health?.ok) throw new Error('API not running');
 
   const { token, projectId } = await login();
+  const accRes = await invoke(token, projectId, 'get-linked-accounts', []);
+  const firstAcc = Array.isArray(accRes.data) && accRes.data[0];
+
   let pass = 0, fail = 0, weak = 0;
   const results = [];
 
   for (const f of FEATURES) {
-    const r = await invoke(token, projectId, f.channel, f.args || []);
+    let args = f.args ? [...f.args] : [];
+    if (f.needsAccount && firstAcc) {
+      args = args.map((a) => (typeof a === 'object' && a
+        ? { ...a, accountId: firstAcc.id, platform: a.platform || firstAcc.platform }
+        : a));
+    }
+    const r = await invoke(token, projectId, f.channel, args);
     let status = 'PASS';
     let reason = '';
     if (!r.ok) {
