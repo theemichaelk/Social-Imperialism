@@ -3,7 +3,7 @@ import { useLayoutEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
-import { getToken } from '@/lib/api';
+import { bootstrapSession, getToken } from '@/lib/api';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
@@ -24,6 +24,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const token = getToken();
     if (!token && !isPublic) {
       window.location.replace('/login');
+      return;
+    }
+    if (token && !isPublic) {
+      bootstrapSession().finally(() => setChecked(true));
       return;
     }
     setChecked(true);

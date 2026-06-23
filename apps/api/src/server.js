@@ -155,8 +155,8 @@ app.post('/api/upload', requireAuth, async (req, res) => {
 async function getActiveProject(orgId, projectId) {
   if (projectId) {
     const p = await prisma.project.findFirst({ where: { id: projectId, organizationId: orgId } });
-    if (!p) throw new Error('Project not found');
-    return p;
+    if (p) return p;
+    console.warn(`Stale project id ${projectId} for org ${orgId} — using active project`);
   }
   let project = await prisma.project.findFirst({ where: { organizationId: orgId, isActive: true } });
   if (!project) project = await prisma.project.findFirst({ where: { organizationId: orgId } });

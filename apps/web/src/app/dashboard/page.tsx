@@ -112,6 +112,7 @@ export default function DashboardPage() {
   const [feedLocation, setFeedLocation] = useState('global');
   const [feedTime, setFeedTime] = useState('all');
   const [feedMinEngage, setFeedMinEngage] = useState('0');
+  const [loadError, setLoadError] = useState('');
 
   const loadFeed = useCallback(async (opts?: { refresh?: boolean; quick?: boolean }) => {
     setFeedLoading(true);
@@ -156,6 +157,7 @@ export default function DashboardPage() {
   const refresh = useCallback(async (fullFeed = false) => {
     setLoading(true);
     setActionMsg('');
+    setLoadError('');
     try {
       const [s, n, t, c, w, st, ld, fp, eq] = await Promise.all([
         invoke<DashboardStats>('get-dashboard-stats'),
@@ -183,6 +185,10 @@ export default function DashboardPage() {
         if (c.id) invoke('get-project-metrics', c.id).then(setProjectMetrics).catch(() => setProjectMetrics({}));
       }
       await loadFeed({ refresh: fullFeed, quick: !fullFeed });
+    } catch (e) {
+      const msg = (e as Error).message || 'Dashboard refresh failed';
+      setLoadError(msg);
+      setActionMsg(msg);
     } finally {
       setLoading(false);
     }
@@ -307,6 +313,18 @@ export default function DashboardPage() {
       />
 
       <SectionLivePanel section="dashboard" className="dash-section-live" />
+
+      {loadError && (
+        <div className="card" style={{ marginBottom: 12, borderColor: '#ef4444' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>
+            Mission Control sync error: {loadError}. Try{' '}
+            <button type="button" className="btn" onClick={() => refresh(false)} disabled={loading}>
+              {loading ? 'Refreshing…' : 'Quick Refresh'}
+            </button>
+            {' '}or log out and back in if this persists.
+          </p>
+        </div>
+      )}
 
       {isSurfaceEnabled('dashboard') && accounts[0] && (
         <div className="card" style={{ marginBottom: '1rem' }}>

@@ -160,12 +160,16 @@ type Props = {
 export function SectionLivePanel({ section, showAccounts = true, className }: Props) {
   const [data, setData] = useState<LiveData>({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       setData(await invoke<LiveData>('get-section-live', section));
     } catch (e) {
+      const msg = (e as Error).message || 'Failed to load live data';
+      setError(msg);
       console.error(e);
     } finally {
       setLoading(false);
@@ -194,6 +198,16 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
 
   return (
     <div className={`ics-live-grid section-live-grid ${className || ''}`}>
+      {error && (
+        <div className="card" style={{ gridColumn: '1 / -1', borderColor: '#f59e0b', marginBottom: 8 }}>
+          <p style={{ margin: 0, fontSize: '0.88rem' }}>
+            Live sync failed: {error}.{' '}
+            <button type="button" className="btn" onClick={refresh} disabled={loading} style={{ marginLeft: 8 }}>
+              {loading ? 'Retrying…' : 'Retry'}
+            </button>
+          </p>
+        </div>
+      )}
       <div className="dash-hero" style={{ gridColumn: '1 / -1' }}>
         <div className="dash-hero-grid">
           {tiles.map((t) => {

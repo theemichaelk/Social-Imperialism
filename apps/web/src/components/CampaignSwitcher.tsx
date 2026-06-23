@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { invoke } from '@/lib/api';
+import { invoke, setProjectId } from '@/lib/api';
 
 type Campaign = { id: string; brandName?: string; domain?: string; status?: string };
 
@@ -15,7 +15,9 @@ export function CampaignSwitcher({ onSwitch }: { onSwitch?: (id: string) => void
       invoke<Campaign | null>('get-active-campaign'),
     ]);
     setCampaigns(Array.isArray(list) ? list : []);
-    setActiveId(active?.id || list?.[0]?.id || '');
+    const id = active?.id || list?.[0]?.id || '';
+    setActiveId(id);
+    if (id) setProjectId(id);
   }, []);
 
   useEffect(() => { load().catch(console.error); }, [load]);
@@ -26,6 +28,7 @@ export function CampaignSwitcher({ onSwitch }: { onSwitch?: (id: string) => void
     try {
       await invoke('set-active-campaign', id);
       setActiveId(id);
+      setProjectId(id);
       onSwitch?.(id);
     } finally {
       setSwitching(false);

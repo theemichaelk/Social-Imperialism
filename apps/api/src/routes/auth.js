@@ -88,7 +88,13 @@ router.get('/me', requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
   const org = await prisma.organization.findUnique({ where: { id: req.user.orgId } });
   const projects = await prisma.project.findMany({ where: { organizationId: req.user.orgId } });
-  res.json({ user, organization: org, projects });
+  const active = projects.find((p) => p.isActive) || projects[0] || null;
+  res.json({
+    user,
+    organization: org,
+    projects,
+    project: active ? { id: active.id, name: active.name } : null,
+  });
 });
 
 module.exports = router;
