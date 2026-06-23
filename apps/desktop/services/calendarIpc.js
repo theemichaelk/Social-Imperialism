@@ -57,6 +57,16 @@ function registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics
 
     history.unshift(newPost);
     store.setItem('postHistory', JSON.stringify(history));
+
+    if (typeof store.coordinateEvent === 'function') {
+      store.coordinateEvent('post.published', {
+        platform: newPost.platform,
+        content: newPost.content,
+        accountId: newPost.accountId,
+        postId: newPost.id,
+      }).catch(() => {});
+    }
+
     return { success: true, post: newPost };
   }
 
@@ -167,6 +177,11 @@ function registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics
     };
     scheduled_posts.push(newPost);
     saveScheduledPostsStore(scheduled_posts);
+
+    if (typeof store.coordinateEvent === 'function') {
+      store.coordinateEvent('post.scheduled', newPost).catch(() => {});
+    }
+
     return { success: true, post: newPost };
   });
 

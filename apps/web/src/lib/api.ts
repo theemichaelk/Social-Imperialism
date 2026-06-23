@@ -65,7 +65,17 @@ function isStaleProjectError(msg: string) {
   return /project not found/i.test(msg);
 }
 
-export async function apiFetch(path: string, options: RequestInit = {}, allowRetry = true) {
+function isRetryableResponse(status: number, json: Record<string, unknown>) {
+  return status === 503 || json.retryable === true
+    || /timeout|ECONNRESET|503|502|429/i.test(String(json.error || ''));
+}
+
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+export async function apiFetch(path: string, options: RequestInit = {}, retryState: { allowSessionRetry?: boolean; attempt?: number } = {}) {
+  const { allowSessionRetry = true, attempt = 0 } = retryState;
   const token = getToken();
   const projectId = getProjectId();
   const headers: Record<string, string> = {
@@ -76,15 +86,22 @@ export async function apiFetch(path: string, options: RequestInit = {}, allowRet
   if (projectId) headers['x-project-id'] = projectId;
 
   const res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
-  const json = await res.json().catch(() => ({}));
+  const json = await res.json().catch(() => ({})) as Record<string, unknown>;
   if (!res.ok) {
-    const msg = (json as { error?: string }).error || res.statusText;
-    if (allowRetry && typeof window !== 'undefined' && isStaleProjectError(msg)) {
+    const msg = (json.error as string) || res.statusText;
+    if (allowSessionRetry && typeof window !== 'undefined' && isStaleProjectError(msg)) {
       setProjectId(null);
       await repairSession();
-      return apiFetch(path, options, false);
+      return apiFetch(path, options, { allowSessionRetry: false, attempt });
     }
-    throw new Error(msg);
+    if (attempt < 2 && isRetryableResponse(res.status, json)) {
+      await sleep(400 * (attempt + 1));
+      return apiFetch(path, options, { allowSessionRetry, attempt: attempt + 1 });
+    }
+    const err = new Error(msg) as Error & { retryable?: boolean; code?: string };
+    err.retryable = !!json.retryable;
+    err.code = json.code as string | undefined;
+    throw err;
   }
   return json;
 }
@@ -106,10 +123,12 @@ export async function invoke<T = unknown>(channel: string, ...args: unknown[]): 
   return res.data as T;
 }
 
+type SessionResponse = { token: string; project?: { id: string; name?: string } };
+
 export const auth = {
   login: (email: string, password: string) =>
-    apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }) as Promise<SessionResponse>,
   register: (data: { email: string; password: string; name?: string; orgName?: string }) =>
-    apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-  me: () => apiFetch('/api/auth/me'),
+    apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }) as Promise<SessionResponse>,
+  me: () => apiFetch('/api/auth/me') as Promise<MeResponse>,
 };

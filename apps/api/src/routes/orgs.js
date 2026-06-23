@@ -1,6 +1,6 @@
 const express = require('express');
 const { prisma } = require('@si/db');
-const { syncProjectToStore, createPrismaStore } = require('@si/core');
+const { syncProjectToStore, createPrismaStore, clearHandlerCache } = require('@si/core');
 
 const router = express.Router();
 
@@ -37,6 +37,7 @@ router.patch('/projects/:id', async (req, res) => {
   const store = await createPrismaStore({ projectId: updated.id, organizationId: req.user.orgId });
   await syncProjectToStore(store, updated.id);
   await store.flush();
+  clearHandlerCache(updated.id, req.user.orgId);
   res.json({ project: updated });
 });
 
@@ -49,6 +50,7 @@ router.post('/projects/:id/activate', async (req, res) => {
     where: { id: req.params.id, organizationId: req.user.orgId },
     data: { isActive: true },
   });
+  clearHandlerCache(req.params.id, req.user.orgId);
   res.json({ success: true });
 });
 

@@ -200,6 +200,22 @@ async function processPostMatch({
   history.unshift(entry);
   seen.add(key);
   incrementDrafts(store);
+
+  if (typeof store.coordinateEvent === 'function') {
+    store.coordinateEvent('keyword.matched', {
+      platform: post.platform,
+      matchedKeyword: post.matchedKeyword,
+      author: post.author,
+      searchLabel,
+    }).catch(() => {});
+    store.coordinateEvent('reply.generated', {
+      platform: post.platform,
+      preview: replyText?.slice(0, 200),
+      status: entry.status,
+      matchedKeyword: post.matchedKeyword,
+    }).catch(() => {});
+  }
+
   return processed + 1;
 }
 

@@ -12,6 +12,7 @@ import { PostExplorerModal } from '@/components/PostExplorerModal';
 import { FetchProfileFilters } from '@/lib/fetchProfiles';
 import { QaSettingsPanel } from '@/components/QaSettingsPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { useSiEvents } from '@/hooks/useSiEvents';
 
 type Post = {
   platform: string;
@@ -195,6 +196,16 @@ export default function DashboardPage() {
   }, [loadFeed]);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
+
+  useSiEvents({
+    onEvent: (evt) => {
+      const syncTypes = new Set([
+        'post.published', 'post.scheduled', 'keywords.updated', 'campaign.switched',
+        'search.completed', 'engagement.queued', 'reply.generated', 'keyword.matched',
+      ]);
+      if (syncTypes.has(evt.type)) refresh(false).catch(console.error);
+    },
+  });
 
   async function draftReply(post: Post) {
     setSelectedPost(post);

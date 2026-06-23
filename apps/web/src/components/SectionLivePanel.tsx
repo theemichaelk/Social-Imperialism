@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
+import { useSiEvents } from '@/hooks/useSiEvents';
 import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 
 type LiveData = {
@@ -181,6 +182,16 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
     const id = setInterval(() => refresh().catch(console.error), 90000);
     return () => clearInterval(id);
   }, [refresh]);
+
+  useSiEvents({
+    onEvent: (evt) => {
+      const liveTypes = new Set([
+        'post.published', 'post.scheduled', 'keywords.updated', 'campaign.switched',
+        'search.completed', 'engagement.queued', 'reply.generated', 'keyword.matched',
+      ]);
+      if (liveTypes.has(evt.type)) refresh().catch(console.error);
+    },
+  });
 
   const stats = data.stats || {};
   const tiles = SECTION_TILES[section] || SECTION_TILES.dashboard;

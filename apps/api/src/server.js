@@ -3,7 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { prisma } = require('@si/db');
-const { invoke, listChannels, syncProjectToStore, createPrismaStore } = require('@si/core');
+const { invoke, listChannels, syncProjectToStore, createPrismaStore, clearHandlerCache, eventBus } = require('@si/core');
+const { getCircuitStatus } = require('@si/core/src/resilience');
 const authRoutes = require('./routes/auth');
 const orgRoutes = require('./routes/orgs');
 const partnerRoutes = require('./routes/partner');
@@ -40,7 +41,24 @@ app.use(cors({
 app.use(express.json({ limit: '25mb' }));
 
 app.get('/', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', health: '/health', api: '/api' }));
-app.get('/health', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', s3: s3.getS3Status() }));
+app.get('/health', async (req, res) => {
+  let db = 'unknown';
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    db = 'ok';
+  } catch (e) {
+    db = 'error';
+  }
+  res.json({
+    ok: db === 'ok',
+    service: 'social-imperialism-api',
+    db,
+    s3: s3.getS3Status(),
+    circuits: getCircuitStatus(),
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
 
 app.get('/api/oauth/setup', (req, res) => {
   try {
@@ -107,10 +125,47 @@ app.post('/api/invoke/:channel', requireAuth, async (req, res) => {
     }
     res.json({ success: true, data: data ?? null, pendingOAuthUrl });
   } catch (e) {
-    if (e.code === 'UNKNOWN_CHANNEL') return res.status(404).json({ error: e.message });
+    if (e.code === 'UNKNOWN_CHANNEL') return res.status(404).json({ error: e.message, code: e.code });
+    const status = e.retryable ? 503 : 500;
     console.error(`invoke/${req.params.channel}:`, e.message);
-    res.status(500).json({ error: e.message });
+    res.status(status).json({
+      error: e.message,
+      code: e.code || (e.retryable ? 'RETRYABLE' : 'FATAL'),
+      retryable: !!e.retryable,
+    });
   }
+});
+
+const sseClients = new Map();
+
+eventBus.on('*', (event) => {
+  const payload = `data: ${JSON.stringify(event)}\n\n`;
+  for (const [id, client] of sseClients) {
+    if (client.orgId && event.organizationId && client.orgId !== event.organizationId) continue;
+    if (client.projectId && event.projectId && client.projectId !== event.projectId) continue;
+    try { client.res.write(payload); } catch (e) { sseClients.delete(id); }
+  }
+});
+
+app.get('/api/events/stream', requireAuth, async (req, res) => {
+  const project = await getActiveProject(req.user.orgId, req.headers['x-project-id']);
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const id = `${req.user.orgId}:${project.id}:${Date.now()}`;
+  sseClients.set(id, { res, orgId: req.user.orgId, projectId: project.id });
+  res.write(`data: ${JSON.stringify({ type: 'connected', projectId: project.id, at: new Date().toISOString() })}\n\n`);
+
+  const ping = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch (e) { clearInterval(ping); sseClients.delete(id); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(ping);
+    sseClients.delete(id);
+  });
 });
 
 app.get('/api/s3/status', requireAuth, (req, res) => {
@@ -165,10 +220,12 @@ async function getActiveProject(orgId, projectId) {
 }
 
 const { startScheduler } = require('./scheduler');
+const { startJobRunner } = require('@si/core/src/jobRunner');
 
 app.listen(PORT, () => {
   console.log(`Social Imperialism API → http://localhost:${PORT}`);
   startScheduler();
+  startJobRunner();
 });
 
 module.exports = app;

@@ -1,23 +1,43 @@
 const path = require('path');
 const { createPrismaStore } = require('./prismaStore');
 const { registerAllHandlers } = require('./handlerRegistry');
+const eventCoordination = require('./eventCoordination');
+const { wrapInvokeError } = require('./resilience');
+const eventBus = require('./eventBus');
 
 const handlerCache = new Map();
+const CACHE_TTL_MS = parseInt(process.env.HANDLER_CACHE_TTL_MS || '1800000', 10);
 
-function clearHandlerCache() {
+function clearHandlerCache(projectId, organizationId) {
+  if (projectId && organizationId) {
+    handlerCache.delete(`${organizationId}:${projectId}`);
+    return;
+  }
   handlerCache.clear();
 }
 
-async function getHandlersForProject({ projectId, organizationId, userDataPath }) {
+async function getHandlersForProject({ projectId, organizationId, userDataPath, forceRefresh = false }) {
   const cacheKey = `${organizationId}:${projectId}`;
-  if (handlerCache.has(cacheKey)) return handlerCache.get(cacheKey);
+  const cached = handlerCache.get(cacheKey);
+  if (!forceRefresh && cached) {
+    if (Date.now() - cached.loadedAt < CACHE_TTL_MS) return cached.entry;
+    handlerCache.delete(cacheKey);
+  }
 
   const store = await createPrismaStore({ projectId, organizationId });
   await syncProjectToStore(store, projectId);
 
   const registry = await registerAllHandlers(store, { userDataPath });
-  const entry = { store, ...registry };
-  handlerCache.set(cacheKey, entry);
+  const entry = { store, ...registry, projectId, organizationId };
+
+  store.coordinateEvent = (type, data) => eventCoordination.dispatch(entry, {
+    type,
+    data,
+    projectId,
+    organizationId,
+  });
+
+  handlerCache.set(cacheKey, { entry, loadedAt: Date.now() });
   return entry;
 }
 
@@ -80,6 +100,21 @@ async function syncProjectToStore(store, projectId) {
   await store.flush();
 }
 
+async function afterInvoke({ entry, channel, args, result }) {
+  const mapped = eventCoordination.mapChannelEvent(channel, args, result);
+  if (mapped) {
+    await eventCoordination.dispatch(entry, {
+      ...mapped,
+      projectId: entry.projectId,
+      organizationId: entry.organizationId,
+    });
+  }
+
+  if (['set-active-campaign', 'save-global-keys', 'save-settings'].includes(channel)) {
+    clearHandlerCache(entry.projectId, entry.organizationId);
+  }
+}
+
 async function invoke({ projectId, organizationId, channel, args = [] }) {
   const entry = await getHandlersForProject({ projectId, organizationId });
   const { handlers, store, pendingOAuth } = entry;
@@ -89,20 +124,26 @@ async function invoke({ projectId, organizationId, channel, args = [] }) {
     err.code = 'UNKNOWN_CHANNEL';
     throw err;
   }
-  const result = await handler(null, ...args);
-  await store.flush();
-  const oauthUrl = typeof pendingOAuth === 'function' ? pendingOAuth() : null;
-  if (!oauthUrl) return result;
-  if (result && typeof result === 'object' && !Array.isArray(result)) {
-    return { ...result, pendingOAuthUrl: oauthUrl };
+  try {
+    const result = await handler(null, ...args);
+    await store.flush();
+    await afterInvoke({ entry, channel, args, result });
+
+    const oauthUrl = typeof pendingOAuth === 'function' ? pendingOAuth() : null;
+    if (!oauthUrl) return result;
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
+      return { ...result, pendingOAuthUrl: oauthUrl };
+    }
+    return { success: true, data: result, pendingOAuthUrl: oauthUrl };
+  } catch (e) {
+    throw wrapInvokeError(e);
   }
-  return { success: true, data: result, pendingOAuthUrl: oauthUrl };
 }
 
 function listChannels(projectId, organizationId) {
   const cacheKey = `${organizationId}:${projectId}`;
-  const entry = handlerCache.get(cacheKey);
-  return entry ? Object.keys(entry.handlers).sort() : [];
+  const cached = handlerCache.get(cacheKey);
+  return cached?.entry ? Object.keys(cached.entry.handlers).sort() : [];
 }
 
 module.exports = {
@@ -113,4 +154,5 @@ module.exports = {
   listChannels,
   syncProjectToStore,
   clearHandlerCache,
+  eventBus,
 };
