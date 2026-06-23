@@ -26,6 +26,20 @@ const BUILTIN_TEMPLATES = {
       { from: 'node_3', to: 'node_4', port: 'out' },
     ],
   },
+  emailAutoReply: {
+    id: 'emailAutoReply',
+    name: 'Email Auto-Reply Campaign',
+    builtin: true,
+    nodes: [
+      { id: 'node_1', type: 'trigger', title: 'Keyword Match', icon: 'fas fa-search', x: 1200, y: 1200, config: { platform: 'Any', match: 'Semantic' } },
+      { id: 'node_2', type: 'action', title: 'AI Draft Reply', icon: 'fas fa-robot', x: 1200, y: 1400, config: { account: 'Auto', prompt: '' } },
+      { id: 'node_3', type: 'action', title: 'Send Email Campaign', icon: 'fas fa-envelope', x: 1200, y: 1600, config: { campaignId: 'email_camp_mention_digest' } },
+    ],
+    edges: [
+      { from: 'node_1', to: 'node_2', port: 'out' },
+      { from: 'node_2', to: 'node_3', port: 'out' },
+    ],
+  },
   rss: {
     id: 'rss',
     name: 'RSS to Social Publisher',
@@ -79,6 +93,7 @@ function listTemplates(store) {
   }));
   return [
     { id: 'engagement', name: 'Auto-Engagement Flow', builtin: true },
+    { id: 'emailAutoReply', name: 'Email Auto-Reply Campaign', builtin: true },
     { id: 'rss', name: 'RSS to Social Publisher', builtin: true },
     ...custom,
   ];

@@ -34,6 +34,7 @@ const { registerCalendarHandlers } = require('./services/calendarIpc');
 const { registerBackgroundRunHandlers } = require('./services/backgroundRunIpc');
 const backgroundRunScheduler = require('./services/backgroundRunScheduler');
 const { registerSettingsHandlers } = require('./services/settingsIpc');
+const { registerEmailCampaignHandlers } = require('./services/emailCampaignIpc');
 const { registerBillingPaymentHandlers } = require('./services/billingPaymentsIpc');
 const { registerAccountHandlers } = require('./services/accountIpc');
 const { registerAccountCreatorHandlers, processBrowserBatchQueue } = require('./services/accountCreatorIpc');
@@ -94,6 +95,7 @@ registerRedditAiHandlers({
   resolveKeys,
 });
 registerSettingsHandlers({ ipcMain, store });
+registerEmailCampaignHandlers({ ipcMain, store });
 const billingPayments = registerBillingPaymentHandlers({
   ipcMain,
   store,

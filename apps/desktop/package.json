@@ -20,14 +20,16 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1073.0",
     "@google/genai": "^1.42.0",
     "axios": "^1.13.5",
     "chart.js": "^4.5.1",
     "dotenv": "^17.3.1",
     "electron": "^40.6.0",
-    "jsdom": "^28.1.0",
     "form-data": "^4.0.2",
+    "jsdom": "^28.1.0",
     "node-localstorage": "^3.0.5",
+    "nodemailer": "^6.10.1",
     "puppeteer": "^25.1.0",
     "twitter-api-v2": "^1.29.0"
   },

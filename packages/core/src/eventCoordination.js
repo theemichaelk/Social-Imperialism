@@ -81,6 +81,13 @@ async function runRecipes(entry, event) {
       });
     }
   }
+
+  const emailTriggers = ['reply.generated', 'keyword.matched', 'lead.captured'];
+  if (emailTriggers.includes(type) && handlers['run-email-auto-reply']) {
+    handlers['run-email-auto-reply'](null, { trigger: type, data }).catch((e) => {
+      console.warn('[coordination] email auto-reply:', e.message);
+    });
+  }
 }
 
 async function dispatch(entry, event) {

@@ -55,6 +55,14 @@ const ENV_ALIASES = {
   serpApiKey: ['SERP_API_KEY'],
   deeplKey: ['DEEPL_API_KEY'],
   tinyurlApiKey: ['TINYURL_API_KEY'],
+  vboutApiKey: ['VBOUT_API_KEY'],
+  mailchimpApiKey: ['MAILCHIMP_API_KEY'],
+  smtpHost: ['SMTP_HOST', 'SES_SMTP_HOST'],
+  smtpPort: ['SMTP_PORT', 'SES_SMTP_PORT'],
+  smtpUser: ['SMTP_USER', 'SES_SMTP_USER'],
+  smtpPass: ['SMTP_PASS', 'SES_SMTP_PASS'],
+  smtpFrom: ['SMTP_FROM', 'SES_FROM_EMAIL'],
+  smtpFromName: ['SMTP_FROM_NAME'],
   playhtUserId: ['PLAYHT_USER_ID'],
   playhtSecretKey: ['PLAYHT_SECRET_KEY'],
   contentfulSpaceId: ['CONTENTFUL_SPACE_ID'],
@@ -124,6 +132,14 @@ const STORAGE_ALIASES = {
   serpApiKey: ['serpApiKey'],
   deeplKey: ['deeplKey'],
   tinyurlApiKey: ['tinyurlApiKey'],
+  vboutApiKey: ['vboutApiKey'],
+  mailchimpApiKey: ['mailchimpApiKey'],
+  smtpHost: ['smtpHost'],
+  smtpPort: ['smtpPort'],
+  smtpUser: ['smtpUser'],
+  smtpPass: ['smtpPass'],
+  smtpFrom: ['smtpFrom', 'alertEmail'],
+  smtpFromName: ['smtpFromName'],
   playhtUserId: ['playhtUserId'],
   playhtSecretKey: ['playhtSecretKey'],
   contentfulSpaceId: ['contentfulSpaceId'],
@@ -215,6 +231,19 @@ function hasContentStudioKey(keys) {
 
 function hasMozKeys(keys) {
   return !!(keys.mozAccessId && keys.mozSecret);
+}
+
+function hasVboutKeys(keys) {
+  return !!keys.vboutApiKey;
+}
+
+function hasMailchimpKeys(keys) {
+  return !!keys.mailchimpApiKey;
+}
+
+function hasSmtpKeys(keys) {
+  return !!(keys.smtpHost && keys.smtpUser && keys.smtpPass)
+    || !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
 function twitterConsumerKey(keys) {
@@ -350,5 +379,8 @@ module.exports = {
   hasAdvancedWorkflowKey,
   hasContentStudioKey,
   hasMozKeys,
+  hasVboutKeys,
+  hasMailchimpKeys,
+  hasSmtpKeys,
   ENV_ALIASES,
 };

@@ -24,6 +24,7 @@ function buildApiMetrics(resolveKeys, keys) {
     hasTwitterKeys, hasRedditKeys, hasLinkedInKeys, hasMetaKeys,
     hasYouTubeKeys, hasTikTokKeys, hasTwitchKeys, hasMediaKeys,
     hasAdvancedWorkflowKey, hasContentStudioKey, hasMozKeys,
+    hasVboutKeys, hasMailchimpKeys, hasSmtpKeys,
   } = require(path.join(DESKTOP_SERVICES, 'keys'));
   return {
     'Twitter / X': status(hasTwitterKeys(k)),
@@ -50,6 +51,9 @@ function buildApiMetrics(resolveKeys, keys) {
     FAL: status(!!k.falKey),
     Contentful: status(!!(k.contentfulSpaceId && k.contentfulAccessToken)),
     Discord: status(!!k.discordBotToken),
+    VBout: status(hasVboutKeys(k)),
+    MailChimp: status(hasMailchimpKeys(k)),
+    'Amazon SES': status(hasSmtpKeys(k)),
   };
 }
 
@@ -156,6 +160,9 @@ async function registerAllHandlers(store, deps = {}) {
 
   const { registerIntegrationHubHandlers } = require(path.join(DESKTOP_SERVICES, 'integrationHubIpc'));
   registerIntegrationHubHandlers({ ipcMain, store });
+
+  const { registerEmailCampaignHandlers } = require(path.join(DESKTOP_SERVICES, 'emailCampaignIpc'));
+  registerEmailCampaignHandlers({ ipcMain, store });
 
   // Core index.js handlers
   const { registerCoreHandlers } = require('./coreHandlers');
