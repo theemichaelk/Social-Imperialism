@@ -227,6 +227,13 @@ async function listSites(store, ctx = {}) {
 
 function getRecords(store, siteId) {
   const data = loadDnsStore(store);
+  if (!data.records[siteId]?.length) {
+    const site = data.sites.find((s) => s.id === siteId);
+    if (site) {
+      data.records[siteId] = defaultRecordsForSite(site);
+      saveDnsStore(store, data);
+    }
+  }
   return data.records[siteId] || [];
 }
 
