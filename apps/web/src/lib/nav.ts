@@ -5,7 +5,10 @@ export const NAV_SECTIONS = [
   ]},
   { id: 'create', label: 'Create & Publish', items: [
     { id: 'onboarding', href: '/onboarding', icon: '🚀', label: 'Setup Wizard' },
-    { id: 'content-hub', href: '/content-hub', icon: '✏️', label: 'Content Hub' },
+    { id: 'content-hub', href: '/content-hub', icon: '✏️', label: 'Create' },
+    { id: 'content-library', href: '/content-library', icon: '📁', label: 'Library' },
+    { id: 'design-studio', href: '/design-studio', icon: '🎨', label: 'Design Studio' },
+    { id: 'brand', href: '/brand', icon: '🎯', label: 'Brand' },
     { id: 'calendar', href: '/calendar', icon: '📅', label: 'Calendar' },
     { id: 'scheduler', href: '/scheduler', icon: '⏱️', label: 'Scheduler' },
   ]},
@@ -20,7 +23,7 @@ export const NAV_SECTIONS = [
     { id: 'quora-traffic', href: '/quora-traffic', icon: '❓', label: 'Quora Ops' },
   ]},
   { id: 'automation', label: 'Automation', items: [
-    { id: 'automations', href: '/automations', icon: '🔀', label: 'Visual Builder' },
+    { id: 'automations', href: '/automations', icon: '🔀', label: 'Automations' },
     { id: 'rules', href: '/rules', icon: '⚙️', label: 'Auto-Rules' },
   ]},
   { id: 'accounts', label: 'Accounts', items: [

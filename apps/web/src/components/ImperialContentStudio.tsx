@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import {
   WORKFLOW_STEPS,
@@ -44,14 +45,19 @@ export function ImperialContentStudio() {
   const [frequency, setFrequency] = useState('daily');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
+  const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; type: string }>>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [useLibrary, setUseLibrary] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [camp, accs, cfg, kws] = await Promise.all([
+    const [camp, accs, cfg, kws, lib] = await Promise.all([
       invoke<Campaign>('get-active-campaign'),
       invoke<Account[]>('get-linked-accounts'),
       invoke<StudioConfig>('get-content-studio-config'),
       invoke<Array<{ term: string }>>('get-keywords'),
+      invoke<{ assets?: Array<{ id: string; name: string; type: string }> }>('get-content-library').catch(() => ({ assets: [] })),
     ]);
+    setLibraryAssets(lib.assets || []);
     setCampaign(camp || {});
     setAccounts(accs || []);
     setConfig(cfg || {});
@@ -90,6 +96,8 @@ export function ImperialContentStudio() {
         account: acc || null,
         scheduleConfig: { mode: 'preview' },
         tabId: 'standard',
+        useLibraryAssets: useLibrary,
+        assetIds: selectedAssetIds,
       });
       if (res.error || res.success === false) throw new Error(res.error || 'Generation failed');
       const enriched = (res.items || []).map((item, i) => {
@@ -156,20 +164,24 @@ export function ImperialContentStudio() {
   }
 
   async function learnBrandFromDomain() {
-    if (!campaign.domain) { setMsg('Set your domain in Settings or Onboarding first'); return; }
+    if (!campaign.domain) { setMsg('Set your domain in Brand or Onboarding first'); return; }
     setLoading(true);
-    setMsg('Learning brand voice from your website…');
+    setMsg('Seeding brand and library from your website…');
     try {
-      const res = await invoke<{ description?: string; brandName?: string }>('generate-ai', `Summarize brand voice, audience, and key topics for website ${campaign.domain}. Return 3 sentences for social content strategy.`);
-      if (typeof res === 'string') {
-        setCampaign((c) => ({ ...c, description: res }));
-      }
-      setMsg('Brand context refreshed — ready to generate');
+      const res = await invoke<{ success?: boolean; error?: string; campaign?: Campaign }>('seed-brand-from-website', { url: campaign.domain });
+      if (!res.success) throw new Error(res.error || 'Seed failed');
+      if (res.campaign) setCampaign(res.campaign);
+      await refresh();
+      setMsg('Brand and library updated — ready to generate');
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleAsset(id: string) {
+    setSelectedAssetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   const stepIndex = WORKFLOW_STEPS.findIndex((s) => s.id === step);
@@ -251,6 +263,25 @@ export function ImperialContentStudio() {
           <label className="ac-label" style={{ marginTop: 12 }}>Designer template styles</label>
           <TemplatePicker selected={selectedTemplates} onChange={setSelectedTemplates} />
 
+          <div style={{ marginTop: 12 }}>
+            <label className="post-card" style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+              <input type="checkbox" checked={useLibrary} onChange={(e) => setUseLibrary(e.target.checked)} />
+              <span>Use content library assets in generation</span>
+            </label>
+            {useLibrary && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {libraryAssets.slice(0, 16).map((a) => (
+                  <button key={a.id} type="button" className={`btn ${selectedAssetIds.includes(a.id) ? 'primary' : ''}`} style={{ fontSize: '0.72rem' }} onClick={() => toggleAsset(a.id)}>
+                    {a.name.slice(0, 20)}
+                  </button>
+                ))}
+                {!libraryAssets.length && (
+                  <span className="settings-panel-desc">No assets — <Link href="/content-library">add to library</Link></span>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-2" style={{ marginTop: 12 }}>
             <div>
               <label className="ac-label">AI model</label>
@@ -275,8 +306,9 @@ export function ImperialContentStudio() {
       {step === 'review' && (
         <div className="ics-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <h3 style={{ margin: 0 }}>Edit in Visual Builder &amp; approve — what a month of content looks like</h3>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <h3 style={{ margin: 0 }}>Edit, approve, and schedule your batch</h3>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Link href="/design-studio" className="btn">Open Design Studio</Link>
               <button type="button" className="btn" onClick={() => setPosts((prev) => prev.map((p) => ({ ...p, status: 'approved' })))}>Approve All</button>
               <button type="button" className="btn primary" onClick={() => setStep('publish')} disabled={!approved.length}>
                 Continue ({approved.length} approved) →

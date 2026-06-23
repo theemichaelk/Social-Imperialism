@@ -23,7 +23,7 @@ const SOURCE_LABELS: Record<string, string> = {
   keyword: 'Keywords',
   monitor: 'Monitors',
   automation: 'Auto-Rules',
-  'automation-flow': 'Visual Builder',
+  'automation-flow': 'Automations',
   engagement: 'Engagement',
   qa: 'Q&A',
   lead: 'Leads',

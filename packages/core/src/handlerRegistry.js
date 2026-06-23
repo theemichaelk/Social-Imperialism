@@ -154,6 +154,9 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerPageHealthHandlers } = require(path.join(DESKTOP_SERVICES, 'pageHealthCheck'));
   registerPageHealthHandlers({ ipcMain, store, resolveKeys, appRoot: DESKTOP_ROOT });
 
+  const { registerIntegrationHubHandlers } = require(path.join(DESKTOP_SERVICES, 'integrationHubIpc'));
+  registerIntegrationHubHandlers({ ipcMain, store });
+
   // Core index.js handlers
   const { registerCoreHandlers } = require('./coreHandlers');
   registerCoreHandlers({
@@ -195,6 +198,12 @@ async function registerAllHandlers(store, deps = {}) {
     saveScheduledPosts: saveScheduledPostsStoreList,
     publishPost: (postData) => calendarApi.executePublishPost(postData),
   });
+
+  const { registerContentLibraryHandlers } = require(path.join(DESKTOP_SERVICES, 'contentLibraryIpc'));
+  registerContentLibraryHandlers({ ipcMain, store, generateAI });
+
+  const { registerDesignStudioHandlers } = require(path.join(DESKTOP_SERVICES, 'designStudioIpc'));
+  registerDesignStudioHandlers({ ipcMain, store, generateAI });
 
   return { handlers, calendarApi, integrations, pendingOAuth: () => deps.pendingOAuthUrl };
 }

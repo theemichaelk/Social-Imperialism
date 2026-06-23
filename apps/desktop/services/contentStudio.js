@@ -83,11 +83,46 @@ function tabContextPrompt(tabId) {
   return map[tabId] || 'social content';
 }
 
-function typePrompt(type, keywords, tabId, variantIndex = 0) {
+function getCampaignBrandBlock(store) {
+  if (!store) return '';
+  try {
+    const { buildBrandGuidelinesBlock } = require('./brandGuidelines');
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const campaign = JSON.parse(store.getItem('campaigns') || '[]').find((c) => c.id === activeId) || {};
+    const block = buildBrandGuidelinesBlock(campaign);
+    const brand = [campaign.brandName, campaign.domain, campaign.description].filter(Boolean).join(' — ');
+    return brand ? `Brand: ${brand}\n${block}` : block;
+  } catch (e) {
+    return '';
+  }
+}
+
+function getLibraryContextBlock(store, assetIds = []) {
+  if (!store) return '';
+  try {
+    const { getLibrary } = require('./contentLibraryIpc');
+    const lib = getLibrary(store);
+    const picked = assetIds.length
+      ? lib.filter((a) => assetIds.includes(a.id))
+      : lib.slice(0, 8);
+    if (!picked.length) return '';
+    const lines = picked.map((a) => {
+      if (a.type === 'copy' || a.text) return `[${a.name}]: ${(a.text || '').slice(0, 400)}`;
+      if (a.url) return `[${a.name}]: image ${a.url}`;
+      return `[${a.name}]`;
+    });
+    return `\nContent Library assets to reference:\n${lines.join('\n')}\n`;
+  } catch (e) {
+    return '';
+  }
+}
+
+function typePrompt(type, keywords, tabId, variantIndex = 0, brandBlock = '', libraryBlock = '') {
   const kw = keywords.join(', ');
   const ctx = tabContextPrompt(tabId);
+  const brandPrefix = `${brandBlock}${libraryBlock}`;
   const prompts = {
-    post: `Write a ${ctx} optimized for engagement. Keywords: ${kw}. Variant ${variantIndex + 1}. Include hashtags.`,
+    post: `${brandPrefix}Write a ${ctx} optimized for engagement. Keywords: ${kw}. Variant ${variantIndex + 1}. Include hashtags. Use library assets when relevant.`,
     image: `Write image caption + describe the ideal image to generate for keywords: ${kw}. Variant ${variantIndex + 1}.`,
     infographic: `Create infographic copy: headline, 5 data bullets, caption for keywords: ${kw}. Variant ${variantIndex + 1}.`,
     video: `Write viral reel/video script + caption for keywords: ${kw}. Variant ${variantIndex + 1}. Under 60s hook.`,
@@ -127,7 +162,9 @@ async function generateOneItem(deps, {
     generateGrokImagine,
   } = deps;
 
-  const prompt = typePrompt(type, keywords, tabId, variantIndex);
+  const brandBlock = getCampaignBrandBlock(deps.store);
+  const libraryBlock = getLibraryContextBlock(deps.store, deps.assetIds || []);
+  const prompt = typePrompt(type, keywords, tabId, variantIndex, brandBlock, libraryBlock);
   let content = '';
   let mediaUrl = null;
   let isVideo = false;
@@ -181,14 +218,37 @@ async function generateContentBatch(deps, payload) {
   const model = payload.model || 'gemini';
   const tabId = payload.tabId || 'standard';
   const account = payload.account || null;
-  const variantsPerType = Math.min(5, Math.max(1, parseInt(payload.variantsPerType, 10) || 1));
+  const count = Math.min(10, Math.max(1, parseInt(payload.count, 10) || 0));
+  const variantsPerType = count || Math.min(5, Math.max(1, parseInt(payload.variantsPerType, 10) || 1));
+  const batchDeps = {
+    ...deps,
+    store: deps.store || payload.store,
+    assetIds: payload.assetIds || [],
+  };
+
+  if (payload.useLibraryAssets && batchDeps.store) {
+    try {
+      const { getLibrary } = require('./contentLibraryIpc');
+      const lib = getLibrary(batchDeps.store);
+      if (lib.length && !batchDeps.assetIds.length) {
+        batchDeps.assetIds = lib.slice(0, 6).map((a) => a.id);
+      }
+    } catch (e) { /* noop */ }
+  }
 
   const items = [];
   for (const type of types) {
     for (let v = 0; v < variantsPerType; v += 1) {
-      const item = await generateOneItem(deps, {
+      const item = await generateOneItem(batchDeps, {
         type, keywords, model, tabId, variantIndex: v, account,
       });
+      if (batchDeps.store && batchDeps.assetIds?.length) {
+        try {
+          const { getLibrary } = require('./contentLibraryIpc');
+          const img = getLibrary(batchDeps.store).find((a) => batchDeps.assetIds.includes(a.id) && a.url);
+          if (img?.url && !item.mediaUrl) item.mediaUrl = img.url;
+        } catch (e) { /* noop */ }
+      }
       items.push(item);
     }
   }

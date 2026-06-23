@@ -500,6 +500,23 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   ipcMain.handle('get-notification-settings', () => saasNotifications.getNotificationSettings(store));
   ipcMain.handle('save-notification-settings', (event, s) => saasNotifications.saveNotificationSettings(store, s));
 
+  ipcMain.handle('get-brand-guidelines', () => {
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const campaigns = JSON.parse(store.getItem('campaigns') || '[]');
+    const campaign = campaigns.find((c) => c.id === activeId) || {};
+    return {
+      success: true,
+      brandName: campaign.brandName || '',
+      domain: campaign.domain || '',
+      description: campaign.description || '',
+      tone: campaign.tone || '',
+      disallowedTopics: campaign.disallowedTopics || '',
+      sampleMessages: campaign.sampleMessages || '',
+      affiliateLinks: campaign.affiliateLinks || '',
+      brandGuidelines: campaign.brandGuidelines || {},
+    };
+  });
+
   ipcMain.handle('save-brand-guidelines', (event, payload) => {
     const activeId = store.getItem('activeCampaignId') || 'default';
     const campaigns = JSON.parse(store.getItem('campaigns') || '[]');
@@ -507,13 +524,69 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     if (idx < 0) return { success: false, error: 'No active campaign' };
     campaigns[idx] = {
       ...campaigns[idx],
-      brandGuidelines: payload?.brandGuidelines || campaigns[idx].brandGuidelines || {},
+      brandName: payload?.brandName ?? campaigns[idx].brandName,
+      domain: payload?.domain ?? campaigns[idx].domain,
+      description: payload?.description ?? campaigns[idx].description,
+      tone: payload?.tone ?? campaigns[idx].tone,
+      brandGuidelines: { ...(campaigns[idx].brandGuidelines || {}), ...(payload?.brandGuidelines || {}) },
       disallowedTopics: payload?.disallowedTopics ?? campaigns[idx].disallowedTopics,
       sampleMessages: payload?.sampleMessages ?? campaigns[idx].sampleMessages,
       affiliateLinks: payload?.affiliateLinks ?? campaigns[idx].affiliateLinks,
     };
     store.setItem('campaigns', JSON.stringify(campaigns));
     return { success: true, campaign: campaigns[idx] };
+  });
+
+  ipcMain.handle('seed-brand-from-website', async (event, { url } = {}) => {
+    const raw = String(url || '').trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (!raw) return { success: false, error: 'Enter your business website' };
+    const domain = raw.split('/')[0];
+    const target = raw.startsWith('http') ? raw : `https://${domain}`;
+    try {
+      const axios = require('axios');
+      const res = await axios.get(target, {
+        timeout: 15000,
+        headers: { 'User-Agent': 'SocialImperialism/1.0' },
+      });
+      const html = String(res.data || '');
+      const title = (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1]?.trim() || domain;
+      const desc = (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) || [])[1]?.trim() || '';
+
+      let aiSummary = desc;
+      try {
+        aiSummary = await generateAI(
+          `Summarize brand voice, target audience, and 5 social content topics for website ${target}. Title: ${title}. Description: ${desc}. Return 4-6 sentences.`,
+        );
+      } catch (e) { /* use desc */ }
+
+      const activeId = store.getItem('activeCampaignId') || 'default';
+      const campaigns = JSON.parse(store.getItem('campaigns') || '[]');
+      const idx = campaigns.findIndex((c) => c.id === activeId);
+      if (idx < 0) return { success: false, error: 'No active campaign — complete Setup Wizard first' };
+
+      campaigns[idx] = {
+        ...campaigns[idx],
+        brandName: campaigns[idx].brandName || title,
+        domain,
+        description: String(aiSummary || desc).trim(),
+        sampleMessages: campaigns[idx].sampleMessages || desc,
+        brandGuidelines: {
+          ...(campaigns[idx].brandGuidelines || {}),
+          doList: campaigns[idx].brandGuidelines?.doList || `Speak as ${title}. Be helpful, authoritative, on-brand.`,
+          websiteSeededAt: new Date().toISOString(),
+        },
+      };
+      store.setItem('campaigns', JSON.stringify(campaigns));
+
+      try {
+        const { importWebsiteToLibrary } = require(path.join(DESKTOP_SERVICES, 'contentLibraryIpc'));
+        await importWebsiteToLibrary(store, generateAI, { url: domain });
+      } catch (e) { /* library import optional */ }
+
+      return { success: true, campaign: campaigns[idx], domain, title };
+    } catch (e) {
+      return { success: false, error: e.message || 'Could not analyze website' };
+    }
   });
 
   ipcMain.handle('save-watched-monitors', (event, monitors) => {

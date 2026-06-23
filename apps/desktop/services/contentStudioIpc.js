@@ -65,7 +65,7 @@ function registerContentStudioHandlers({
 
   ipcMain.handle('generate-content-batch', async (event, payload) => {
     try {
-      return await contentStudio.generateContentBatch(deps, payload || {});
+      return await contentStudio.generateContentBatch({ ...deps, store }, payload || {});
     } catch (e) {
       return { success: false, error: e.message };
     }
@@ -86,7 +86,7 @@ function registerContentStudioHandlers({
 
   ipcMain.handle('run-content-studio', async (event, payload) => {
     try {
-      const gen = await contentStudio.generateContentBatch(deps, payload || {});
+      const gen = await contentStudio.generateContentBatch({ ...deps, store }, payload || {});
       if (!gen.success) return gen;
 
       const scheduleConfig = payload.scheduleConfig || { mode: 'preview' };
