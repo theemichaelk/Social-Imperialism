@@ -7,6 +7,7 @@ import { IntelligenceRecommendations } from '@/components/IntelligenceRecommenda
 import { useIntelligence } from '@/hooks/useIntelligence';
 import { FetchProfilesPanel } from '@/components/FetchProfilesPanel';
 import { PostExplorerModal } from '@/components/PostExplorerModal';
+import { BrowsePostsLivePanel } from '@/components/BrowsePostsLivePanel';
 import { FetchProfileFilters, LANGUAGE_OPTIONS, LOCATION_OPTIONS } from '@/lib/fetchProfiles';
 
 type Post = {
@@ -135,6 +136,13 @@ export default function BrowsePostsPage() {
   const [customPrompt, setCustomPrompt] = useState('');
   const [selected, setSelected] = useState<Post | null>(null);
   const [stockUrl, setStockUrl] = useState('');
+  const [mediaUrl, setMediaUrl] = useState('');
+  const [publishAccountId, setPublishAccountId] = useState('');
+  const [scheduleTime, setScheduleTime] = useState(() => {
+    const d = new Date(Date.now() + 86400000);
+    d.setMinutes(0, 0, 0);
+    return d.toISOString().slice(0, 16);
+  });
   const [platform, setPlatform] = useState('All');
   const [sort, setSort] = useState('recent');
   const [keyword, setKeyword] = useState('all');
@@ -208,7 +216,9 @@ export default function BrowsePostsPage() {
       invoke<Record<string, number>>('get-dashboard-stats'),
     ]);
     setKeywords(asArray(k));
-    setAccounts(asArray(a));
+    const accList = asArray<LinkedAccount>(a);
+    setAccounts(accList);
+    setPublishAccountId((prev) => prev || accList[0]?.id || '');
     setNews(asArray<NewsItem>(n));
     setMonitors(asArray(m));
     setStats({
@@ -253,7 +263,7 @@ export default function BrowsePostsPage() {
 
   useEffect(() => {
     loadFeed(false).catch(console.error);
-  }, [platform, sort]);
+  }, [platform, sort, language, location, minFollowers, mediaOnly]);
 
   async function draftReply(post: Post) {
     setSelected(post);
@@ -287,31 +297,43 @@ export default function BrowsePostsPage() {
     setMsg('Saved to AI Replies inbox');
   }
 
+  function resolvePublishAccount(accs: LinkedAccount[]) {
+    const picked = accs.find((a) => a.id === publishAccountId);
+    if (picked) return picked;
+    if (!selected) return accs[0];
+    return accs.find((a) => platformMatch(a.platform, selected.platform)) || accs[0];
+  }
+
   async function scheduleDraft() {
     if (!selected || !draft.trim()) return;
     const accs = accounts.length ? accounts : asArray<LinkedAccount>(await invoke<LinkedAccount[]>('get-linked-accounts'));
-    const acc = accs.find((a) => platformMatch(a.platform, selected.platform)) || accs[0];
+    const acc = resolvePublishAccount(accs);
     if (!acc) { setMsg('Link an account in Account Hub first'); return; }
+    const when = scheduleTime ? new Date(scheduleTime).toISOString() : new Date(Date.now() + 86400000).toISOString();
     await invoke('schedule-post', {
       platform: acc.platform,
       accountId: acc.id,
       content: draft,
-      scheduleTime: new Date(Date.now() + 86400000).toISOString(),
+      mediaUrl: mediaUrl || stockUrl || undefined,
+      hasMedia: !!(mediaUrl || stockUrl),
+      scheduleTime: when,
     });
-    setMsg('Scheduled for tomorrow');
+    setMsg(`Scheduled on ${acc.platform} for ${new Date(when).toLocaleString()}`);
   }
 
   async function postNow() {
     if (!selected || !draft.trim()) return;
     const accs = accounts.length ? accounts : asArray<LinkedAccount>(await invoke<LinkedAccount[]>('get-linked-accounts'));
-    const acc = accs.find((a) => platformMatch(a.platform, selected.platform)) || accs[0];
+    const acc = resolvePublishAccount(accs);
     if (!acc) { setMsg('Link an account in Account Hub first'); return; }
     await invoke('publish-post', {
       platform: acc.platform,
       accountId: acc.id,
       content: draft,
+      mediaUrl: mediaUrl || stockUrl || undefined,
+      hasMedia: !!(mediaUrl || stockUrl),
     });
-    setMsg(`Published to ${acc.platform}`);
+    setMsg(`Published to ${acc.platform}${acc.handle ? ` (${acc.handle})` : ''}`);
     loadFeed(false);
   }
 
@@ -370,8 +392,16 @@ export default function BrowsePostsPage() {
     const res = await invoke<{ imageUrl?: string }>('search-stock-photo', q);
     if (res?.imageUrl) {
       setStockUrl(res.imageUrl);
-      setMsg('Stock photo attached — include URL when publishing if your platform supports media.');
+      setMediaUrl(res.imageUrl);
+      setMsg('Stock photo attached to media URL — ready for publish/schedule.');
     }
+  }
+
+  async function removeMonitor(id: string) {
+    const next = monitors.filter((m) => m.id !== id);
+    await invoke('save-watched-monitors', next);
+    setMonitors(next);
+    setMsg('Monitor removed');
   }
 
   return (
@@ -389,13 +419,7 @@ export default function BrowsePostsPage() {
         }
       />
 
-      <div className="grid grid-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', marginBottom: 12 }}>
-        <div className="card kpi"><div className="kpi-val">{filtered.length}</div><div className="kpi-label">Posts</div></div>
-        <div className="card kpi"><div className="kpi-val">{stats.keywords ?? 0}</div><div className="kpi-label">Keywords</div></div>
-        <div className="card kpi"><div className="kpi-val">{stats.accounts ?? 0}</div><div className="kpi-label">Accounts</div></div>
-        <div className="card kpi"><div className="kpi-val">{stats.drafts ?? 0}</div><div className="kpi-label">AI Drafts</div></div>
-        <div className="card kpi"><div className="kpi-val">{monitors.length}</div><div className="kpi-label">Monitors</div></div>
-      </div>
+      <BrowsePostsLivePanel feedCount={filtered.length} />
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -412,6 +436,7 @@ export default function BrowsePostsPage() {
             <option value="relevance">Match Score</option>
           </select>
           <button className="btn" onClick={() => setShowAdvanced((v) => !v)}>{showAdvanced ? 'Hide Filters' : 'More Filters'}</button>
+          <button className="btn primary" onClick={() => loadFeed(false)} disabled={loading}>Apply Filters</button>
           <FetchProfilesPanel currentFilters={currentFetchFilters} onApply={applyFetchProfile} />
           <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Page {page + 1}/{totalPages}</span>
         </div>
@@ -538,12 +563,48 @@ export default function BrowsePostsPage() {
             ))}
           </div>
 
+          {monitors.length > 0 && (
+            <div className="card" style={{ marginBottom: 12 }}>
+              <h3>Be First Monitors</h3>
+              {monitors.slice(0, 6).map((m) => (
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: '0.85rem' }}>
+                  <span><span className="badge">{m.platform}</span> {m.label}</span>
+                  <button type="button" className="btn" style={{ padding: '2px 8px', fontSize: '0.72rem' }} onClick={() => removeMonitor(m.id)}>Remove</button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="card">
             <h3>AI Draft Reply</h3>
             {selected && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Replying on {selected.platform}</p>}
+
+            <label className="ac-label">Publish via account</label>
+            <select className="input" value={publishAccountId} onChange={(e) => setPublishAccountId(e.target.value)} style={{ marginBottom: 8 }}>
+              {!accounts.length && <option value="">No accounts linked</option>}
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.platform} — {a.handle || a.id}</option>
+              ))}
+            </select>
+
             <input className="input" placeholder="Custom prompt override (optional)" value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} style={{ marginBottom: 8 }} />
             <textarea className="input" value={draft} onChange={(e) => setDraft(e.target.value)} rows={8} placeholder="Select a post and click Draft Reply" />
-            {stockUrl && <img src={stockUrl} alt="" style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8 }} />}
+
+            <label className="ac-label" style={{ marginTop: 8 }}>Media URL (optional)</label>
+            <input className="input" placeholder="https://… image or video" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} />
+
+            <label className="ac-label" style={{ marginTop: 8 }}>Schedule time</label>
+            <input
+              className="input"
+              type="datetime-local"
+              value={scheduleTime}
+              onChange={(e) => setScheduleTime(e.target.value)}
+            />
+
+            {(stockUrl || mediaUrl) && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={mediaUrl || stockUrl} alt="" style={{ maxWidth: '100%', borderRadius: 8, marginTop: 8 }} />
+            )}
             <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
               <button className="btn primary" onClick={saveDraft} disabled={!draft.trim()}>Save Inbox</button>
               <button className="btn" onClick={() => engage('reply')} disabled={!draft.trim() || !selected}>Reply & Engage</button>

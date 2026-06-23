@@ -26,6 +26,13 @@ export const PAGE_CHANNELS = {
     'seed-brand-from-website', 'get-design-templates', 'render-design-post',
     'generate-from-library-assets', 'schedule-content-batch',
   ],
+  browsePosts: [
+    'get-live-feed', 'get-keywords', 'get-linked-accounts', 'get-dashboard-stats',
+    'get-all-post-history', 'draft-post-reply', 'save-ai-reply', 'engage-post',
+    'get-engagement-queue', 'get-watched-monitors', 'save-watched-monitors',
+    'schedule-post', 'publish-post', 'get-live-news', 'search-stock-photo',
+    'generate-image', 'get-browse-posts-live', 'get-trending-topics', 'generate-ai',
+  ],
   accountCreator: [
     'get-proxy-pool', 'save-proxy', 'delete-proxy', 'test-proxy', 'get-profile-kits',
     'generate-profile-kit', 'generate-bulk-profile-kits', 'delete-profile-kit', 'export-profile-kit',

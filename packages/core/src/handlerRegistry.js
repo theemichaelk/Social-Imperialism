@@ -205,6 +205,16 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerDesignStudioHandlers } = require(path.join(DESKTOP_SERVICES, 'designStudioIpc'));
   registerDesignStudioHandlers({ ipcMain, store, generateAI });
 
+  const { fetchTrendingTopics } = require(path.join(DESKTOP_SERVICES, 'feedFetcher'));
+  const { registerBrowsePostsHandlers } = require(path.join(DESKTOP_SERVICES, 'browsePostsIpc'));
+  registerBrowsePostsHandlers({
+    ipcMain,
+    store,
+    resolveKeys,
+    buildApiMetrics: (k) => buildApiMetrics(resolveKeys, k),
+    fetchTrendingTopics,
+  });
+
   return { handlers, calendarApi, integrations, pendingOAuth: () => deps.pendingOAuthUrl };
 }
 

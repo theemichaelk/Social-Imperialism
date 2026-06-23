@@ -54,6 +54,17 @@ const FEATURES = [
     validate: (d) => d?.imageUrl?.startsWith('http') },
   { area: 'Media', name: 'Image generation', channel: 'generate-image', args: ['minimal social media icon flat design'],
     validate: (d) => d?.imageUrl?.startsWith('http') || d?.url?.startsWith('http') || d?.success === true },
+  { area: 'Live', name: 'Browse posts live metrics', channel: 'get-browse-posts-live',
+    validate: (d) => d?.stats && typeof d.stats.accounts === 'number' },
+  { area: 'Live', name: 'Trending topics', channel: 'get-trending-topics',
+    validate: (d) => Array.isArray(d) },
+  { area: 'Feed', name: 'Live feed (language filter)', channel: 'get-live-feed', args: [{ quick: true, language: 'en' }],
+    validate: (d) => Array.isArray(d) },
+  { area: 'Feed', name: 'Live feed (media only)', channel: 'get-live-feed', args: [{ quick: true, media: 'only' }],
+    validate: (d) => Array.isArray(d) },
+  { area: 'Publish', name: 'Publish with media', channel: 'publish-post',
+    args: [{ platform: 'LinkedIn', content: 'Browse QA with media', hasMedia: true, mediaUrl: 'https://images.unsplash.com/photo-1611162617474-5b21e939e966' }],
+    validate: (d) => d?.success !== false },
 ];
 
 async function login() {
