@@ -901,16 +901,30 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   });
   ipcMain.handle('link-account', async (event, payload) => {
     const creds = typeof payload === 'string' ? { platform: payload } : (payload || {});
+    const { connectPlatform } = require(path.join(desktopServicesPath, 'connectionService'));
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
     const openOAuth = typeof deps.openExternal === 'function' ? deps.openExternal : () => {};
-    return integrations.discoverAccounts({
+    const method = creds.method === 'oauth' ? 'oauth' : 'credentials';
+
+    if (method === 'oauth') {
+      return {
+        success: false,
+        error: 'Use OAuth Connect button — opens authorization popup immediately.',
+        useAsyncOAuth: true,
+      };
+    }
+
+    return connectPlatform({
       platform: creds.platform,
       email: creds.email,
       username: creds.username,
       password: creds.password || '',
-      useCredentials: creds.method !== 'oauth',
-      connectionId: creds.connectionId,
-    }, keys, (url) => openOAuth(url));
+      method,
+      keys,
+      openExternal: openOAuth,
+      store,
+      integrations,
+    });
   });
 
   // AI replies hub (update/delete)

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
+import { openOAuthPopup, pollOAuthUntilComplete } from '@/lib/oauthConnect';
 import { PageHeader } from '@/components/PageHeader';
 import { IntelligenceProfilePanel } from '@/components/IntelligenceProfilePanel';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
@@ -75,6 +76,7 @@ export default function AccountHubPage() {
   const [useProxyOnConnect, setUseProxyOnConnect] = useState(false);
   const [connectProxyId, setConnectProxyId] = useState('');
   const [accountProxyId, setAccountProxyId] = useState('');
+  const [connecting, setConnecting] = useState(false);
 
   async function loadProxies() {
     try {
@@ -122,8 +124,14 @@ export default function AccountHubPage() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('oauth') === 'success') {
-      setMsg('OAuth complete — refresh accounts or finish account selection.');
-      refresh().catch(console.error);
+      const state = params.get('state');
+      if (state) {
+        finishOAuthConnect(state).catch(console.error);
+      } else {
+        setMsg('OAuth complete — refresh accounts or finish account selection.');
+        refresh().catch(console.error);
+      }
+      window.history.replaceState({}, '', '/account-hub');
     }
   }, []);
 
@@ -142,34 +150,112 @@ export default function AccountHubPage() {
     return items.map((a) => ({ ...a, useProxy: true, proxyId: connectProxyId }));
   }
 
+  type ConnectResult = {
+    success?: boolean;
+    error?: string;
+    accounts?: Account[];
+    linked?: number;
+    autoLinked?: boolean;
+    needsSelection?: boolean;
+    discovered?: Account[];
+  };
+
+  function handleConnectResult(res: ConnectResult) {
+    if (res.success === false) {
+      setMsg(res.error || 'Connection failed');
+      return;
+    }
+    const discovered = res.accounts || res.discovered || [];
+    if (res.autoLinked || (res.linked && res.linked > 0 && !res.needsSelection)) {
+      setMsg(`Linked ${res.linked || discovered.length || 1} account(s) on ${connectPlatform}`);
+      refresh();
+      loadProxies();
+      return;
+    }
+    if (discovered.length > 1 || res.needsSelection) {
+      const withProxy = attachProxyMeta(discovered as Account[]);
+      setPendingSelection(withProxy);
+      setSelectionChecked(Object.fromEntries(withProxy.map((a) => [a.id, true])));
+      setShowSelection(true);
+      setMsg(`Found ${withProxy.length} account(s) — select which to link`);
+      return;
+    }
+    if (discovered.length === 1) {
+      confirmSelection(attachProxyMeta(discovered as Account[]));
+      return;
+    }
+    setMsg('Connected — refreshing accounts…');
+    refresh();
+    loadProxies();
+  }
+
+  async function finishOAuthConnect(state: string) {
+    setConnecting(true);
+    setMsg('Finalizing OAuth connection…');
+    try {
+      const res = await invoke<ConnectResult>('finish-platform-oauth-connect', {
+        state,
+        platform: connectPlatform,
+        ...creds,
+        useProxy: useProxyOnConnect,
+        proxyId: useProxyOnConnect ? connectProxyId : null,
+      });
+      handleConnectResult(res);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   async function connect(method: 'oauth' | 'credentials') {
     if (useProxyOnConnect && !connectProxyId) {
       setMsg('Select a proxy from the pool or connect without proxy');
       return;
     }
+    setConnecting(true);
     setMsg(`Connecting ${connectPlatform}…`);
-    const res = await invoke<Account[] | { success?: boolean; error?: string; accounts?: Account[] }>('link-account', {
-      platform: connectPlatform,
-      method,
-      ...creds,
-      useProxy: useProxyOnConnect,
-      proxyId: useProxyOnConnect ? connectProxyId : null,
-    });
-    const discovered = Array.isArray(res) ? res : (res?.accounts || []);
-    if (discovered.length > 1) {
-      const withProxy = attachProxyMeta(discovered as Account[]);
-      setPendingSelection(withProxy);
-      setSelectionChecked(Object.fromEntries(withProxy.map((a) => [a.id, true])));
-      setShowSelection(true);
-      setMsg(`Found ${withProxy.length} account(s) — select which to link${useProxyOnConnect ? ' (proxy will apply to root account)' : ''}`);
-    } else if (discovered.length === 1) {
-      await confirmSelection(attachProxyMeta(discovered as Account[]));
-    } else if (res && !Array.isArray(res) && res.success === false) {
-      setMsg(String(res.error));
-    } else {
-      setMsg('Connected — complete OAuth in popup if prompted');
-      refresh();
-      loadProxies();
+    try {
+      if (method === 'oauth') {
+        const begin = await invoke<{ success?: boolean; error?: string; oauthUrl?: string; state?: string }>(
+          'begin-platform-oauth',
+          {
+            platform: connectPlatform,
+            email: creds.email,
+            username: creds.username,
+            useProxy: useProxyOnConnect,
+            proxyId: useProxyOnConnect ? connectProxyId : null,
+          },
+        );
+        if (!begin.success || !begin.oauthUrl || !begin.state) {
+          setMsg(begin.error || 'OAuth not configured — add API keys in Settings → Integrations');
+          return;
+        }
+        openOAuthPopup(begin.oauthUrl);
+        setMsg('Authorize in the popup window…');
+        const polled = await pollOAuthUntilComplete(begin.state);
+        if (!polled.ok) {
+          setMsg(polled.error || 'OAuth failed');
+          return;
+        }
+        await finishOAuthConnect(begin.state);
+        return;
+      }
+
+      const res = await invoke<ConnectResult>('connect-platform', {
+        platform: connectPlatform,
+        method: 'credentials',
+        email: creds.email,
+        username: creds.username,
+        password: creds.password,
+        useProxy: useProxyOnConnect,
+        proxyId: useProxyOnConnect ? connectProxyId : null,
+      });
+      handleConnectResult(res);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setConnecting(false);
     }
   }
 
@@ -357,8 +443,12 @@ export default function AccountHubPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn primary" onClick={() => connect('oauth')}>OAuth Connect</button>
-            <button className="btn" onClick={() => connect('credentials')}>Credentials</button>
+            <button className="btn primary" onClick={() => connect('oauth')} disabled={connecting}>
+              {connecting ? 'Connecting…' : 'OAuth Connect'}
+            </button>
+            <button className="btn" onClick={() => connect('credentials')} disabled={connecting}>
+              {connecting ? 'Connecting…' : 'Credentials'}
+            </button>
           </div>
           {msg && <p style={{ marginTop: 8, color: '#94a3b8', fontSize: '0.85rem' }}>{msg}</p>}
         </div>

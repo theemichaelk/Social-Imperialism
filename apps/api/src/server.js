@@ -75,17 +75,52 @@ app.get('/api/oauth/setup', (req, res) => {
   }
 });
 
-app.get('/api/oauth/callback', (req, res) => {
+app.get('/api/oauth/callback', async (req, res) => {
   try {
     const oauth = require(path.join(__dirname, '../../desktop/services/oauth'));
+    const oauthFlowStore = require(path.join(__dirname, '../../desktop/services/oauthFlowStore'));
+    const { resolveKeys } = require(path.join(__dirname, '../../desktop/services/keys'));
     const webBase = (process.env.WEB_URL || 'https://www.socialimperialism.com').replace(/\/$/, '');
     const qs = new URLSearchParams(req.query).toString();
     const callbackUrl = `${webBase}/oauth/callback${qs ? `?${qs}` : ''}`;
     const result = oauth.handleOAuthCallback(callbackUrl);
+
     if (result?.error) {
+      if (result.state) await oauthFlowStore.markError(result.state, result.error);
       return res.status(400).type('html').send(oauth.oauthErrorHtml(result.error));
     }
-    return res.redirect(302, `${webBase}/account-hub?oauth=success`);
+
+    if (result?.state && result?.code) {
+      const flow = await oauthFlowStore.getFlow(result.state);
+      if (flow) {
+        try {
+          const project = await prisma.project.findUnique({
+            where: { id: flow.projectId },
+            include: { organization: true },
+          });
+          if (project) {
+            const store = await createPrismaStore({ projectId: project.id, organizationId: project.organizationId });
+            await syncProjectToStore(store, project.id);
+            const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+            const tokens = await oauth.exchangeToken(
+              flow.platform,
+              result.code,
+              keys,
+              flow.pkceVerifier,
+              flow.redirectUri,
+            );
+            await oauthFlowStore.markComplete(result.state, tokens);
+          }
+        } catch (e) {
+          console.error('OAuth token exchange:', e.message);
+          await oauthFlowStore.markError(result.state, e.message);
+          return res.status(400).type('html').send(oauth.oauthErrorHtml(e.message));
+        }
+      }
+    }
+
+    const stateQs = result?.state ? `&state=${encodeURIComponent(result.state)}` : '';
+    return res.redirect(302, `${webBase}/account-hub?oauth=success${stateQs}`);
   } catch (e) {
     console.error('OAuth callback:', e.message);
     res.status(500).type('text/plain').send('OAuth callback failed');

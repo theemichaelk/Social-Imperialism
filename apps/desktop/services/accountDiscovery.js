@@ -45,14 +45,16 @@ function usesOAuth(platform) {
 async function discoverAccounts(credentials, keys, openExternal, options = {}) {
   const { platform, username, password, email, useCredentials, connectionId: presetConnectionId } = credentials;
   let accessToken = null;
-  let oauthTokens = null;
+  let oauthTokens = credentials.oauthTokens || null;
   let loginEmail = email || username || null;
   let encryptedPassword = null;
 
   let youtubeApiKey = keys.youtubeApiKey || null;
   let discordBotToken = keys.discordBotToken || null;
 
-  if (useCredentials) {
+  if (oauthTokens?.access_token) {
+    accessToken = oauthTokens.access_token;
+  } else if (useCredentials) {
     const auth = await authenticateWithCredentials(platform, keys, {
       email: email || username,
       password,

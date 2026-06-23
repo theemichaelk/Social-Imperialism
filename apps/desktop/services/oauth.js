@@ -311,41 +311,52 @@ function waitForOAuthCallback(state, timeoutMs = 120000) {
   });
 }
 
+function parseCallbackUrl(url) {
+  const parsed = new URL(url);
+  return {
+    code: parsed.searchParams.get('code'),
+    state: parsed.searchParams.get('state'),
+    error: parsed.searchParams.get('error'),
+    errorDescription: parsed.searchParams.get('error_description'),
+  };
+}
+
 function handleOAuthCallback(url) {
   try {
-    const parsed = new URL(url);
-    const code = parsed.searchParams.get('code');
-    const state = parsed.searchParams.get('state');
-    const error = parsed.searchParams.get('error');
-    const errorDescription = parsed.searchParams.get('error_description');
-
-    if (!state || !pendingFlows.has(state)) {
-      console.warn('OAuth callback with unknown state:', state);
-      return null;
-    }
-
-    const flow = pendingFlows.get(state);
-    pendingFlows.delete(state);
+    const { code, state, error, errorDescription } = parseCallbackUrl(url);
+    if (!state) return null;
 
     if (error) {
       const msg = errorDescription ? `${error}: ${errorDescription}` : error;
-      flow.reject(new Error(msg));
-      return { error: msg };
+      if (pendingFlows.has(state)) {
+        pendingFlows.get(state).reject(new Error(msg));
+        pendingFlows.delete(state);
+      }
+      return { error: msg, state };
     }
     if (!code) {
-      flow.reject(new Error('No authorization code received'));
-      return { error: 'no_code' };
+      const msg = 'No authorization code received';
+      if (pendingFlows.has(state)) {
+        pendingFlows.get(state).reject(new Error(msg));
+        pendingFlows.delete(state);
+      }
+      return { error: msg, state };
     }
 
-    flow.resolve({ code, state, platform: state.split('_')[0] });
-    return { code, state };
+    if (pendingFlows.has(state)) {
+      const flow = pendingFlows.get(state);
+      pendingFlows.delete(state);
+      flow.resolve({ code, state, platform: state.split('_')[0] });
+    }
+
+    return { code, state, platform: state.split('_')[0] };
   } catch (e) {
     console.error('OAuth callback parse error:', e.message);
     return null;
   }
 }
 
-async function startOAuthFlow(platform, keys, openExternal, options = {}) {
+async function prepareOAuthFlow(platform, keys, options = {}) {
   const normalized = platform === 'X' ? 'Twitter' : platform;
   const flowPlatform = normalized.replace(/\s+/g, '');
   const state = generateState(flowPlatform);
@@ -357,18 +368,20 @@ async function startOAuthFlow(platform, keys, openExternal, options = {}) {
   }
 
   const authUrl = buildAuthUrl(platform, keys, state, pkce, redirectUri, options);
-
   if (!authUrl) {
     throw new Error(`OAuth not configured for ${platform}. Add client credentials in Settings > API Integrations.`);
   }
 
+  return { authUrl, state, pkce, redirectUri, platform };
+}
+
+async function startOAuthFlow(platform, keys, openExternal, options = {}) {
+  const { authUrl, state, pkce, redirectUri, platform: p } = await prepareOAuthFlow(platform, keys, options);
   const callbackPromise = waitForOAuthCallback(state);
   await openExternal(authUrl);
-
   const { code } = await callbackPromise;
   const tokens = await exchangeToken(platform, code, keys, pkce.verifier, redirectUri);
-
-  return { tokens, platform, state };
+  return { tokens, platform: p, state };
 }
 
 module.exports = {
@@ -380,7 +393,9 @@ module.exports = {
   oauthSuccessHtml,
   buildAuthUrl,
   exchangeToken,
+  parseCallbackUrl,
   handleOAuthCallback,
+  prepareOAuthFlow,
   startOAuthFlow,
   waitForOAuthCallback,
   generateState,
