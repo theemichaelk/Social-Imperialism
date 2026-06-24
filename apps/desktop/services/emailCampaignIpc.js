@@ -26,7 +26,9 @@ function registerEmailCampaignHandlers({ ipcMain, store }) {
         VBout: result.vbout?.ok ? 'Connected' : 'Not configured',
         MailChimp: result.mailchimp?.ok ? 'Connected' : 'Not configured',
         'Amazon SES': result.ses?.ok ? 'Connected' : 'Not configured',
-        Acumbamail: result.acumbamail?.ok ? 'Connected' : 'Not configured',
+        Acumbamail: result.acumbamail?.ok
+          ? 'Connected'
+          : (result.configured?.acumbamail ? 'Auth failed — enable SMTP relay with Acumbamail support' : 'Not configured'),
       },
     };
   });
