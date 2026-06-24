@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Integrations — Social Imperialism</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="sidebar-nav.css">
+<link rel="stylesheet" href="futuristic-shell.css">
+<link rel="stylesheet" href="grok-integrate.css">
+</head>
+<body class="app-shell">
+<aside id="app-sidebar"></aside>
+<main class="main-content" style="padding:1.5rem 2rem;">
+  <div id="neoPageHeader" class="neo-page-header"></div>
+  <div id="neoToast" class="neo-toast" style="display:none"></div>
+  <div class="neo-card">
+    <h3><i class="fas fa-satellite-dish"></i> Live Connection Probes</h3>
+    <button class="neo-btn primary" onclick="testConnections()">Test All Connections</button>
+    <div id="probeGrid" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px"></div>
+  </div>
+  <div class="neo-grid">
+    <div class="neo-card">
+      <h3><i class="fas fa-envelope"></i> Email Marketing & SMTP</h3>
+      <p style="font-size:0.8rem;color:#8ba3c7;margin:0 0 10px">Acumbamail, Amazon SES, VBout, MailChimp</p>
+      <div id="emailStatus"></div>
+      <a href="settings.html" class="neo-btn" style="margin-top:10px;text-decoration:none;display:inline-block">Edit API Keys</a>
+    </div>
+    <div class="neo-card">
+      <h3><i class="fas fa-link"></i> URL Shortener</h3>
+      <input class="neo-input" id="shortUrl" placeholder="https://example.com/page">
+      <button class="neo-btn" style="margin-top:8px" onclick="shortenUrl()">Shorten with TinyURL</button>
+      <p id="shortResult" style="font-size:0.85rem;color:#38bdf8;margin-top:8px"></p>
+    </div>
+    <div class="neo-card">
+      <h3><i class="fas fa-cloud"></i> AWS & Storage</h3>
+      <div id="awsStatus" style="font-size:0.82rem;color:#8ba3c7">Checking…</div>
+    </div>
+    <div class="neo-card">
+      <h3><i class="fas fa-robot"></i> AI Providers</h3>
+      <div id="aiStatus" style="font-size:0.82rem;color:#8ba3c7">Checking…</div>
+    </div>
+  </div>
+  <div class="neo-card">
+    <h3><i class="fas fa-broadcast-tower"></i> Email Auto-Reply Campaigns</h3>
+    <button class="neo-btn" onclick="loadCampaigns()">Load Campaigns</button>
+    <div id="campaignList" style="margin-top:10px;font-size:0.85rem;color:#8ba3c7"></div>
+  </div>
+</main>
+<script src="sidebar-nav.js"></script>
+<script src="desktop-page-kit.js"></script>
+<script src="grok-integrate.js"></script>
+<script>
+const { ipcRenderer } = require('electron');
+
+async function testConnections() {
+  showToast('Running live probes…');
+  const res = await ipcRenderer.invoke('test-email-connections');
+  const metrics = res.apiMetrics || {};
+  document.getElementById('probeGrid').innerHTML = Object.entries(metrics).map(([k, v]) => {
+    const cls = v === 'Connected' ? 'ok' : v.includes('Auth failed') ? 'warn' : '';
+    return `<span class="neo-pill ${cls}">${escapeHtml(k)}: ${escapeHtml(v)}</span>`;
+  }).join('');
+  document.getElementById('emailStatus').innerHTML = `
+    <span class="neo-pill ${res.acumbamail?.ok ? 'ok' : 'warn'}">Acumbamail ${res.acumbamail?.ok ? 'Connected' : (res.acumbamail?.error || 'Pending')}</span>
+    <span class="neo-pill ${res.ses?.ok ? 'ok' : ''}">SES ${res.ses?.ok ? 'Connected' : '—'}</span>
+    <span class="neo-pill ${res.vbout?.ok ? 'ok' : ''}">VBout ${res.vbout?.ok ? 'Connected' : '—'}</span>
+    <span class="neo-pill ${res.mailchimp?.ok ? 'ok' : ''}">MailChimp ${res.mailchimp?.ok ? 'Connected' : '—'}</span>
+  `;
+  showToast(res.success ? 'Connections probed' : 'Some providers need configuration');
+}
+
+async function shortenUrl() {
+  const url = document.getElementById('shortUrl').value.trim();
+  if (!url) return;
+  const res = await ipcRenderer.invoke('shorten-url', url);
+  document.getElementById('shortResult').textContent = res.shortUrl || res.error || 'Failed';
+}
+
+async function loadCampaigns() {
+  const res = await ipcRenderer.invoke('get-email-campaigns');
+  const camps = res.campaigns || [];
+  document.getElementById('campaignList').innerHTML = camps.map((c) =>
+    `<div style="margin-bottom:6px"><span class="neo-pill">${escapeHtml(c.trigger)}</span> ${escapeHtml(c.name)}</div>`
+  ).join('') || 'No campaigns configured';
+}
+
+async function loadHealth() {
+  const health = await ipcRenderer.invoke('get-page-health').catch(() => ({}));
+  document.getElementById('awsStatus').innerHTML = health.s3
+    ? `<span class="neo-pill ok">S3 ${escapeHtml(health.s3.bucket || 'configured')}</span>`
+    : '<span class="neo-pill warn">S3 not configured</span>';
+  document.getElementById('aiStatus').innerHTML = `
+    <span class="neo-pill ${health.grok ? 'ok' : ''}">Grok ${health.grok ? 'Ready' : 'Configure in Settings'}</span>
+    <span class="neo-pill ok">IPC ${Object.keys(health.channels || {}).length || '180+'} channels</span>
+  `;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  mountNeoPage({
+    pageId: 'integrations',
+    eyebrow: 'System',
+    title: 'Integrations Hub',
+    subtitle: 'Connections, live probes, email providers, URL shortening, and campaign auto-reply — matches live SaaS.',
+  });
+  testConnections();
+  loadHealth();
+  loadCampaigns();
+});
+</script>
+</body>
+</html>

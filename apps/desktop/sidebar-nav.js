@@ -5,29 +5,35 @@ const NAV_ITEMS = [
   { id: 'dashboard', href: 'dashboard.html', icon: 'fa-home', label: 'Dashboard' },
   { id: 'browse-posts', href: 'dashboard.html#browse-posts', icon: 'fa-compass', label: 'Browse Posts' },
   { id: 'onboarding', href: 'onboarding.html', icon: 'fa-rocket', label: 'Setup Wizard' },
-  { id: 'content-hub', href: 'content-hub.html', icon: 'fa-edit', label: 'Content Hub' },
+  { id: 'content-hub', href: 'content-hub.html', icon: 'fa-edit', label: 'Create' },
+  { id: 'content-library', href: 'content-library.html', icon: 'fa-folder-open', label: 'Library' },
+  { id: 'design-studio', href: 'design-studio.html', icon: 'fa-palette', label: 'Design Studio' },
+  { id: 'brand', href: 'brand.html', icon: 'fa-bullseye', label: 'Brand' },
   { id: 'calendar', href: 'calendar.html', icon: 'fa-calendar-alt', label: 'Calendar' },
+  { id: 'scheduler', href: 'calendar.html#scheduler', icon: 'fa-clock', label: 'Scheduler' },
   { id: 'engagement', href: 'engagement.html', icon: 'fa-users', label: 'Engagement' },
   { id: 'history', href: 'history.html', icon: 'fa-history', label: 'AI Replies' },
   { id: 'keywords', href: 'keywords.html', icon: 'fa-tags', label: 'Keywords' },
   { id: 'seo-tools', href: 'seo-tools.html', icon: 'fa-search-plus', label: 'SEO Tools' },
   { id: 'reddit-ai', href: 'reddit-ai-suite.html', icon: 'fa-brain', label: 'Growth Lab' },
   { id: 'quora-traffic', href: 'quora-traffic-ops.html', icon: 'fa-quora', label: 'Quora Ops' },
-  { id: 'automations', href: 'automations.html', icon: 'fa-project-diagram', label: 'Visual Builder' },
+  { id: 'automations', href: 'automations.html', icon: 'fa-project-diagram', label: 'Automations' },
   { id: 'rules', href: 'rules.html', icon: 'fa-cogs', label: 'Auto-Rules' },
   { id: 'account-hub', href: 'account-hub.html', icon: 'fa-link', label: 'Accounts' },
   { id: 'account-creator', href: 'account-creator.html', icon: 'fa-user-plus', label: 'Acct Creator' },
+  { id: 'dns', href: 'dns.html', icon: 'fa-globe', label: 'DNS' },
+  { id: 'integrations', href: 'integrations.html', icon: 'fa-plug', label: 'Integrations' },
   { id: 'settings', href: 'settings.html', icon: 'fa-sliders-h', label: 'Settings' },
 ];
 
 const NAV_SECTIONS = [
   { id: 'mission', label: 'Mission Control', ids: ['dashboard', 'browse-posts'] },
-  { id: 'create', label: 'Create & Publish', ids: ['onboarding', 'content-hub', 'calendar'] },
+  { id: 'create', label: 'Create & Publish', ids: ['onboarding', 'content-hub', 'content-library', 'design-studio', 'brand', 'calendar', 'scheduler'] },
   { id: 'discovery', label: 'Discovery & Replies', ids: ['engagement', 'history', 'keywords', 'seo-tools'] },
   { id: 'labs', label: 'Growth Labs', ids: ['reddit-ai', 'quora-traffic'] },
   { id: 'automation', label: 'Automation', ids: ['automations', 'rules'] },
   { id: 'accounts', label: 'Accounts', ids: ['account-hub', 'account-creator'] },
-  { id: 'system', label: 'System', ids: ['settings'] },
+  { id: 'system', label: 'System', ids: ['dns', 'integrations', 'settings'] },
 ];
 
 const NAV_BY_ID = Object.fromEntries(NAV_ITEMS.map((item) => [item.id, item]));
@@ -46,9 +52,14 @@ const FILE_TO_PAGE_ID = {
   'account-hub': 'account-hub',
   'account-creator': 'account-creator',
   'content-hub': 'content-hub',
+  'content-library': 'content-library',
+  'design-studio': 'design-studio',
+  brand: 'brand',
   calendar: 'calendar',
   settings: 'settings',
-  scheduler: 'calendar',
+  scheduler: 'scheduler',
+  dns: 'dns',
+  integrations: 'integrations',
 };
 
 const COLLAPSE_KEY = 'siNavCollapsedSections';
@@ -57,8 +68,9 @@ const SIDEBAR_COLLAPSED_KEY = 'siSidebarCollapsed';
 let _hashListenerBound = false;
 
 function detectActivePageId() {
-  if (typeof window !== 'undefined' && window.location?.hash === '#browse-posts') {
-    return 'browse-posts';
+  if (typeof window !== 'undefined') {
+    if (window.location?.hash === '#browse-posts') return 'browse-posts';
+    if (window.location?.hash === '#scheduler') return 'scheduler';
   }
   const path = (typeof window !== 'undefined' && window.location?.pathname) || '';
   const file = path.split('/').pop() || 'dashboard.html';

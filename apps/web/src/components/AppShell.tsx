@@ -54,7 +54,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="dash-bg-grid" aria-hidden />
       <div className="dash-orb dash-orb-1" aria-hidden />
       <div className="dash-orb dash-orb-2" aria-hidden />
+      <div className="dash-orb dash-orb-3" aria-hidden />
       <div className="dash-scanlines" aria-hidden />
+      <div className="data-stream" aria-hidden />
       <Sidebar />
       <main className="main">
         {children}

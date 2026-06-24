@@ -33,7 +33,7 @@ type DnsConfig = {
   defaultHostedZone?: string | null;
 };
 
-const EMPTY_RECORD = { type: 'A', name: '@', value: '', ttl: 300 };
+const EMPTY_RECORD = { type: 'A', name: '@', value: '', ttl: 300, priority: undefined as number | undefined };
 
 export default function DnsPage() {
   const [sites, setSites] = useState<DnsSite[]>([]);

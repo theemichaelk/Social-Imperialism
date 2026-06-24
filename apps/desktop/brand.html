@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Brand Guidelines — Social Imperialism</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="sidebar-nav.css">
+<link rel="stylesheet" href="futuristic-shell.css">
+<link rel="stylesheet" href="grok-integrate.css">
+</head>
+<body class="app-shell">
+<aside id="app-sidebar"></aside>
+<main class="main-content" style="padding:1.5rem 2rem;">
+  <div id="neoPageHeader" class="neo-page-header"></div>
+  <div id="neoToast" class="neo-toast" style="display:none"></div>
+  <div class="neo-card">
+    <h3><i class="fas fa-bullseye"></i> Brand Voice & Rules</h3>
+    <p style="color:#8ba3c7;font-size:0.85rem;margin-top:0">Injected into all AI copy generation across Create, Replies, and Growth Labs.</p>
+    <label style="display:block;margin:12px 0 4px;font-size:0.78rem;color:#8ba3c7">Brand voice</label>
+    <textarea class="neo-textarea" id="brandVoice" rows="3" placeholder="Professional, bold, data-driven…"></textarea>
+    <label style="display:block;margin:12px 0 4px;font-size:0.78rem;color:#8ba3c7">Content rules (one per line)</label>
+    <textarea class="neo-textarea" id="brandRules" rows="4" placeholder="Always mention ROI&#10;Never use slang"></textarea>
+    <label style="display:block;margin:12px 0 4px;font-size:0.78rem;color:#8ba3c7">Sample posts</label>
+    <textarea class="neo-textarea" id="brandSamples" rows="4" placeholder="Example posts for AI to mimic…"></textarea>
+    <label style="display:block;margin:12px 0 4px;font-size:0.78rem;color:#8ba3c7">Forbidden words (comma-separated)</label>
+    <input class="neo-input" id="forbiddenWords" placeholder="cheap, spam, guaranteed">
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="neo-btn primary" onclick="saveBrand()">Save Brand Guidelines</button>
+      <button class="neo-btn" onclick="loadBrand()">Reload</button>
+      <a href="content-hub.html" class="neo-btn" style="text-decoration:none;display:inline-block">Open Create Hub</a>
+    </div>
+  </div>
+</main>
+<script src="sidebar-nav.js"></script>
+<script src="desktop-page-kit.js"></script>
+<script src="grok-integrate.js"></script>
+<script>
+const { ipcRenderer } = require('electron');
+
+async function loadBrand() {
+  const res = await ipcRenderer.invoke('get-brand-guidelines');
+  const g = res.guidelines || res || {};
+  document.getElementById('brandVoice').value = g.voice || g.brandVoice || '';
+  document.getElementById('brandRules').value = (g.rules || g.contentRules || []).join('\n');
+  document.getElementById('brandSamples').value = (g.samples || g.samplePosts || []).join('\n\n---\n\n');
+  document.getElementById('forbiddenWords').value = (g.forbiddenWords || []).join(', ');
+  showToast('Brand guidelines loaded');
+}
+
+async function saveBrand() {
+  const guidelines = {
+    voice: document.getElementById('brandVoice').value.trim(),
+    rules: document.getElementById('brandRules').value.split('\n').map((s) => s.trim()).filter(Boolean),
+    samples: document.getElementById('brandSamples').value.split(/\n---\n/).map((s) => s.trim()).filter(Boolean),
+    forbiddenWords: document.getElementById('forbiddenWords').value.split(',').map((s) => s.trim()).filter(Boolean),
+  };
+  await ipcRenderer.invoke('save-brand-guidelines', guidelines);
+  showToast('Brand guidelines saved — active in all AI copy');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  mountNeoPage({
+    pageId: 'brand',
+    eyebrow: 'Create & Publish',
+    title: 'Brand Guidelines',
+    subtitle: 'Voice, rules, and samples — injected into post generation and AI copy.',
+  });
+  loadBrand();
+});
+</script>
+</body>
+</html>

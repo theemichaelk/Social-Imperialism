@@ -68,7 +68,10 @@ function validateTest(id: string, data: unknown): 'pass' | 'fail' | 'warn' {
     case 'domain': return d.success !== false && !d.error ? 'pass' : 'warn';
     case 'youtube': return d.success !== false || err.includes('429') ? (err.includes('429') ? 'warn' : 'pass') : 'warn';
     case 'tinyurl': return !!(d.shortUrl) ? 'pass' : 'warn';
-    case 'email': return (d.vbout?.ok || d.mailchimp?.ok || d.ses?.ok || d.acumbamail?.ok) ? 'pass' : 'warn';
+    case 'email': {
+      const e = d as { vbout?: { ok?: boolean }; mailchimp?: { ok?: boolean }; ses?: { ok?: boolean }; acumbamail?: { ok?: boolean } };
+      return (e.vbout?.ok || e.mailchimp?.ok || e.ses?.ok || e.acumbamail?.ok) ? 'pass' : 'warn';
+    }
     case 'email-send': return d.success === true ? 'pass' : 'warn';
     case 'deepl': return d.success !== false ? 'pass' : 'warn';
     case 'contentful': return d.success !== false ? 'pass' : 'warn';

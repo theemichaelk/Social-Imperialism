@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>DNS Management — Social Imperialism</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="sidebar-nav.css">
+<link rel="stylesheet" href="futuristic-shell.css">
+<link rel="stylesheet" href="grok-integrate.css">
+</head>
+<body class="app-shell">
+<aside id="app-sidebar"></aside>
+<main class="main-content" style="padding:1.5rem 2rem;">
+  <div id="neoPageHeader" class="neo-page-header"></div>
+  <div id="neoToast" class="neo-toast" style="display:none"></div>
+  <div class="neo-grid">
+    <div class="neo-card">
+      <h3><i class="fas fa-globe"></i> Sites <span id="siteCount" class="neo-pill">0</span></h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="neo-btn" onclick="syncSites()">Sync Sites</button>
+        <button class="neo-btn" onclick="refresh()">Refresh</button>
+      </div>
+      <select class="neo-select" id="siteSelect" onchange="loadRecords()"></select>
+      <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
+        <input class="neo-input" id="newDomain" placeholder="domain.com" style="flex:1;min-width:140px">
+        <input class="neo-input" id="newName" placeholder="Site name" style="flex:1;min-width:120px">
+        <button class="neo-btn" onclick="addSite()">Add Site</button>
+      </div>
+      <p id="route53Status" style="font-size:0.78rem;color:#8ba3c7;margin-top:10px"></p>
+    </div>
+    <div class="neo-card">
+      <h3><i class="fas fa-plus-circle"></i> Add Record</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px">
+        <select class="neo-select" id="recType"><option>A</option><option>AAAA</option><option>CNAME</option><option>MX</option><option>TXT</option><option>NS</option></select>
+        <input class="neo-input" id="recName" placeholder="@" value="@">
+        <input class="neo-input" id="recValue" placeholder="Value">
+        <input class="neo-input" id="recTtl" placeholder="TTL" value="300">
+      </div>
+      <button class="neo-btn primary" style="margin-top:10px" onclick="saveRecord()">Save Record</button>
+    </div>
+  </div>
+  <div class="neo-card">
+    <h3><i class="fas fa-list"></i> DNS Records</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="neo-btn" onclick="verifyRecord()">Verify Propagation</button>
+      <button class="neo-btn primary" onclick="applyDns()">Apply to Route53</button>
+      <button class="neo-btn" onclick="exportDns()">Export JSON</button>
+    </div>
+    <div id="recordList"></div>
+  </div>
+</main>
+<script src="sidebar-nav.js"></script>
+<script src="desktop-page-kit.js"></script>
+<script src="grok-integrate.js"></script>
+<script>
+const { ipcRenderer } = require('electron');
+let sites = [], records = [], selectedId = '';
+
+async function refresh() {
+  const [siteRes, cfg] = await Promise.all([
+    ipcRenderer.invoke('get-dns-sites'),
+    ipcRenderer.invoke('get-dns-config'),
+  ]);
+  sites = siteRes.sites || [];
+  selectedId = document.getElementById('siteSelect').value || sites[0]?.id || '';
+  document.getElementById('siteCount').textContent = sites.length;
+  document.getElementById('siteSelect').innerHTML = sites.map((s) =>
+    `<option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${escapeHtml(s.domain)} (${escapeHtml(s.source || 'manual')})</option>`
+  ).join('');
+  document.getElementById('route53Status').textContent = cfg.route53Configured
+    ? 'Route53: Ready' : 'Route53: Not configured — add AWS keys in Integrations';
+  if (selectedId) await loadRecords();
+}
+
+async function syncSites() {
+  const res = await ipcRenderer.invoke('sync-dns-sites');
+  showToast(`Synced ${res.count || 0} site(s)`);
+  refresh();
+}
+
+async function addSite() {
+  const domain = document.getElementById('newDomain').value.trim();
+  const name = document.getElementById('newName').value.trim() || domain;
+  if (!domain) return;
+  await ipcRenderer.invoke('add-dns-site', { domain, name });
+  showToast(`Added ${domain}`);
+  document.getElementById('newDomain').value = '';
+  refresh();
+}
+
+async function loadRecords() {
+  selectedId = document.getElementById('siteSelect').value;
+  if (!selectedId) return;
+  const res = await ipcRenderer.invoke('get-dns-records', selectedId);
+  records = res.records || [];
+  document.getElementById('recordList').innerHTML = records.length ? records.map((r) => `
+    <div class="neo-record-row">
+      <span class="neo-pill">${escapeHtml(r.type)}</span>
+      <span>${escapeHtml(r.name)}</span>
+      <span style="color:#8ba3c7;word-break:break-all">${escapeHtml(r.value)}</span>
+      <span>TTL ${r.ttl}</span>
+      <button class="neo-btn" onclick="deleteRecord('${r.id}')">Delete</button>
+    </div>
+  `).join('') : '<p style="color:#8ba3c7">No records — defaults seed on first load.</p>';
+}
+
+async function saveRecord() {
+  if (!selectedId) return;
+  await ipcRenderer.invoke('save-dns-record', selectedId, {
+    type: document.getElementById('recType').value,
+    name: document.getElementById('recName').value,
+    value: document.getElementById('recValue').value,
+    ttl: parseInt(document.getElementById('recTtl').value, 10) || 300,
+  });
+  showToast('Record saved');
+  loadRecords();
+}
+
+async function deleteRecord(id) {
+  await ipcRenderer.invoke('delete-dns-record', selectedId, id);
+  showToast('Record deleted');
+  loadRecords();
+}
+
+async function verifyRecord() {
+  const res = await ipcRenderer.invoke('verify-dns-record', selectedId);
+  showToast(res.ok ? 'Propagation verified' : (res.error || 'Verification pending'));
+}
+
+async function applyDns() {
+  showToast('Applying to Route53…');
+  const res = await ipcRenderer.invoke('apply-dns-records', selectedId);
+  showToast(res.success ? 'DNS applied to Route53' : (res.error || 'Apply failed'));
+}
+
+async function exportDns() {
+  const res = await ipcRenderer.invoke('export-dns-records', selectedId);
+  if (res.json) {
+    const blob = new Blob([res.json], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'dns-export.json';
+    a.click();
+    showToast('Exported DNS records');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  mountNeoPage({
+    pageId: 'dns',
+    eyebrow: 'System',
+    title: 'DNS Management',
+    subtitle: 'Route53 site registry, record CRUD, propagation verify, and apply — admin and client sites.',
+  });
+  refresh();
+});
+</script>
+</body>
+</html>

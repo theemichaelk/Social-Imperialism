@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Design Studio — Social Imperialism</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="sidebar-nav.css">
+<link rel="stylesheet" href="futuristic-shell.css">
+<link rel="stylesheet" href="grok-integrate.css">
+</head>
+<body class="app-shell">
+<aside id="app-sidebar"></aside>
+<main class="main-content" style="padding:1.5rem 2rem;">
+  <div id="neoPageHeader" class="neo-page-header"></div>
+  <div id="neoToast" class="neo-toast" style="display:none"></div>
+  <div class="neo-grid">
+    <div class="neo-card">
+      <h3><i class="fas fa-palette"></i> Template</h3>
+      <select class="neo-select" id="templateSelect" onchange="onTemplateChange()"></select>
+      <div id="fieldInputs" style="margin-top:12px"></div>
+      <button class="neo-btn primary" style="margin-top:10px" onclick="renderPost()">Render Design Post</button>
+      <button class="neo-btn" style="margin-top:8px" onclick="generateFromAssets()">Generate from Library</button>
+    </div>
+    <div class="neo-card">
+      <h3><i class="fas fa-images"></i> Library Assets</h3>
+      <div id="assetPick" class="neo-asset-grid" style="max-height:320px;overflow-y:auto"></div>
+    </div>
+    <div class="neo-card" style="grid-column:1/-1">
+      <h3><i class="fas fa-eye"></i> Preview</h3>
+      <div id="preview" style="color:#8ba3c7;font-size:0.85rem">Select a template and render to preview.</div>
+    </div>
+  </div>
+</main>
+<script src="sidebar-nav.js"></script>
+<script src="desktop-page-kit.js"></script>
+<script src="grok-integrate.js"></script>
+<script>
+const { ipcRenderer } = require('electron');
+let templates = [], assets = [], selectedTpl = '', selectedAssets = [];
+
+async function refresh() {
+  const [tplRes, libRes] = await Promise.all([
+    ipcRenderer.invoke('get-design-templates'),
+    ipcRenderer.invoke('get-content-library'),
+  ]);
+  templates = tplRes.templates || [];
+  assets = libRes.assets || [];
+  const sel = document.getElementById('templateSelect');
+  sel.innerHTML = templates.map((t) => `<option value="${t.id}">${escapeHtml(t.label)}</option>`).join('');
+  if (!selectedTpl && templates[0]) selectedTpl = templates[0].id;
+  sel.value = selectedTpl || templates[0]?.id || '';
+  onTemplateChange();
+  document.getElementById('assetPick').innerHTML = assets.filter((a) => a.url).map((a) => `
+    <label class="neo-asset-card" style="cursor:pointer">
+      <input type="checkbox" value="${a.id}" onchange="toggleAsset('${a.id}', this.checked)" ${selectedAssets.includes(a.id) ? 'checked' : ''}>
+      ${a.type === 'image' ? `<img src="${a.url}" alt="">` : ''}
+      ${escapeHtml(a.name)}
+    </label>
+  `).join('') || '<p>No image assets — add some in Library.</p>';
+}
+
+function toggleAsset(id, on) {
+  selectedAssets = on ? [...new Set([...selectedAssets, id])] : selectedAssets.filter((x) => x !== id);
+}
+
+function onTemplateChange() {
+  selectedTpl = document.getElementById('templateSelect').value;
+  const tpl = templates.find((t) => t.id === selectedTpl);
+  const fields = tpl?.slots || ['headline', 'body'];
+  document.getElementById('fieldInputs').innerHTML = fields.map((f) => `
+    <label style="display:block;margin-bottom:8px;font-size:0.78rem;color:#8ba3c7">${escapeHtml(f)}</label>
+    <input class="neo-input" id="field_${f}" placeholder="${escapeHtml(f)}" style="margin-bottom:8px">
+  `).join('');
+}
+
+async function renderPost() {
+  const tpl = templates.find((t) => t.id === selectedTpl);
+  const fields = {};
+  (tpl?.slots || []).forEach((f) => {
+    fields[f] = document.getElementById('field_' + f)?.value || '';
+  });
+  const imageAsset = assets.find((a) => selectedAssets.includes(a.id) && a.url);
+  showToast('Rendering design…');
+  const res = await ipcRenderer.invoke('render-design-post', {
+    templateId: selectedTpl,
+    fields: { ...fields, image: imageAsset?.url || fields.image },
+    assetIds: selectedAssets,
+    useAiCaption: true,
+  });
+  if (!res.success) { showToast(res.error || 'Render failed'); return; }
+  document.getElementById('preview').innerHTML = `<pre style="white-space:pre-wrap">${escapeHtml(JSON.stringify(res.post, null, 2))}</pre>`;
+  showToast('Post ready — schedule from Create or Calendar');
+}
+
+async function generateFromAssets() {
+  showToast('Generating from library…');
+  const res = await ipcRenderer.invoke('generate-from-library-assets', {
+    assetIds: selectedAssets,
+    keywords: document.getElementById('field_headline')?.value || 'brand',
+  });
+  showToast(res.success ? `Generated ${(res.items || []).length} item(s)` : (res.error || 'Failed'));
+  if (res.items?.[0]) {
+    document.getElementById('preview').innerHTML = `<pre style="white-space:pre-wrap">${escapeHtml(JSON.stringify(res.items[0], null, 2))}</pre>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  mountNeoPage({
+    pageId: 'design-studio',
+    eyebrow: 'Create & Publish',
+    title: 'Design Studio',
+    subtitle: 'Template-based visual post designer with AI captions — matches live SaaS.',
+  });
+  refresh();
+});
+</script>
+</body>
+</html>

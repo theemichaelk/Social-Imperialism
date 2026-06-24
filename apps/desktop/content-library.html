@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Content Library — Social Imperialism</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="sidebar-nav.css">
+<link rel="stylesheet" href="futuristic-shell.css">
+<link rel="stylesheet" href="grok-integrate.css">
+</head>
+<body class="app-shell">
+<aside id="app-sidebar"></aside>
+<main class="main-content" style="padding:1.5rem 2rem;">
+  <div id="neoPageHeader" class="neo-page-header"></div>
+  <div id="neoToast" class="neo-toast" style="display:none"></div>
+  <div class="neo-grid">
+    <div class="neo-card">
+      <h3><i class="fas fa-upload"></i> Upload Media</h3>
+      <input type="file" id="uploadInput" accept="image/*,video/*" multiple>
+      <button class="neo-btn primary" style="margin-top:10px" onclick="uploadFiles()">Upload to Library</button>
+    </div>
+    <div class="neo-card">
+      <h3><i class="fas fa-globe"></i> Import Website</h3>
+      <input class="neo-input" id="importUrl" placeholder="https://example.com">
+      <button class="neo-btn" style="margin-top:10px" onclick="importWebsite()">Import Assets</button>
+    </div>
+    <div class="neo-card">
+      <h3><i class="fas fa-rss"></i> Import RSS</h3>
+      <input class="neo-input" id="rssUrl" placeholder="https://example.com/feed.xml">
+      <button class="neo-btn" style="margin-top:10px" onclick="importRss()">Import RSS</button>
+    </div>
+    <div class="neo-card">
+      <h3><i class="fas fa-paste"></i> Paste Copy</h3>
+      <textarea class="neo-textarea" id="pasteText" rows="4" placeholder="Paste headline or body copy…"></textarea>
+      <button class="neo-btn" style="margin-top:10px" onclick="savePaste()">Save as Asset</button>
+    </div>
+  </div>
+  <div class="neo-card">
+    <h3><i class="fas fa-folder-open"></i> Asset Library <span id="assetCount" class="neo-pill">0</span></h3>
+    <div style="margin-bottom:10px">
+      <select class="neo-select" id="filterType" style="width:auto" onchange="refresh()">
+        <option value="all">All types</option>
+        <option value="image">Images</option>
+        <option value="video">Video</option>
+        <option value="text">Copy</option>
+      </select>
+      <button class="neo-btn" onclick="refresh()">Refresh</button>
+    </div>
+    <div id="assetGrid" class="neo-asset-grid"></div>
+  </div>
+</main>
+<script src="sidebar-nav.js"></script>
+<script src="desktop-page-kit.js"></script>
+<script src="grok-integrate.js"></script>
+<script>
+const { ipcRenderer } = require('electron');
+let assets = [];
+
+async function refresh() {
+  const res = await ipcRenderer.invoke('get-content-library');
+  assets = res.assets || [];
+  const filter = document.getElementById('filterType').value;
+  const list = filter === 'all' ? assets : assets.filter((a) => a.type === filter);
+  document.getElementById('assetCount').textContent = list.length;
+  document.getElementById('assetGrid').innerHTML = list.map((a) => `
+    <div class="neo-asset-card">
+      ${a.url && a.type === 'image' ? `<img src="${a.url}" alt="">` : ''}
+      <strong>${escapeHtml(a.name)}</strong><br>
+      <span class="neo-pill">${escapeHtml(a.type)}</span>
+      ${a.source ? `<span class="neo-pill">${escapeHtml(a.source)}</span>` : ''}
+      <div style="margin-top:6px;color:#8ba3c7;font-size:0.7rem">${escapeHtml((a.text || '').slice(0, 80))}</div>
+    </div>
+  `).join('') || '<p style="color:#8ba3c7">No assets yet — upload or import above.</p>';
+}
+
+async function uploadFiles() {
+  const input = document.getElementById('uploadInput');
+  for (const file of input.files || []) {
+    const reader = new FileReader();
+    await new Promise((resolve) => {
+      reader.onload = async () => {
+        const dataUrl = await ipcRenderer.invoke('upload-local-media', reader.result);
+        if (dataUrl) {
+          await ipcRenderer.invoke('save-content-asset', {
+            name: file.name, type: file.type.startsWith('video') ? 'video' : 'image',
+            url: dataUrl, tags: ['upload'], source: 'upload',
+          });
+        }
+        resolve();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  showToast('Upload complete');
+  refresh();
+}
+
+async function importWebsite() {
+  const url = document.getElementById('importUrl').value.trim();
+  if (!url) return;
+  const res = await ipcRenderer.invoke('import-website-to-library', { url });
+  showToast(res.success ? `Imported ${res.count || 0} asset(s)` : (res.error || 'Import failed'));
+  refresh();
+}
+
+async function importRss() {
+  const feedUrl = document.getElementById('rssUrl').value.trim();
+  if (!feedUrl) return;
+  const res = await ipcRenderer.invoke('import-rss-to-library', { feedUrl });
+  showToast(res.success ? 'RSS imported' : (res.error || 'RSS failed'));
+  refresh();
+}
+
+async function savePaste() {
+  const text = document.getElementById('pasteText').value.trim();
+  if (!text) return;
+  await ipcRenderer.invoke('save-content-asset', {
+    name: 'Pasted copy', type: 'text', text, tags: ['paste'], source: 'paste',
+  });
+  showToast('Copy saved to library');
+  document.getElementById('pasteText').value = '';
+  refresh();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  mountNeoPage({
+    pageId: 'content-library',
+    eyebrow: 'Create & Publish',
+    title: 'Content Library',
+    subtitle: 'Central asset hub — images, video, copy, website imports, and RSS feeds.',
+  });
+  refresh();
+});
+</script>
+</body>
+</html>

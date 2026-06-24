@@ -535,8 +535,9 @@ body.dash-browse-mode .dash-title::after {
 </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="sidebar-nav.css">
+  <link rel="stylesheet" href="futuristic-shell.css">
 </head>
-<body>
+<body class="app-shell">
 <div id="app-sidebar" class="sidebar app-sidebar"></div>
 <script>
 (() => {
@@ -572,6 +573,8 @@ body.dash-browse-mode .dash-title::after {
     <div class="dash-kpi"><span class="dash-kpi-label">Leads</span><span class="dash-kpi-val" id="stat-leads">0</span></div>
     <div class="dash-kpi"><span class="dash-kpi-label">Click-Throughs</span><span class="dash-kpi-val" id="stat-est-clicks">0</span><div class="dash-kpi-meta" id="stat-conversion-rate">0% publish rate</div></div>
   </section>
+
+  <section id="desktopCommandCenter" style="margin-bottom:1.5rem"></section>
 
   <section class="dash-auto-strip">
     <div class="dash-pill">Mode <span id="approvalModeSummary">—</span></div>
@@ -2222,6 +2225,11 @@ function useNewsForPost(title, researchSnippet) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Dashboard initializing (fixed)...");
     try {
+        try {
+          const { renderDesktopCommandCenter } = require('./command-center-desktop');
+          renderDesktopCommandCenter('desktopCommandCenter');
+        } catch (e) { console.warn('Command center:', e.message); }
+
         // Core explorer + real metrics
         applyBrowseMode();
         if (typeof loadFeed === 'function') loadFeed();
