@@ -33,6 +33,7 @@ function registerContentStudioHandlers({
   generateImage,
   generateInfographic,
   generateGrokImagine,
+  generateGrokVideo,
   getScheduledPosts,
   saveScheduledPosts,
   publishPost,
@@ -54,12 +55,14 @@ function registerContentStudioHandlers({
     generateImage,
     generateInfographic,
     generateGrokImagine,
+    generateGrokVideo,
   };
 
   ipcMain.handle('get-content-studio-config', () => ({
     models: contentStudio.AI_MODELS,
     contentTypes: contentStudio.CONTENT_TYPES,
     frequencies: Object.entries(contentStudio.FREQUENCIES).map(([id, v]) => ({ id, label: v.label })),
+    humanizationLevels: Object.values(contentStudio.HUMANIZATION_LEVELS).map((l) => ({ id: l.id, label: l.label })),
     maxCampaignDays: contentStudio.MAX_CAMPAIGN_DAYS,
     maxScheduledPosts: contentStudio.MAX_SCHEDULED_POSTS,
   }));

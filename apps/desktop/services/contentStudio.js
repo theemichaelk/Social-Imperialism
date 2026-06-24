@@ -1,6 +1,9 @@
 /**
  * Content Studio — multi-format generation + long-range scheduling.
  */
+const { applyContentHumanization, HUMANIZATION_LEVELS } = require('../../../packages/core/src/contentHumanization');
+const { getTemplateSpec } = require('../../../packages/core/src/imperialTemplateMap');
+
 const MAX_CAMPAIGN_DAYS = 180;
 const MAX_SCHEDULED_POSTS = 200;
 
@@ -152,50 +155,109 @@ function imagePromptForType(type, keywords, textContent) {
   return `Engaging social media image for: ${kw}. ${(textContent || '').slice(0, 100)}`;
 }
 
-async function generateOneItem(deps, {
-  type, keywords, model, tabId, variantIndex, account,
+async function resolveMediaForItem(deps, {
+  type, spec, keywords, content, model, useGrok,
 }) {
   const {
-    generateAIWithModel,
     generateImage,
     generateInfographic,
     generateGrokImagine,
+    generateGrokVideo,
   } = deps;
 
-  const brandBlock = getCampaignBrandBlock(deps.store);
-  const libraryBlock = getLibraryContextBlock(deps.store, deps.assetIds || []);
-  const prompt = typePrompt(type, keywords, tabId, variantIndex, brandBlock, libraryBlock);
-  let content = '';
   let mediaUrl = null;
   let isVideo = false;
+  const kw = keywords.join(', ');
+  const visualPrompt = spec?.visualPrompt
+    ? spec.visualPrompt(kw, content)
+    : imagePromptForType(type, keywords, content);
 
-  if (model === 'grok-browser') {
-    const grok = await generateAIWithModel(prompt, 'grok-browser');
-    content = grok.text || grok;
-  } else {
-    content = await generateAIWithModel(prompt, model);
+  const grokMedia = useGrok || model === 'grok-browser';
+
+  if (spec?.grokVideo && grokMedia && generateGrokVideo) {
+    const res = await generateGrokVideo(`${kw}\n${content}`, { maxExtends: 2 });
+    const asset = res?.primaryAsset || res?.assets?.find((a) => a.type === 'video');
+    if (asset?.path) mediaUrl = asset.path;
+    else if (asset?.url) mediaUrl = asset.url;
+    isVideo = true;
+    return { mediaUrl, isVideo };
+  }
+
+  if (spec?.grokInfographic && grokMedia && generateInfographic) {
+    const grokImg = await generateInfographic({ content: `${kw}\n${content}`, style: 'modern' });
+    const asset = grokImg?.imageAsset || grokImg?.primaryAsset;
+    if (asset?.path) mediaUrl = asset.path;
+    else if (asset?.url) mediaUrl = asset.url;
+    else if (grokImg?.imageUrl) mediaUrl = grokImg.imageUrl;
+    return { mediaUrl, isVideo };
   }
 
   if (['image', 'infographic', 'carousel', 'video', 'thumbnail'].includes(type)) {
-    const imgPrompt = imagePromptForType(type, keywords, content);
-    if (model === 'grok-browser' || type === 'infographic') {
-      const grokImg = type === 'infographic' && generateInfographic
-        ? await generateInfographic({ content: `${keywords.join(' ')}\n${content}`, style: 'modern' })
-        : await generateGrokImagine(imgPrompt);
-      const asset = grokImg?.imageAsset || grokImg?.primaryAsset;
+    if (grokMedia && (spec?.grokVisual || type === 'infographic')) {
+      const grokImg = await generateGrokImagine(visualPrompt);
+      const asset = grokImg?.primaryAsset || grokImg?.assets?.[0];
       if (asset?.path) mediaUrl = asset.path;
       else if (asset?.url) mediaUrl = asset.url;
-      else if (grokImg?.imageUrl) mediaUrl = grokImg.imageUrl;
       isVideo = type === 'video' && asset?.type === 'video';
     } else {
-      const imgRes = await generateImage(imgPrompt);
+      const imgRes = await generateImage(visualPrompt);
       if (imgRes?.success && imgRes.imageUrl) mediaUrl = imgRes.imageUrl;
     }
   }
 
+  return { mediaUrl, isVideo };
+}
+
+async function generateOneItem(deps, {
+  type, keywords, model, tabId, variantIndex, account,
+  templateId, humanizationLevel, campaignTone,
+}) {
+  const { generateAIWithModel } = deps;
+
+  const brandBlock = getCampaignBrandBlock(deps.store);
+  const libraryBlock = getLibraryContextBlock(deps.store, deps.assetIds || []);
+  const spec = templateId ? getTemplateSpec(templateId) : null;
+  const useGrok = model === 'grok-browser' || deps.forceGrok;
+
+  const prompt = spec
+    ? `${brandBlock}${libraryBlock}${spec.prompt(keywords.join(', '), variantIndex)}`
+    : typePrompt(type, keywords, tabId, variantIndex, brandBlock, libraryBlock);
+
+  let content = '';
+  if (useGrok && spec?.grokText !== false) {
+    content = await generateAIWithModel(prompt, 'grok-browser');
+  } else {
+    content = await generateAIWithModel(prompt, model);
+  }
+
+  const level = humanizationLevel || deps.humanizationLevel || 'standard';
+  if (level && level !== 'off') {
+    content = await applyContentHumanization(
+      { generateAIWithModel },
+      content,
+      {
+        humanizationLevel: level,
+        model: model === 'grok-browser' ? 'gemini' : model,
+        tone: campaignTone || 'professional',
+        templateLabel: spec?.label || type,
+        platform: account?.platform,
+      },
+    );
+  }
+
+  const { mediaUrl, isVideo } = await resolveMediaForItem(deps, {
+    type: spec?.contentType || type,
+    spec,
+    keywords,
+    content,
+    model,
+    useGrok,
+  });
+
   return {
     id: `gen_${Date.now()}_${type}_${variantIndex}`,
-    type,
+    type: spec?.contentType || type,
+    templateId: templateId || spec?.id,
     content,
     mediaUrl,
     isVideo: isVideo || type === 'video',
@@ -205,6 +267,7 @@ async function generateOneItem(deps, {
     tabId,
     keywords: keywords.join(', '),
     model,
+    humanizationLevel: level,
   };
 }
 
@@ -212,18 +275,32 @@ async function generateContentBatch(deps, payload) {
   const keywords = parseKeywords(payload.keywords);
   if (!keywords.length) throw new Error('Enter at least one keyword.');
 
-  const types = Array.isArray(payload.types) && payload.types.length
-    ? payload.types
-    : ['post'];
+  const templateIds = Array.isArray(payload.templateIds) && payload.templateIds.length
+    ? payload.templateIds
+    : null;
+  const types = templateIds
+    ? null
+    : (Array.isArray(payload.types) && payload.types.length ? payload.types : ['post']);
   const model = payload.model || 'gemini';
   const tabId = payload.tabId || 'standard';
   const account = payload.account || null;
   const count = Math.min(10, Math.max(1, parseInt(payload.count, 10) || 0));
   const variantsPerType = count || Math.min(5, Math.max(1, parseInt(payload.variantsPerType, 10) || 1));
+  const humanizationLevel = payload.humanizationLevel || 'standard';
+  const storeRef = deps.store || payload.store;
+  let campaignTone = 'professional';
+  try {
+    const activeId = storeRef?.getItem('activeCampaignId') || 'default';
+    const camp = JSON.parse(storeRef?.getItem('campaigns') || '[]').find((c) => c.id === activeId);
+    campaignTone = camp?.tone || campaignTone;
+  } catch (e) { /* ignore */ }
+
   const batchDeps = {
     ...deps,
     store: deps.store || payload.store,
     assetIds: payload.assetIds || [],
+    humanizationLevel,
+    forceGrok: payload.useGrok === true,
   };
 
   if (payload.useLibraryAssets && batchDeps.store) {
@@ -236,11 +313,23 @@ async function generateContentBatch(deps, payload) {
     } catch (e) { /* noop */ }
   }
 
+  const workQueue = templateIds
+    ? templateIds.map((tid) => ({ templateId: tid, type: getTemplateSpec(tid).contentType }))
+    : types.map((type) => ({ type, templateId: null }));
+
   const items = [];
-  for (const type of types) {
+  for (const job of workQueue) {
     for (let v = 0; v < variantsPerType; v += 1) {
       const item = await generateOneItem(batchDeps, {
-        type, keywords, model, tabId, variantIndex: v, account,
+        type: job.type,
+        templateId: job.templateId,
+        keywords,
+        model,
+        tabId,
+        variantIndex: v,
+        account,
+        humanizationLevel,
+        campaignTone,
       });
       if (batchDeps.store && batchDeps.assetIds?.length) {
         try {
@@ -312,6 +401,7 @@ module.exports = {
   AI_MODELS,
   CONTENT_TYPES,
   FREQUENCIES,
+  HUMANIZATION_LEVELS,
   MAX_CAMPAIGN_DAYS,
   MAX_SCHEDULED_POSTS,
   parseKeywords,
@@ -319,4 +409,5 @@ module.exports = {
   generateContentBatch,
   scheduleGeneratedItems,
   typePrompt,
+  applyContentHumanization,
 };

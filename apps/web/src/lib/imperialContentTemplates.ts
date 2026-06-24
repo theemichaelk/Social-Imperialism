@@ -23,6 +23,13 @@ export type ImperialTemplate = {
   accent: string;
 };
 
+/** All designer template IDs — default selection for batch generation */
+export const ALL_TEMPLATE_IDS: TemplateCategory[] = [
+  'promotional-design', 'promotional-ai-image', 'educational-carousel', 'promotional-video',
+  'educational-design', 'quote-ai-image', 'national-day-carousel', 'national-day-design',
+  'photo-highlight', 'testimonial-ai-image', 'thought-leadership', 'thread',
+];
+
 export const IMPERIAL_TEMPLATES: ImperialTemplate[] = [
   { id: 'promotional-design', label: 'Promotional Design', description: 'Bold offer or service highlight with branded layout', contentType: 'post', gradient: ['#1e3a5f', '#2563eb'], accent: '#38bdf8' },
   { id: 'promotional-ai-image', label: 'Promotional AI Image', description: 'Eye-catching visual with short conversion copy', contentType: 'image', gradient: ['#4c1d95', '#7c3aed'], accent: '#a78bfa' },

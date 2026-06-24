@@ -163,6 +163,40 @@ export const LIVE_INTEGRATION_TESTS: LiveIntegrationTest[] = [
   { id: 'streaming', label: 'Streaming Keys', channel: 'get-streaming-keys', category: 'social' },
   { id: 'payment', label: 'Payment Gateways', channel: 'test-payment-connections', category: 'utility' },
   { id: 'grok', label: 'Grok Session', channel: 'grok-get-status', category: 'ai' },
+  { id: 'grok-imagine', label: 'Grok Imagine (Edge)', channel: 'grok-get-status', category: 'ai', metric: 'Grok Imagine' },
 ];
 
 export const ALL_FIELD_KEYS = INTEGRATION_GROUPS.flatMap((g) => g.fields.map((f) => f.key));
+
+/** Per-metric live probe for field-level "Test" buttons in Settings API Keys tab */
+export const METRIC_PROBE_MAP: Record<string, { channel: string; args?: unknown[] }> = {
+  'NewsAPI': { channel: 'get-live-news', args: ['technology'] },
+  'Unsplash': { channel: 'search-stock-photo', args: ['business technology'] },
+  'Stock Media': { channel: 'search-stock-photo', args: ['marketing'] },
+  'SerpAPI': { channel: 'serp-search', args: ['social media automation'] },
+  'DomDetailer': { channel: 'get-domain-metrics', args: ['google.com'] },
+  'YouTube': { channel: 'get-youtube-channels' },
+  'TinyURL': { channel: 'shorten-url', args: ['https://example.com/test'] },
+  'DeepL': { channel: 'deepl-translate', args: ['Hello world', 'ES'] },
+  'Contentful': { channel: 'contentful-fetch' },
+  'PlayHT': { channel: 'check-api-status' },
+  'VBout': { channel: 'test-email-connections' },
+  'MailChimp': { channel: 'test-email-connections' },
+  'Amazon SES': { channel: 'test-email-connections' },
+  'Acumbamail': { channel: 'test-email-connections' },
+  'Gemini AI': { channel: 'check-api-status' },
+  'OpenRouter': { channel: 'check-api-status' },
+  'LinkedIn': { channel: 'check-api-status' },
+  'Twitter / X': { channel: 'check-api-status' },
+  'Reddit OAuth': { channel: 'check-api-status' },
+  'Meta / Facebook': { channel: 'check-api-status' },
+  'Twitch': { channel: 'check-api-status' },
+  'Discord': { channel: 'check-api-status' },
+  'MOZ': { channel: 'check-api-status' },
+  'FAL': { channel: 'check-api-status' },
+  'AI Workflows': { channel: 'check-api-status' },
+  'Content Studio': { channel: 'check-api-status' },
+  'TikTok': { channel: 'check-api-status' },
+  'Grok Imagine': { channel: 'grok-get-status' },
+  'Grok Session': { channel: 'grok-get-status' },
+};

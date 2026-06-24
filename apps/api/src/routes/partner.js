@@ -10,7 +10,8 @@ const ALLOWED_CHANNELS = new Set([
   'serp-search', 'get-domain-metrics', 'research-keyword', 'shorten-url',
   'deepl-translate', 'get-youtube-channels', 'get-settings-status',
   'get-active-campaign', 'get-engagement-queue', 'get-automation-status',
-  'get-partner-api-catalog', 'test-all-connections',
+  'get-partner-api-catalog', 'test-all-connections', 'run-live-connection-audit',
+  'test-email-connections', 'test-payment-connections',
 ]);
 
 router.get('/docs', (req, res) => {

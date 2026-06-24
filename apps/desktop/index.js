@@ -29,7 +29,7 @@ if (!fs.existsSync(dataPath)) {
 const { LocalStorage } = require('node-localstorage');
 const quoraBrowserAutomation = require('./services/quoraBrowserAutomation');
 const store = new LocalStorage(path.join(dataPath, 'storage'));
-quoraBrowserAutomation.setUserDataPath(dataPath);
+quoraBrowserAutomation.setUserDataPath(dataPath, store);
 const { registerCalendarHandlers } = require('./services/calendarIpc');
 const { registerBackgroundRunHandlers } = require('./services/backgroundRunIpc');
 const backgroundRunScheduler = require('./services/backgroundRunScheduler');
@@ -40,6 +40,7 @@ const { registerBillingPaymentHandlers } = require('./services/billingPaymentsIp
 const { registerAccountHandlers } = require('./services/accountIpc');
 const { registerAccountCreatorHandlers, processBrowserBatchQueue } = require('./services/accountCreatorIpc');
 const { registerGrokHandlers } = require('./services/grokIpc');
+const { registerNativeBrowserHandlers } = require('./services/nativeBrowserIpc');
 const { registerRssCategoryHandlers } = require('./services/rssCategoryIpc');
 const { registerContentStudioHandlers } = require('./services/contentStudioIpc');
 const { registerRedditAiHandlers } = require('./services/redditAiIpc');
@@ -74,6 +75,7 @@ function buildApiMetrics(keys) {
 const calendarApi = registerCalendarHandlers({ ipcMain, store, resolveKeys, buildApiMetrics, integrations });
 registerBackgroundRunHandlers({ ipcMain, store });
 registerGrokHandlers({ ipcMain, store, userDataPath: dataPath });
+registerNativeBrowserHandlers({ ipcMain, store, userDataPath: dataPath });
 registerRssCategoryHandlers({
   ipcMain,
   store,
@@ -2054,6 +2056,7 @@ registerContentStudioHandlers({
   generateImage: generateImageForStudio,
   generateInfographic: (payload) => infographicGenerator.generateInfographic(store, dataPath, payload),
   generateGrokImagine: (prompt) => grokBrowserAutomation.generateGrokImagine(store, dataPath, prompt),
+  generateGrokVideo: (prompt, opts) => grokBrowserAutomation.generateGrokVideo(store, dataPath, prompt, opts || {}),
   getScheduledPosts: getScheduledPostsStoreList,
   saveScheduledPosts: saveScheduledPostsStoreList,
   publishPost: (postData) => calendarApi.executePublishPost(postData),
@@ -3186,6 +3189,7 @@ registerAccountCreatorHandlers({
   store,
   generateAI,
   calendarApi,
+  userDataPath: dataPath,
   onBatchProgress: (progress) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('browser-batch-progress', progress);
@@ -3206,6 +3210,7 @@ function startBrowserBatchPoller() {
 app.whenReady().then(() => {
   const readyDataPath = app.getPath('userData');
   registerGrokHandlers({ ipcMain, store, userDataPath: readyDataPath });
+  registerNativeBrowserHandlers({ ipcMain, store, userDataPath: readyDataPath });
   registerRssCategoryHandlers({
     ipcMain,
     store,

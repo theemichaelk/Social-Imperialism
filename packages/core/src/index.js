@@ -66,13 +66,7 @@ async function syncProjectToStore(store, projectId) {
   else campaigns.push(campaign);
   store.setItem('campaigns', JSON.stringify(campaigns));
   store.setItem('activeCampaignId', project.id);
-  {
-    const { resolveKeys } = require(path.join(__dirname, '../../../apps/desktop/services/keys'));
-    let stored = {};
-    try { stored = JSON.parse(store.getItem('globalApiKeys') || '{}'); } catch (e) {}
-    const merged = resolveKeys(stored);
-    store.setItem('globalApiKeys', JSON.stringify(merged));
-  }
+  // Keys are resolved at request time (admin gets .env merge; clients use saved keys only).
 
   ensureProjectDefaults(store, project);
 

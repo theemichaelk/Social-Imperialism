@@ -59,5 +59,5 @@ export const SHOWCASE_SLIDES = [
 export const TICKER_ITEMS = [
   '230+ IPC Channels', '14+ Social Platforms', 'Live NewsAPI Feed', 'AI Reply Engine',
   'Reddit Prospector', 'DomDetailer SEO', 'Visual Automations', 'Multi-Campaign',
-  'Engagement Queue', 'Worker Automation', 'Grok Imagine', 'Stock Media APIs',
+  'Engagement Queue', 'Worker Automation', 'Grok Imagine (Edge)', 'Grok Video + Extend', 'Stock Media APIs',
 ];

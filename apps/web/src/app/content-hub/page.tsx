@@ -29,7 +29,7 @@ const TABS = [
 
 export default function ContentHubPage() {
   const { settings, accounts: intelAccounts, isSurfaceEnabled } = useIntelligence();
-  const [tab, setTab] = useState('studio');
+  const [tab, setTab] = useState('studio'); // Generate tab — Imperial studio above connected accounts
   const [publishAccountId, setPublishAccountId] = useState('');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('');
@@ -108,9 +108,24 @@ export default function ContentHubPage() {
 
       <SectionLivePanel section="content-hub" />
 
-      <div className="card" style={{ marginBottom: '1rem' }}>
+      {groups.map((group) => (
+        <div key={group} style={{ marginBottom: '0.5rem' }}>
+          <div className="nav-section-label" style={{ padding: '0.25rem 0' }}>{group}</div>
+          <div className="tabs">
+            {TABS.filter((t) => t.group === group).map((t) => (
+              <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {tab === 'home' && <ContentHubDashboard onStartCreate={() => setTab('studio')} />}
+
+      {tab === 'studio' && <ImperialContentStudio />}
+
+      <div className="card" style={{ marginBottom: '1rem', marginTop: tab === 'studio' ? '1rem' : 0 }}>
         <div className="ch-readiness" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem', alignItems: 'center' }}>
-          <span>Accounts: <strong>{accounts.length}</strong></span>
+          <span>Connected accounts: <strong>{accounts.length}</strong></span>
           <AccountSelectField value={publishAccountId} onChange={setPublishAccountId} label="Publish via account" />
           <button className="btn" onClick={async () => setAccounts(await invoke('get-linked-accounts'))}>Refresh Accounts</button>
         </div>
@@ -126,21 +141,6 @@ export default function ContentHubPage() {
           );
         })()}
       </div>
-
-      {groups.map((group) => (
-        <div key={group} style={{ marginBottom: '0.5rem' }}>
-          <div className="nav-section-label" style={{ padding: '0.25rem 0' }}>{group}</div>
-          <div className="tabs">
-            {TABS.filter((t) => t.group === group).map((t) => (
-              <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {tab === 'home' && <ContentHubDashboard onStartCreate={() => setTab('studio')} />}
-
-      {tab === 'studio' && <ImperialContentStudio />}
 
       {tab === 'standard' && (
         <div className="pw-compose-split">

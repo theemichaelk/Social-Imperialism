@@ -61,13 +61,14 @@ function buildApiMetrics(resolveKeys, keys) {
 async function registerAllHandlers(store, deps = {}) {
   const { ipcMain, handlers } = createMockIpc();
   const integrations = require(path.join(DESKTOP_SERVICES, 'index'));
-  const { resolveKeys } = require(path.join(DESKTOP_SERVICES, 'keys'));
+  const { createStoreResolveKeys } = require(path.join(DESKTOP_SERVICES, 'keys'));
+  const resolveKeys = createStoreResolveKeys(store);
   const { FREQUENCY_OPTIONS } = require(path.join(DESKTOP_SERVICES, 'scheduleIntervals'));
   const userDataPath = deps.userDataPath || path.join(require('os').tmpdir(), 'si-saas');
 
   const getGlobalKey = (key) => {
     try {
-      const keys = JSON.parse(store.getItem('globalApiKeys') || '{}');
+      const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
       return keys[key];
     } catch (e) { return null; }
   };
@@ -102,15 +103,18 @@ async function registerAllHandlers(store, deps = {}) {
   });
 
   const { registerAccountCreatorHandlers } = require(path.join(DESKTOP_SERVICES, 'accountCreatorIpc'));
-  registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress: () => {} });
+  registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress: () => {}, userDataPath });
 
   const { registerGrokHandlers } = require(path.join(DESKTOP_SERVICES, 'grokIpc'));
   registerGrokHandlers({ ipcMain, store, userDataPath });
 
+  const { registerNativeBrowserHandlers } = require(path.join(DESKTOP_SERVICES, 'nativeBrowserIpc'));
+  registerNativeBrowserHandlers({ ipcMain, store, userDataPath });
+
   const { registerRssCategoryHandlers } = require(path.join(DESKTOP_SERVICES, 'rssCategoryIpc'));
   registerRssCategoryHandlers({
     ipcMain, store, resolveKeys, generateAI,
-    getFalKey: () => getGlobalKey('falKey') || process.env.FAL_KEY,
+    getFalKey: () => getGlobalKey('falKey'),
   });
 
   const generateAIWithModel = async (prompt, _modelId) => generateAI(prompt);
@@ -189,7 +193,7 @@ async function registerAllHandlers(store, deps = {}) {
   const axios = require('axios');
   const generateImageForStudio = async (prompt) => {
     const k = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const falKey = k.falKey || process.env.FAL_KEY;
+    const falKey = k.falKey;
     if (!falKey) return { success: false, error: 'No FAL key configured.' };
     try {
       const response = await axios.post('https://fal.run/fal-ai/fast-sdxl', {
@@ -234,6 +238,16 @@ async function registerAllHandlers(store, deps = {}) {
     buildApiMetrics: (k) => buildApiMetrics(resolveKeys, k),
     fetchTrendingTopics,
   });
+
+  const { runLiveConnectionAudit } = require(path.join(DESKTOP_SERVICES, 'connectionProbeService'));
+  const liveAuditFn = async () => {
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    return runLiveConnectionAudit(handlers, (k) => buildApiMetrics(resolveKeys, k), keys);
+  };
+  handlers['test-all-connections'] = liveAuditFn;
+  handlers['run-live-connection-audit'] = liveAuditFn;
+  ipcMain.handle('test-all-connections', liveAuditFn);
+  ipcMain.handle('run-live-connection-audit', liveAuditFn);
 
   return { handlers, calendarApi, integrations, pendingOAuth: () => deps.pendingOAuthUrl };
 }

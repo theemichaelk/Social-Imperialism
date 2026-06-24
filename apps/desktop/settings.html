@@ -155,6 +155,22 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
 .api-pill { font-size: 0.75rem; padding: 4px 10px; border-radius: 999px; border: 1px solid #475569; color: #94a3b8; }
 .api-pill.ok { border-color: #10b981; color: #34d399; background: rgba(16,185,129,0.1); }
 .api-pill.miss { border-color: #64748b; color: #64748b; }
+.api-pill.warn { border-color: #f59e0b; color: #fbbf24; background: rgba(245,158,11,0.1); }
+
+.live-probes-panel {
+  background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.6));
+  border: 1px solid rgba(56,189,248,0.25);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 0 24px rgba(56,189,248,0.08);
+}
+.live-probes-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem; }
+.live-probes-head h3 { margin: 0; font-size: 1rem; color: #38bdf8; }
+#liveProbesGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+.probe-bar-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.probe-bar { height: 6px; border-radius: 999px; background: rgba(71,85,105,0.5); flex: 1; min-width: 60px; overflow: hidden; }
+.probe-bar-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
 
 #toastContainer { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
 .toast { padding: 12px 18px; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
@@ -191,6 +207,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
 </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="sidebar-nav.css">
+  <link rel="stylesheet" href="futuristic-shell.css">
 </head>
 <body>
 <div id="app-sidebar" class="sidebar app-sidebar"></div>
@@ -218,6 +235,7 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
     <div class="settings-subnav">
       <button class="primary" id="btn-campaigns" onclick="switchSettingsView('campaignListView')"><i class="fas fa-layer-group"></i> Campaigns</button>
       <button class="secondary" id="btn-api-keys" onclick="switchSettingsView('apiKeysView')"><i class="fas fa-key"></i> API Keys</button>
+      <button class="secondary" id="btn-grok" onclick="switchSettingsView('grokView')"><i class="fas fa-robot"></i> Grok</button>
       <button class="secondary" id="btn-pricing" onclick="switchSettingsView('pricingView')"><i class="fas fa-credit-card"></i> Billing</button>
       <button class="secondary" id="btn-tutorials" onclick="switchSettingsView('tutorialView')"><i class="fas fa-graduation-cap"></i> Tutorials</button>
       <button class="secondary" id="btn-system-health" onclick="switchSettingsView('systemHealthView')"><i class="fas fa-heartbeat"></i> Health</button>
@@ -363,6 +381,83 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
         <div style="display:flex; gap:0.75rem; margin-top:1.25rem; flex-wrap:wrap;">
           <button type="button" class="primary" id="tutorialOpenPageBtn" style="text-transform:none;">Open Related Page</button>
           <button type="button" class="secondary" id="tutorialMarkCompleteBtn" style="text-transform:none;">Mark Complete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grok Engine View (parity with web Settings → Grok tab) -->
+    <div id="grokView" class="hidden">
+      <div class="header">
+        <h1><i class="fas fa-robot" style="color:#a78bfa;"></i> Grok Engine</h1>
+        <p style="color:#94a3b8; margin-top:5px;">Grok Text, <strong>Grok Imagine</strong> (images), Grok Video + Extend, and Infographics — Microsoft Edge browser session at grok.com (no API key).</p>
+      </div>
+
+      <div class="rule-box" style="margin-bottom: 2rem; border-color: #22c55e;">
+        <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+          <div>
+            <div class="rule-title" style="color: #22c55e;"><i class="fas fa-globe"></i> Native Browser (Edge Profile)</div>
+            <span style="font-size: 0.8rem; color: #94a3b8;">Default: <strong>Microsoft Edge</strong> dedicated profile — cookies persist for Grok Imagine &amp; Video.</span>
+          </div>
+          <button type="button" class="secondary" id="saveNativeBrowserBtnGrok" style="text-transform:none;padding:0.5rem 0.9rem;font-size:0.8rem;"><i class="fas fa-save"></i> Save Browser Settings</button>
+        </div>
+        <div id="nativeBrowserStatusGrok" class="api-status-bar" style="margin-bottom:1rem;"></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Browser</label>
+            <select id="nativeBrowserIdGrok">
+              <option value="edge" selected>Microsoft Edge</option>
+              <option value="chrome">Google Chrome</option>
+              <option value="opera">Opera / Opera GX</option>
+              <option value="firefox">Mozilla Firefox</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Launch Mode</label>
+            <select id="nativeBrowserLaunchModeGrok">
+              <option value="app_profile">Dedicated profile (recommended)</option>
+              <option value="system_profile">System profile</option>
+              <option value="attach">Attach (remote debugging)</option>
+            </select>
+          </div>
+        </div>
+        <p id="grokEdgeProfilePath" style="margin:0.75rem 0 0;font-size:0.78rem;color:#64748b;">Edge profile path loading…</p>
+      </div>
+
+      <div class="rule-box" style="margin-bottom: 2rem; border-color: #7c3aed;">
+        <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <div class="rule-title" style="color: #a78bfa;"><i class="fas fa-wand-magic-sparkles"></i> Grok Session &amp; Features</div>
+          <span style="font-size: 0.8rem; color: #94a3b8;">Brain: <code style="color:#a78bfa;">brain/GROK.md</code> · Skill: <code style="color:#a78bfa;">brain/skills/grok-imagine/SKILL.md</code></span>
+        </div>
+        <ul style="font-size:0.82rem;color:#94a3b8;margin:0 0 1rem;padding-left:1.25rem;line-height:1.6;">
+          <li><strong style="color:#e2e8f0;">Grok Imagine</strong> — Content Hub → generates PNG to <code>grok-assets/</code></li>
+          <li><strong style="color:#e2e8f0;">Grok Video</strong> — keyword prompt, ~1min wait, auto <strong>Extend</strong> per part</li>
+          <li><strong style="color:#e2e8f0;">Grok Text</strong> — new chat with campaign keyword prompts</li>
+          <li><strong style="color:#e2e8f0;">Edge profile</strong> — <code>native-browser-profiles/edge/grok</code> (login once)</li>
+        </ul>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>x.ai / Grok Email</label>
+            <input type="email" id="grokEmailGrok" placeholder="your@email.com" autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label>x.ai / Grok Password</label>
+            <input type="password" id="grokPasswordGrok" placeholder="Stored locally" autocomplete="current-password">
+          </div>
+          <div class="form-group full-width">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="grokAutoLoginGrok" checked style="width:auto;">
+              Auto-fill credentials on Connect (complete CAPTCHA/2FA manually if prompted)
+            </label>
+          </div>
+          <div class="form-group full-width" id="grokSessionStatusGrok" style="padding:0.75rem;background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;font-size:0.85rem;color:#94a3b8;">
+            Grok session status loading…
+          </div>
+          <div class="form-group full-width" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <button type="button" class="primary" id="grokConnectBtnGrok"><i class="fas fa-plug"></i> Connect &amp; Authorize Grok</button>
+            <button type="button" class="secondary" id="grokSaveBtnGrok"><i class="fas fa-save"></i> Save Credentials</button>
+            <button type="button" class="secondary" id="grokDisconnectBtnGrok"><i class="fas fa-sign-out-alt"></i> Close Session</button>
+            <button type="button" class="secondary" id="grokOpenTutorialBtn" style="text-transform:none;"><i class="fas fa-graduation-cap"></i> Setup Tutorial (tut_grok)</button>
+          </div>
         </div>
       </div>
     </div>
@@ -529,6 +624,18 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
       </div>
     </div>
     <div class="api-status-bar" id="apiKeysStatusBar"></div>
+
+    <div class="live-probes-panel" id="liveProbesPanel">
+      <div class="live-probes-head">
+        <h3><i class="fas fa-satellite-dish"></i> Live Connection Audit</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <div id="liveProbesSummary" class="api-status-bar" style="margin:0;"></div>
+          <button type="button" class="secondary" id="refreshLiveProbesBtn" style="text-transform:none;padding:0.45rem 0.85rem;font-size:0.8rem;"><i class="fas fa-sync"></i> Re-run Audit</button>
+        </div>
+      </div>
+      <div class="probe-bar-row" id="liveProbesCategoryBars"></div>
+      <div id="liveProbesGrid"><span class="api-pill miss">Open API Keys tab to run live audit…</span></div>
+    </div>
     
     <div class="rule-box" style="margin-bottom: 2rem;">
       <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
@@ -670,37 +777,59 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
     </div>
 
     <div class="rule-box" style="margin-bottom: 2rem; border-color: #7c3aed;">
-      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
-        <div class="rule-title" style="color: #a78bfa;"><i class="fas fa-robot"></i> Grok Engine (Browser Session — No API)</div>
-        <span style="font-size: 0.8rem; color: #94a3b8;">Infographic generator, Grok text (new chat), and Grok Imagine use a persistent browser login — not an API key.</span>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>x.ai / Grok Email</label>
-          <input type="email" id="grokEmail" placeholder="your@email.com" autocomplete="username">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+        <div>
+          <div class="rule-title" style="color: #a78bfa;"><i class="fas fa-robot"></i> Grok Engine</div>
+          <span style="font-size: 0.8rem; color: #94a3b8;">Grok Imagine, Video, Text — configure in the dedicated <strong>Grok</strong> tab.</span>
         </div>
-        <div class="form-group">
-          <label>x.ai / Grok Password</label>
-          <input type="password" id="grokPassword" placeholder="Stored locally on this device" autocomplete="current-password">
-        </div>
-        <div class="form-group full-width">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="grokAutoLogin" checked style="width:auto;">
-            Auto-fill credentials on Connect (complete CAPTCHA/2FA manually if prompted)
-          </label>
-        </div>
-        <div class="form-group full-width" id="grokSessionStatus" style="padding:0.75rem;background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:6px;font-size:0.85rem;color:#94a3b8;">
-          Grok session status loading…
-        </div>
-        <div class="form-group full-width" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-          <button type="button" class="secondary" id="grokConnectBtn"><i class="fas fa-plug"></i> Connect &amp; Authorize Grok</button>
-          <button type="button" class="secondary" id="grokSaveBtn"><i class="fas fa-save"></i> Save Grok Credentials</button>
-          <button type="button" class="secondary" id="grokDisconnectBtn"><i class="fas fa-sign-out-alt"></i> Close Browser Session</button>
-        </div>
-        <p style="grid-column:1/-1;margin:0;color:#64748b;font-size:0.78rem;">Opens a real Chrome window via Puppeteer. Grok receives <strong>keyword-driven prompts</strong> built from your active campaign, brand profile, and tracked keywords (Keywords page). Session cookies are saved locally. Use <strong>new chat</strong> for text and <strong>Imagine</strong> for visuals.</p>
+        <button type="button" class="secondary" onclick="switchSettingsView('grokView')" style="text-transform:none;"><i class="fas fa-external-link-alt"></i> Open Grok Tab</button>
       </div>
     </div>
-    
+
+    <div class="rule-box" style="margin-bottom: 2rem; border-color: #22c55e;">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+        <div>
+          <div class="rule-title" style="color: #22c55e;"><i class="fas fa-globe"></i> Native Browser Automation</div>
+          <span style="font-size: 0.8rem; color: #94a3b8;">Quora &amp; social profile automation. Grok uses the <strong>Grok tab</strong> Edge profile.</span>
+        </div>
+        <button type="button" class="secondary" id="saveNativeBrowserBtn" style="text-transform:none;padding:0.5rem 0.9rem;font-size:0.8rem;"><i class="fas fa-save"></i> Save Browser Settings</button>
+      </div>
+      <div id="nativeBrowserStatus" class="api-status-bar" style="margin-bottom:1rem;"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Browser</label>
+          <select id="nativeBrowserId">
+            <option value="edge" selected>Microsoft Edge</option>
+            <option value="chrome">Google Chrome</option>
+            <option value="opera">Opera / Opera GX</option>
+            <option value="firefox">Mozilla Firefox</option>
+            <option value="chromium">Bundled Chromium (fallback)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Launch Mode</label>
+          <select id="nativeBrowserLaunchMode">
+            <option value="app_profile">Dedicated profile (recommended — cookies saved)</option>
+            <option value="system_profile">Your existing browser profile (close browser first)</option>
+            <option value="attach">Attach to running browser (remote debugging)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Profile folder (system profile mode)</label>
+          <input type="text" id="nativeBrowserProfileDir" placeholder="Default" value="Default">
+        </div>
+        <div class="form-group">
+          <label>Debug port (attach mode)</label>
+          <input type="number" id="nativeBrowserDebugPort" placeholder="9222" value="9222">
+        </div>
+      </div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.5rem;">
+        <button type="button" class="secondary" id="launchDebugBrowserBtn" style="text-transform:none;"><i class="fas fa-external-link-alt"></i> Launch Browser with Debugging</button>
+        <button type="button" class="secondary" id="testNativeBrowserBtn" style="text-transform:none;"><i class="fas fa-vial"></i> Open Test Tab</button>
+        <button type="button" class="secondary" id="closeNativeBrowserBtn" style="text-transform:none;"><i class="fas fa-times"></i> Close Automation Sessions</button>
+      </div>
+      <p id="nativeBrowserAttachHelp" style="margin:0.75rem 0 0;font-size:0.75rem;color:#64748b;"></p>
+    </div>
     <div class="rule-box" style="margin-bottom: 2rem;">
       <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem;">
         <div class="rule-title" style="color: #f59e0b;">📊 Data & Metrics APIs</div>
@@ -742,6 +871,72 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
         <div class="form-group">
           <label>Flickr Secret 2</label>
           <input type="password" id="flickrSecret2" placeholder="Enter Flickr Secret 2">
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-box" style="margin-bottom: 2rem; border-color: #22d3ee;">
+      <div class="rule-header" style="border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+        <div>
+          <div class="rule-title" style="color: #22d3ee;">📧 Email Marketing &amp; SMTP</div>
+          <span style="font-size: 0.8rem; color: #94a3b8;">VBout, MailChimp, Amazon SES, and Acumbamail — powers drip campaigns, auto-replies, and transactional sends.</span>
+        </div>
+        <button type="button" class="secondary" id="testEmailProvidersBtn" style="text-transform:none;padding:0.5rem 0.9rem;font-size:0.8rem;"><i class="fas fa-vial"></i> Test Email Providers</button>
+      </div>
+      <div id="emailProvidersStatus" class="api-status-bar" style="margin-bottom:1rem;"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>VBout API Key</label>
+          <input type="password" id="vboutApiKey" placeholder="Enter VBout API Key">
+        </div>
+        <div class="form-group">
+          <label>MailChimp API Key (format: key-dc)</label>
+          <input type="password" id="mailchimpApiKey" placeholder="xxxxxxxx-us3">
+        </div>
+        <div class="form-group">
+          <label>Amazon SES SMTP Host</label>
+          <input type="text" id="smtpHost" placeholder="email-smtp.us-east-1.amazonaws.com">
+        </div>
+        <div class="form-group">
+          <label>SES SMTP Port</label>
+          <input type="text" id="smtpPort" placeholder="587">
+        </div>
+        <div class="form-group">
+          <label>SES SMTP Username</label>
+          <input type="password" id="smtpUser" placeholder="SMTP username">
+        </div>
+        <div class="form-group">
+          <label>SES SMTP Password</label>
+          <input type="password" id="smtpPass" placeholder="SMTP password">
+        </div>
+        <div class="form-group">
+          <label>SES From Email (verified)</label>
+          <input type="email" id="smtpFrom" placeholder="noreply@yourdomain.com">
+        </div>
+        <div class="form-group">
+          <label>SES From Name</label>
+          <input type="text" id="smtpFromName" placeholder="Social Imperialism">
+        </div>
+        <div class="form-group">
+          <label>Acumbamail SMTP Server</label>
+          <input type="text" id="acumbamailHost" placeholder="smtp.acumbamail.com">
+        </div>
+        <div class="form-group">
+          <label>Acumbamail SMTP Port</label>
+          <input type="text" id="acumbamailPort" placeholder="587">
+        </div>
+        <div class="form-group">
+          <label>Acumbamail Username</label>
+          <input type="email" id="acumbamailUser" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label>Acumbamail Password / Auth Token</label>
+          <input type="password" id="acumbamailPass" placeholder="Auth token">
+        </div>
+        <div class="form-group full-width">
+          <label>Acumbamail From Email</label>
+          <input type="email" id="acumbamailFrom" placeholder="noreply@yourdomain.com">
+          <span style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: block;">If Acumbamail shows auth failed, contact Acumbamail support to enable SMTP relay on your account.</span>
         </div>
       </div>
     </div>
@@ -881,21 +1076,109 @@ async function loadSystemHealth() {
 
 document.getElementById('btnRefreshHealth')?.addEventListener('click', () => loadSystemHealth());
 
+function normalizeApiMetrics(result) {
+  return result?.apiMetrics || result || {};
+}
+
 async function loadApiKeysStatusBar() {
   const bar = document.getElementById('apiKeysStatusBar');
   if (!bar) return;
   try {
     const result = await ipcRenderer.invoke('check-api-status');
-    const pills = [];
-    if (result.apiMetrics) {
-      Object.entries(result.apiMetrics).forEach(([name, status]) => {
-        const ok = status === 'Connected';
-        pills.push(`<span class="api-pill ${ok ? 'ok' : 'miss'}">${ok ? '✓' : '✗'} ${escapeHtml(name)}</span>`);
-      });
-    }
+    const metrics = normalizeApiMetrics(result);
+    const pills = Object.entries(metrics).map(([name, status]) => {
+      const ok = status === 'Connected';
+      const warn = String(status).includes('Auth failed') || String(status).includes('Live (');
+      const cls = ok ? 'ok' : warn ? 'miss' : 'miss';
+      return `<span class="api-pill ${cls}">${ok ? '✓' : '○'} ${escapeHtml(name)}: ${escapeHtml(String(status))}</span>`;
+    });
     bar.innerHTML = pills.join('') || `<span class="api-pill miss">No API status data</span>`;
   } catch (e) {
     bar.innerHTML = `<span class="api-pill miss">API check failed</span>`;
+  }
+}
+
+function renderLiveProbeCategoryBars(probes) {
+  const barEl = document.getElementById('liveProbesCategoryBars');
+  if (!barEl || !probes?.length) return;
+  const cats = {};
+  probes.forEach((p) => {
+    const cat = p.category || p.metric || 'Other';
+    if (!cats[cat]) cats[cat] = { pass: 0, total: 0 };
+    cats[cat].total++;
+    if (p.status === 'pass' || p.status === 'warn') cats[cat].pass++;
+  });
+  barEl.innerHTML = Object.entries(cats).map(([label, v]) => {
+    const pct = v.total ? Math.round((v.pass / v.total) * 100) : 0;
+    const color = pct === 100 ? '#22c55e' : pct > 0 ? '#38bdf8' : '#64748b';
+    return `<div style="flex:1;min-width:90px;font-size:0.68rem;color:#94a3b8;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span>${escapeHtml(label)}</span><span>${pct}%</span></div>
+      <div class="probe-bar"><div class="probe-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+async function runLiveConnectionAuditUI() {
+  const grid = document.getElementById('liveProbesGrid');
+  const summary = document.getElementById('liveProbesSummary');
+  if (grid) grid.innerHTML = '<span class="api-pill miss">Running live audit…</span>';
+  try {
+    let audit;
+    try {
+      audit = await ipcRenderer.invoke('run-live-connection-audit');
+    } catch (_) {
+      audit = await ipcRenderer.invoke('test-all-connections');
+    }
+    const s = audit.summary || {};
+    if (summary) {
+      summary.innerHTML = `
+        <span class="api-pill ok">${s.pass || 0} pass</span>
+        <span class="api-pill warn">${s.warn || 0} warn</span>
+        <span class="api-pill ${s.fail ? 'miss' : 'ok'}">${s.fail || 0} fail</span>
+        <span class="api-pill ok">${new Date(audit.auditedAt || Date.now()).toLocaleTimeString()}</span>
+      `;
+    }
+    if (grid && audit.probes) {
+      renderLiveProbeCategoryBars(audit.probes);
+      grid.innerHTML = audit.probes.map((p) => `
+        <div class="neo-card" style="margin:0;padding:0.85rem;border-color:${p.status === 'pass' ? 'rgba(34,197,94,0.4)' : p.status === 'warn' ? 'rgba(245,158,11,0.4)' : 'rgba(239,68,68,0.35)'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+            <strong style="font-size:0.82rem">${escapeHtml(p.label)}</strong>
+            <span class="api-pill ${p.status === 'pass' ? 'ok' : p.status === 'warn' ? 'warn' : 'miss'}">${escapeHtml(p.status)}</span>
+          </div>
+          <div style="font-size:0.72rem;color:#8ba3c7;margin-top:4px">${escapeHtml(p.summary || '—')} · ${p.ms || 0}ms</div>
+        </div>
+      `).join('');
+    }
+    await loadApiKeysStatusBar();
+    showToast(`Live audit: ${s.pass || 0} pass, ${s.warn || 0} warn, ${s.fail || 0} fail`, (s.fail || 0) === 0 ? 'success' : 'info');
+    return audit;
+  } catch (e) {
+    if (grid) grid.innerHTML = `<span class="api-pill miss">${escapeHtml(e.message)}</span>`;
+    showToast('Live audit failed: ' + e.message, 'error');
+    return null;
+  }
+}
+
+async function testEmailProvidersUI() {
+  const bar = document.getElementById('emailProvidersStatus');
+  if (bar) bar.innerHTML = '<span class="api-pill miss">Testing email providers…</span>';
+  try {
+    const res = await ipcRenderer.invoke('test-email-connections');
+    if (bar) {
+      bar.innerHTML = `
+        <span class="api-pill ${res.vbout?.ok ? 'ok' : 'miss'}">VBout ${res.vbout?.ok ? 'Connected' : (res.vbout?.error || '—')}</span>
+        <span class="api-pill ${res.mailchimp?.ok ? 'ok' : 'miss'}">MailChimp ${res.mailchimp?.ok ? 'Connected' : (res.mailchimp?.error || '—')}</span>
+        <span class="api-pill ${res.ses?.ok ? 'ok' : 'miss'}">SES ${res.ses?.ok ? 'Connected' : (res.ses?.error || '—')}</span>
+        <span class="api-pill ${res.acumbamail?.ok ? 'ok' : 'warn'}">Acumbamail ${res.acumbamail?.ok ? 'Connected' : (res.acumbamail?.error || 'Auth pending')}</span>
+      `;
+    }
+    showToast(res.success ? 'Email providers probed live' : 'Some email providers need attention', res.success ? 'success' : 'info');
+    return res;
+  } catch (e) {
+    if (bar) bar.innerHTML = `<span class="api-pill miss">${escapeHtml(e.message)}</span>`;
+    showToast('Email test failed: ' + e.message, 'error');
+    return null;
   }
 }
 
@@ -1017,6 +1300,7 @@ const EMBEDDED_TUTORIALS = [
   { id: 'tut_13', category: 'campaigns', title: 'Multi-Brand Agency Setup', duration: '10 min', icon: 'fa-building', color: '#38bdf8', page: 'settings.html', steps: ['Create a campaign per client brand', 'Set active campaign before working on that client', 'Each campaign has isolated keywords and linked accounts', 'Use sidebar switcher to jump between brands'] },
   { id: 'tut_14', category: 'campaigns', title: 'UTM Tracking & Conversion Links', duration: '4 min', icon: 'fa-link', color: '#10b981', page: 'settings.html', steps: ['Edit campaign → Brand Details', 'Set UTM Source and UTM Medium', 'Add primary conversion link', 'AI replies append tracking params automatically'] },
   { id: 'tut_15', category: 'getting-started', title: 'Dashboard Command Center', duration: '5 min', icon: 'fa-home', color: '#38bdf8', page: 'dashboard.html', steps: ['View live API status and worker state', 'Monitor trending topics from real feeds', 'Check domain metrics for active campaign', 'Export data snapshot from dashboard tools'] },
+  { id: 'tut_grok', category: 'content', title: 'Grok Imagine + Edge Browser Setup', duration: '10 min', icon: 'fa-wand-magic-sparkles', color: '#a78bfa', page: 'settings.html', steps: ['Settings → Native Browser Automation: select Microsoft Edge + dedicated profile', 'Settings → Grok Engine: credentials pre-filled — Save Grok Credentials', 'Click Connect & Authorize Grok — complete CAPTCHA in Edge if prompted', 'Content Hub → Grok Imagine — images save to grok-assets folder', 'Brain docs: brain/GROK.md · brain/skills/grok-imagine/SKILL.md'] },
 ];
 
 function renderPlanFeatures(planId, features) {
@@ -1302,6 +1586,10 @@ function openTutorialDetail(tutorialId) {
     openBtn.onclick = () => {
       if (t.page === 'settings.html') {
         if (t.id === 'tut_02') switchSettingsView('apiKeysView');
+        else if (t.id === 'tut_grok') {
+          switchSettingsView('grokView');
+          openTutorialDetail('tut_grok');
+        }
         else if (t.id === 'tut_14') { switchSettingsView('campaignListView'); showToast('Edit a campaign to configure UTM fields.', 'info'); }
         else switchSettingsView('campaignListView');
         return;
@@ -1367,7 +1655,7 @@ let currentCampaigns = [];
 let editingCampaignId = null;
 
 function switchSettingsView(viewId) {
-    const views = ['campaignListView', 'pricingView', 'tutorialView', 'apiKeysView', 'systemHealthView', 'campaignEditView'];
+    const views = ['campaignListView', 'pricingView', 'tutorialView', 'grokView', 'apiKeysView', 'systemHealthView', 'campaignEditView'];
     views.forEach(v => {
         const el = document.getElementById(v);
         if(el) el.classList.add('hidden');
@@ -1379,7 +1667,13 @@ function switchSettingsView(viewId) {
     if(viewId === 'apiKeysView') {
         loadGlobalApiKeys();
         loadApiKeysStatusBar();
+        loadNativeBrowserSettings();
+        testEmailProvidersUI();
+        runLiveConnectionAuditUI();
+    }
+    if (viewId === 'grokView') {
         loadGrokSettings();
+        loadNativeBrowserSettingsGrok();
     }
     if (viewId === 'pricingView') {
       loadPaymentGatewayUI();
@@ -1397,11 +1691,13 @@ function switchSettingsView(viewId) {
         if(document.getElementById('btn-pricing')) document.getElementById('btn-pricing').className = 'secondary';
         if(document.getElementById('btn-tutorials')) document.getElementById('btn-tutorials').className = 'secondary';
         if(document.getElementById('btn-api-keys')) document.getElementById('btn-api-keys').className = 'secondary';
+        if(document.getElementById('btn-grok')) document.getElementById('btn-grok').className = 'secondary';
         if(document.getElementById('btn-system-health')) document.getElementById('btn-system-health').className = 'secondary';
         
         if(viewId === 'campaignListView' && document.getElementById('btn-campaigns')) document.getElementById('btn-campaigns').className = 'primary';
         if(viewId === 'pricingView' && document.getElementById('btn-pricing')) document.getElementById('btn-pricing').className = 'primary';
         if(viewId === 'tutorialView' && document.getElementById('btn-tutorials')) document.getElementById('btn-tutorials').className = 'primary';
+        if(viewId === 'grokView' && document.getElementById('btn-grok')) document.getElementById('btn-grok').className = 'primary';
         if(viewId === 'apiKeysView' && document.getElementById('btn-api-keys')) document.getElementById('btn-api-keys').className = 'primary';
         if(viewId === 'systemHealthView' && document.getElementById('btn-system-health')) document.getElementById('btn-system-health').className = 'primary';
     }
@@ -1541,6 +1837,19 @@ async function loadGlobalApiKeys() {
   setVal('alertEmail', k.alertEmail);
   setVal('mozAccessId', k.mozAccessId);
   setVal('mozSecret', k.mozSecret);
+  setVal('vboutApiKey', k.vboutApiKey);
+  setVal('mailchimpApiKey', k.mailchimpApiKey);
+  setVal('smtpHost', k.smtpHost);
+  setVal('smtpPort', k.smtpPort);
+  setVal('smtpUser', k.smtpUser);
+  setVal('smtpPass', k.smtpPass);
+  setVal('smtpFrom', k.smtpFrom);
+  setVal('smtpFromName', k.smtpFromName);
+  setVal('acumbamailHost', k.acumbamailHost);
+  setVal('acumbamailPort', k.acumbamailPort);
+  setVal('acumbamailUser', k.acumbamailUser);
+  setVal('acumbamailPass', k.acumbamailPass);
+  setVal('acumbamailFrom', k.acumbamailFrom);
 
   // Group textareas
   setVal('streamingKeys', k.streamingKeys);
@@ -1557,31 +1866,130 @@ async function loadGlobalApiKeys() {
   renderPlatformFields('twitter');
 }
 
+function renderNativeBrowserStatusBar(status, barId) {
+  const bar = document.getElementById(barId);
+  if (!bar || !status?.browsers) return;
+  bar.innerHTML = status.browsers.map((b) =>
+    `<span class="api-pill ${b.installed && b.automationReady ? 'ok' : 'miss'}">${escapeHtml(b.label)} ${b.installed ? (b.automationReady ? '✓' : 'needs setup') : 'not installed'}</span>`
+  ).join('');
+}
+
+async function loadNativeBrowserSettings() {
+  try {
+    const [settings, status] = await Promise.all([
+      ipcRenderer.invoke('get-browser-settings'),
+      ipcRenderer.invoke('get-native-browser-status'),
+    ]);
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+    setVal('nativeBrowserId', settings.browserId);
+    setVal('nativeBrowserLaunchMode', settings.launchMode);
+    setVal('nativeBrowserProfileDir', settings.profileDirectory);
+    setVal('nativeBrowserDebugPort', settings.debugPort || 9222);
+    renderNativeBrowserStatusBar(status, 'nativeBrowserStatus');
+    const help = document.getElementById('nativeBrowserAttachHelp');
+    if (help && status.attachInstructions) {
+      help.innerHTML = settings.launchMode === 'attach'
+        ? `<strong>Attach mode:</strong> ${status.attachInstructions.steps.join(' → ')}`
+        : 'Dedicated profiles store cookies under your app data folder — log in once per site in the automation browser window.';
+    }
+  } catch (e) {
+    const bar = document.getElementById('nativeBrowserStatus');
+    if (bar) bar.innerHTML = `<span class="api-pill miss">${escapeHtml(e.message)}</span>`;
+  }
+}
+
+async function loadNativeBrowserSettingsGrok() {
+  try {
+    const [settings, status, grokSt] = await Promise.all([
+      ipcRenderer.invoke('get-browser-settings'),
+      ipcRenderer.invoke('get-native-browser-status'),
+      ipcRenderer.invoke('grok-get-status'),
+    ]);
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+    setVal('nativeBrowserIdGrok', settings.browserId || 'edge');
+    setVal('nativeBrowserLaunchModeGrok', settings.launchMode || 'app_profile');
+    renderNativeBrowserStatusBar(status, 'nativeBrowserStatusGrok');
+    const pathEl = document.getElementById('grokEdgeProfilePath');
+    if (pathEl) {
+      pathEl.innerHTML = grokSt.profileDir
+        ? `<strong>Edge profile:</strong> <code style="color:#a78bfa;">${escapeHtml(grokSt.profileDir)}</code> · Assets: <code style="color:#a78bfa;">%APPDATA%\\Social Imperialism\\grok-assets\\</code>`
+        : 'Edge profile path unavailable — save browser settings first.';
+    }
+  } catch (e) {
+    const bar = document.getElementById('nativeBrowserStatusGrok');
+    if (bar) bar.innerHTML = `<span class="api-pill miss">${escapeHtml(e.message)}</span>`;
+  }
+}
+
+async function saveNativeBrowserSettings(fromGrokTab) {
+  const payload = fromGrokTab ? {
+    browserId: document.getElementById('nativeBrowserIdGrok')?.value || 'edge',
+    launchMode: document.getElementById('nativeBrowserLaunchModeGrok')?.value || 'app_profile',
+    profileDirectory: 'Default',
+    debugPort: 9222,
+    persistCookies: true,
+  } : {
+    browserId: document.getElementById('nativeBrowserId')?.value || 'edge',
+    launchMode: document.getElementById('nativeBrowserLaunchMode')?.value || 'app_profile',
+    profileDirectory: document.getElementById('nativeBrowserProfileDir')?.value || 'Default',
+    debugPort: parseInt(document.getElementById('nativeBrowserDebugPort')?.value || '9222', 10),
+    persistCookies: true,
+  };
+  await ipcRenderer.invoke('save-browser-settings', payload);
+  await loadNativeBrowserSettings();
+  await loadNativeBrowserSettingsGrok();
+  showToast('Native browser settings saved.', 'success');
+}
+
+document.getElementById('saveNativeBrowserBtn')?.addEventListener('click', () => saveNativeBrowserSettings(false));
+document.getElementById('saveNativeBrowserBtnGrok')?.addEventListener('click', () => saveNativeBrowserSettings(true));
+document.getElementById('launchDebugBrowserBtn')?.addEventListener('click', async () => {
+  await saveNativeBrowserSettings();
+  const res = await ipcRenderer.invoke('native-browser-launch-debug');
+  if (res.success) showToast(`Launched with debugging on port ${res.port}`, 'success');
+  else showToast(res.error || 'Launch failed', 'error');
+});
+document.getElementById('testNativeBrowserBtn')?.addEventListener('click', async () => {
+  await saveNativeBrowserSettings();
+  const res = await ipcRenderer.invoke('native-browser-open-url', { url: 'https://grok.com/', profileKey: 'grok' });
+  if (res.success) showToast('Opened Grok in your native browser — log in to save cookies.', 'success');
+  else showToast(res.error || 'Failed', 'error');
+});
+document.getElementById('closeNativeBrowserBtn')?.addEventListener('click', async () => {
+  await ipcRenderer.invoke('native-browser-close-sessions');
+  showToast('Browser automation sessions closed.', 'info');
+});
+
 async function loadGrokSettings() {
   try {
     const s = await ipcRenderer.invoke('get-grok-settings');
-    const emailEl = document.getElementById('grokEmail');
-    const passEl = document.getElementById('grokPassword');
-    const autoEl = document.getElementById('grokAutoLogin');
+    const emailEl = document.getElementById('grokEmailGrok');
+    const passEl = document.getElementById('grokPasswordGrok');
+    const autoEl = document.getElementById('grokAutoLoginGrok');
     if (emailEl) emailEl.value = s.email || '';
     if (passEl) passEl.value = s.password || '';
     if (autoEl) autoEl.checked = s.autoLogin !== false;
     await refreshGrokSessionStatus();
   } catch (e) {
-    const st = document.getElementById('grokSessionStatus');
+    const st = document.getElementById('grokSessionStatusGrok');
     if (st) st.textContent = 'Could not load Grok settings.';
   }
 }
 
 async function refreshGrokSessionStatus() {
-  const el = document.getElementById('grokSessionStatus');
+  const el = document.getElementById('grokSessionStatusGrok');
   if (!el) return;
   try {
     const st = await ipcRenderer.invoke('grok-get-status');
     const ok = st.session?.loggedIn || st.settings?.sessionValid;
+    const browser = st.nativeBrowser?.selectedBrowser?.label || 'Microsoft Edge';
     el.innerHTML = ok
-      ? `<span style="color:#10b981;"><i class="fas fa-check-circle"></i> Grok authorized</span> · Puppeteer ${st.puppeteerReady ? 'ready' : 'missing'} · Last login: ${st.settings?.lastLoginAt || '—'}`
-      : `<span style="color:#f59e0b;"><i class="fas fa-exclamation-circle"></i> Not authorized</span> — click Connect &amp; Authorize. Puppeteer ${st.puppeteerReady ? 'ready' : 'not installed'}.`;
+      ? `<span style="color:#10b981;"><i class="fas fa-check-circle"></i> Grok authorized — Imagine, Video, and Text ready</span> · ${escapeHtml(browser)} · Last login: ${st.settings?.lastLoginAt || '—'}`
+      : `<span style="color:#f59e0b;"><i class="fas fa-exclamation-circle"></i> Not authorized</span> — click Connect &amp; Authorize (${escapeHtml(browser)}). Complete CAPTCHA in Edge if prompted.`;
+    const pathEl = document.getElementById('grokEdgeProfilePath');
+    if (pathEl && st.profileDir) {
+      pathEl.innerHTML = `<strong>Edge profile:</strong> <code style="color:#a78bfa;">${escapeHtml(st.profileDir)}</code> · Assets: <code style="color:#a78bfa;">grok-assets/</code>`;
+    }
   } catch (e) {
     el.textContent = 'Grok status unavailable.';
   }
@@ -1589,9 +1997,9 @@ async function refreshGrokSessionStatus() {
 
 async function saveGrokCredentials() {
   const payload = {
-    email: document.getElementById('grokEmail')?.value?.trim() || '',
-    password: document.getElementById('grokPassword')?.value || '',
-    autoLogin: document.getElementById('grokAutoLogin')?.checked !== false,
+    email: document.getElementById('grokEmailGrok')?.value?.trim() || '',
+    password: document.getElementById('grokPasswordGrok')?.value || '',
+    autoLogin: document.getElementById('grokAutoLoginGrok')?.checked !== false,
     enabled: true,
   };
   const res = await ipcRenderer.invoke('save-grok-settings', payload);
@@ -1603,19 +2011,25 @@ async function saveGrokCredentials() {
   }
 }
 
-document.getElementById('grokSaveBtn')?.addEventListener('click', saveGrokCredentials);
-document.getElementById('grokConnectBtn')?.addEventListener('click', async () => {
-  showToast('Opening Grok browser — complete sign-in if prompted…', 'info');
+document.getElementById('grokSaveBtnGrok')?.addEventListener('click', saveGrokCredentials);
+document.getElementById('grokConnectBtnGrok')?.addEventListener('click', async () => {
+  showToast('Opening Grok in Edge — complete sign-in if prompted…', 'info');
+  await saveNativeBrowserSettings(true);
   await saveGrokCredentials();
   const res = await ipcRenderer.invoke('grok-connect');
   if (res.success) showToast(res.message || 'Grok connected.', 'success');
   else showToast(res.error || res.message || 'Grok connect failed.', 'error');
   await refreshGrokSessionStatus();
 });
-document.getElementById('grokDisconnectBtn')?.addEventListener('click', async () => {
+document.getElementById('grokDisconnectBtnGrok')?.addEventListener('click', async () => {
   await ipcRenderer.invoke('grok-close-browser');
   showToast('Grok browser session closed.', 'info');
   await refreshGrokSessionStatus();
+});
+document.getElementById('grokOpenTutorialBtn')?.addEventListener('click', async () => {
+  switchSettingsView('tutorialView');
+  await loadTutorials();
+  openTutorialDetail('tut_grok');
 });
 
 function showListView() {
@@ -1870,12 +2284,12 @@ const platformFields = {
   'tiktok': { idLabel: 'Client Key', secretLabel: 'Client Secret', idKey: 'tkId', secretKey: 'tkSecret' },
   'youtube': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'ytId', secretKey: 'ytSecret' },
   'reddit': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'rdId', secretKey: 'rdSecret' },
-  'pinterest': { idLabel: 'App ID', secretLabel: 'App Secret', idKey: 'pnId', secretKey: 'pnSecret' },
-  'snapchat': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'scId', secretKey: 'scSecret' },
-  'discord': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'dcId', secretKey: 'dcSecret' },
-  'telegram': { idLabel: 'Bot Token (from @BotFather)', secretLabel: '(n/a for bots)', idKey: 'tgBotToken', secretKey: '' },
-  'whatsapp': { idLabel: 'Phone Number ID (Meta Business)', secretLabel: 'Business Access Token', idKey: 'waPhoneId', secretKey: 'waAccessToken' },
-  'twitch': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'twitchId', secretKey: 'twitchSecret' },
+  'pinterest': { idLabel: 'App ID', secretLabel: 'App Secret', idKey: 'pinterestAppId', secretKey: 'pinterestSecret' },
+  'snapchat': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'snapchatClientId', secretKey: 'snapchatClientSecret' },
+  'discord': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'discordClientId', secretKey: 'discordClientSecret' },
+  'telegram': { idLabel: 'Bot Token (from @BotFather)', secretLabel: '(n/a for bots)', idKey: 'telegramBotToken', secretKey: '' },
+  'whatsapp': { idLabel: 'Phone Number ID (Meta Business)', secretLabel: 'Business Access Token', idKey: 'whatsappPhoneNumberId', secretKey: 'whatsappAccessToken' },
+  'twitch': { idLabel: 'Client ID', secretLabel: 'Client Secret', idKey: 'twitchClientId', secretKey: 'twitchClientSecret' },
   'wechat': { idLabel: 'App ID', secretLabel: 'App Secret', idKey: 'wechatAppId', secretKey: 'wechatAppSecret' },
   'weibo': { idLabel: 'App Key', secretLabel: 'App Secret', idKey: 'weiboAppKey', secretKey: 'weiboAppSecret' },
 };
@@ -1926,10 +2340,13 @@ document.getElementById('backToCampaignsBtn')?.addEventListener('click', () => {
 });
 
 document.getElementById('testApiKeysBtn')?.addEventListener('click', async () => {
-  await loadApiKeysStatusBar();
-  const result = await ipcRenderer.invoke('check-api-status');
-  const connected = result.apiMetrics ? Object.values(result.apiMetrics).filter(v => v === 'Connected').length : 0;
-  showToast(result.message || `Checked ${connected} connection(s).`, connected > 0 ? 'success' : 'error');
+  await runLiveConnectionAuditUI();
+});
+document.getElementById('refreshLiveProbesBtn')?.addEventListener('click', async () => {
+  await runLiveConnectionAuditUI();
+});
+document.getElementById('testEmailProvidersBtn')?.addEventListener('click', async () => {
+  await testEmailProvidersUI();
 });
 
 document.getElementById('saveGlobalKeysBtn')?.addEventListener('click', async () => {
@@ -1981,6 +2398,19 @@ document.getElementById('saveGlobalKeysBtn')?.addEventListener('click', async ()
   currentGlobalKeys.slackWebhook = getVal('slackWebhook');
   currentGlobalKeys.discordWebhook = getVal('discordWebhook');
   currentGlobalKeys.alertEmail = getVal('alertEmail');
+  currentGlobalKeys.vboutApiKey = getVal('vboutApiKey');
+  currentGlobalKeys.mailchimpApiKey = getVal('mailchimpApiKey');
+  currentGlobalKeys.smtpHost = getVal('smtpHost');
+  currentGlobalKeys.smtpPort = getVal('smtpPort');
+  currentGlobalKeys.smtpUser = getVal('smtpUser');
+  currentGlobalKeys.smtpPass = getVal('smtpPass');
+  currentGlobalKeys.smtpFrom = getVal('smtpFrom');
+  currentGlobalKeys.smtpFromName = getVal('smtpFromName');
+  currentGlobalKeys.acumbamailHost = getVal('acumbamailHost');
+  currentGlobalKeys.acumbamailPort = getVal('acumbamailPort');
+  currentGlobalKeys.acumbamailUser = getVal('acumbamailUser');
+  currentGlobalKeys.acumbamailPass = getVal('acumbamailPass');
+  currentGlobalKeys.acumbamailFrom = getVal('acumbamailFrom');
 
   // Group fields (textareas for sessions, keys, RTMPs, multi-account etc.)
   currentGlobalKeys.streamingKeys = getVal('streamingKeys');

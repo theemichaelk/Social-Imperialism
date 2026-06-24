@@ -14,7 +14,7 @@ export const PAGE_CHANNELS = {
     'publish-post', 'schedule-post', 'generate-ai', 'generate-image', 'search-stock-photo',
     'curate-from-rss', 'run-content-studio', 'generate-content-batch', 'get-content-studio-config',
     'generate-viral-thumbnail', 'generate-viral-thumbnail-batch', 'get-thumbnail-studio-config',
-    'grok-ask-text', 'grok-imagine', 'grok-generate-infographic', 'grok-get-status',
+    'grok-ask-text', 'grok-imagine', 'grok-generate-video', 'grok-generate-infographic', 'grok-get-status',
     'compose-qa-answer', 'publish-qa-answer', 'get-content-queue', 'remove-content-queue-item',
     'get-auto-content-settings', 'save-auto-content-settings', 'run-content-scheduler-now',
     'discover-site-rss', 'get-site-rss-sources', 'save-site-rss-source', 'run-category-rss-router',

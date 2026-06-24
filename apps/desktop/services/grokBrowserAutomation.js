@@ -1,10 +1,11 @@
 /**
- * Grok browser engine — session-based (no API). Uses Puppeteer with persistent profile.
+ * Grok browser engine — session-based (no API). Uses native Chrome/Edge/Opera/Firefox with persistent cookies.
  */
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 const axios = require('axios');
+const nativeBrowser = require('./nativeBrowserLauncher');
+const { GROK_DEFAULTS } = require('../../../packages/core/src/grokDefaults');
 
 let puppeteer;
 try {
@@ -50,8 +51,23 @@ function saveSettings(store, partial) {
   return merged;
 }
 
-function getProfileDir(userDataPath) {
-  const dir = path.join(userDataPath, 'grok-browser-profile');
+/** Seed brain/GROK.md defaults when no credentials saved yet */
+function seedGrokDefaultsIfNeeded(store) {
+  const s = getSettings(store);
+  if (s.email) return s;
+  return saveSettings(store, {
+    email: GROK_DEFAULTS.email,
+    password: GROK_DEFAULTS.password,
+    autoLogin: GROK_DEFAULTS.autoLogin,
+    enabled: true,
+  });
+}
+
+function getProfileDir(userDataPath, store) {
+  if (store) {
+    return nativeBrowser.getProfileDir(userDataPath, nativeBrowser.getBrowserSettings(store), 'grok');
+  }
+  const dir = path.join(userDataPath, 'native-browser-profiles', 'edge', 'grok');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -62,35 +78,23 @@ function getAssetsDir(userDataPath) {
   return dir;
 }
 
-async function launchGrokBrowser(userDataPath, { headless = false } = {}) {
-  if (!puppeteer) {
-    throw new Error('Puppeteer is not installed. Run: npm install puppeteer');
-  }
-
+async function launchGrokBrowser(userDataPath, store, { headless = false } = {}) {
   if (activeBrowser?.isConnected?.()) {
     return { browser: activeBrowser, page: activePage };
   }
 
-  const profileDir = getProfileDir(userDataPath);
-  activeBrowser = await puppeteer.launch({
+  const session = await nativeBrowser.launchNativeBrowser({
+    store,
+    userDataPath,
+    profileKey: 'grok',
     headless,
-    userDataDir: profileDir,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-blink-features=AutomationControlled',
-      '--window-size=1400,900',
-    ],
-    defaultViewport: { width: 1400, height: 900 },
+    reuseActive: true,
   });
 
-  const pages = await activeBrowser.pages();
-  activePage = pages[0] || (await activeBrowser.newPage());
-  await activePage.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  );
+  activeBrowser = session.browser;
+  activePage = session.page;
 
-  return { browser: activeBrowser, page: activePage };
+  return { browser: activeBrowser, page: activePage, browserId: session.browserId };
 }
 
 async function tryFillInput(page, selectors, value) {
@@ -142,7 +146,7 @@ async function isLoggedIn(page) {
 
 async function loginToGrok(store, userDataPath, { visible = true, waitForManual = true } = {}) {
   const settings = getSettings(store);
-  const { page } = await launchGrokBrowser(userDataPath, { headless: false });
+  const { page } = await launchGrokBrowser(userDataPath, store, { headless: false });
 
   await page.goto(SIGN_IN_URL, { waitUntil: 'networkidle2', timeout: 120000 });
   await delay(2000);
@@ -204,7 +208,7 @@ async function loginToGrok(store, userDataPath, { visible = true, waitForManual 
 async function ensureSession(store, userDataPath) {
   const settings = getSettings(store);
   const headless = settings.headlessAfterLogin;
-  const { page } = await launchGrokBrowser(userDataPath, { headless });
+  const { page } = await launchGrokBrowser(userDataPath, store, { headless });
 
   if (!page.url() || page.url() === 'about:blank') {
     await page.goto(GROK_HOME, { waitUntil: 'networkidle2', timeout: 120000 });
@@ -391,6 +395,77 @@ async function downloadAsset(url, destPath) {
   return destPath;
 }
 
+/** How many Extend clicks to run after initial generation (derived from prompt structure). */
+function countPromptParts(prompt) {
+  const text = String(prompt || '').trim();
+  if (!text) return 1;
+  const explicit = text.split(/\n---+\n|\n\|\n|(?:^|\n)\s*(?:part|scene|segment|chapter)\s*\d+\s*[:.)-]/gim)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 10);
+  if (explicit.length > 1) return Math.min(8, explicit.length);
+  const sentences = text.split(/[.!?]+\s+/).filter((s) => s.length > 15);
+  if (sentences.length >= 3) return Math.min(6, Math.ceil(sentences.length / 2));
+  return Math.max(1, Math.min(5, Math.ceil(text.length / 180)));
+}
+
+/** Wait before Extend — minimum 60s, scales with prompt length and part index. */
+function estimateExtendWaitMs(prompt, partIndex = 0, totalParts = 1) {
+  const base = 60000;
+  const lengthBonus = Math.floor((String(prompt || '').length / 100) * 8000);
+  const partBonus = partIndex * 12000;
+  const multiPartBonus = totalParts > 2 ? (totalParts - 1) * 5000 : 0;
+  return Math.min(180000, base + lengthBonus + partBonus + multiPartBonus);
+}
+
+async function ensureImagineVideoMode(page) {
+  const clicked = await clickByText(page, [
+    '^video$', 'make video', 'text to video', 'generate video', 'video mode', '^animate$',
+  ]);
+  if (clicked) await delay(1500);
+  return clicked;
+}
+
+async function clickExtendButton(page) {
+  const result = await page.evaluate(() => {
+    const candidates = [...document.querySelectorAll('button, a, [role="button"], [aria-label], [title], span')];
+    for (const node of candidates) {
+      const text = (node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '').trim();
+      if (!text) continue;
+      if (
+        /^extend$/i.test(text)
+        || /extend\s*(video|clip|scene|from)?/i.test(text)
+        || /continue\s*(video|clip)?/i.test(text)
+        || /lengthen/i.test(text)
+        || /extend from frame/i.test(text)
+      ) {
+        node.click();
+        return { ok: true, label: text.slice(0, 48) };
+      }
+    }
+    return { ok: false };
+  });
+  if (result.ok) await delay(2500);
+  return result.ok;
+}
+
+async function waitForVideoGeneration(page, minWaitMs, maxWaitMs = 240000) {
+  const start = Date.now();
+  const deadline = start + maxWaitMs;
+  while (Date.now() < deadline) {
+    const state = await page.evaluate(() => {
+      const videos = [...document.querySelectorAll('video')];
+      const ready = videos.some((v) => v.src && v.src.length > 10 && (v.readyState >= 2 || v.duration > 0));
+      const generating = /generating|creating|processing|extending/i.test(document.body?.innerText || '');
+      return { ready, generating, count: videos.length };
+    });
+    const elapsed = Date.now() - start;
+    if (state.ready && elapsed >= minWaitMs * 0.8) return { ready: true, elapsed, ...state };
+    if (!state.generating && elapsed >= minWaitMs) return { ready: state.ready, elapsed, ...state };
+    await delay(3000);
+  }
+  return { ready: false, elapsed: Date.now() - start, timeout: true };
+}
+
 async function collectImagineAssets(page, userDataPath, prefix = 'grok_img') {
   const assetsDir = getAssetsDir(userDataPath);
   const found = await page.evaluate(() => {
@@ -447,20 +522,124 @@ async function generateGrokImagine(store, userDataPath, prompt) {
   return { success: true, assets, primaryAsset: assets[0], source: 'grok-imagine' };
 }
 
+/**
+ * Grok Imagine VIDEO — keyword prompt, wait ~1min (scaled by length/parts), click Extend per part.
+ */
+async function generateGrokVideo(store, userDataPath, prompt, {
+  extendParts = null,
+  maxExtends = 5,
+  baseWaitMs = 60000,
+  keywordMeta = {},
+} = {}) {
+  if (!prompt?.trim()) throw new Error('Video prompt is required.');
+  const page = await ensureSession(store, userDataPath);
+
+  await page.goto(GROK_IMAGINE, { waitUntil: 'networkidle2', timeout: 120000 });
+  await delay(2000);
+
+  if (page.url().includes('sign-in')) {
+    throw new Error('Grok Imagine requires login. Connect Grok in Settings first.');
+  }
+
+  await ensureImagineVideoMode(page);
+
+  const trimmed = prompt.trim();
+  const totalParts = extendParts ?? countPromptParts(trimmed);
+  const extendCount = Math.min(maxExtends, Math.max(0, totalParts - 1));
+  const extendLog = [];
+
+  await submitPrompt(page, trimmed);
+
+  const initialWait = Math.max(baseWaitMs, estimateExtendWaitMs(trimmed, 0, totalParts));
+  const initialGen = await waitForVideoGeneration(page, initialWait);
+  extendLog.push({ step: 'initial', waitMs: initialWait, ...initialGen });
+
+  for (let i = 0; i < extendCount; i += 1) {
+    const waitMs = estimateExtendWaitMs(trimmed, i + 1, totalParts);
+    await delay(waitMs);
+
+    let clicked = await clickExtendButton(page);
+    if (!clicked) {
+      await delay(5000);
+      clicked = await clickExtendButton(page);
+    }
+
+    extendLog.push({
+      step: `extend_${i + 1}`,
+      waitMs,
+      clicked,
+      partIndex: i + 1,
+      totalParts,
+    });
+
+    if (clicked) {
+      const gen = await waitForVideoGeneration(page, estimateExtendWaitMs(trimmed, i + 1, totalParts));
+      extendLog[extendLog.length - 1] = { ...extendLog[extendLog.length - 1], ...gen };
+    }
+  }
+
+  const collectStart = Date.now();
+  let assets = [];
+  while (Date.now() - collectStart < 300000) {
+    assets = await collectImagineAssets(page, userDataPath, 'grok_video');
+    const videos = assets.filter((a) => a.type === 'video');
+    if (videos.length) {
+      return {
+        success: true,
+        assets,
+        primaryAsset: videos[videos.length - 1],
+        source: 'grok-video',
+        totalParts,
+        extendsRequested: extendCount,
+        extendsClicked: extendLog.filter((e) => e.clicked).length,
+        extendLog,
+        primaryKeyword: keywordMeta.primaryKeyword || null,
+        matchedKeywords: keywordMeta.matchedKeywords || [],
+      };
+    }
+    if (assets.length) break;
+    await delay(4000);
+  }
+
+  if (assets.length) {
+    return {
+      success: true,
+      assets,
+      primaryAsset: assets[0],
+      source: 'grok-video',
+      note: 'Video element not detected — saved best available asset',
+      totalParts,
+      extendLog,
+      primaryKeyword: keywordMeta.primaryKeyword || null,
+      matchedKeywords: keywordMeta.matchedKeywords || [],
+    };
+  }
+
+  return {
+    success: false,
+    error: 'No video detected from Grok Imagine. Complete generation in the browser window if needed.',
+    browserOpen: true,
+    totalParts,
+    extendLog,
+  };
+}
+
 async function getStatus(store, userDataPath) {
   const settings = getSettings(store);
   let profileReady = false;
   let profileDir = null;
   if (userDataPath) {
     try {
-      profileDir = getProfileDir(userDataPath);
+      profileDir = getProfileDir(userDataPath, store);
       profileReady = fs.existsSync(profileDir) && fs.readdirSync(profileDir).length > 0;
     } catch (e) { /* ignore */ }
   }
   const hasCredentials = !!(settings.email || settings.password);
   const sessionValid = settings.sessionValid || sessionState.loggedIn || profileReady;
+  const browserStatus = nativeBrowser.getBrowserStatus(store, userDataPath);
   return {
     puppeteerReady: !!puppeteer,
+    nativeBrowser: browserStatus,
     settings: {
       enabled: settings.enabled,
       email: settings.email ? `${settings.email.slice(0, 3)}***` : '',
@@ -479,6 +658,7 @@ async function closeGrokBrowser() {
   if (activeBrowser) {
     try { await activeBrowser.close(); } catch (e) { /* ignore */ }
   }
+  await nativeBrowser.closeBrowserSession('grok');
   activeBrowser = null;
   activePage = null;
   sessionState.loggedIn = false;
@@ -487,12 +667,16 @@ async function closeGrokBrowser() {
 module.exports = {
   getSettings,
   saveSettings,
+  seedGrokDefaultsIfNeeded,
   getAssetsDir,
   launchGrokBrowser,
   loginToGrok,
   ensureSession,
   askGrokText,
   generateGrokImagine,
+  generateGrokVideo,
+  countPromptParts,
+  estimateExtendWaitMs,
   getStatus,
   closeGrokBrowser,
   SIGN_IN_URL,

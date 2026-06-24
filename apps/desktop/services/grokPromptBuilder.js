@@ -17,6 +17,9 @@ OUTPUT: Only the reply text — no quotes, labels, or explanation.`,
 OUTPUT: Bullet points with actionable insights. Max 400 words.`,
   imagine: `TASK: This prompt will be sent to an image generator. Describe ONE vivid visual scene.
 OUTPUT: A single detailed image prompt (2-4 sentences). No commentary.`,
+  video: `TASK: This prompt will be sent to Grok Imagine VIDEO. Create a keyword-driven cinematic clip.
+OUTPUT: One video scene description (3-6 sentences) with clear motion, pacing, and visual beats.
+For multi-part stories use "Part 1:", "Part 2:" on separate lines — each part triggers an Extend in automation.`,
   infographic: `TASK: Analyze content and produce infographic copy sections.
 OUTPUT: Plain text with sections labeled exactly: HEADLINE, INSIGHTS, CAPTION, COLORS, VISUAL`,
   keyword_content: `TASK: Create content centered on the tracked keywords below.

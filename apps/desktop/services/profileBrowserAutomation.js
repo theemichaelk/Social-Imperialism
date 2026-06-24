@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const proxyManager = require('./proxyManager');
 const { downloadImageToTemp } = require('./mediaHelpers');
+const nativeBrowser = require('./nativeBrowserLauncher');
 
 let puppeteer;
 try {
@@ -73,30 +74,31 @@ const PLATFORM_FLOWS = {
   },
 };
 
-async function launchBrowser(proxy, headless = false) {
+async function launchBrowser(proxy, headless = false, { store, userDataPath, kitId } = {}) {
+  if (store && userDataPath) {
+    const session = await nativeBrowser.launchNativeBrowser({
+      store,
+      userDataPath,
+      profileKey: `social_${kitId || 'kit'}`,
+      headless,
+      reuseActive: false,
+    });
+    return session.browser;
+  }
   if (!puppeteer) {
     throw new Error('Puppeteer is not installed. Run: npm install puppeteer');
   }
-
   const args = [
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-blink-features=AutomationControlled',
     '--window-size=1280,900',
   ];
-
   if (proxy?.host && proxy?.port) {
     const proto = proxy.protocol === 'socks5' ? 'socks5' : 'http';
     args.push(`--proxy-server=${proto}://${proxy.host}:${proxy.port}`);
   }
-
-  const browser = await puppeteer.launch({
-    headless,
-    args,
-    defaultViewport: { width: 1280, height: 900 },
-  });
-
-  return browser;
+  return puppeteer.launch({ headless, args, defaultViewport: { width: 1280, height: 900 } });
 }
 
 async function tryFill(page, selectors, value) {
@@ -182,17 +184,18 @@ async function applyPlatformProfile(page, platform, kit, mode = 'edit') {
 }
 
 async function applyKitViaBrowser(store, kit, options = {}) {
-  if (!puppeteer) {
-    throw new Error('Puppeteer is not installed. Run: npm install puppeteer');
-  }
-
   const platforms = options.platforms || kit.platforms || [];
   const mode = options.mode || 'edit';
   const headless = options.headless === true;
   const proxy = kit.proxyId ? proxyManager.findProxyById(store, kit.proxyId) : null;
 
-  const browser = await launchBrowser(proxy, headless);
-  const page = await browser.newPage();
+  const browser = await launchBrowser(proxy, headless, {
+    store,
+    userDataPath: options.userDataPath,
+    kitId: kit.id,
+  });
+  const pages = await browser.pages();
+  const page = pages[0] || await browser.newPage();
 
   await page.setUserAgent(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

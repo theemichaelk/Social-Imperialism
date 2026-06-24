@@ -355,6 +355,7 @@ function buildBarHtml(pageId, profile) {
     ${hintHtml}
     <button type="button" class="grok-integrate-btn grok" data-action="grok-text"><i class="fas fa-comment"></i> Grok</button>
     <button type="button" class="grok-integrate-btn grok" data-action="grok-imagine"><i class="fas fa-image"></i> Imagine</button>
+    <button type="button" class="grok-integrate-btn grok" data-action="grok-video"><i class="fas fa-video"></i> Video</button>
     <button type="button" class="grok-integrate-btn primary" data-action="infographic"><i class="fas fa-magic"></i> Infographic</button>
     <button type="button" class="grok-integrate-btn" data-action="apply"><i class="fas fa-paste"></i> Apply</button>
     <button type="button" class="grok-integrate-btn connect" data-action="connect"><i class="fas fa-plug"></i> Connect</button>
@@ -611,6 +612,15 @@ function wireBar(bar, pageId) {
         }
         showPreview(lastResult);
         toast('Visual ready — click Apply', 'success');
+      } else if (action === 'grok-video') {
+        toast('Generating keyword video (wait + extend)…', 'info');
+        await ensureGrokReady(ipc);
+        const res = await ipc.invoke('grok-generate-video', { content, pageId, taskType: 'video' });
+        if (!res?.success) throw new Error(res?.error || 'Video generation failed');
+        const parts = res.totalParts ? ` · ${res.extendsClicked || 0} extend(s)` : '';
+        lastResult = { imageAsset: res.primaryAsset, videoAsset: res.primaryAsset, postText: '' };
+        showPreview(lastResult);
+        toast(`Video ready${parts} — click Apply`, 'success');
       } else if (action === 'infographic') {
         toast('Generating infographic…', 'info');
         try {

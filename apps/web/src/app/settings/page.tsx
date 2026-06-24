@@ -14,6 +14,7 @@ import { IntelligenceSettingsPanel } from '@/components/IntelligenceSettingsPane
 import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { INTEGRATION_GROUPS } from '@/lib/integrationCatalog';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
 
 type Campaign = {
   id: string; brandName?: string; domain?: string; status?: string;
@@ -38,6 +39,7 @@ const TABS = [
   { id: 'playbooks', label: 'Strategy Playbooks' },
   { id: 'site-health', label: 'Traffic & Rankings' },
   { id: 'api-keys', label: 'API Keys' },
+  { id: 'live-probes', label: 'Live Probes' },
   { id: 'account-intelligence', label: 'Account Intelligence' },
   { id: 'campaigns', label: 'Campaigns' },
   { id: 'billing', label: 'Billing' },
@@ -154,10 +156,28 @@ function SettingsContent() {
   async function testConnections() {
     setLoading(true);
     try {
-      const res = await invoke<{ apiMetrics?: Record<string, string>; output?: Record<string, string> }>('test-all-connections');
+      type AuditRes = {
+        apiMetrics?: Record<string, string>;
+        output?: Record<string, string>;
+        summary?: { pass?: number; warn?: number; fail?: number };
+        probes?: Array<{ id: string; label: string; status: string; summary?: string }>;
+      };
+      let res: AuditRes;
+      try {
+        res = await invoke<AuditRes>('run-live-connection-audit');
+      } catch {
+        res = await invoke<AuditRes>('test-all-connections');
+      }
       const metrics = res.apiMetrics || res.output || {};
       setApiStatus(metrics);
-      setMsg(`Connection scan: ${Object.values(metrics).filter((v) => v === 'Connected').length}/${Object.keys(metrics).length} live`);
+      const s = res.summary;
+      const issues = (res.probes || []).filter((p) => p.status === 'fail' || p.status === 'warn');
+      setMsg(s
+        ? `Live audit: ${s.pass ?? 0} pass · ${s.warn ?? 0} warn · ${s.fail ?? 0} fail`
+        : `Connection scan: ${Object.values(metrics).filter((v) => v === 'Connected').length}/${Object.keys(metrics).length} keys set`);
+      if (issues.length) {
+        setMsg((m) => `${m} — Issues: ${issues.map((i) => i.label).join(', ')}`);
+      }
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -309,7 +329,8 @@ function SettingsContent() {
               <button className="btn" onClick={() => setTabAndUrl('playbooks')}>Strategy Playbooks</button>
               <button className="btn" onClick={() => setTabAndUrl('account-intelligence')}>Account Intelligence</button>
               <button className="btn" onClick={() => setTabAndUrl('site-health')}>Traffic & Rankings</button>
-              <button className="btn" onClick={testConnections} disabled={loading}>Test All</button>
+              <button className="btn primary" onClick={testConnections} disabled={loading}>Run Live Audit</button>
+              <button className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Probes →</button>
             </div>
           </DataPanel>
           <DataPanel title="Credential Mode" live>
@@ -340,6 +361,13 @@ function SettingsContent() {
 
       {tab === 'site-health' && <SiteTrafficHealthPanel campaigns={campaigns} />}
 
+      {tab === 'live-probes' && (
+        <SettingsLiveProbes
+          onMetrics={(m) => setApiStatus(m)}
+          onMessage={setMsg}
+        />
+      )}
+
       {tab === 'api-keys' && (
         <>
           <div className="card" style={{ marginBottom: 12, borderColor: 'var(--accent)' }}>
@@ -366,6 +394,7 @@ function SettingsContent() {
             apiStatus={apiStatus}
             keySources={keySources.sources}
             onChange={(key, value) => setKeys((prev) => ({ ...prev, [key]: value }))}
+            onMetricStatus={(metric, status) => setApiStatus((prev) => ({ ...prev, [metric]: status }))}
           />
           <button className="btn primary" style={{ marginTop: 12 }} onClick={saveKeys} disabled={loading}>Save All Keys</button>
         </>
@@ -456,21 +485,31 @@ function SettingsContent() {
 
       {tab === 'grok' && (
         <DataPanel title="Grok Engine (Browser Session)" live>
-          <p className="settings-panel-desc">Infographic, Grok text, and Imagine use a persistent browser login — not an API key.</p>
+          <p className="settings-panel-desc">
+            Grok Text, <strong>Grok Imagine</strong> (images), Grok Video + Extend, and Infographics run through a persistent
+            <strong> Microsoft Edge</strong> profile at grok.com — not an API key. Brain docs: <code>brain/GROK.md</code> · skill: <code>brain/skills/grok-imagine/SKILL.md</code>
+          </p>
           <div className="grid grid-2">
             <input className="input" type="email" placeholder="x.ai / Grok email" value={grok.email || ''} onChange={(e) => setGrok({ ...grok, email: e.target.value })} />
             <input className="input" type="password" placeholder="Grok password" value={grok.password || ''} onChange={(e) => setGrok({ ...grok, password: e.target.value })} />
           </div>
           <div className="post-card" style={{ marginTop: 12, fontSize: '0.85rem' }}>
             {(grokStatus as { session?: { loggedIn?: boolean } }).session?.loggedIn
-              ? <span className="status-ok">✓ Grok authorized</span>
-              : <span className="status-partial">Not authorized — connect to enable Grok features</span>}
+              ? <span className="status-ok">✓ Grok authorized — Imagine, Video, and Text ready</span>
+              : <span className="status-partial">Not authorized — connect in desktop Settings or click Connect below</span>}
           </div>
+          <ul style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '12px 0', paddingLeft: 18 }}>
+            <li><strong>Grok Imagine</strong> — Content Hub → generates PNG to grok-assets/</li>
+            <li><strong>Grok Video</strong> — keyword prompt, ~1min wait, auto Extend per part</li>
+            <li><strong>Grok Text</strong> — new chat with campaign keyword prompts</li>
+            <li><strong>Edge profile</strong> — native-browser-profiles/edge/grok (cookies persist)</li>
+          </ul>
+          <button className="btn" style={{ marginBottom: 8 }} onClick={() => setTabAndUrl('tutorials')}>Open Setup Tutorial (tut_grok)</button>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <button className="btn primary" onClick={saveGrok}>Save Credentials</button>
             <button className="btn" onClick={async () => {
               setGrokStatus(await invoke<Record<string, unknown>>('grok-connect'));
-              setMsg('Grok connect initiated');
+              setMsg('Grok connect initiated — complete CAPTCHA in Edge if prompted');
             }}>Connect & Authorize</button>
             <button className="btn" onClick={async () => {
               setGrokStatus(await invoke<Record<string, unknown>>('grok-get-status'));

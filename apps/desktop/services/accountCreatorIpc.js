@@ -243,7 +243,10 @@ function pushKitScheduleToStore(store, kit, campaignId, launchDate) {
   return { success: true, count: posts.length };
 }
 
-function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress }) {
+let accountCreatorUserDataPath = null;
+
+function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress, userDataPath }) {
+  accountCreatorUserDataPath = userDataPath;
   const channels = [
     'get-proxy-pool',
     'save-proxy',
@@ -572,6 +575,7 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
         platforms: platforms || kit.platforms,
         mode: mode || 'edit',
         keepBrowserOpen: !!keepBrowserOpen,
+        userDataPath,
       });
       kit.browserAppliedAt = new Date().toISOString();
       kit.browserResults = result.results;
@@ -646,7 +650,7 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
 
 async function processBrowserBatchQueueInternal(store, onBatchProgress) {
   return browserBatchRunner.processBrowserBatchQueue(store, {
-    applyKitViaBrowser,
+    applyKitViaBrowser: (s, kit, opts) => applyKitViaBrowser(s, kit, { ...opts, userDataPath: accountCreatorUserDataPath }),
     uploadKitToLinkedAccounts,
     accountCreator,
     resolveKeys,

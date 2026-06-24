@@ -99,6 +99,44 @@ This document serves as the internal brain for Social Imperialism's AI when it n
 
 ---
 
+## 6. Grok Engine (Browser Session — Not an API)
+
+**Documentation:** `brain/GROK.md` · **Skill:** `brain/skills/grok-imagine/SKILL.md`  
+**Login URL:** https://grok.com/  
+**Imagine URL:** https://grok.com/imagine
+
+Social Imperialism does **not** use the xAI REST API for Grok. It automates a logged-in browser session via native Edge (default), Chrome, Opera, or Firefox.
+
+### Account (canonical)
+| Field | Value |
+|-------|-------|
+| Platform | grok |
+| Email | theesaintmichael@gmail.com |
+| Password | Kingme05$85$$ |
+
+### IPC channels
+| Channel | Purpose |
+|---------|---------|
+| `grok-get-status` | Session health probe |
+| `grok-connect` | Open browser, authorize login |
+| `grok-ask-text` | New-chat text with keyword prompts |
+| `grok-imagine` | Generate image via Imagine |
+| `grok-generate-video` | Video mode with auto-Extend |
+| `grok-generate-infographic` | Infographic pipeline |
+
+### Implementation files
+- `apps/desktop/services/grokBrowserAutomation.js`
+- `apps/desktop/services/nativeBrowserLauncher.js`
+- `apps/desktop/services/grokIpc.js`
+- `packages/core/src/grokDefaults.js`
+
+### Intelligence strategy (Grok)
+- Inject active campaign keywords into every Grok prompt (`grokPromptBuilder.js`).
+- Persist Edge cookies in `%APPDATA%\Social Imperialism\native-browser-profiles\edge\grok`.
+- Save generated PNG/MP4 to `%APPDATA%\Social Imperialism\grok-assets\`.
+
+---
+
 ## Universal API Tracking Protocol
 
 When Social Imperialism needs to integrate a new tool not listed above:

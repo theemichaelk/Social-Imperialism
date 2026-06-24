@@ -42,6 +42,13 @@ Errors are learning opportunities. When something breaks:
 - Update the directive to include the new flow  
 - The system is now stronger.  
 
+## Social Imperialism Brain (`brain/`)
+Before implementing Grok, browser automation, or new integrations, read:
+- `brain/BRAIN.md` — index
+- `brain/FEATURES.md` — feature catalog (desktop + web parity)
+- `brain/GROK.md` — Grok session, Edge profile, credentials, IPC channels
+- `brain/skills/grok-imagine/SKILL.md` — Grok Imagine image generation workflow
+
 ## File Organization  
 **Deliverables vs Intermediates:**  
 - **Deliverables:** Google Sheets, Google Slides, or other cloud-based outputs that the user can access  

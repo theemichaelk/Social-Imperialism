@@ -4,6 +4,7 @@
  */
 const path = require('path');
 const fs = require('fs');
+const nativeBrowser = require('./nativeBrowserLauncher');
 
 let puppeteer;
 try {
@@ -12,10 +13,13 @@ try {
   puppeteer = null;
 }
 
+let quoraStore = null;
+
 let userDataBasePath = null;
 
-function setUserDataPath(basePath) {
+function setUserDataPath(basePath, store) {
   userDataBasePath = basePath;
+  quoraStore = store || quoraStore;
 }
 
 function getSessionDir(connectionId) {
@@ -36,28 +40,20 @@ function sessionExists(connectionId) {
   }
 }
 
-async function launchBrowser(connectionId, { headless = true } = {}) {
-  if (!puppeteer) {
-    throw new Error('Puppeteer is not installed. Run: npm install puppeteer');
+async function launchBrowser(connectionId, { headless = true, store = null } = {}) {
+  const activeStore = store || quoraStore;
+  if (!activeStore) {
+    throw new Error('Quora browser store not configured.');
   }
-  const userDataDir = getSessionDir(connectionId);
-  const browser = await puppeteer.launch({
-    headless: headless ? 'new' : false,
-    userDataDir,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-blink-features=AutomationControlled',
-      '--window-size=1280,900',
-    ],
-    defaultViewport: { width: 1280, height: 900 },
+  const profileKey = `quora_${String(connectionId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const session = await nativeBrowser.launchNativeBrowser({
+    store: activeStore,
+    userDataPath: userDataBasePath,
+    profileKey,
+    headless: !!headless,
+    reuseActive: false,
   });
-  const pages = await browser.pages();
-  const page = pages[0] || await browser.newPage();
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  );
-  return { browser, page };
+  return { browser: session.browser, page: session.page };
 }
 
 async function isLoggedIn(page) {

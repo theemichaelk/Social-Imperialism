@@ -57,8 +57,22 @@ async function generateInfographic(store, userDataPath, payload = {}, getCampaig
 
   let videoAsset = null;
   if (includeVideo && imagineResult.success) {
-    const videoPrompt = `${imaginePrompt} Short motion graphic loop, subtle animation, professional marketing video clip.`;
-    const vidResult = await grokBrowser.generateGrokImagine(store, userDataPath, videoPrompt);
+    const videoBuilt = buildGrokPrompt({
+      store,
+      campaign,
+      content: content || payload.topic || '',
+      taskType: 'video',
+      pageId: payload.pageId,
+      keywordTerm: payload.keyword,
+      platform: payload.platform,
+    });
+    const videoPrompt = `${videoBuilt.prompt}\n\nVisual style: ${imaginePrompt}`;
+    const vidResult = await grokBrowser.generateGrokVideo(store, userDataPath, videoPrompt, {
+      keywordMeta: {
+        primaryKeyword: videoBuilt.primaryKeyword,
+        matchedKeywords: videoBuilt.matchedKeywords,
+      },
+    });
     videoAsset = vidResult.primaryAsset || null;
   }
 

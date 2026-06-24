@@ -55,7 +55,12 @@ for (const f of buildFiles) {
     console.warn(`  skip missing: ${f}`);
     continue;
   }
-  awsS3(`sync "${src}" s3://${BUCKET}/builds/web/${f} --delete`);
+  const dest = `s3://${BUCKET}/builds/web/${f}`;
+  if (fs.statSync(src).isDirectory()) {
+    awsS3(`sync "${src}" ${dest} --delete`);
+  } else {
+    awsS3(`cp "${src}" ${dest}`);
+  }
 }
 
 // Repo-level Amplify config

@@ -8,9 +8,11 @@ import {
   WorkflowStep,
   GeneratedPost,
   IMPERIAL_TEMPLATES,
+  ALL_TEMPLATE_IDS,
   enrichGeneratedItem,
   TemplateCategory,
 } from '@/lib/imperialContentTemplates';
+import { HUMANIZATION_LEVELS, HUMANIZATION_STEP_LABELS, HumanizationLevelId } from '@/lib/contentHumanization';
 import { SocialPostCard, TemplatePicker } from '@/components/SocialPostCard';
 import { PostEditorModal } from '@/components/PostEditorModal';
 import { ContentStudioLivePanel } from '@/components/ContentStudioLivePanel';
@@ -28,6 +30,7 @@ type Account = { id: string; platform: string; handle?: string };
 type StudioConfig = {
   models?: Array<{ id: string; label: string }>;
   frequencies?: Array<{ id: string; label: string }>;
+  humanizationLevels?: Array<{ id: string; label: string }>;
 };
 
 export function ImperialContentStudio() {
@@ -36,10 +39,9 @@ export function ImperialContentStudio() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [config, setConfig] = useState<StudioConfig>({});
   const [keywords, setKeywords] = useState('');
-  const [selectedTemplates, setSelectedTemplates] = useState<TemplateCategory[]>([
-    'promotional-design', 'promotional-ai-image', 'educational-carousel', 'quote-ai-image',
-  ]);
-  const [model, setModel] = useState('gemini');
+  const [selectedTemplates, setSelectedTemplates] = useState<TemplateCategory[]>(ALL_TEMPLATE_IDS);
+  const [model, setModel] = useState('grok-browser');
+  const [humanizationLevel, setHumanizationLevel] = useState<HumanizationLevelId>('maximum');
   const [count, setCount] = useState(3);
   const [posts, setPosts] = useState<GeneratedPost[]>([]);
   const [editing, setEditing] = useState<GeneratedPost | null>(null);
@@ -77,27 +79,22 @@ export function ImperialContentStudio() {
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
   const approved = useMemo(() => posts.filter((p) => p.status === 'approved'), [posts]);
-  const types = useMemo(() => {
-    const typeSet = new Set<string>();
-    selectedTemplates.forEach((id) => {
-      const t = IMPERIAL_TEMPLATES.find((x) => x.id === id);
-      if (t) typeSet.add(t.contentType);
-    });
-    return [...typeSet];
-  }, [selectedTemplates]);
-
   async function generateBatch() {
     if (!keywords.trim()) { setMsg('Add keywords or save your brand profile first'); return; }
-    if (!types.length) { setMsg('Select at least one template style'); return; }
+    if (!selectedTemplates.length) { setMsg('Select at least one template style'); return; }
     setLoading(true);
-    setMsg('Social Imperialism is generating your month of content…');
+    const grokNote = model === 'grok-browser' ? ' (Grok browser for text + Imagine/Video visuals)' : '';
+    const humanNote = humanizationLevel !== 'off' ? ` + ${humanizationLevel} humanization` : '';
+    setMsg(`Generating ${selectedTemplates.length} template type(s) × ${count}${grokNote}${humanNote}…`);
     try {
       const acc = accounts[0];
       const res = await invoke<{ success?: boolean; items?: GeneratedPost[]; error?: string; message?: string }>('run-content-studio', {
         keywords: keywords.split(/[,\n]+/).map((s) => s.trim()).filter(Boolean),
-        types,
+        templateIds: selectedTemplates,
         count,
         model,
+        humanizationLevel,
+        useGrok: model === 'grok-browser',
         account: acc || null,
         scheduleConfig: { mode: 'preview' },
         tabId: 'standard',
@@ -148,7 +145,7 @@ export function ImperialContentStudio() {
             mediaUrl,
             hasMedia: !!mediaUrl,
             isVideo: !!item.isVideo,
-            humanLike: false,
+            humanLike: humanizationLevel !== 'off',
           });
           if (res?.success === false) throw new Error(res.error || 'Publish failed');
           published += 1;
@@ -274,7 +271,10 @@ export function ImperialContentStudio() {
           <label className="ac-label">Keywords & topics</label>
           <textarea className="input" rows={2} value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="marketing automation, brand growth, …" />
 
-          <label className="ac-label" style={{ marginTop: 12 }}>Designer template styles</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+            <label className="ac-label" style={{ margin: 0 }}>Designer template styles (Grok generates visuals for image/video/carousel types)</label>
+            <button type="button" className="btn" style={{ fontSize: '0.75rem' }} onClick={() => setSelectedTemplates(ALL_TEMPLATE_IDS)}>Select all</button>
+          </div>
           <TemplatePicker selected={selectedTemplates} onChange={setSelectedTemplates} />
 
           <div style={{ marginTop: 12 }}>
@@ -300,7 +300,7 @@ export function ImperialContentStudio() {
             <div>
               <label className="ac-label">AI model</label>
               <select className="input" value={model} onChange={(e) => setModel(e.target.value)}>
-                {(config.models || [{ id: 'gemini', label: 'Gemini' }]).map((m) => (
+                {(config.models || [{ id: 'grok-browser', label: 'Grok (browser)' }, { id: 'gemini', label: 'Gemini' }]).map((m) => (
                   <option key={m.id} value={m.id}>{m.label}</option>
                 ))}
               </select>
@@ -311,8 +311,29 @@ export function ImperialContentStudio() {
             </div>
           </div>
 
+          <div style={{ marginTop: 12 }}>
+            <label className="ac-label">Humanization level</label>
+            <select className="input" value={humanizationLevel} onChange={(e) => setHumanizationLevel(e.target.value as HumanizationLevelId)}>
+              {(config.humanizationLevels || HUMANIZATION_LEVELS).map((l) => (
+                <option key={l.id} value={l.id}>{l.label}</option>
+              ))}
+            </select>
+            <p className="settings-panel-desc" style={{ marginTop: 6, fontSize: '0.78rem' }}>
+              {HUMANIZATION_LEVELS.find((l) => l.id === humanizationLevel)?.description}
+              {humanizationLevel === 'maximum' && ' — runs all steps: rewrite, tone, proofread, elaborate, paraphrase, anti-AI detection, native polish.'}
+            </p>
+            {humanizationLevel !== 'off' && (
+              <details style={{ marginTop: 8, fontSize: '0.72rem', color: '#64748b' }}>
+                <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>Humanization workflow steps</summary>
+                <ol style={{ margin: '8px 0 0', paddingLeft: 18, lineHeight: 1.5 }}>
+                  {HUMANIZATION_STEP_LABELS.map((s) => <li key={s}>{s}</li>)}
+                </ol>
+              </details>
+            )}
+          </div>
+
           <button type="button" className="btn primary" style={{ marginTop: 16 }} onClick={generateBatch} disabled={loading || !selectedTemplates.length}>
-            {loading ? 'Generating…' : 'Generate Posts'}
+            {loading ? 'Generating…' : model === 'grok-browser' ? 'Generate with Grok' : 'Generate Posts'}
           </button>
         </div>
       )}

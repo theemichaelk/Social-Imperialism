@@ -45,6 +45,7 @@ function prepareGrokRequest(store, payload) {
 }
 
 function registerGrokHandlers({ ipcMain, store, userDataPath }) {
+  grokBrowser.seedGrokDefaultsIfNeeded(store);
   const channels = [
     'grok-ping',
     'get-grok-settings',
@@ -53,6 +54,7 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
     'grok-get-status',
     'grok-ask-text',
     'grok-imagine',
+    'grok-generate-video',
     'grok-generate-infographic',
     'grok-close-browser',
     'grok-build-prompt-preview',
@@ -142,6 +144,25 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
     }
   });
 
+  ipcMain.handle('grok-generate-video', async (event, payload) => {
+    try {
+      const p = resolveGrokPayload(store, payload);
+      const { prompt, meta } = prepareGrokRequest(store, {
+        ...p,
+        content: p.content || p.prompt || p.topic || '',
+        taskType: 'video',
+      });
+      const motionSuffix = '\n\nCinematic marketing video clip with smooth motion, professional pacing, vertical 9:16 friendly framing.';
+      return await grokBrowser.generateGrokVideo(store, userDataPath, `${prompt}${motionSuffix}`, {
+        extendParts: p.extendParts ?? payload?.extendParts,
+        maxExtends: p.maxExtends ?? payload?.maxExtends ?? 5,
+        keywordMeta: meta,
+      });
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
   ipcMain.handle('grok-generate-infographic', async (event, payload) => {
     try {
       return await infographicGenerator.generateInfographic(store, userDataPath, payload || {}, getActiveCampaign);
@@ -156,7 +177,7 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
     return { success: true };
   });
 
-  console.log('[grokIpc] Registered Grok IPC handlers (keyword-aware prompts, connect, text, imagine, infographic)');
+  console.log('[grokIpc] Registered Grok IPC handlers (keyword-aware prompts, connect, text, imagine, video+extend, infographic)');
 }
 
 module.exports = { registerGrokHandlers, prepareGrokRequest, getActiveCampaign };

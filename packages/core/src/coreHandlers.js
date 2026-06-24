@@ -64,7 +64,12 @@ function registerCoreHandlers(deps) {
     let stored = {};
     try { stored = JSON.parse(store.getItem('globalApiKeys') || '{}'); } catch (e) {}
     const keys = resolveKeys(stored);
-    store.setItem('globalApiKeys', JSON.stringify(keys));
+    const servicesPath = deps.DESKTOP_SERVICES || path.join(__dirname, '../../../apps/desktop/services');
+    const { isPlatformAdmin } = require(path.join(servicesPath, 'keys'));
+    const ctx = store._invokeContext || {};
+    if (isPlatformAdmin(ctx.email)) {
+      store.setItem('globalApiKeys', JSON.stringify(keys));
+    }
     return keys;
   });
 
@@ -681,25 +686,30 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     let stored = {};
     try { stored = JSON.parse(store.getItem('globalApiKeys') || '{}'); } catch (e) {}
     const servicesPath = deps.DESKTOP_SERVICES || path.join(__dirname, '../../../apps/desktop/services');
-    const { getKeySources } = require(path.join(servicesPath, 'keys'));
-    const sources = getKeySources(stored);
+    const { getKeySources, isPlatformAdmin } = require(path.join(servicesPath, 'keys'));
+    const ctx = store._invokeContext || {};
+    const isAdmin = isPlatformAdmin(ctx.email);
+    const sources = getKeySources(stored, { useEnv: isAdmin });
     const envCount = Object.values(sources).filter((s) => s === 'env').length;
     const userCount = Object.values(sources).filter((s) => s === 'user').length;
     return {
       sources,
-      isAdminEnv: envCount > 0,
+      isAdmin,
+      isAdminEnv: isAdmin && envCount > 0,
       envKeyCount: envCount,
       userKeyCount: userCount,
-      message: envCount > 0
+      message: isAdmin && envCount > 0
         ? 'Admin .env keys loaded — clients must configure their own credentials to run features.'
-        : 'No .env keys detected — configure credentials below to enable live features.',
+        : isAdmin
+          ? 'Admin account detected but no .env keys found on server — configure credentials below or set server env vars.'
+          : 'Configure your own API credentials below to enable live features.',
     };
   });
 
   ipcMain.handle('shorten-url', async (event, url) => {
     const target = url || 'https://example.com';
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const key = keys.tinyurlApiKey || process.env.TINYURL_API_KEY;
+    const key = keys.tinyurlApiKey;
     if (!key) return { shortUrl: target };
     try {
       const res = await axios.get(`https://api.tinyurl.com/create?api_token=${key}&url=${encodeURIComponent(target)}`, { timeout: 8000 });

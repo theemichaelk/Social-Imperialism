@@ -196,13 +196,34 @@ function firstDefined(sources, keys) {
   return null;
 }
 
-function resolveKeys(globalKeys = {}) {
+function getAdminEmails() {
+  const raw = process.env.ADMIN_EMAILS || process.env.SEED_EMAIL || 'theesaintmichael@gmail.com,michaelk@tsbrenterprises.com';
+  return raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+
+function isPlatformAdmin(email) {
+  return getAdminEmails().includes(String(email || '').trim().toLowerCase());
+}
+
+function shouldUseEnvKeys(storeOrOpts) {
+  if (!storeOrOpts) return true;
+  if (typeof storeOrOpts === 'object' && storeOrOpts._invokeContext) {
+    return isPlatformAdmin(storeOrOpts._invokeContext.email);
+  }
+  if (typeof storeOrOpts === 'object' && storeOrOpts.useEnv != null) return !!storeOrOpts.useEnv;
+  return true;
+}
+
+function resolveKeys(globalKeys = {}, opts = {}) {
+  const useEnv = opts.useEnv !== false;
+  const envOverridesUser = !!opts.envOverridesUser;
   const keys = { ...globalKeys };
 
-  for (const [canonical, envNames] of Object.entries(ENV_ALIASES)) {
-    if (!keys[canonical]) {
+  if (useEnv) {
+    for (const [canonical, envNames] of Object.entries(ENV_ALIASES)) {
       const fromEnv = firstDefined(process.env, envNames);
-      if (fromEnv) keys[canonical] = fromEnv;
+      if (!fromEnv) continue;
+      if (envOverridesUser || !keys[canonical]) keys[canonical] = fromEnv;
     }
   }
 
@@ -252,13 +273,11 @@ function hasMailchimpKeys(keys) {
 }
 
 function hasSmtpKeys(keys) {
-  return !!(keys.smtpHost && keys.smtpUser && keys.smtpPass)
-    || !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  return !!(keys.smtpHost && keys.smtpUser && keys.smtpPass);
 }
 
 function hasAcumbamailKeys(keys) {
-  return !!(keys.acumbamailUser && keys.acumbamailPass)
-    || !!(process.env.ACUMBAMAIL_SMTP_USER && (process.env.ACUMBAMAIL_SMTP_PASS || process.env.ACUMBAMAIL_AUTH_TOKEN));
+  return !!(keys.acumbamailUser && keys.acumbamailPass);
 }
 
 function twitterConsumerKey(keys) {
@@ -355,14 +374,15 @@ function hasStoredConnectToken(platform, keys) {
   return !!resolveSettingsToken(platform, keys);
 }
 
-function getKeySources(globalKeys = {}) {
+function getKeySources(globalKeys = {}, opts = {}) {
+  const useEnv = opts.useEnv !== false;
   const sources = {};
   const allCanonical = new Set([
     ...Object.keys(ENV_ALIASES),
     ...Object.keys(STORAGE_ALIASES),
   ]);
   for (const canonical of allCanonical) {
-    const fromEnv = firstDefined(process.env, ENV_ALIASES[canonical] || []);
+    const fromEnv = useEnv ? firstDefined(process.env, ENV_ALIASES[canonical] || []) : null;
     const storageNames = STORAGE_ALIASES[canonical] || [canonical];
     const fromStorage = firstDefined(globalKeys, storageNames);
     if (fromEnv) sources[canonical] = 'env';
@@ -372,9 +392,34 @@ function getKeySources(globalKeys = {}) {
   return sources;
 }
 
+function readStoredKeys(store) {
+  try {
+    return JSON.parse(store.getItem('globalApiKeys') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function resolveKeysFromStore(store, globalKeys) {
+  const stored = globalKeys !== undefined && globalKeys !== null
+    ? globalKeys
+    : readStoredKeys(store);
+  const useEnv = shouldUseEnvKeys(store);
+  return resolveKeys(stored, { useEnv, envOverridesUser: useEnv });
+}
+
+function createStoreResolveKeys(store) {
+  return (globalKeys) => resolveKeysFromStore(store, globalKeys);
+}
+
 module.exports = {
   resolveKeys,
+  resolveKeysFromStore,
+  createStoreResolveKeys,
   getKeySources,
+  getAdminEmails,
+  isPlatformAdmin,
+  shouldUseEnvKeys,
   twitterConsumerKey,
   twitterConsumerSecret,
   hasTwitterKeys,

@@ -111,6 +111,18 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
 .cs-preview { margin-top: 0.75rem; max-height: 160px; overflow-y: auto; font-size: 0.75rem; color: #94a3b8; }
 .cs-preview-item { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; }
 
+.ics-hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.ics-stats { display: flex; gap: 1rem; }
+.ics-stat { text-align: center; min-width: 64px; }
+.ics-stat strong { display: block; font-size: 1.4rem; color: #38bdf8; }
+.ics-stat span { font-size: 0.68rem; color: #64748b; text-transform: uppercase; }
+.ics-template-grid { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.ics-tpl-chip { padding: 5px 10px; border-radius: 14px; border: 1px solid #475569; font-size: 0.68rem; cursor: pointer; color: #cbd5e1; background: #0f172a; }
+.ics-tpl-chip.on { border-color: #a78bfa; color: #e9d5ff; background: rgba(124,58,237,0.15); }
+.ics-workflow { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+.ics-step { padding: 6px 12px; border-radius: 8px; border: 1px solid #334155; background: rgba(15,23,42,0.6); font-size: 0.72rem; color: #94a3b8; }
+.ics-step.active { border-color: #38bdf8; color: #38bdf8; }
+
 .thumb-studio { background: linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.9)); border: 1px solid #7c3aed; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; }
 .thumb-studio h3 { margin: 0 0 0.35rem; color: #c4b5fd; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
 .thumb-studio .sub { color: #94a3b8; font-size: 0.82rem; margin: 0 0 1rem; }
@@ -174,6 +186,68 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
       <button class="secondary-btn" onclick="window.location.href='calendar.html'"><i class="fas fa-calendar-alt"></i> View Calendar</button>
     </div>
     <div id="apiStatusBar"></div>
+
+    <!-- Imperial Content Generator — above connected accounts -->
+    <div id="imperialGeneratorPanel" class="content-studio-box" style="border-color:#7c3aed;">
+      <div class="ics-hero">
+        <div>
+          <div class="cs-title" style="color:#a78bfa;margin:0 0 6px;"><i class="fas fa-wand-magic-sparkles"></i> Fast, quality content for your socials</div>
+          <p style="margin:0;font-size:0.82rem;color:#94a3b8;max-width:560px;">Social Imperialism creates consistent, on-brand posts — professional templates in your voice, not generic AI output. Generate → design → approve → publish. <strong>Grok</strong> powers text, Imagine images, and Video for visual templates.</p>
+        </div>
+        <div class="ics-stats">
+          <div class="ics-stat"><strong id="icsGenCount">0</strong><span>Generated</span></div>
+          <div class="ics-stat"><strong id="icsApprovedCount">0</strong><span>Approved</span></div>
+          <div class="ics-stat"><strong id="icsAccountCount">0</strong><span>Accounts</span></div>
+        </div>
+      </div>
+      <div class="ics-workflow">
+        <span class="ics-step active">🎯 Brand Voice</span>
+        <span class="ics-step active">✨ Generate</span>
+        <span class="ics-step">✓ Edit &amp; Approve</span>
+        <span class="ics-step">🚀 Schedule &amp; Publish</span>
+      </div>
+      <span class="cs-label">Keywords &amp; topics</span>
+      <textarea class="cs-textarea" id="icsKeywords" placeholder="seo, brand growth, marketing automation…" style="min-height:52px;"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:6px;">
+        <span class="cs-label" style="margin:0;">Designer template styles</span>
+        <button type="button" class="cs-btn" onclick="icsSelectAllTemplates()">Select all</button>
+      </div>
+      <div class="ics-template-grid" id="icsTemplateGrid"></div>
+      <div class="content-studio-grid" style="margin-top:10px;">
+        <div>
+          <span class="cs-label">AI model</span>
+          <select class="cs-select" id="icsModel">
+            <option value="grok-browser" selected>Grok (browser — text + Imagine/Video)</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="openai/gpt-4o">GPT-4o (OpenRouter)</option>
+          </select>
+        </div>
+        <div>
+          <span class="cs-label">Posts per template</span>
+          <input type="number" class="cs-input" id="icsCount" min="1" max="5" value="3">
+        </div>
+        <div class="full">
+          <span class="cs-label">Humanization level</span>
+          <select class="cs-select" id="icsHumanization">
+            <option value="maximum" selected>Maximum (16-step human-native workflow)</option>
+            <option value="standard">Standard (8 steps)</option>
+            <option value="light">Light</option>
+            <option value="off">Off</option>
+          </select>
+          <p style="margin:6px 0 0;font-size:0.72rem;color:#64748b;">Rewrite, tone, proofread, paraphrase, expand/shorten, anti-AI detection — content that reads 100% human-written.</p>
+        </div>
+        <div class="full">
+          <label style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:#94a3b8;cursor:pointer;">
+            <input type="checkbox" id="icsUseLibrary" checked style="width:auto;"> Use content library assets in generation
+          </label>
+        </div>
+      </div>
+      <div class="cs-actions">
+        <button type="button" class="cs-btn primary" id="icsGenerateBtn" onclick="runImperialBatch()"><i class="fas fa-bolt"></i> Generate Posts</button>
+      </div>
+      <div class="cs-preview" id="icsPreview">Generated posts appear here — open Content Studio preview or apply to Post tab.</div>
+    </div>
+
     <div id="noAccountsBanner" class="ch-no-accounts" style="display:none;">
       <span><i class="fas fa-link"></i> No social accounts linked — publish, groups, and live profile need connections in Account Hub.</span>
       <a href="account-hub.html" class="secondary-btn" style="padding:0.4rem 0.9rem;font-size:0.8rem;text-decoration:none;color:inherit;"><i class="fas fa-plug"></i> Link Accounts</a>
@@ -371,6 +445,7 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
       
       <div class="toolbar">
         <button class="tool-btn generate" onclick="enhanceVideoCaption()"><i class="fas fa-magic"></i> AI Write Caption</button>
+        <button class="tool-btn generate" onclick="window.social_api.grokVideo()"><i class="fas fa-video"></i> Grok Video (Keywords + Extend)</button>
       </div>
 
       <textarea class="textarea-field" id="videoCaption" style="min-height: 120px;" placeholder="Write your highly engaging Reel/Video caption here..."></textarea>
@@ -583,6 +658,7 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
         <button class="tool-btn generate" onclick="generateHubInfographic()"><i class="fas fa-magic"></i> Generate Full Infographic</button>
         <button class="tool-btn generate" onclick="grokHubText()"><i class="fas fa-comment"></i> Grok Text (New Chat)</button>
         <button class="tool-btn generate" onclick="grokHubImagine()"><i class="fas fa-image"></i> Grok Imagine</button>
+        <button class="tool-btn generate" onclick="grokHubVideo()"><i class="fas fa-film"></i> Grok Video + Extend</button>
         <button class="tool-btn" onclick="applyInfographicToPost()"><i class="fas fa-paste"></i> Apply to Standard Post</button>
         <button class="tool-btn" onclick="pullDraftIntoInfographic()"><i class="fas fa-arrow-down"></i> Pull from Post Draft</button>
       </div>
@@ -657,6 +733,89 @@ const { ipcRenderer, shell } = require('electron');
 
 const PLATFORMS = ['Facebook', 'Instagram', 'WhatsApp', 'YouTube', 'TikTok', 'LinkedIn', 'Reddit', 'Twitter', 'Discord', 'Pinterest', 'Telegram', 'Snapchat', 'Threads', 'Twitch'];
 const CONTENT_STUDIO_TABS = ['standard', 'media', 'repurpose', 'analytics', 'answer', 'rss'];
+
+const IMPERIAL_TEMPLATES = [
+  { id: 'promotional-design', label: 'Promotional Design' },
+  { id: 'promotional-ai-image', label: 'Promotional AI Image' },
+  { id: 'educational-carousel', label: 'Educational Carousel' },
+  { id: 'promotional-video', label: 'Promotional Video' },
+  { id: 'educational-design', label: 'Educational Design' },
+  { id: 'quote-ai-image', label: 'Quote AI Image' },
+  { id: 'national-day-carousel', label: 'National Day Carousel' },
+  { id: 'national-day-design', label: 'National Day Design' },
+  { id: 'photo-highlight', label: 'Photo Highlight' },
+  { id: 'testimonial-ai-image', label: 'Testimonial AI Image' },
+  { id: 'thought-leadership', label: 'Thought Leadership' },
+  { id: 'thread', label: 'Thread / X' },
+];
+let icsSelectedTemplates = IMPERIAL_TEMPLATES.map((t) => t.id);
+let icsLastItems = [];
+
+function initImperialGenerator() {
+  const grid = document.getElementById('icsTemplateGrid');
+  if (!grid) return;
+  grid.innerHTML = IMPERIAL_TEMPLATES.map((t) =>
+    `<span class="ics-tpl-chip ${icsSelectedTemplates.includes(t.id) ? 'on' : ''}" data-tid="${t.id}" onclick="icsToggleTemplate('${t.id}')">${escapeHtml(t.label)}</span>`
+  ).join('');
+}
+
+window.icsToggleTemplate = function(id) {
+  icsSelectedTemplates = icsSelectedTemplates.includes(id)
+    ? icsSelectedTemplates.filter((x) => x !== id)
+    : [...icsSelectedTemplates, id];
+  initImperialGenerator();
+};
+
+window.icsSelectAllTemplates = function() {
+  icsSelectedTemplates = IMPERIAL_TEMPLATES.map((t) => t.id);
+  initImperialGenerator();
+};
+
+window.runImperialBatch = async function() {
+  const keywords = document.getElementById('icsKeywords')?.value?.trim();
+  if (!keywords) return showToast('Enter keywords first', 'error');
+  if (!icsSelectedTemplates.length) return showToast('Select at least one template', 'error');
+  const preview = document.getElementById('icsPreview');
+  const btn = document.getElementById('icsGenerateBtn');
+  if (preview) preview.textContent = 'Generating with Grok + humanization…';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…'; }
+  try {
+    const stdSel = document.getElementById('accountSelect');
+    const accountOpt = stdSel?.options[stdSel.selectedIndex];
+    const res = await ipcRenderer.invoke('run-content-studio', {
+      keywords: keywords.split(/[,\n]+/).map((s) => s.trim()).filter(Boolean),
+      templateIds: icsSelectedTemplates,
+      count: parseInt(document.getElementById('icsCount')?.value, 10) || 3,
+      model: document.getElementById('icsModel')?.value || 'grok-browser',
+      humanizationLevel: document.getElementById('icsHumanization')?.value || 'maximum',
+      useGrok: document.getElementById('icsModel')?.value === 'grok-browser',
+      useLibraryAssets: document.getElementById('icsUseLibrary')?.checked !== false,
+      tabId: 'standard',
+      account: accountOpt?.value ? { id: accountOpt.value, platform: accountOpt.getAttribute('data-platform') || 'Facebook' } : null,
+      scheduleConfig: { mode: 'generate_only' },
+    });
+    if (!res.success && !res.items?.length) throw new Error(res.error || 'Generation failed');
+    icsLastItems = res.items || [];
+    document.getElementById('icsGenCount').textContent = String(icsLastItems.length);
+    if (preview) {
+      preview.innerHTML = icsLastItems.map((it, i) =>
+        `<div class="cs-preview-item"><strong>${i + 1}. ${escapeHtml(it.templateId || it.type)}</strong>${it.mediaUrl ? ' <span style="color:#10b981;">[+Grok media]</span>' : ''}<br>${escapeHtml((it.content || '').slice(0, 160))}…</div>`
+      ).join('');
+    }
+    if (icsLastItems[0]) {
+      const ta = document.getElementById('postContent');
+      if (ta) ta.value = icsLastItems[0].content || '';
+      const mu = document.getElementById('mediaUrl');
+      if (mu && icsLastItems[0].mediaUrl) mu.value = icsLastItems[0].mediaUrl;
+    }
+    showToast(res.message || `Generated ${icsLastItems.length} post(s)`, 'success');
+  } catch (e) {
+    if (preview) preview.textContent = 'Error: ' + e.message;
+    showToast('Generate failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Posts'; }
+  }
+};
 const CONTENT_TYPE_OPTIONS = [
   { id: 'post', label: 'Text Post' },
   { id: 'image', label: 'Image' },
@@ -696,6 +855,8 @@ async function seedContentStudioKeywords() {
     document.querySelectorAll('.cs-keywords-sync').forEach((el) => {
       if (!el.value.trim()) el.value = seed;
     });
+    const icsKw = document.getElementById('icsKeywords');
+    if (icsKw && !icsKw.value.trim()) icsKw.value = seed;
   } catch (e) { /* non-fatal */ }
 }
 
@@ -1283,6 +1444,8 @@ async function loadAccounts() {
   }
 
   populateStudioAccounts();
+  const accCount = document.getElementById('icsAccountCount');
+  if (accCount) accCount.textContent = String((accounts || []).length);
 
   if (active) {
     const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
@@ -1398,6 +1561,34 @@ window.social_api = {
       showToast('Grok Imagine: ' + e.message, 'error');
     }
   },
+  async grokVideo() {
+    const caption = document.getElementById('videoCaption')?.value?.trim()
+      || document.getElementById('postContent')?.value?.trim()
+      || prompt('Grok Video topic (uses tracked keywords):', 'brand marketing reel');
+    if (!caption) return;
+    showToast('Grok Video: generating, waiting ~1min per part, then Extend…', 'info');
+    const preview = document.getElementById('videoPreviewElement');
+    const icon = document.getElementById('videoIcon');
+    const uploadText = document.getElementById('videoUploadText');
+    try {
+      const res = await ipcRenderer.invoke('grok-generate-video', { content: caption, pageId: 'content-hub', taskType: 'video' });
+      if (!res.success || !res.primaryAsset) throw new Error(res.error || 'No video returned');
+      const uploaded = await ipcRenderer.invoke('upload-local-media', res.primaryAsset.path);
+      const url = uploaded || res.primaryAsset.url;
+      const store = document.getElementById('videoBase64Store');
+      if (store && uploaded) store.value = uploaded;
+      if (preview) {
+        preview.src = url;
+        preview.style.display = 'block';
+      }
+      if (icon) icon.style.display = 'none';
+      if (uploadText) uploadText.textContent = `Grok video ready (${res.extendsClicked || 0} extend)`;
+      const kw = res.matchedKeywords?.length ? ` · keywords: ${res.matchedKeywords.join(', ')}` : '';
+      showToast(`Grok video attached${kw}`, 'success');
+    } catch (e) {
+      showToast('Grok Video: ' + e.message, 'error');
+    }
+  },
 };
 
 let lastInfographicResult = null;
@@ -1457,6 +1648,24 @@ window.grokHubText = async function() {
     showToast('Grok text received', 'success');
   } catch (e) {
     showToast('Grok text: ' + e.message, 'error');
+  }
+};
+
+window.grokHubVideo = async function() {
+  const content = document.getElementById('igContent')?.value?.trim() || 'marketing video';
+  showToast('Grok Video — keyword prompt, ~1min wait, auto Extend per part…', 'info');
+  try {
+    const res = await ipcRenderer.invoke('grok-generate-video', { content, pageId: 'content-hub', taskType: 'video' });
+    if (!res.success) throw new Error(res.error);
+    lastInfographicResult = { ...(lastInfographicResult || {}), videoAsset: res.primaryAsset, imageAsset: res.primaryAsset };
+    const preview = document.getElementById('igPreview');
+    if (preview && res.primaryAsset?.url) {
+      preview.style.display = 'block';
+      preview.innerHTML = `<video src="${res.primaryAsset.url}" controls style="width:100%;max-height:320px;"></video>`;
+    }
+    showToast(`Grok video ready (${res.extendsClicked || 0} extend, ${res.totalParts || 1} parts)`, 'success');
+  } catch (e) {
+    showToast('Grok Video: ' + e.message, 'error');
   }
 };
 
@@ -2643,6 +2852,7 @@ window.getLiveKeys = async function() {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
+  initImperialGenerator();
   initContentStudios();
   await loadThumbnailStudioConfig();
   const thumbDrop = document.getElementById('thumbDropzone');

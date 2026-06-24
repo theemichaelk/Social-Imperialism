@@ -11,7 +11,7 @@ function registerIndexHandlers(deps) {
 
   const getGlobalKey = (key) => {
     try {
-      return JSON.parse(store.getItem('globalApiKeys') || '{}')[key];
+      return resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'))[key];
     } catch (e) { return null; }
   };
 
@@ -37,7 +37,7 @@ function registerIndexHandlers(deps) {
 
   async function runAdvancedWorkflow(recipe, inputPayload) {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const wfKey = keys.advancedWorkflowKey || process.env.ADVANCED_WORKFLOW_KEY;
+    const wfKey = keys.advancedWorkflowKey;
     if (!wfKey) return { success: false, error: 'No Advanced Workflow Key configured' };
     try {
       const res = await axios.post(`https://api.gooey.ai/v1/recipes/${recipe}/run`, { input: inputPayload }, {
@@ -51,7 +51,7 @@ function registerIndexHandlers(deps) {
 
   async function generateImageForStudio(prompt) {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const falKey = keys.falKey || process.env.FAL_KEY;
+    const falKey = keys.falKey;
     if (keys.advancedWorkflowKey) {
       const wfRes = await runAdvancedWorkflow('text2image', { text_prompt: prompt, num_images: 1, image_size: 'square_hd' });
       if (wfRes.success && wfRes.output?.images?.[0]) {
@@ -102,7 +102,7 @@ function registerIndexHandlers(deps) {
   });
 
   ipcMain.handle('get-domain-metrics', async (event, domain) => {
-    const domKey = getGlobalKey('domDetailer') || process.env.DOMDETAILER_API_KEY;
+    const domKey = getGlobalKey('domDetailer');
     if (!domKey) return { error: 'No DomDetailer API Key configured.' };
     if (!domain) return { error: 'No domain provided.' };
     try {
@@ -116,8 +116,8 @@ function registerIndexHandlers(deps) {
   ipcMain.handle('get-site-traffic-health', async (event, payload) => {
     const { domains = [], keyword = '' } = payload || {};
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const domKey = keys.domDetailer || process.env.DOMDETAILER_API_KEY;
-    const serpKey = keys.serpApiKey || process.env.SERP_API_KEY;
+    const domKey = keys.domDetailer;
+    const serpKey = keys.serpApiKey;
     const siteList = (Array.isArray(domains) ? domains : [domains]).filter(Boolean).slice(0, 8);
 
     const sites = await Promise.all(siteList.map(async (domain) => {
@@ -187,7 +187,7 @@ function registerIndexHandlers(deps) {
   ipcMain.handle('get-domdetailer-metrics', async (event, targetDomain) => {
     const domain = (targetDomain || getCampaign().domain || '').trim();
     if (!domain) return { error: 'No domain provided.' };
-    const domKey = getGlobalKey('domDetailer') || process.env.DOMDETAILER_API_KEY;
+    const domKey = getGlobalKey('domDetailer');
     if (!domKey) return { error: 'No DomDetailer API Key configured.' };
     try {
       const url = `http://domdetailer.com/api/checkDomain.php?domain=${encodeURIComponent(domain)}&app=SocialImperialism&apikey=${encodeURIComponent(domKey)}`;
@@ -394,7 +394,7 @@ function registerIndexHandlers(deps) {
   ipcMain.handle('generate-carousel-fal', async (event, payload) => {
     const campaign = getCampaign();
     const slides = await integrations.generateCarouselSlides({
-      generateAI, falKey: getGlobalKey('falKey') || process.env.FAL_KEY,
+      generateAI, falKey: getGlobalKey('falKey'),
       topic: payload?.topic || 'brand update', campaign, count: payload?.count || 4,
     });
     return { success: true, slides };
@@ -403,7 +403,7 @@ function registerIndexHandlers(deps) {
   ipcMain.handle('run-content-scheduler-now', async () => {
     const campaign = getCampaign();
     const result = await integrations.runContentScheduler({
-      store, generateAI, falKey: getGlobalKey('falKey') || process.env.FAL_KEY, campaign,
+      store, generateAI, falKey: getGlobalKey('falKey'), campaign,
       publishFn: (post, accountIds) => postCuratedToFanpages(post, accountIds),
     });
     return { success: true, ...result };
@@ -427,7 +427,7 @@ function registerIndexHandlers(deps) {
     const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]');
     return { success: true, ...(await integrations.runHandsFreeCycle({
       store, campaign, keys, linkedAccounts, generateAI,
-      falKey: getGlobalKey('falKey') || process.env.FAL_KEY,
+      falKey: getGlobalKey('falKey'),
       publishFn: (post, accountIds) => postCuratedToFanpages(post, accountIds),
     })) };
   });
@@ -447,7 +447,7 @@ function registerIndexHandlers(deps) {
   // Media / integrations
   ipcMain.handle('generate-image', async (event, prompt) => generateImageForStudio(prompt));
   ipcMain.handle('serp-search', async (event, q) => {
-    const key = getGlobalKey('serpApiKey') || process.env.SERP_API_KEY;
+    const key = getGlobalKey('serpApiKey');
     if (!key) return { success: false, error: 'No SerpAPI key' };
     try {
       const res = await axios.get(`https://serpapi.com/search.json?q=${encodeURIComponent(q)}&api_key=${key}`);
@@ -456,7 +456,7 @@ function registerIndexHandlers(deps) {
   });
   ipcMain.handle('search-stock-photo', async (event, query) => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const unsplashKey = keys.unsplashAccessKey || process.env.UNSPLASH_ACCESS_KEY;
+    const unsplashKey = keys.unsplashAccessKey;
     if (unsplashKey) {
       try {
         const res = await axios.get(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=1&client_id=${unsplashKey}`, { headers: { 'Accept-Version': 'v1' } });
@@ -466,7 +466,7 @@ function registerIndexHandlers(deps) {
         }
       } catch (e) { /* next source */ }
     }
-    const pexelsKey = keys.pexelsKey || process.env.PEXELS_API_KEY;
+    const pexelsKey = keys.pexelsKey;
     if (pexelsKey) {
       try {
         const res = await axios.get(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&size=medium`, {
@@ -476,7 +476,7 @@ function registerIndexHandlers(deps) {
         if (p) return { success: true, imageUrl: p.src.medium || p.src.original, source: 'Pexels', photographer: p.photographer || null };
       } catch (e) { /* next */ }
     }
-    const pixKey = keys.pixabayKey || process.env.PIXABAY_API_KEY;
+    const pixKey = keys.pixabayKey;
     if (pixKey) {
       try {
         const res = await axios.get(`https://pixabay.com/api/?key=${pixKey}&q=${encodeURIComponent(query)}&image_type=photo&per_page=3&min_width=640&safesearch=true`);
@@ -484,7 +484,7 @@ function registerIndexHandlers(deps) {
         if (h) return { success: true, imageUrl: h.webformatURL || h.largeImageURL, source: 'Pixabay', photographer: h.user || null };
       } catch (e) { /* next */ }
     }
-    const flickrKey = keys.flickrKey || keys.flickrKey2 || process.env.FLICKR_API_KEY;
+    const flickrKey = keys.flickrKey || keys.flickrKey2;
     if (flickrKey) {
       try {
         const res = await axios.get(`https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=${flickrKey}&text=${encodeURIComponent(query)}&per_page=3&format=json&nojsoncallback=1&sort=relevance&license=4,5,6,7,8,9`);
@@ -530,7 +530,7 @@ function registerIndexHandlers(deps) {
     };
   });
   ipcMain.handle('get-youtube-channels', async () => {
-    const key = getGlobalKey('youtubeApiKey') || process.env.YOUTUBE_API_KEY;
+    const key = getGlobalKey('youtubeApiKey');
     if (!key) return { success: false, error: 'No YouTube API key' };
     try {
       const res = await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=tech&maxResults=5&key=${key}`);
@@ -549,7 +549,7 @@ function registerIndexHandlers(deps) {
     } catch (e) { return { success: false, error: e.message }; }
   });
   ipcMain.handle('deepl-translate', async (event, text, targetLang = 'ES') => {
-    const key = getGlobalKey('deeplKey') || process.env.DEEPL_API_KEY || process.env.DEEPL_KEY;
+    const key = getGlobalKey('deeplKey');
     if (!key) return { success: false, error: 'No DeepL key' };
     const endpoints = key.endsWith(':fx')
       ? ['https://api-free.deepl.com/v2/translate', 'https://api.deepl.com/v2/translate']

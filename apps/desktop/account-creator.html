@@ -24,6 +24,18 @@ h1 { margin: 0 0 0.5rem; color: #f1f5f9; }
 .status-pill { padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; border: 1px solid #475569; }
 .status-pill.ok { border-color: #10b981; color: #34d399; }
 .status-pill.bad { border-color: #ef4444; color: #f87171; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
+.kpi-tile { background: rgba(15,23,42,0.6); border: 1px solid #334155; border-radius: 8px; padding: 0.75rem; text-align: center; }
+.kpi-val { font-size: 1.35rem; font-weight: 700; color: #38bdf8; }
+.kpi-lbl { font-size: 0.68rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+.bar-row { display: flex; align-items: flex-end; gap: 6px; height: 64px; margin-top: 0.5rem; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 0; }
+.bar-fill { width: 100%; max-width: 36px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #38bdf8, #6366f1); min-height: 4px; }
+.bar-lbl { font-size: 0.58rem; color: #64748b; margin-top: 4px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.conn-card { border: 1px solid #334155; border-radius: 8px; margin-bottom: 0.5rem; overflow: hidden; }
+.conn-card summary { padding: 0.65rem 0.85rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; background: rgba(15,23,42,0.5); }
+.conn-fields { padding: 0.75rem; display: grid; gap: 0.5rem; }
+.conn-fields input { margin-bottom: 0; font-size: 0.8rem; padding: 0.5rem; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
 .panel { background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
@@ -89,6 +101,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     <p class="subtitle">Generate complete multi-platform account kits — names, bios, AI profile photos, Unsplash covers, proxy/IP assignment, YouTube videos, and content schedules.</p>
 
     <div class="status-bar" id="statusBar"></div>
+
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="panel" style="margin-bottom:1.5rem;">
+      <h2 style="margin:0 0 0.5rem;font-size:1rem;">Live Pipeline</h2>
+      <div class="bar-row" id="platformBarChart"></div>
+      <p id="kpiSubtext" style="margin:0.75rem 0 0;font-size:0.8rem;color:#94a3b8;"></p>
+    </div>
 
     <div class="grid-2">
       <div class="panel">
@@ -173,7 +192,20 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           <input type="password" id="proxyPass" placeholder="Password (optional)">
           <button class="secondary" id="testProxyBtn">Test</button>
         </div>
+        <label style="margin-top:0.75rem;">Bulk import (one per line: host:port or label|host:port)</label>
+        <textarea id="bulkProxyText" rows="3" placeholder="US-Mobile-1|192.168.1.10:8080&#10;10.0.0.2:3128" style="min-height:60px;"></textarea>
+        <button class="secondary" id="bulkImportProxyBtn" style="margin-bottom:0.75rem;">Import Bulk Proxies</button>
         <div class="proxy-list" id="proxyList"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="connectionsPanel">
+      <h2>3. Platform API Connections</h2>
+      <p style="color:#94a3b8;font-size:0.85rem;margin:0 0 1rem;">Per-platform keys for API upload and browser automation. Saved to global settings.</p>
+      <div id="connectionCards"></div>
+      <div class="actions">
+        <button class="primary" id="saveConnectionsBtn"><i class="fas fa-save"></i> Save All Connections</button>
+        <button class="secondary" id="testConnectionsBtn"><i class="fas fa-plug"></i> Test All APIs</button>
       </div>
     </div>
 
@@ -278,6 +310,22 @@ let allKits = [];
 let allProxies = [];
 let supportedPlatforms = [];
 let linkedAccountsByPlatform = [];
+let globalKeys = {};
+
+const PLATFORM_CONN = [
+  { platform: 'Twitter', fields: [{ key: 'twId', label: 'Client ID' }, { key: 'twSecret', label: 'Client Secret', type: 'password' }, { key: 'twBearer', label: 'Bearer', type: 'password' }] },
+  { platform: 'LinkedIn', fields: [{ key: 'linkedinAccessToken', label: 'Access Token', type: 'password' }] },
+  { platform: 'Facebook', fields: [{ key: 'fbId', label: 'App ID' }, { key: 'fbSecret', label: 'App Secret', type: 'password' }, { key: 'metaAccess', label: 'Access Token', type: 'password' }] },
+  { platform: 'Instagram', fields: [{ key: 'metaAccess', label: 'Meta Token', type: 'password' }] },
+  { platform: 'YouTube', fields: [{ key: 'ytId', label: 'Client ID' }, { key: 'ytSecret', label: 'Client Secret', type: 'password' }, { key: 'youtubeApiKey', label: 'API Key', type: 'password' }] },
+  { platform: 'TikTok', fields: [{ key: 'tkId', label: 'Client Key' }, { key: 'tkSecret', label: 'Client Secret', type: 'password' }] },
+  { platform: 'Pinterest', fields: [{ key: 'pinterestAppId', label: 'App ID' }, { key: 'pinterestSecret', label: 'Secret', type: 'password' }] },
+  { platform: 'Reddit', fields: [{ key: 'rdId', label: 'Client ID' }, { key: 'rdSecret', label: 'Client Secret', type: 'password' }] },
+  { platform: 'Threads', fields: [{ key: 'metaAccess', label: 'Meta Token', type: 'password' }] },
+  { platform: 'Twitch', fields: [{ key: 'twitchClientId', label: 'Client ID' }, { key: 'twitchClientSecret', label: 'Secret', type: 'password' }] },
+  { platform: 'Telegram', fields: [{ key: 'telegramBotToken', label: 'Bot Token', type: 'password' }] },
+  { platform: 'Discord', fields: [{ key: 'discordClientId', label: 'Client ID' }, { key: 'discordBotToken', label: 'Bot Token', type: 'password' }] },
+];
 
 function escapeHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -297,9 +345,43 @@ async function loadStatus() {
   document.getElementById('statusBar').innerHTML = items.map(([label, ok]) =>
     `<span class="status-pill ${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${label}</span>`
   ).join('');
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-tile"><div class="kpi-val">${allKits.length}</div><div class="kpi-lbl">Profile Kits</div></div>
+    <div class="kpi-tile"><div class="kpi-val">${status.proxyCount || 0}</div><div class="kpi-lbl">Proxies</div></div>
+    <div class="kpi-tile"><div class="kpi-val">${status.availableProxies || 0}</div><div class="kpi-lbl">Free IPs</div></div>
+    <div class="kpi-tile"><div class="kpi-val">${allKits.filter(k => k.status === 'ready').length}</div><div class="kpi-lbl">Ready Kits</div></div>`;
+  const platCounts = {};
+  allKits.forEach(k => (k.platforms || []).forEach(p => { platCounts[p] = (platCounts[p] || 0) + 1; }));
+  const bars = Object.entries(platCounts).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  const max = Math.max(...bars.map(([,v]) => v), 1);
+  document.getElementById('platformBarChart').innerHTML = bars.length ? bars.map(([p, v]) =>
+    `<div class="bar-col" title="${p}: ${v} kits"><div class="bar-fill" style="height:${Math.max(8, Math.round((v/max)*52))}px"></div><span class="bar-lbl">${escapeHtml(p.slice(0,6))}</span></div>`
+  ).join('') : '<span style="color:#64748b;font-size:0.85rem;">Generate kits to see platform distribution</span>';
+  document.getElementById('kpiSubtext').textContent = `Campaign: ${status.campaignName || '—'} · ${status.availableProxies || 0} proxies available for assignment`;
   if (!status.hasCampaign) {
     document.getElementById('generateBtn').disabled = true;
   }
+}
+
+function renderConnectionCards() {
+  const el = document.getElementById('connectionCards');
+  if (!el) return;
+  el.innerHTML = PLATFORM_CONN.map((pl) => {
+    const fields = pl.fields.map((f) =>
+      `<label style="font-size:0.75rem;color:#94a3b8;">${escapeHtml(f.label)}</label>
+       <input type="${f.type || 'text'}" data-key="${f.key}" value="${escapeHtml(globalKeys[f.key] || '')}" placeholder="${escapeHtml(f.label)}">`
+    ).join('');
+    const hasKey = pl.fields.some((f) => (globalKeys[f.key] || '').trim());
+    return `<details class="conn-card" ${!hasKey ? 'open' : ''}>
+      <summary><span>${escapeHtml(pl.platform)}</span><span class="status-pill ${hasKey ? 'ok' : 'bad'}" style="font-size:0.68rem;">${hasKey ? 'keys set' : 'missing'}</span></summary>
+      <div class="conn-fields">${fields}</div>
+    </details>`;
+  }).join('');
+}
+
+async function loadGlobalKeys() {
+  globalKeys = await ipcRenderer.invoke('get-global-keys').catch(() => ({}));
+  renderConnectionCards();
 }
 
 function renderPlatformGrid() {
@@ -473,6 +555,36 @@ async function selectKit(id) {
     </tr>
   `).join('') || '<tr><td colspan="5" class="empty">No schedule items.</td></tr>';
 }
+
+document.getElementById('bulkImportProxyBtn')?.addEventListener('click', async () => {
+  const text = document.getElementById('bulkProxyText')?.value || '';
+  if (!text.trim()) return alert('Paste proxy lines first.');
+  const res = await ipcRenderer.invoke('import-proxies-bulk', {
+    text,
+    protocol: document.getElementById('proxyProtocol').value,
+  });
+  if (!res.success) return alert('Import failed: ' + (res.errors?.[0]?.error || 'No valid lines'));
+  document.getElementById('bulkProxyText').value = '';
+  await loadProxies();
+  await loadStatus();
+  alert(`Imported ${res.count} proxy(ies).`);
+});
+
+document.getElementById('saveConnectionsBtn')?.addEventListener('click', async () => {
+  document.querySelectorAll('#connectionCards input[data-key]').forEach((inp) => {
+    globalKeys[inp.dataset.key] = inp.value;
+  });
+  await ipcRenderer.invoke('save-global-keys', globalKeys);
+  alert('Connection keys saved.');
+  await loadGlobalKeys();
+  await loadStatus();
+});
+
+document.getElementById('testConnectionsBtn')?.addEventListener('click', async () => {
+  const res = await ipcRenderer.invoke('test-all-connections');
+  alert('API probe complete — check status pills and try generating a kit.');
+  console.log(res);
+});
 
 document.getElementById('addProxyBtn').addEventListener('click', async () => {
   const res = await ipcRenderer.invoke('save-proxy', {
@@ -780,12 +892,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (batchInput) {
     batchInput.value = tonight.toISOString().slice(0, 16);
   }
-  await loadStatus();
-  renderPlatformGrid();
+  await loadGlobalKeys();
   await loadProxies();
   await loadKits();
+  await loadStatus();
+  renderPlatformGrid();
   await loadBatchStatus();
-  setInterval(loadBatchStatus, 30000);
+  setInterval(loadBatchStatus, 12000);
+  setInterval(async () => { await loadKits(); await loadStatus(); }, 20000);
 });
 </script>
 </body>

@@ -96,6 +96,16 @@
 #### 2.9 Dashboard Widgets
 *   **[x] Trending News:** Displays exactly 4 random but highly relevant titles. Clicking a title opens a new research page utilizing AI. Fix "globalKeys is not defined" error.
 
+#### 2.10 Grok Engine (Browser Session — No API)
+*   **[x] Native browser automation:** Real Chrome, Edge, Opera, Firefox with persistent cookies (`nativeBrowserLauncher.js`). Default: Microsoft Edge dedicated profile.
+*   **[x] Grok session login:** x.ai credentials stored locally; auto-fill on Connect. Account: `theesaintmichael@gmail.com` (see `brain/GROK.md`).
+*   **[x] Grok Text:** New-chat prompts with keyword-aware campaign context (`grok-ask-text`).
+*   **[x] Grok Imagine:** Text-to-image via https://grok.com/imagine in Edge (`grok-imagine`). Assets saved to `grok-assets/`.
+*   **[x] Grok Video + Extend:** Keyword-driven video with ~60s wait per part and auto-Extend (`grok-generate-video`).
+*   **[x] Grok Infographic:** Research + Imagine composite (`grok-generate-infographic`).
+*   **[x] Brain / skill docs:** `brain/BRAIN.md`, `brain/FEATURES.md`, `brain/skills/grok-imagine/SKILL.md`.
+*   **[x] UI surfaces:** Settings → Grok Engine + Native Browser; Content Hub Grok buttons; web Settings Grok tab; Setup tutorial `tut_grok`.
+
 ### 3. Technical Architecture Overview
 1.  **[x] API Gateway / Backend Service:** Currently using Electron IPC and Node logic. Needs expansion for OAuth.
 2.  **[x] Workers & Schedulers:** Redis/Queue system needed for background polling.
