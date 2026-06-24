@@ -113,6 +113,11 @@ export const INTEGRATION_GROUPS: IntegrationGroup[] = [
       { key: 'smtpPass', label: 'SMTP Password', type: 'password', metric: 'Amazon SES' },
       { key: 'smtpFrom', label: 'From Email (SES verified)', type: 'email', metric: 'Amazon SES' },
       { key: 'smtpFromName', label: 'From Name', type: 'text', placeholder: 'Social Imperialism' },
+      { key: 'acumbamailHost', label: 'Acumbamail SMTP Server', type: 'text', metric: 'Acumbamail', placeholder: 'smtp.acumbamail.com' },
+      { key: 'acumbamailPort', label: 'Acumbamail SMTP Port', type: 'text', metric: 'Acumbamail', placeholder: '587' },
+      { key: 'acumbamailUser', label: 'Acumbamail Username', type: 'email', metric: 'Acumbamail' },
+      { key: 'acumbamailPass', label: 'Acumbamail Password / Auth Token', type: 'password', metric: 'Acumbamail' },
+      { key: 'acumbamailFrom', label: 'Acumbamail From Email', type: 'email', metric: 'Acumbamail' },
     ],
   },
   {

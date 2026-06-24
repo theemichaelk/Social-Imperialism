@@ -24,7 +24,7 @@ function buildApiMetrics(resolveKeys, keys) {
     hasTwitterKeys, hasRedditKeys, hasLinkedInKeys, hasMetaKeys,
     hasYouTubeKeys, hasTikTokKeys, hasTwitchKeys, hasMediaKeys,
     hasAdvancedWorkflowKey, hasContentStudioKey, hasMozKeys,
-    hasVboutKeys, hasMailchimpKeys, hasSmtpKeys,
+    hasVboutKeys, hasMailchimpKeys, hasSmtpKeys, hasAcumbamailKeys,
   } = require(path.join(DESKTOP_SERVICES, 'keys'));
   return {
     'Twitter / X': status(hasTwitterKeys(k)),
@@ -54,6 +54,7 @@ function buildApiMetrics(resolveKeys, keys) {
     VBout: status(hasVboutKeys(k)),
     MailChimp: status(hasMailchimpKeys(k)),
     'Amazon SES': status(hasSmtpKeys(k)),
+    Acumbamail: status(hasAcumbamailKeys(k)),
   };
 }
 

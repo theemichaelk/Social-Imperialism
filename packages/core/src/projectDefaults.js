@@ -146,7 +146,7 @@ function buildDefaults(project) {
     emailCampaigns: {
       settings: {
         defaultProvider: 'auto',
-        providerPriority: ['ses', 'vbout', 'mailchimp'],
+        providerPriority: ['acumbamail', 'ses', 'vbout', 'mailchimp'],
         fromEmail: 'michaelk@tsbrenterprises.com',
         fromName: 'Social Imperialism',
         alertEmail: 'theesaintmichael@gmail.com',

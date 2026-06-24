@@ -63,6 +63,11 @@ const ENV_ALIASES = {
   smtpPass: ['SMTP_PASS', 'SES_SMTP_PASS'],
   smtpFrom: ['SMTP_FROM', 'SES_FROM_EMAIL'],
   smtpFromName: ['SMTP_FROM_NAME'],
+  acumbamailHost: ['ACUMBAMAIL_SMTP_HOST'],
+  acumbamailPort: ['ACUMBAMAIL_SMTP_PORT'],
+  acumbamailUser: ['ACUMBAMAIL_SMTP_USER'],
+  acumbamailPass: ['ACUMBAMAIL_SMTP_PASS', 'ACUMBAMAIL_AUTH_TOKEN'],
+  acumbamailFrom: ['ACUMBAMAIL_SMTP_FROM'],
   playhtUserId: ['PLAYHT_USER_ID'],
   playhtSecretKey: ['PLAYHT_SECRET_KEY'],
   contentfulSpaceId: ['CONTENTFUL_SPACE_ID'],
@@ -140,6 +145,11 @@ const STORAGE_ALIASES = {
   smtpPass: ['smtpPass'],
   smtpFrom: ['smtpFrom', 'alertEmail'],
   smtpFromName: ['smtpFromName'],
+  acumbamailHost: ['acumbamailHost'],
+  acumbamailPort: ['acumbamailPort'],
+  acumbamailUser: ['acumbamailUser'],
+  acumbamailPass: ['acumbamailPass', 'acumbamailAuthToken'],
+  acumbamailFrom: ['acumbamailFrom'],
   playhtUserId: ['playhtUserId'],
   playhtSecretKey: ['playhtSecretKey'],
   contentfulSpaceId: ['contentfulSpaceId'],
@@ -244,6 +254,11 @@ function hasMailchimpKeys(keys) {
 function hasSmtpKeys(keys) {
   return !!(keys.smtpHost && keys.smtpUser && keys.smtpPass)
     || !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
+function hasAcumbamailKeys(keys) {
+  return !!(keys.acumbamailUser && keys.acumbamailPass)
+    || !!(process.env.ACUMBAMAIL_SMTP_USER && (process.env.ACUMBAMAIL_SMTP_PASS || process.env.ACUMBAMAIL_AUTH_TOKEN));
 }
 
 function twitterConsumerKey(keys) {
@@ -382,5 +397,6 @@ module.exports = {
   hasVboutKeys,
   hasMailchimpKeys,
   hasSmtpKeys,
+  hasAcumbamailKeys,
   ENV_ALIASES,
 };

@@ -1,5 +1,5 @@
 /**
- * Email delivery — Amazon SES SMTP, VBout API, MailChimp Marketing API.
+ * Email delivery — Acumbamail SMTP, Amazon SES SMTP, VBout API, MailChimp Marketing API.
  */
 const axios = require('axios');
 const nodemailer = require('nodemailer');
@@ -26,12 +26,21 @@ function resolveEmailConfig(keys = {}) {
     smtpPass: keys.smtpPass || process.env.SMTP_PASS || null,
     smtpFrom: keys.smtpFrom || process.env.SMTP_FROM || 'michaelk@tsbrenterprises.com',
     smtpFromName: keys.smtpFromName || process.env.SMTP_FROM_NAME || 'Social Imperialism',
+    acumbamailHost: keys.acumbamailHost || process.env.ACUMBAMAIL_SMTP_HOST || 'smtp.acumbamail.com',
+    acumbamailPort: parseInt(keys.acumbamailPort || process.env.ACUMBAMAIL_SMTP_PORT || '587', 10),
+    acumbamailUser: keys.acumbamailUser || process.env.ACUMBAMAIL_SMTP_USER || null,
+    acumbamailPass: keys.acumbamailPass || process.env.ACUMBAMAIL_SMTP_PASS || process.env.ACUMBAMAIL_AUTH_TOKEN || null,
+    acumbamailFrom: keys.acumbamailFrom || process.env.ACUMBAMAIL_SMTP_FROM || keys.acumbamailUser || process.env.ACUMBAMAIL_SMTP_USER || null,
     tinyurlApiKey: keys.tinyurlApiKey || process.env.TINYURL_API_KEY || null,
   };
 }
 
 function hasSmtpConfig(cfg) {
   return !!(cfg.smtpHost && cfg.smtpUser && cfg.smtpPass);
+}
+
+function hasAcumbamailConfig(cfg) {
+  return !!(cfg.acumbamailHost && cfg.acumbamailUser && cfg.acumbamailPass);
 }
 
 function hasVboutConfig(cfg) {
@@ -42,16 +51,40 @@ function hasMailchimpConfig(cfg) {
   return !!cfg.mailchimpApiKey;
 }
 
-function createSmtpTransport(cfg) {
+function createSmtpTransport(profile) {
+  const port = profile.port || 587;
   return nodemailer.createTransport({
-    host: cfg.smtpHost,
-    port: cfg.smtpPort,
-    secure: cfg.smtpPort === 465,
-    requireTLS: cfg.smtpPort === 587 || cfg.smtpPort === 2587,
-    auth: { user: cfg.smtpUser, pass: cfg.smtpPass },
+    host: profile.host,
+    port,
+    secure: port === 465,
+    requireTLS: port === 587 || port === 25252 || port === 2587,
+    auth: { user: profile.user, pass: profile.pass },
+
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   });
+}
+
+function sesSmtpProfile(cfg) {
+  return {
+    host: cfg.smtpHost,
+    port: cfg.smtpPort,
+    user: cfg.smtpUser,
+    pass: cfg.smtpPass,
+    from: cfg.smtpFrom,
+    fromName: cfg.smtpFromName,
+  };
+}
+
+function acumbamailSmtpProfile(cfg) {
+  return {
+    host: cfg.acumbamailHost,
+    port: cfg.acumbamailPort,
+    user: cfg.acumbamailUser,
+    pass: cfg.acumbamailPass,
+    from: cfg.acumbamailFrom || cfg.acumbamailUser,
+    fromName: cfg.smtpFromName,
+  };
 }
 
 async function shortenUrl(url, tinyKey) {
@@ -121,9 +154,9 @@ async function testMailchimp(cfg) {
 }
 
 async function testSmtp(cfg) {
-  if (!hasSmtpConfig(cfg)) return { ok: false, error: 'SMTP credentials not configured' };
+  if (!hasSmtpConfig(cfg)) return { ok: false, error: 'Amazon SES SMTP credentials not configured' };
   try {
-    const transport = createSmtpTransport(cfg);
+    const transport = createSmtpTransport(sesSmtpProfile(cfg));
     await transport.verify();
     return { ok: true, provider: 'ses', host: cfg.smtpHost, port: cfg.smtpPort };
   } catch (e) {
@@ -131,37 +164,65 @@ async function testSmtp(cfg) {
   }
 }
 
+async function testAcumbamail(cfg) {
+  if (!hasAcumbamailConfig(cfg)) return { ok: false, error: 'Acumbamail SMTP not configured' };
+  try {
+    const transport = createSmtpTransport(acumbamailSmtpProfile(cfg));
+    await transport.verify();
+    return {
+      ok: true,
+      provider: 'acumbamail',
+      host: cfg.acumbamailHost,
+      port: cfg.acumbamailPort,
+      user: cfg.acumbamailUser,
+    };
+  } catch (e) {
+    return { ok: false, provider: 'acumbamail', error: e.message };
+  }
+}
+
 async function testAllConnections(keys) {
   const cfg = resolveEmailConfig(keys);
-  const [vbout, mailchimp, ses] = await Promise.all([
+  const [vbout, mailchimp, ses, acumbamail] = await Promise.all([
     testVbout(cfg),
     testMailchimp(cfg),
     testSmtp(cfg),
+    testAcumbamail(cfg),
   ]);
   return {
-    success: vbout.ok || mailchimp.ok || ses.ok,
+    success: vbout.ok || mailchimp.ok || ses.ok || acumbamail.ok,
     vbout,
     mailchimp,
     ses,
+    acumbamail,
     configured: {
       vbout: hasVboutConfig(cfg),
       mailchimp: hasMailchimpConfig(cfg),
       ses: hasSmtpConfig(cfg),
+      acumbamail: hasAcumbamailConfig(cfg),
       tinyurl: !!cfg.tinyurlApiKey,
     },
   };
 }
 
-async function sendViaSmtp(cfg, { to, subject, html, text }) {
-  const transport = createSmtpTransport(cfg);
+async function sendViaSmtpProfile(profile, provider, { to, subject, html, text }) {
+  const transport = createSmtpTransport(profile);
   const info = await transport.sendMail({
-    from: `"${cfg.smtpFromName}" <${cfg.smtpFrom}>`,
+    from: `"${profile.fromName || 'Social Imperialism'}" <${profile.from}>`,
     to,
     subject,
     html,
     text: text || html?.replace(/<[^>]+>/g, ' '),
   });
-  return { success: true, provider: 'ses', messageId: info.messageId };
+  return { success: true, provider, messageId: info.messageId };
+}
+
+async function sendViaSmtp(cfg, payload) {
+  return sendViaSmtpProfile(sesSmtpProfile(cfg), 'ses', payload);
+}
+
+async function sendViaAcumbamail(cfg, payload) {
+  return sendViaSmtpProfile(acumbamailSmtpProfile(cfg), 'acumbamail', payload);
 }
 
 async function getVboutLists(cfg) {
@@ -354,13 +415,17 @@ async function sendEmail(keys, payload = {}) {
 
   const order = provider
     ? [provider]
-    : (payload.providerPriority || ['ses', 'vbout', 'mailchimp']);
+    : (payload.providerPriority || ['acumbamail', 'ses', 'vbout', 'mailchimp']);
 
   const errors = [];
+  const mailPayload = { to, subject, html: finalHtml, text: finalText };
   for (const p of order) {
     try {
+      if (p === 'acumbamail' && hasAcumbamailConfig(cfg)) {
+        return await sendViaAcumbamail(cfg, mailPayload);
+      }
       if (p === 'ses' && hasSmtpConfig(cfg)) {
-        return await sendViaSmtp(cfg, { to, subject, html: finalHtml, text: finalText });
+        return await sendViaSmtp(cfg, mailPayload);
       }
       if (p === 'vbout' && hasVboutConfig(cfg)) {
         return await sendViaVbout(cfg, { to, subject, html: finalHtml, text: finalText, listId: payload.vboutListId });
@@ -453,7 +518,7 @@ function ensureEmailCampaigns(store, campaign = {}) {
   const seeded = {
     settings: {
       defaultProvider: 'auto',
-      providerPriority: ['ses', 'vbout', 'mailchimp'],
+      providerPriority: ['acumbamail', 'ses', 'vbout', 'mailchimp'],
       fromEmail: process.env.SMTP_FROM || 'theesaintmichael@gmail.com',
       fromName: 'Social Imperialism',
       alertEmail: process.env.SMTP_FROM || 'theesaintmichael@gmail.com',
@@ -546,12 +611,14 @@ async function runEmailAutoReply(store, keys, { trigger, data = {} } = {}) {
 module.exports = {
   resolveEmailConfig,
   hasSmtpConfig,
+  hasAcumbamailConfig,
   hasVboutConfig,
   hasMailchimpConfig,
   testAllConnections,
   testVbout,
   testMailchimp,
   testSmtp,
+  testAcumbamail,
   sendEmail,
   shortenUrl,
   shortenLinksInText,
