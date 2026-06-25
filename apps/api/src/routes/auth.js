@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { prisma } = require('@si/db');
 const { signToken, requireAuth } = require('../middleware/auth');
+const { ensureDefaultProject } = require('../projectEnsure');
 
 const router = express.Router();
 
@@ -68,16 +69,14 @@ router.post('/login', async (req, res) => {
     });
     if (!membership) return res.status(403).json({ error: 'No organization' });
 
-    const project = await prisma.project.findFirst({
-      where: { organizationId: membership.organizationId, isActive: true },
-    }) || await prisma.project.findFirst({ where: { organizationId: membership.organizationId } });
+    const project = await ensureDefaultProject(membership.organizationId);
 
     const token = signToken({ userId: user.id, orgId: membership.organizationId, email: user.email });
     res.json({
       token,
       user: { id: user.id, email: user.email, name: user.name },
       organization: membership.organization,
-      project: project ? { id: project.id, name: project.name } : null,
+      project: { id: project.id, name: project.name },
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -87,13 +86,17 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
   const org = await prisma.organization.findUnique({ where: { id: req.user.orgId } });
-  const projects = await prisma.project.findMany({ where: { organizationId: req.user.orgId } });
-  const active = projects.find((p) => p.isActive) || projects[0] || null;
+  let projects = await prisma.project.findMany({ where: { organizationId: req.user.orgId } });
+  let active = projects.find((p) => p.isActive) || projects[0] || null;
+  if (!active) {
+    active = await ensureDefaultProject(req.user.orgId);
+    projects = [active];
+  }
   res.json({
     user,
     organization: org,
     projects,
-    project: active ? { id: active.id, name: active.name } : null,
+    project: { id: active.id, name: active.name },
   });
 });
 

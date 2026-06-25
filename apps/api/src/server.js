@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const orgRoutes = require('./routes/orgs');
 const partnerRoutes = require('./routes/partner');
 const { requireAuth } = require('./middleware/auth');
+const { resolveActiveProject } = require('./projectEnsure');
 const s3 = require('./s3');
 
 // Load desktop .env for API keys (local dev only — production uses App Runner env vars)
@@ -248,15 +249,7 @@ app.post('/api/upload', requireAuth, async (req, res) => {
 });
 
 async function getActiveProject(orgId, projectId) {
-  if (projectId) {
-    const p = await prisma.project.findFirst({ where: { id: projectId, organizationId: orgId } });
-    if (p) return p;
-    console.warn(`Stale project id ${projectId} for org ${orgId} — using active project`);
-  }
-  let project = await prisma.project.findFirst({ where: { organizationId: orgId, isActive: true } });
-  if (!project) project = await prisma.project.findFirst({ where: { organizationId: orgId } });
-  if (!project) throw new Error('No project — create one in Settings');
-  return project;
+  return resolveActiveProject(orgId, projectId);
 }
 
 const { startScheduler } = require('./scheduler');

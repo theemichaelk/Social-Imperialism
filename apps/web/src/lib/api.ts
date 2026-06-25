@@ -11,7 +11,9 @@ export function getToken(): string | null {
 
 export function getProjectId(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('si_project_id');
+  const id = localStorage.getItem('si_project_id');
+  if (id?.startsWith('camp_')) return null;
+  return id;
 }
 
 export function setProjectId(id: string | null) {
@@ -41,6 +43,10 @@ let bootstrapPromise: Promise<void> | null = null;
 export async function repairSession(): Promise<void> {
   const token = getToken();
   if (!token) return;
+  if (typeof window !== 'undefined') {
+    const raw = localStorage.getItem('si_project_id');
+    if (raw?.startsWith('camp_')) localStorage.removeItem('si_project_id');
+  }
   try {
     const me = await auth.me() as MeResponse;
     const active =
@@ -62,7 +68,7 @@ export async function bootstrapSession(): Promise<void> {
 }
 
 function isStaleProjectError(msg: string) {
-  return /project not found/i.test(msg);
+  return /project not found|no project/i.test(msg);
 }
 
 function isRetryableResponse(status: number, json: Record<string, unknown>) {
