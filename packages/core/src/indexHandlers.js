@@ -571,15 +571,27 @@ function registerIndexHandlers(deps) {
     const endpoints = key.endsWith(':fx')
       ? ['https://api-free.deepl.com/v2/translate', 'https://api.deepl.com/v2/translate']
       : ['https://api.deepl.com/v2/translate', 'https://api-free.deepl.com/v2/translate'];
+    const payload = {
+      text: String(text || ''),
+      target_lang: String(targetLang || 'EN').toUpperCase(),
+    };
     for (const base of endpoints) {
       try {
-        const body = new URLSearchParams({
-          auth_key: key,
-          text: String(text || ''),
-          target_lang: String(targetLang || 'EN').toUpperCase(),
-        });
+        const body = new URLSearchParams({ auth_key: key, ...payload });
         const res = await axios.post(base, body.toString(), {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          timeout: 15000,
+        });
+        if (res.data?.translations?.[0]?.text) {
+          return { success: true, translated: res.data.translations[0].text };
+        }
+      } catch (e) { /* try next */ }
+      try {
+        const res = await axios.post(base, new URLSearchParams(payload).toString(), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `DeepL-Auth-Key ${key}`,
+          },
           timeout: 15000,
         });
         if (res.data?.translations?.[0]?.text) {

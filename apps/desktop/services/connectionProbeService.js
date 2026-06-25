@@ -78,7 +78,10 @@ function probeStatus(id, data) {
     }
     case 'grok': {
       const logged = d.session?.loggedIn || d.settings?.sessionValid;
-      return { status: logged ? 'pass' : 'warn', summary: logged ? 'Authorized' : 'Not authorized' };
+      const hasCreds = d.settings?.hasCredentials || !!(d.settings?.email);
+      if (logged) return { status: 'pass', summary: 'Authorized' };
+      if (hasCreds) return { status: 'pass', summary: 'Credentials saved — Imagine/Video via Edge on desktop or SaaS Grok tab' };
+      return { status: 'warn', summary: 'Configure Grok email in Settings → Grok' };
     }
     default:
       return { status: 'pass', summary: 'OK' };
