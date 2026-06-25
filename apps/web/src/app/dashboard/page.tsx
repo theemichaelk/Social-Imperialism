@@ -12,7 +12,6 @@ import { PostExplorerModal } from '@/components/PostExplorerModal';
 import { FetchProfileFilters } from '@/lib/fetchProfiles';
 import { QaSettingsPanel } from '@/components/QaSettingsPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
-import { CommandCenter } from '@/components/CommandCenter';
 import { useSiEvents } from '@/hooks/useSiEvents';
 
 type Post = {
@@ -295,7 +294,7 @@ export default function DashboardPage() {
     refresh();
   }
 
-  const tabs = ['overview', 'command', 'feed', 'qa', 'growth', 'worker', 'analytics'];
+  const tabs = ['overview', 'feed', 'qa', 'growth', 'worker', 'analytics'];
   const apiEntries = Object.entries(stats.apiMetrics || setup.apiMetrics as Record<string, string> || {});
   const connectedApis = apiEntries.filter(([, v]) => v === 'Connected').length;
   const totalApis = apiEntries.length || 1;
@@ -380,13 +379,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {tab === 'command' && (
-        <CommandCenter stats={stats} apiMetrics={stats.apiMetrics || (setup.apiMetrics as Record<string, string>) || {}} />
-      )}
-
       {tab === 'overview' && (
         <>
-        <CommandCenter stats={stats} apiMetrics={stats.apiMetrics || (setup.apiMetrics as Record<string, string>) || {}} />
         <div className="grid grid-2">
           <DataPanel title="Campaign Pulse" live>
             <SparkRow items={[
