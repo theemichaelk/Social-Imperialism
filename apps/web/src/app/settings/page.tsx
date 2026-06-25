@@ -186,15 +186,25 @@ function SettingsContent() {
   }
 
   async function addCampaign() {
-    if (!newCamp.brandName.trim()) return;
-    const id = `camp_${Date.now()}`;
-    const updated = [...campaigns, { id, ...newCamp, status: 'Active' }];
-    await invoke('save-settings', updated);
-    await invoke('set-active-campaign', id);
-    setCampaigns(updated);
-    setActiveId(id);
-    setNewCamp({ brandName: '', domain: '', description: '', tone: 'Professional', utmSource: 'social_imperialism', utmMedium: 'ai_reply' });
-    setMsg('Campaign created and activated');
+    if (!newCamp.brandName.trim()) {
+      setMsg('Brand name is required to create a campaign.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const id = `camp_${Date.now()}`;
+      const updated = [...campaigns, { id, ...newCamp, status: 'Active' }];
+      await invoke('save-settings', updated);
+      await invoke('set-active-campaign', id);
+      setCampaigns(updated);
+      setActiveId(id);
+      setNewCamp({ brandName: '', domain: '', description: '', tone: 'Professional', utmSource: 'social_imperialism', utmMedium: 'ai_reply' });
+      setMsg('Campaign created and activated');
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function saveCampaignUtm() {

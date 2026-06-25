@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { invoke } from '@/lib/api';
+import { invoke, getProjectId } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { LivePulse, RingChart, BarChart, DataPanel } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
@@ -82,7 +82,7 @@ export default function OnboardingPage() {
     setLoading(true);
     try {
       const campaigns = await invoke<Array<Record<string, string>>>('get-settings') || [];
-      const id = (status.campaign as { id?: string })?.id || `camp_${Date.now()}`;
+      const id = getProjectId() || (status.campaign as { id?: string })?.id || `camp_${Date.now()}`;
       const entry = { id, ...brand, status: 'Active' };
       await invoke('save-settings', [entry, ...campaigns.filter((c) => c.id !== id)]);
       await invoke('set-active-campaign', id);

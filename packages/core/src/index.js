@@ -41,6 +41,26 @@ async function getHandlersForProject({ projectId, organizationId, userDataPath, 
   return entry;
 }
 
+async function persistActiveCampaignToProject(store, projectId) {
+  const { prisma } = require('@si/db');
+  const activeId = store.getItem('activeCampaignId');
+  if (!activeId || activeId !== projectId) return;
+  let campaigns = [];
+  try { campaigns = JSON.parse(store.getItem('campaigns') || '[]'); } catch (e) {}
+  const campaign = campaigns.find((c) => c.id === projectId);
+  if (!campaign?.brandName?.trim()) return;
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      brandName: campaign.brandName,
+      domain: campaign.domain || '',
+      description: campaign.description || '',
+      tone: campaign.tone || 'Professional',
+      name: campaign.brandName,
+    },
+  });
+}
+
 async function syncProjectToStore(store, projectId) {
   const { prisma } = require('@si/db');
   const { ensureProjectDefaults } = require('./projectDefaults');
@@ -50,7 +70,7 @@ async function syncProjectToStore(store, projectId) {
   });
   if (!project) return;
 
-  const campaign = {
+  const campaignFromDb = {
     id: project.id,
     brandName: project.brandName || project.name,
     domain: project.domain || '',
@@ -62,10 +82,24 @@ async function syncProjectToStore(store, projectId) {
   let campaigns = [];
   try { campaigns = JSON.parse(store.getItem('campaigns') || '[]'); } catch (e) {}
   const idx = campaigns.findIndex((c) => c.id === project.id);
-  if (idx >= 0) campaigns[idx] = { ...campaigns[idx], ...campaign };
-  else campaigns.push(campaign);
+  if (idx >= 0) {
+    const stored = campaigns[idx];
+    campaigns[idx] = {
+      ...campaignFromDb,
+      ...stored,
+      brandName: stored.brandName || campaignFromDb.brandName,
+      domain: stored.domain || campaignFromDb.domain,
+      description: stored.description || campaignFromDb.description,
+      tone: stored.tone || campaignFromDb.tone,
+    };
+  } else {
+    campaigns.push(campaignFromDb);
+  }
   store.setItem('campaigns', JSON.stringify(campaigns));
-  store.setItem('activeCampaignId', project.id);
+
+  const activeId = store.getItem('activeCampaignId');
+  const hasValidActive = activeId && campaigns.some((c) => c.id === activeId);
+  if (!hasValidActive) store.setItem('activeCampaignId', project.id);
   // Keys are resolved at request time (admin gets .env merge; clients use saved keys only).
 
   ensureProjectDefaults(store, project);
@@ -105,6 +139,9 @@ async function afterInvoke({ entry, channel, args, result }) {
   }
 
   if (['set-active-campaign', 'save-global-keys', 'save-settings'].includes(channel)) {
+    if (['set-active-campaign', 'save-settings'].includes(channel)) {
+      await persistActiveCampaignToProject(store, entry.projectId);
+    }
     clearHandlerCache(entry.projectId, entry.organizationId);
   }
 }
@@ -148,6 +185,7 @@ module.exports = {
   invoke,
   listChannels,
   syncProjectToStore,
+  persistActiveCampaignToProject,
   clearHandlerCache,
   eventBus,
 };

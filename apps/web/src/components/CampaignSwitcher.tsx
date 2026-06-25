@@ -17,7 +17,7 @@ export function CampaignSwitcher({ onSwitch }: { onSwitch?: (id: string) => void
     setCampaigns(Array.isArray(list) ? list : []);
     const id = active?.id || list?.[0]?.id || '';
     setActiveId(id);
-    if (id) setProjectId(id);
+    if (id && !id.startsWith('camp_')) setProjectId(id);
   }, []);
 
   useEffect(() => { load().catch(console.error); }, [load]);
@@ -28,7 +28,7 @@ export function CampaignSwitcher({ onSwitch }: { onSwitch?: (id: string) => void
     try {
       await invoke('set-active-campaign', id);
       setActiveId(id);
-      setProjectId(id);
+      if (!id.startsWith('camp_')) setProjectId(id);
       onSwitch?.(id);
     } finally {
       setSwitching(false);
