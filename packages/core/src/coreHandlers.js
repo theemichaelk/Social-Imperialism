@@ -97,10 +97,12 @@ function registerCoreHandlers(deps) {
     const onboardingComplete = store.getItem('onboardingComplete') === 'true';
     const linkedAccountsCount = JSON.parse(store.getItem(`linkedAccounts_${activeCampaignId}`) || '[]').length;
     const globalKeys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const apiConnected = Object.values(buildApiMetrics(globalKeys)).filter((v) => v === 'Connected').length;
     let nextStep = 1;
-    if (hasProject && !keywords.length) nextStep = 2;
-    else if (hasProject && keywords.length && !onboardingComplete) nextStep = 3;
-    else if (hasProject && keywords.length && onboardingComplete) nextStep = 4;
+    if (hasProject && apiConnected < 5) nextStep = 2;
+    else if (hasProject && !keywords.length) nextStep = 3;
+    else if (hasProject && keywords.length && !onboardingComplete) nextStep = 5;
+    else if (hasProject && keywords.length && onboardingComplete) nextStep = 5;
     return {
       hasProject, hasKeywords: keywords.length > 0, onboardingComplete,
       complete: hasProject && keywords.length && onboardingComplete,

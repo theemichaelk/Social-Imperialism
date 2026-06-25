@@ -39,12 +39,14 @@ function probeStatus(id, data) {
         ? { status: 'pass', summary: d.imageUrl ? 'Image found' : 'OK' }
         : { status: 'warn', summary: err || 'No image' };
     case 'serp':
+      if (d.rateLimited) return { status: 'warn', summary: d.note || 'Rate limited' };
       return d.success !== false ? { status: 'pass', summary: 'Results OK' } : { status: 'warn', summary: err || 'Failed' };
     case 'domain':
       return d.success !== false && !d.error ? { status: 'pass', summary: 'Metrics OK' } : { status: 'warn', summary: err || 'Failed' };
     case 'youtube':
-      return d.success !== false || err.includes('429')
-        ? { status: err.includes('429') ? 'warn' : 'pass', summary: err.includes('429') ? 'Rate limited' : 'OK' }
+      if (d.rateLimited) return { status: 'warn', summary: d.note || 'Rate limited' };
+      return d.success !== false
+        ? { status: 'pass', summary: `${(d.data || []).length} channels` }
         : { status: 'warn', summary: err || 'Failed' };
     case 'tinyurl':
       return d.shortUrl ? { status: 'pass', summary: String(d.shortUrl) } : { status: 'warn', summary: 'No short URL' };

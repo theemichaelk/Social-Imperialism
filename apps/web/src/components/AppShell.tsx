@@ -1,5 +1,5 @@
 'use client';
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
@@ -17,8 +17,13 @@ function isPublicPath(pathname: string) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [checked, setChecked] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const isPublic = isPublicPath(pathname);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   useLayoutEffect(() => {
     const token = getToken();
@@ -57,8 +62,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="dash-orb dash-orb-3" aria-hidden />
       <div className="dash-scanlines" aria-hidden />
       <div className="data-stream" aria-hidden />
-      <Sidebar />
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="mobile-nav-backdrop"
+          aria-label="Close menu"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+      <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
       <main className="main">
+        <div className="mobile-top-bar">
+          <button
+            type="button"
+            className="mobile-nav-toggle"
+            aria-label="Open navigation"
+            onClick={() => setMobileNavOpen(true)}
+          >
+            ☰
+          </button>
+          <span className="mobile-top-title">Social Imperialism</span>
+        </div>
         {children}
         <FooterCredit className="app-footer-credit" />
         <div className="build-stamp" title="Deployed build">{BUILD_STAMP.slice(0, 7)}</div>

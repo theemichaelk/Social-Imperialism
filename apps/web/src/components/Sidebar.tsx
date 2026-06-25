@@ -10,7 +10,12 @@ import { invoke } from '@/lib/api';
 const COLLAPSE_KEY = 'siWebNavCollapsed';
 const SECTION_COLLAPSE_KEY = 'siWebSectionCollapsed';
 
-export function Sidebar() {
+type SidebarProps = {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+};
+
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}) {
   const pathname = usePathname();
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState(false);
@@ -68,7 +73,7 @@ export function Sidebar() {
   const activeSection = NAV_SECTIONS.find((s) => s.items.some((i) => i.href === pathname))?.id;
 
   return (
-    <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-mobile-open' : ''}`}>
       <div className="sidebar-brand">
         <Link href="/" style={{ textDecoration: 'none' }} title="Home">
           <Logo size="sm" showText={!collapsed} />
@@ -114,6 +119,7 @@ export function Sidebar() {
                       href={item.href}
                       className={`nav-link ${pathname === item.href ? 'active' : ''}`}
                       title={collapsed ? item.label : undefined}
+                      onClick={() => onMobileClose?.()}
                     >
                       <span className="nav-link-icon">{item.icon}</span>
                       {!collapsed && <span>{item.label}</span>}

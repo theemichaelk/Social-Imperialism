@@ -450,9 +450,15 @@ function registerIndexHandlers(deps) {
     const key = getGlobalKey('serpApiKey');
     if (!key) return { success: false, error: 'No SerpAPI key' };
     try {
-      const res = await axios.get(`https://serpapi.com/search.json?q=${encodeURIComponent(q)}&api_key=${key}`);
+      const res = await axios.get(`https://serpapi.com/search.json?q=${encodeURIComponent(q)}&api_key=${key}`, { timeout: 20000 });
       return { success: true, data: res.data.organic_results || [] };
-    } catch (e) { return { success: false, error: e.message }; }
+    } catch (e) {
+      const msg = e.message || '';
+      if (msg.includes('429') || msg.includes('403')) {
+        return { success: true, rateLimited: true, data: [], note: 'SerpAPI rate limited — retry later or use Keyword Research' };
+      }
+      return { success: false, error: msg };
+    }
   });
   ipcMain.handle('search-stock-photo', async (event, query) => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
@@ -533,9 +539,20 @@ function registerIndexHandlers(deps) {
     const key = getGlobalKey('youtubeApiKey');
     if (!key) return { success: false, error: 'No YouTube API key' };
     try {
-      const res = await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=tech&maxResults=5&key=${key}`);
+      const res = await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=tech&maxResults=5&key=${key}`, { timeout: 20000 });
       return { success: true, data: res.data.items || [] };
-    } catch (e) { return { success: false, error: e.message }; }
+    } catch (e) {
+      const msg = e.message || '';
+      if (msg.includes('429') || msg.includes('403')) {
+        return {
+          success: true,
+          rateLimited: true,
+          data: [],
+          note: 'YouTube quota rate limited — OAuth channel list still works in Account Hub',
+        };
+      }
+      return { success: false, error: msg };
+    }
   });
   ipcMain.handle('play-tts', async (event, text) => {
     const secret = getGlobalKey('playhtSecretKey');
@@ -556,8 +573,13 @@ function registerIndexHandlers(deps) {
       : ['https://api.deepl.com/v2/translate', 'https://api-free.deepl.com/v2/translate'];
     for (const base of endpoints) {
       try {
-        const res = await axios.post(base, null, {
-          params: { auth_key: key, text, target_lang: targetLang },
+        const body = new URLSearchParams({
+          auth_key: key,
+          text: String(text || ''),
+          target_lang: String(targetLang || 'EN').toUpperCase(),
+        });
+        const res = await axios.post(base, body.toString(), {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           timeout: 15000,
         });
         if (res.data?.translations?.[0]?.text) {

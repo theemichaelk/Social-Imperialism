@@ -6,6 +6,7 @@ import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from 
 
 type LiveData = {
   updatedAt?: string;
+  apiMetrics?: Record<string, string>;
   stats?: {
     accounts?: number;
     library?: number;
@@ -31,13 +32,18 @@ function formatHour(h: number) {
 
 export function ContentStudioLivePanel() {
   const [data, setData] = useState<LiveData>({});
+  const [apiMetrics, setApiMetrics] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await invoke<LiveData>('get-content-studio-live');
+      const [res, api] = await Promise.all([
+        invoke<LiveData>('get-content-studio-live'),
+        invoke<Record<string, string>>('check-api-status').catch(() => ({})),
+      ]);
       setData(res || {});
+      setApiMetrics(api || {});
     } catch (e) {
       console.error(e);
     } finally {
@@ -52,6 +58,22 @@ export function ContentStudioLivePanel() {
   }, [refresh]);
 
   const stats = data.stats || {};
+  const apisConnected = Object.values(apiMetrics).filter((v) => v === 'Connected').length;
+  const apisTotal = Object.keys(apiMetrics).length || 1;
+  const apiBars = Object.entries(apiMetrics)
+    .filter(([, v]) => v === 'Connected')
+    .slice(0, 10)
+    .map(([label], i) => ({
+      label: label.slice(0, 5),
+      value: 1,
+      color: ['#22c55e', '#38bdf8', '#a855f7', '#f59e0b', '#f472b6'][i % 5],
+    }));
+  const actions: string[] = [];
+  if ((stats.scheduled ?? 0) === 0 && (stats.queue ?? 0) > 0) actions.push('Approve queue items to fill your publish calendar');
+  if ((stats.accounts ?? 0) === 0) actions.push('Link accounts in Account Hub to enable one-click publish');
+  if (!stats.brandReady) actions.push('Seed brand from your domain to unlock on-brand generation');
+  if (apisConnected < 8) actions.push('Wire remaining APIs in Setup Wizard for full template coverage');
+  if ((stats.published7d ?? 0) === 0) actions.push('Schedule your first batch — peak windows shown below');
   const scheduleBars = Object.entries(data.platformSchedule || {})
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
@@ -89,15 +111,35 @@ export function ContentStudioLivePanel() {
           <MetricTile label="Keywords" value={stats.keywords ?? 0} sub="tracked" accent="#38bdf8" />
           <MetricTile label="Brand" value={stats.brandReady ? 'Ready' : 'Seed'} sub={stats.brandReady ? 'on-brand' : 'setup'} accent={stats.brandReady ? '#22c55e' : '#f59e0b'} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+        <div className="ics-live-rings" style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
           <RingChart percent={stats.accounts ? Math.min(100, (stats.scheduled || 0) * 8 + 20) : 0} label="Pipeline" color="#a855f7" />
           <RingChart percent={stats.brandReady ? 92 : 35} label="Brand fit" color={stats.brandReady ? '#22c55e' : '#f59e0b'} />
+          <RingChart percent={(apisConnected / apisTotal) * 100} label="APIs" color="#22c55e" />
           <LivePulse label={loading ? 'SYNCING' : 'LIVE'} />
           {data.updatedAt && (
             <span className="settings-panel-desc" style={{ margin: 0 }}>Updated {new Date(data.updatedAt).toLocaleTimeString()}</span>
           )}
         </div>
       </div>
+
+      {actions.length > 0 && (
+        <DataPanel title="Actionable next steps" live className="ics-live-wide ics-action-panel">
+          <ul className="ics-action-list">
+            {actions.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </DataPanel>
+      )}
+
+      {apiBars.length > 0 && (
+        <DataPanel title="Live API stack" live>
+          <BarChart items={apiBars} maxHeight={70} />
+          <p className="settings-panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>
+            {apisConnected}/{apisTotal} integrations connected — Grok, Gemini, stock media, and publish APIs ready for Create.
+          </p>
+        </DataPanel>
+      )}
 
       <DataPanel title="Scheduled by platform" live action={
         <button type="button" className="btn" onClick={refresh} disabled={loading}>{loading ? '…' : 'Refresh'}</button>

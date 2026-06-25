@@ -2,14 +2,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
-import { LivePulse, RingChart } from '@/components/DashboardViz';
+import { LivePulse, RingChart, BarChart, DataPanel } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
 import { useRouter } from 'next/navigation';
 
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
 
 const PLATFORMS = ALL_PLATFORMS;
-const STEPS = ['Brand Profile', 'Keywords & Platforms', 'Feed Preview', 'AI Replies & Be First'];
+const STEPS = ['Brand Profile', 'API Connections', 'Keywords & Platforms', 'Feed Preview', 'AI Replies & Be First'];
 
 type Monitor = { term?: string; platform?: string; type?: string; target?: string; added?: string };
 
@@ -92,7 +93,7 @@ export default function OnboardingPage() {
       });
       await refreshStatus();
       setStep(2);
-      setMsg('Brand integrated with AI');
+      setMsg('Brand integrated with AI — wire your API connections next');
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -134,7 +135,7 @@ export default function OnboardingPage() {
         platforms: k.platforms?.length ? k.platforms : platforms,
       })));
       await refreshStatus();
-      setStep(3);
+      setStep(4);
       setMsg(`Saved ${keywords.length} keywords across ${platforms.length} platforms`);
     } catch (e) {
       setMsg((e as Error).message);
@@ -149,7 +150,7 @@ export default function OnboardingPage() {
     try {
       const posts = await invoke<Post[]>('get-live-feed', { quick: !full, refresh: full });
       setFeed((posts || []).slice(0, 8));
-      setStep(3);
+      setStep(4);
       setMsg(`${(posts || []).length} posts discovered`);
     } catch (e) {
       setMsg((e as Error).message);
@@ -257,11 +258,20 @@ export default function OnboardingPage() {
 
   const readiness = [
     { label: 'Brand profile', done: !!(brand.brandName && brand.domain) },
+    { label: 'API connections', done: connectedCount >= 5 },
     { label: 'Keywords tracked', done: keywords.length > 0 },
-    { label: 'APIs connected', done: connectedCount >= 5 },
     { label: 'Feed preview', done: feed.length > 0 },
     { label: 'Linked accounts', done: Number(status.linkedAccountsCount || 0) > 0 },
   ];
+
+  const apiBars = Object.entries(apiMetrics)
+    .filter(([, st]) => st === 'Connected')
+    .slice(0, 8)
+    .map(([label], i) => ({
+      label: label.slice(0, 6),
+      value: 1,
+      color: ['#22c55e', '#38bdf8', '#a855f7', '#f59e0b', '#f472b6', '#22d3ee', '#94a3b8', '#6366f1'][i % 8],
+    }));
 
   return (
     <div>
@@ -284,13 +294,18 @@ export default function OnboardingPage() {
               ))}
             </div>
           </div>
-          <div style={{ minWidth: 180 }}>
+          <div style={{ minWidth: 180, flex: 1 }}>
             {readiness.map((r) => (
               <div key={r.label} className={`readiness-row ${r.done ? 'done' : ''}`}>
                 <span>{r.label}</span>
                 <span>{r.done ? '✓' : '—'}</span>
               </div>
             ))}
+            {apiBars.length > 0 && (
+              <DataPanel title="Live APIs" live className="wizard-api-panel">
+                <BarChart items={apiBars} maxHeight={60} />
+              </DataPanel>
+            )}
           </div>
         </div>
       </div>
@@ -327,6 +342,22 @@ export default function OnboardingPage() {
       )}
 
       {step === 2 && (
+        <div className="card wizard-connections-step">
+          <h3>API Connections — wire every integration</h3>
+          <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+            Admins: keys load from server .env automatically. Each field below can be tested live before you continue.
+          </p>
+          <SetupConnectionsPanel onSaved={refreshStatus} />
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+            <button className="btn primary" onClick={() => setStep(3)} disabled={connectedCount < 3}>
+              Continue — {connectedCount} APIs live →
+            </button>
+            <button className="btn" onClick={() => setStep(3)}>Skip for now →</button>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && (
         <div className="card">
           <h3>Keywords & Social Platforms</h3>
           <button className="btn" onClick={suggestKeywords} disabled={loading} style={{ marginBottom: 12 }}>✨ AI Suggest Keywords</button>
@@ -353,19 +384,19 @@ export default function OnboardingPage() {
           <p style={{ fontSize: '0.85rem' }}>Tracked ({keywords.length}): {keywords.map((k) => k.term).join(', ') || 'none yet'}</p>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button className="btn primary" onClick={saveKeywords} disabled={loading || !keywords.length}>Save Keywords →</button>
-            <button className="btn" onClick={() => setStep(3)}>Skip →</button>
+            <button className="btn" onClick={() => setStep(4)}>Skip →</button>
           </div>
         </div>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <div className="card">
           <h3>Feed Preview</h3>
           <p style={{ color: '#94a3b8' }}>Posts matching your keywords from connected APIs and web discovery.</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <button className="btn primary" onClick={() => previewFeed(false)} disabled={loading}>Quick Preview</button>
             <button className="btn" onClick={runFirstScan} disabled={loading}>Full First Scan</button>
-            <button className="btn" onClick={() => setStep(4)}>Continue →</button>
+            <button className="btn" onClick={() => setStep(5)}>Continue →</button>
           </div>
           {feed.map((p, i) => (
             <div key={i} className="post-card">
@@ -378,7 +409,7 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {step === 4 && (
+      {step === 5 && (
         <div className="card">
           <h3>AI Replies &amp; Be First Monitors</h3>
           <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Configure global reply voice, scan frequency, and real-time monitors.</p>
@@ -406,7 +437,7 @@ export default function OnboardingPage() {
             </div>
           </div>
           <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Be-First Monitor — watch keyword, page, or account</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, marginBottom: 8 }}>
+          <div className="wizard-monitor-grid" style={{ marginBottom: 8 }}>
             <input className="input" placeholder="Keyword, @handle, or page" value={watchTerm} onChange={(e) => setWatchTerm(e.target.value)} style={{ margin: 0 }} />
             <select className="input" value={watchType} onChange={(e) => setWatchType(e.target.value)} style={{ margin: 0 }}>
               <option value="keyword">Keyword</option>

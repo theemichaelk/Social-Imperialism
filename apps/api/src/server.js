@@ -262,10 +262,13 @@ async function getActiveProject(orgId, projectId) {
 const { startScheduler } = require('./scheduler');
 const { startJobRunner } = require('@si/core/src/jobRunner');
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Social Imperialism API → http://localhost:${PORT}`);
   startScheduler();
   startJobRunner();
 });
+server.setTimeout(120000);
+server.keepAliveTimeout = 120000;
+server.headersTimeout = 125000;
 
 module.exports = app;
