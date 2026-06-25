@@ -29,6 +29,10 @@ export function PageHeader({
   return (
     <header className="page-header dash-page-header">
       <div className="dash-page-header-inner">
+        <span className="fi-corner tl" aria-hidden />
+        <span className="fi-corner tr" aria-hidden />
+        <span className="fi-corner bl" aria-hidden />
+        <span className="fi-corner br" aria-hidden />
         <div className="dash-page-header-scan" aria-hidden />
         <div className="dash-page-header-content">
           <span className="home-section-eyebrow">{sectionLabel}</span>

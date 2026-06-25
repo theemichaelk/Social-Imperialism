@@ -43,7 +43,14 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-bg-grid" aria-hidden />
+      <div className="login-orb login-orb-1" aria-hidden />
+      <div className="login-orb login-orb-2" aria-hidden />
+      <div className="dash-scanlines" aria-hidden />
       <div className="login-card">
+        <span className="fi-corner tl" aria-hidden />
+        <span className="fi-corner tr" aria-hidden />
+        <span className="fi-corner bl" aria-hidden />
+        <span className="fi-corner br" aria-hidden />
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.25rem' }}>
           <a href="/" style={{ textDecoration: 'none' }}><Logo size="lg" showText /></a>
           <p style={{ textAlign: 'center', color: '#94a3b8', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>

@@ -21,12 +21,13 @@ export function Logo({ size = 'md', showText = true, className = '' }: LogoProps
         style={{ objectFit: 'contain', flexShrink: 0 }}
       />
       {showText && (
-        <span className="brand-text" style={{
-          fontWeight: 700,
-          fontSize: size === 'lg' ? '1.35rem' : size === 'sm' ? '0.95rem' : '1.05rem',
-          color: '#38bdf8',
-          lineHeight: 1.2,
-        }}>
+        <span
+          className="brand-text"
+          style={{
+            fontSize: size === 'lg' ? '1.35rem' : size === 'sm' ? '0.95rem' : '1.05rem',
+            lineHeight: 1.2,
+          }}
+        >
           Social Imperialism
         </span>
       )}

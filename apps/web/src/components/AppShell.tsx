@@ -48,7 +48,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="dash-orb dash-orb-2" aria-hidden />
         <div className="dash-loading-inner">
           <div className="dash-loading-ring" />
-          <p>Initializing mission control…</p>
+          <p style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+            Initializing mission control…
+          </p>
         </div>
       </div>
     );
@@ -57,6 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell">
       <div className="dash-bg-grid" aria-hidden />
+      <div className="hex-mesh" aria-hidden />
       <div className="dash-orb dash-orb-1" aria-hidden />
       <div className="dash-orb dash-orb-2" aria-hidden />
       <div className="dash-orb dash-orb-3" aria-hidden />

@@ -64,8 +64,10 @@ export default function HomePage() {
   return (
     <div className="home-page">
       <div className="home-bg-grid" aria-hidden />
+      <div className="hex-mesh" aria-hidden />
       <div className="home-floating-orb home-orb-1" aria-hidden />
       <div className="home-floating-orb home-orb-2" aria-hidden />
+      <div className="dash-scanlines" aria-hidden />
 
       <header className="home-nav home-nav-glass">
         <div className="home-nav-brand">
