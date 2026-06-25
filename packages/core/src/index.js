@@ -140,7 +140,7 @@ async function afterInvoke({ entry, channel, args, result }) {
 
   if (['set-active-campaign', 'save-global-keys', 'save-settings'].includes(channel)) {
     if (['set-active-campaign', 'save-settings'].includes(channel)) {
-      await persistActiveCampaignToProject(store, entry.projectId);
+      await persistActiveCampaignToProject(entry.store, entry.projectId);
     }
     clearHandlerCache(entry.projectId, entry.organizationId);
   }
