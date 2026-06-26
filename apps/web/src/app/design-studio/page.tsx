@@ -7,6 +7,7 @@ import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SocialPostCard } from '@/components/SocialPostCard';
 import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
 import Link from 'next/link';
+import { GrokToolbar } from '@/components/GrokToolbar';
 
 type DesignTemplate = {
   id: string;
@@ -99,6 +100,7 @@ export default function DesignStudioPage() {
       />
 
       <SectionLivePanel section="design-studio" />
+      <GrokToolbar pageId="design-studio" compact onMedia={(url) => setFields((f) => ({ ...f, image: url }))} />
 
       <div className="grid grid-2">
         <div className="card">

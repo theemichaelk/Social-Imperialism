@@ -18,6 +18,10 @@ packages/db/prisma/saas.db-journal
 apps/api/.env
 deploy/rds-state.json
 deploy/rds-eb-options.json
+deploy/apprunner-service.json
+deploy/apprunner-state.json
+deploy/eb-options.json
+deploy/eb-state.json
 
 # OS & editor
 .DS_Store

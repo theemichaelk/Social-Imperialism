@@ -236,6 +236,9 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
       <button class="primary" id="btn-campaigns" onclick="switchSettingsView('campaignListView')"><i class="fas fa-layer-group"></i> Campaigns</button>
       <button class="secondary" id="btn-api-keys" onclick="switchSettingsView('apiKeysView')"><i class="fas fa-key"></i> API Keys</button>
       <button class="secondary" id="btn-grok" onclick="switchSettingsView('grokView')"><i class="fas fa-robot"></i> Grok</button>
+      <button class="secondary" id="btn-playbooks" onclick="switchSettingsView('playbooksView')"><i class="fas fa-map"></i> Playbooks</button>
+      <button class="secondary" id="btn-traffic" onclick="switchSettingsView('trafficHealthView')"><i class="fas fa-chart-line"></i> Traffic</button>
+      <button class="secondary" id="btn-intelligence" onclick="switchSettingsView('intelligenceView')"><i class="fas fa-brain"></i> Intelligence</button>
       <button class="secondary" id="btn-pricing" onclick="switchSettingsView('pricingView')"><i class="fas fa-credit-card"></i> Billing</button>
       <button class="secondary" id="btn-tutorials" onclick="switchSettingsView('tutorialView')"><i class="fas fa-graduation-cap"></i> Tutorials</button>
       <button class="secondary" id="btn-system-health" onclick="switchSettingsView('systemHealthView')"><i class="fas fa-heartbeat"></i> Health</button>
@@ -459,6 +462,76 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
             <button type="button" class="secondary" id="grokOpenTutorialBtn" style="text-transform:none;"><i class="fas fa-graduation-cap"></i> Setup Tutorial (tut_grok)</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Strategy Playbooks (parity with web Settings → Strategy Playbooks) -->
+    <div id="playbooksView" class="hidden">
+      <div class="header">
+        <h1><i class="fas fa-map" style="color:#38bdf8;"></i> Strategy Playbooks</h1>
+        <p style="color:#94a3b8; margin-top:5px;">Keywords and description personalize every playbook step — same as web SaaS Settings.</p>
+      </div>
+      <div class="rule-box" style="margin-bottom:1.5rem;">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Target Keywords</label>
+            <input type="text" id="playbookKeywords" placeholder="social media automation, AI marketing">
+          </div>
+          <div class="form-group full-width">
+            <label>Brand / Site Description</label>
+            <textarea id="playbookDescription" rows="3" placeholder="Describe your site type, audience, and value proposition…"></textarea>
+          </div>
+        </div>
+        <button type="button" class="primary" id="btnSavePlaybooks" style="margin-top:0.75rem;"><i class="fas fa-save"></i> Save Context</button>
+        <span id="playbookSaveMsg" style="margin-left:12px;font-size:0.85rem;color:#94a3b8;"></span>
+      </div>
+      <div id="playbooksList"></div>
+    </div>
+
+    <!-- Traffic & Rankings (parity with web Settings → Traffic & Rankings) -->
+    <div id="trafficHealthView" class="hidden">
+      <div class="header">
+        <h1><i class="fas fa-chart-line" style="color:#22c55e;"></i> Traffic &amp; Rankings</h1>
+        <p style="color:#94a3b8; margin-top:5px;">Domain health scan via SerpAPI + DomDetailer — matches web Traffic &amp; Rankings panel.</p>
+      </div>
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div class="form-group">
+          <label>Domains (comma-separated)</label>
+          <input type="text" id="trafficDomains" placeholder="yourbrand.com, competitor.com">
+        </div>
+        <div class="form-group">
+          <label>Focus keyword</label>
+          <input type="text" id="trafficKeyword" placeholder="primary keyword">
+        </div>
+      </div>
+      <button type="button" class="primary" id="btnRunTrafficHealth"><i class="fas fa-search"></i> Run Health Scan</button>
+      <div id="trafficHealthResults" style="margin-top:1.25rem;font-size:0.85rem;color:#cbd5e1;"></div>
+    </div>
+
+    <!-- Account Intelligence (parity with web Settings → Account Intelligence) -->
+    <div id="intelligenceView" class="hidden">
+      <div class="header">
+        <h1><i class="fas fa-brain" style="color:#a855f7;"></i> Account Intelligence</h1>
+        <p style="color:#94a3b8; margin-top:5px;">Live per-account signals and recommendation surfaces across the app.</p>
+      </div>
+      <div class="rule-box">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0.75rem;">
+          <input type="checkbox" id="intelEnabled" style="width:auto;">
+          Use intelligence recommendations throughout the app
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0.5rem;">
+          <input type="checkbox" id="intelSuggestScheduling" style="width:auto;"> Suggest best posting times
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0.5rem;">
+          <input type="checkbox" id="intelSuggestNiches" style="width:auto;"> Suggest trending niches
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:1rem;">
+          <input type="checkbox" id="intelSuggestCommunities" style="width:auto;"> Suggest communities / groups
+        </label>
+        <div id="intelSurfacesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:1rem;"></div>
+        <button type="button" class="primary" id="btnSaveIntelligence"><i class="fas fa-save"></i> Save Intelligence Settings</button>
+        <button type="button" class="secondary" id="btnRefreshIntelProfiles" style="margin-left:8px;"><i class="fas fa-sync"></i> Refresh All Profiles</button>
+        <div id="intelProfilesList" style="margin-top:1rem;font-size:0.85rem;color:#94a3b8;"></div>
       </div>
     </div>
 
@@ -1655,7 +1728,7 @@ let currentCampaigns = [];
 let editingCampaignId = null;
 
 function switchSettingsView(viewId) {
-    const views = ['campaignListView', 'pricingView', 'tutorialView', 'grokView', 'apiKeysView', 'systemHealthView', 'campaignEditView'];
+    const views = ['campaignListView', 'pricingView', 'tutorialView', 'grokView', 'playbooksView', 'trafficHealthView', 'intelligenceView', 'apiKeysView', 'systemHealthView', 'campaignEditView'];
     views.forEach(v => {
         const el = document.getElementById(v);
         if(el) el.classList.add('hidden');
@@ -1675,6 +1748,9 @@ function switchSettingsView(viewId) {
         loadGrokSettings();
         loadNativeBrowserSettingsGrok();
     }
+    if (viewId === 'playbooksView') loadPlaybooksView();
+    if (viewId === 'trafficHealthView') loadTrafficHealthView();
+    if (viewId === 'intelligenceView') loadIntelligenceView();
     if (viewId === 'pricingView') {
       loadPaymentGatewayUI();
       loadBillingUI();
@@ -1692,12 +1768,18 @@ function switchSettingsView(viewId) {
         if(document.getElementById('btn-tutorials')) document.getElementById('btn-tutorials').className = 'secondary';
         if(document.getElementById('btn-api-keys')) document.getElementById('btn-api-keys').className = 'secondary';
         if(document.getElementById('btn-grok')) document.getElementById('btn-grok').className = 'secondary';
+        if(document.getElementById('btn-playbooks')) document.getElementById('btn-playbooks').className = 'secondary';
+        if(document.getElementById('btn-traffic')) document.getElementById('btn-traffic').className = 'secondary';
+        if(document.getElementById('btn-intelligence')) document.getElementById('btn-intelligence').className = 'secondary';
         if(document.getElementById('btn-system-health')) document.getElementById('btn-system-health').className = 'secondary';
         
         if(viewId === 'campaignListView' && document.getElementById('btn-campaigns')) document.getElementById('btn-campaigns').className = 'primary';
         if(viewId === 'pricingView' && document.getElementById('btn-pricing')) document.getElementById('btn-pricing').className = 'primary';
         if(viewId === 'tutorialView' && document.getElementById('btn-tutorials')) document.getElementById('btn-tutorials').className = 'primary';
         if(viewId === 'grokView' && document.getElementById('btn-grok')) document.getElementById('btn-grok').className = 'primary';
+        if(viewId === 'playbooksView' && document.getElementById('btn-playbooks')) document.getElementById('btn-playbooks').className = 'primary';
+        if(viewId === 'trafficHealthView' && document.getElementById('btn-traffic')) document.getElementById('btn-traffic').className = 'primary';
+        if(viewId === 'intelligenceView' && document.getElementById('btn-intelligence')) document.getElementById('btn-intelligence').className = 'primary';
         if(viewId === 'apiKeysView' && document.getElementById('btn-api-keys')) document.getElementById('btn-api-keys').className = 'primary';
         if(viewId === 'systemHealthView' && document.getElementById('btn-system-health')) document.getElementById('btn-system-health').className = 'primary';
     }
@@ -2432,6 +2514,140 @@ document.getElementById('saveGlobalKeysBtn')?.addEventListener('click', async ()
   await loadApiKeysStatusBar();
   loadSettingsStatus();
   showToast('Global API keys saved. Dashboard, Content Hub, and workers will use live credentials.', 'success');
+});
+
+const SITE_PLAYBOOKS_DESKTOP = [
+  { id: 'blog', icon: '📝', title: 'Blog / Content Site', color: '#38bdf8', summary: 'Keyword clusters, RSS syndication, and social amplification.', steps: [
+    { n: 1, title: 'Keyword Foundation', action: 'Seed {keywords} into Keywords and run SerpAPI research.' },
+    { n: 2, title: 'Brand Context', action: 'Apply "{description}" in Content Hub AI prompts.' },
+    { n: 3, title: 'RSS Discovery', action: 'Run site RSS router for feeds related to {keywords}.' },
+    { n: 4, title: 'Engagement Loop', action: 'Enable auto-rules for {keywords} — review in AI Replies.' },
+  ]},
+  { id: 'ecommerce', icon: '🛒', title: 'E-Commerce Store', color: '#f59e0b', summary: 'Product keywords and conversion-focused outreach.', steps: [
+    { n: 1, title: 'Product Keywords', action: 'Map {keywords} to buyer-intent in SEO Tools.' },
+    { n: 2, title: 'Store Positioning', action: 'Embed "{description}" in reply templates.' },
+  ]},
+  { id: 'saas', icon: '☁️', title: 'SaaS / Software', color: '#a855f7', summary: 'B2B social proof on LinkedIn & Twitter.', steps: [
+    { n: 1, title: 'ICP Keywords', action: 'Define {keywords} as problem/solution pairs.' },
+    { n: 2, title: 'Quora Authority', action: 'Answer questions about {keywords} with product context.' },
+  ]},
+  { id: 'agency', icon: '🏢', title: 'Agency / Multi-Brand', color: '#22c55e', summary: 'Per-client campaigns and isolated credentials.', steps: [
+    { n: 1, title: 'Campaign Isolation', action: 'Create campaign per client with {keywords}.' },
+    { n: 2, title: 'Health Audit', action: 'Run traffic check for each client domain.' },
+  ]},
+];
+
+const INTEL_SURFACES = [
+  'account-hub', 'dashboard', 'calendar', 'content-hub', 'browse-posts', 'rules', 'account-creator',
+];
+
+function personalizePlaybookStep(text, keywords, description) {
+  const kw = (keywords || '').trim() || 'your target keywords';
+  const desc = (description || '').trim() || 'your brand description';
+  return String(text).replace(/\{keywords\}/g, kw).replace(/\{description\}/g, desc);
+}
+
+function renderPlaybooksList() {
+  const kw = document.getElementById('playbookKeywords')?.value || '';
+  const desc = document.getElementById('playbookDescription')?.value || '';
+  const el = document.getElementById('playbooksList');
+  if (!el) return;
+  el.innerHTML = SITE_PLAYBOOKS_DESKTOP.map((pb) => `
+    <div class="rule-box" style="margin-bottom:1rem;border-color:${pb.color};">
+      <div class="rule-title" style="color:${pb.color};">${pb.icon} ${escapeHtml(pb.title)}</div>
+      <p style="color:#94a3b8;font-size:0.85rem;">${escapeHtml(pb.summary)}</p>
+      <ol style="margin:0;padding-left:1.25rem;color:#cbd5e1;font-size:0.85rem;">
+        ${pb.steps.map((s) => `<li style="margin-bottom:6px;"><strong>${escapeHtml(s.title)}</strong> — ${escapeHtml(personalizePlaybookStep(s.action, kw, desc))}</li>`).join('')}
+      </ol>
+    </div>`).join('');
+}
+
+async function loadPlaybooksView() {
+  try {
+    const cfg = await ipcRenderer.invoke('get-site-playbook-config');
+    const kwEl = document.getElementById('playbookKeywords');
+    const descEl = document.getElementById('playbookDescription');
+    if (kwEl) kwEl.value = cfg.keywords || '';
+    if (descEl) descEl.value = cfg.description || '';
+    renderPlaybooksList();
+  } catch (e) {
+    showToast('Playbooks load failed: ' + e.message, 'error');
+  }
+}
+
+document.getElementById('btnSavePlaybooks')?.addEventListener('click', async () => {
+  const keywords = document.getElementById('playbookKeywords')?.value || '';
+  const description = document.getElementById('playbookDescription')?.value || '';
+  await ipcRenderer.invoke('save-site-playbook-config', { keywords, description });
+  document.getElementById('playbookSaveMsg').textContent = 'Context saved — steps updated below';
+  renderPlaybooksList();
+  showToast('Playbook context saved', 'success');
+});
+document.getElementById('playbookKeywords')?.addEventListener('input', renderPlaybooksList);
+document.getElementById('playbookDescription')?.addEventListener('input', renderPlaybooksList);
+
+async function loadTrafficHealthView() {
+  const active = await ipcRenderer.invoke('get-active-campaign').catch(() => null);
+  const domEl = document.getElementById('trafficDomains');
+  if (domEl && active?.domain && !domEl.value) domEl.value = active.domain;
+}
+
+document.getElementById('btnRunTrafficHealth')?.addEventListener('click', async () => {
+  const domains = (document.getElementById('trafficDomains')?.value || '').split(',').map((d) => d.trim()).filter(Boolean);
+  const keyword = document.getElementById('trafficKeyword')?.value || '';
+  const out = document.getElementById('trafficHealthResults');
+  if (!out) return;
+  out.innerHTML = '<p style="color:#94a3b8;">Scanning…</p>';
+  try {
+    const res = await ipcRenderer.invoke('get-site-traffic-health', { domains, keyword });
+    const sites = res.sites || res.domains || [];
+    if (!sites.length && !res.summary) {
+      out.innerHTML = '<p style="color:#94a3b8;">No results — add domains and ensure SerpAPI / DomDetailer keys in API Keys.</p>';
+      return;
+    }
+    out.innerHTML = `<pre style="white-space:pre-wrap;background:rgba(15,23,42,0.6);padding:1rem;border-radius:8px;border:1px solid #334155;">${escapeHtml(JSON.stringify(res, null, 2).slice(0, 4000))}</pre>`;
+    showToast('Traffic health scan complete', 'success');
+  } catch (e) {
+    out.innerHTML = `<p style="color:#ef4444;">${escapeHtml(e.message)}</p>`;
+  }
+});
+
+async function loadIntelligenceView() {
+  const s = await ipcRenderer.invoke('get-intelligence-settings');
+  document.getElementById('intelEnabled').checked = s.enabled !== false;
+  document.getElementById('intelSuggestScheduling').checked = s.autoSuggestScheduling !== false;
+  document.getElementById('intelSuggestNiches').checked = s.autoSuggestNiches !== false;
+  document.getElementById('intelSuggestCommunities').checked = s.autoSuggestCommunities !== false;
+  const surfaces = s.surfaces || INTEL_SURFACES;
+  document.getElementById('intelSurfacesGrid').innerHTML = INTEL_SURFACES.map((id) => `
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:#94a3b8;cursor:pointer;">
+      <input type="checkbox" data-intel-surface="${id}" ${surfaces.includes(id) ? 'checked' : ''} style="width:auto;"> ${id}
+    </label>`).join('');
+  const accounts = await ipcRenderer.invoke('get-linked-accounts').catch(() => []);
+  document.getElementById('intelProfilesList').innerHTML = (accounts || []).map((a) =>
+    `<div style="margin-bottom:6px;"><span class="api-pill ${a.profile ? 'ok' : 'warn'}">${escapeHtml(a.platform)} ${escapeHtml(a.handle || '')}</span> ${a.profile ? 'profile loaded' : 'no profile yet'}</div>`
+  ).join('') || 'No linked accounts — connect in Account Hub.';
+}
+
+document.getElementById('btnSaveIntelligence')?.addEventListener('click', async () => {
+  const surfaces = [...document.querySelectorAll('[data-intel-surface]:checked')].map((el) => el.getAttribute('data-intel-surface'));
+  await ipcRenderer.invoke('save-intelligence-settings', {
+    enabled: document.getElementById('intelEnabled').checked,
+    autoSuggestScheduling: document.getElementById('intelSuggestScheduling').checked,
+    autoSuggestNiches: document.getElementById('intelSuggestNiches').checked,
+    autoSuggestCommunities: document.getElementById('intelSuggestCommunities').checked,
+    surfaces,
+  });
+  showToast('Intelligence settings saved', 'success');
+});
+
+document.getElementById('btnRefreshIntelProfiles')?.addEventListener('click', async () => {
+  const accounts = await ipcRenderer.invoke('get-linked-accounts').catch(() => []);
+  for (const a of accounts || []) {
+    try { await ipcRenderer.invoke('refresh-account-profile', a.id); } catch (e) { /* continue */ }
+  }
+  await loadIntelligenceView();
+  showToast('Profile refresh complete', 'success');
 });
 
 // Initialize

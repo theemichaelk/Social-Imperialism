@@ -42,7 +42,16 @@
   </div>
   <div class="neo-card">
     <h3><i class="fas fa-broadcast-tower"></i> Email Auto-Reply Campaigns</h3>
-    <button class="neo-btn" onclick="loadCampaigns()">Load Campaigns</button>
+    <p style="font-size:0.8rem;color:#8ba3c7;margin:0 0 10px">Triggered alerts for AI replies, leads, and Q&amp;A — parity with web Integrations → Email Campaigns.</p>
+    <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:#8ba3c7;margin-bottom:8px;">
+      <input type="checkbox" id="emailCampaignsEnabled" style="width:auto;"> Enable email auto-reply system
+    </label>
+    <input class="neo-input" id="emailAlertRecipient" placeholder="Alert / test recipient email">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+      <button class="neo-btn" onclick="loadCampaigns()">Refresh Campaigns</button>
+      <button class="neo-btn primary" onclick="saveEmailCampaignSettings()">Save Settings</button>
+      <button class="neo-btn" onclick="sendTestCampaign()">Send Test Campaign</button>
+    </div>
     <div id="campaignList" style="margin-top:10px;font-size:0.85rem;color:#8ba3c7"></div>
   </div>
 </main>
@@ -76,12 +85,49 @@ async function shortenUrl() {
   document.getElementById('shortResult').textContent = res.shortUrl || res.error || 'Failed';
 }
 
+let emailCampaignState = { campaigns: [], settings: {} };
+
 async function loadCampaigns() {
   const res = await ipcRenderer.invoke('get-email-campaigns');
+  emailCampaignState = res || { campaigns: [], settings: {} };
   const camps = res.campaigns || [];
+  const enabledEl = document.getElementById('emailCampaignsEnabled');
+  const recipEl = document.getElementById('emailAlertRecipient');
+  if (enabledEl) enabledEl.checked = res.settings?.enabled !== false;
+  if (recipEl) recipEl.value = res.settings?.alertEmail || '';
   document.getElementById('campaignList').innerHTML = camps.map((c) =>
-    `<div style="margin-bottom:6px"><span class="neo-pill">${escapeHtml(c.trigger)}</span> ${escapeHtml(c.name)}</div>`
-  ).join('') || 'No campaigns configured';
+    `<div style="margin-bottom:8px;padding:8px;border:1px solid #334155;border-radius:6px;">
+      <strong>${escapeHtml(c.name)}</strong>
+      <div style="font-size:0.75rem;color:#64748b;margin:4px 0;">${escapeHtml(c.trigger)} · ${escapeHtml((c.subject || '').slice(0, 60))}</div>
+      <label style="font-size:0.75rem;margin-right:12px;"><input type="checkbox" data-camp-enabled="${c.id}" ${c.enabled ? 'checked' : ''} onchange="toggleEmailCampaign('${c.id}','enabled',this.checked)"> On</label>
+      <label style="font-size:0.75rem;"><input type="checkbox" data-camp-auto="${c.id}" ${c.autoReply ? 'checked' : ''} onchange="toggleEmailCampaign('${c.id}','autoReply',this.checked)"> Auto-reply</label>
+    </div>`
+  ).join('') || 'No campaigns configured — they seed from your active brand on first load.';
+}
+
+async function saveEmailCampaignSettings() {
+  const settings = {
+    ...emailCampaignState.settings,
+    enabled: document.getElementById('emailCampaignsEnabled')?.checked !== false,
+    alertEmail: document.getElementById('emailAlertRecipient')?.value?.trim() || emailCampaignState.settings?.alertEmail,
+  };
+  await ipcRenderer.invoke('save-email-campaigns', { ...emailCampaignState, settings });
+  showToast('Email campaign settings saved', 'success');
+  await loadCampaigns();
+}
+
+async function toggleEmailCampaign(id, field, value) {
+  const campaigns = (emailCampaignState.campaigns || []).map((c) => (c.id === id ? { ...c, [field]: value } : c));
+  emailCampaignState = { ...emailCampaignState, campaigns };
+  await ipcRenderer.invoke('save-email-campaigns', emailCampaignState);
+}
+
+async function sendTestCampaign() {
+  const camp = (emailCampaignState.campaigns || [])[0];
+  if (!camp) return showToast('No campaigns loaded', 'error');
+  const to = document.getElementById('emailAlertRecipient')?.value?.trim();
+  const res = await ipcRenderer.invoke('send-email-campaign', { campaignId: camp.id, to: to || undefined });
+  showToast(res.success !== false ? 'Test campaign sent' : (res.error || 'Send failed'), res.success !== false ? 'success' : 'error');
 }
 
 async function loadHealth() {

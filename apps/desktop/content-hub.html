@@ -40,6 +40,14 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
   color: #38bdf8; border-color: rgba(56, 189, 248, 0.55);
   background: rgba(56, 189, 248, 0.1); font-weight: 600;
 }
+.mtab-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.5rem; }
+.mtab-tool { padding: 0.3rem 0.65rem; font-size: 0.72rem; border-radius: 6px; border: 1px solid rgba(56,189,248,0.2); background: rgba(15,23,42,0.5); color: #94a3b8; cursor: pointer; }
+.mtab-tool.primary { color: #38bdf8; }
+.mtab-chip { display: inline-flex; align-items: center; gap: 2px; }
+.mtab-chip-label { cursor: pointer; }
+.mtab-chip-close { border: none; background: transparent; color: #64748b; cursor: pointer; padding: 0 0.35rem; font-size: 1rem; }
+.mtab-chip-close:hover { color: #f87171; }
+.mtab-group-toggle { border: none; background: transparent; cursor: pointer; color: #64748b; font-size: 0.58rem; text-transform: uppercase; }
 
 .tab-content { display: none; }
 .tab-content.active { display: block; }
@@ -255,41 +263,7 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
     <div id="contentHubReadiness" class="ch-readiness" style="display:none;"></div>
     <div id="toastContainer"></div>
 
-    <div class="ch-tabs-wrap">
-      <div class="ch-tab-groups">
-        <div class="ch-tab-group">
-          <span class="ch-tab-group-label">Publish</span>
-          <div class="ch-tab-group-items tabs">
-            <div class="tab" data-tab="publish-wizard" onclick="switchTab('publish-wizard')" title="Publish Wizard"><i class="fas fa-route"></i> Wizard</div>
-            <div class="tab active" data-tab="standard" onclick="switchTab('standard')" title="Standard Post"><i class="fas fa-pen"></i> Post</div>
-            <div class="tab" data-tab="media" onclick="switchTab('media')" title="Video / Reel / Media"><i class="fas fa-video"></i> Media</div>
-          </div>
-        </div>
-        <div class="ch-tab-group">
-          <span class="ch-tab-group-label">Grow</span>
-          <div class="ch-tab-group-items tabs">
-            <div class="tab" data-tab="repurpose" onclick="switchTab('repurpose')" title="Repurpose Content"><i class="fas fa-recycle"></i> Repurpose</div>
-            <div class="tab" data-tab="answer" onclick="switchTab('answer')" title="Answer Composer"><i class="fas fa-question-circle"></i> Q&amp;A</div>
-            <div class="tab" data-tab="rss" onclick="switchTab('rss')" title="RSS & Auto Content"><i class="fas fa-rss"></i> RSS</div>
-          </div>
-        </div>
-        <div class="ch-tab-group">
-          <span class="ch-tab-group-label">Create</span>
-          <div class="ch-tab-group-items tabs">
-            <div class="tab" data-tab="thumbnails" onclick="switchTab('thumbnails')" title="Viral Thumbnails"><i class="fas fa-fire"></i> Thumbnails</div>
-            <div class="tab" data-tab="infographic" onclick="switchTab('infographic')" title="Infographic Generator"><i class="fas fa-chart-pie"></i> Infographic</div>
-          </div>
-        </div>
-        <div class="ch-tab-group">
-          <span class="ch-tab-group-label">Manage</span>
-          <div class="ch-tab-group-items tabs">
-            <div class="tab" data-tab="analytics" onclick="switchTab('analytics')" title="Post Analytics"><i class="fas fa-chart-line"></i> Analytics</div>
-            <div class="tab" data-tab="brand" onclick="switchTab('brand')" title="Brand & Keywords"><i class="fas fa-bullhorn"></i> Brand</div>
-            <div class="tab" data-tab="comments" onclick="switchTab('comments')" title="Manage Comments / Replies"><i class="fas fa-comments"></i> Comments</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="ch-tabs-wrap" id="chManageableTabsMount"></div>
 
     <!-- PUBLISH WIZARD TAB -->
     <div id="publish-wizard-tab" class="tab-content">
@@ -728,6 +702,7 @@ h1 { margin: 0; color: #f1f5f9; text-shadow: 0 0 15px rgba(255,255,255,0.1); fon
   </div>
 </div>
 
+<script src="js/manageable-tabs.js"></script>
 <script>
 const { ipcRenderer, shell } = require('electron');
 
@@ -892,7 +867,9 @@ function normalizeStatus(status) {
   return (s === 'published' || s === 'sent') ? 'published' : 'draft';
 }
 
+window._chActiveTabId = window._chActiveTabId || 'standard';
 window.switchTab = function(tabId) {
+  window._chActiveTabId = tabId;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
@@ -915,6 +892,7 @@ window.switchTab = function(tabId) {
       integrateGrokForPage('content-hub');
     } catch (e) { /* grok bar optional */ }
   }
+  if (window.chTabsApi) window.chTabsApi.refresh();
 };
 
 window.setPublishWizardStep = function(step) {
@@ -2852,6 +2830,30 @@ window.getLiveKeys = async function() {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const CH_TAB_CATALOG = [
+    { id: 'publish-wizard', label: 'Wizard', group: 'Publish' },
+    { id: 'standard', label: 'Post', group: 'Publish', locked: true },
+    { id: 'media', label: 'Media', group: 'Publish' },
+    { id: 'repurpose', label: 'Repurpose', group: 'Grow' },
+    { id: 'answer', label: 'Q&A', group: 'Grow' },
+    { id: 'rss', label: 'RSS', group: 'Grow' },
+    { id: 'thumbnails', label: 'Thumbnails', group: 'Create' },
+    { id: 'infographic', label: 'Infographic', group: 'Create' },
+    { id: 'analytics', label: 'Analytics', group: 'Manage' },
+    { id: 'brand', label: 'Brand', group: 'Manage' },
+    { id: 'comments', label: 'Comments', group: 'Manage' },
+  ];
+  const tabMount = document.getElementById('chManageableTabsMount');
+  if (tabMount && window.SiManageableTabs) {
+    window.chTabsApi = window.SiManageableTabs.mount(tabMount, {
+      pageId: 'content-hub-desktop',
+      catalog: CH_TAB_CATALOG,
+      grouped: true,
+      getActive: () => window._chActiveTabId || 'standard',
+      setActive: (id) => window.switchTab(id),
+    });
+  }
+
   initImperialGenerator();
   initContentStudios();
   await loadThumbnailStudioConfig();

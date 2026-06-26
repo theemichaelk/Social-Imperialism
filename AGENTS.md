@@ -45,6 +45,7 @@ Errors are learning opportunities. When something breaks:
 ## Social Imperialism Brain (`brain/`)
 Before implementing Grok, browser automation, or new integrations, read:
 - `brain/BRAIN.md` — index
+- `brain/GROWTH_ENGINE.md` — autonomous social growth brain (brain-check, validation, workflow routing)
 - `brain/FEATURES.md` — feature catalog (desktop + web parity)
 - `brain/GROK.md` — Grok session, Edge profile, credentials, IPC channels
 - `brain/skills/grok-imagine/SKILL.md` — Grok Imagine image generation workflow

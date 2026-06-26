@@ -13,6 +13,7 @@ import { FetchProfileFilters } from '@/lib/fetchProfiles';
 import { QaSettingsPanel } from '@/components/QaSettingsPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { useSiEvents } from '@/hooks/useSiEvents';
+import { ManageableTabNav } from '@/components/ManageableTabNav';
 
 type Post = {
   platform: string;
@@ -294,7 +295,14 @@ export default function DashboardPage() {
     refresh();
   }
 
-  const tabs = ['overview', 'feed', 'qa', 'growth', 'worker', 'analytics'];
+  const DASHBOARD_TABS = [
+    { id: 'overview', label: 'Overview', locked: true },
+    { id: 'feed', label: 'Feed' },
+    { id: 'qa', label: 'Q&A' },
+    { id: 'growth', label: 'Growth' },
+    { id: 'worker', label: 'Worker' },
+    { id: 'analytics', label: 'Analytics' },
+  ];
   const apiEntries = Object.entries(stats.apiMetrics || setup.apiMetrics as Record<string, string> || {});
   const connectedApis = apiEntries.filter(([, v]) => v === 'Connected').length;
   const totalApis = apiEntries.length || 1;
@@ -373,11 +381,12 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="tabs">
-        {tabs.map((t) => (
-          <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</button>
-        ))}
-      </div>
+      <ManageableTabNav
+        pageId="dashboard"
+        catalog={DASHBOARD_TABS}
+        active={tab}
+        onChange={setTab}
+      />
 
       {tab === 'overview' && (
         <>

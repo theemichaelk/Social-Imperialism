@@ -1,0 +1,7 @@
+[
+  {
+    "Namespace": "aws:elasticbeanstalk:application:environment",
+    "OptionName": "ALLOWED_ORIGINS",
+    "Value": "https://main.d204r2r6gar3c8.amplifyapp.com,https://d204r2r6gar3c8.amplifyapp.com,https://d2cu5rkstjz0rg.cloudfront.net,https://api.socialimperialism.com,https://socialimperialism.com,https://www.socialimperialism.com"
+  }
+]

@@ -14,6 +14,7 @@ import {
   getFieldMeta,
   platformConnectionStatus,
 } from '@/lib/accountCreatorCatalog';
+import { ManageableTabNav } from '@/components/ManageableTabNav';
 
 type Proxy = {
   id: string; label?: string; host?: string; port?: number; protocol?: string;
@@ -58,7 +59,16 @@ type BatchStatus = {
   failed?: number;
 };
 
-const TABS = ['Studio', 'Overview', 'Configure', 'Proxies', 'Kits', 'Connections', 'Batch'] as const;
+const TAB_CATALOG = [
+  { id: 'Studio', label: 'Studio', group: 'Build', locked: true },
+  { id: 'Overview', label: 'Overview', group: 'Build' },
+  { id: 'Configure', label: 'Configure', group: 'Build' },
+  { id: 'Proxies', label: 'Proxies', group: 'Infra' },
+  { id: 'Kits', label: 'Kits', group: 'Infra' },
+  { id: 'Connections', label: 'Connections', group: 'Launch' },
+  { id: 'Batch', label: 'Batch', group: 'Launch' },
+] as const;
+const TABS = TAB_CATALOG.map((t) => t.id);
 type Tab = (typeof TABS)[number];
 
 const DEFAULT_PLATFORMS = ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'TikTok'];
@@ -560,11 +570,14 @@ export default function AccountCreatorPage() {
       {msg && <div className="card ac-msg-card"><p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p></div>}
       {progress && <div className="card ac-progress-card"><p style={{ margin: 0, color: '#38bdf8' }}>{progress}</p></div>}
 
-      <div className="tabs ac-tabs">
-        {TABS.map((t) => (
-          <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</button>
-        ))}
-      </div>
+      <ManageableTabNav
+        pageId="account-creator"
+        catalog={[...TAB_CATALOG]}
+        active={tab}
+        onChange={(id) => { if (TABS.includes(id as Tab)) setTab(id as Tab); }}
+        grouped
+        className="ac-tabs"
+      />
 
       {tab === 'Studio' && (
         <div className="ac-studio-scroll">

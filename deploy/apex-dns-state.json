@@ -1,0 +1,10 @@
+{
+  "domain": "socialimperialism.com",
+  "amplifyAppId": "d204r2r6gar3c8",
+  "amplifyDomainStatus": "AVAILABLE",
+  "amplifyCloudFront": "d1azg31w2pn0x4.cloudfront.net",
+  "wwwUrl": "https://www.socialimperialism.com",
+  "apexUrl": "https://socialimperialism.com",
+  "route53ChangeId": "C02490101YUDAM2EAN7H4",
+  "note": "Apex DNS propagating; www is live. Flush local DNS if browser still shows NXDOMAIN."
+}

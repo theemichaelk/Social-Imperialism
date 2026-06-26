@@ -15,6 +15,8 @@ import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart,
 import { INTEGRATION_GROUPS } from '@/lib/integrationCatalog';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
+import { NativeBrowserPanel } from '@/components/NativeBrowserPanel';
+import { ManageableTabNav } from '@/components/ManageableTabNav';
 
 type Campaign = {
   id: string; brandName?: string; domain?: string; status?: string;
@@ -35,18 +37,18 @@ type KeySources = {
 };
 
 const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'playbooks', label: 'Strategy Playbooks' },
-  { id: 'site-health', label: 'Traffic & Rankings' },
-  { id: 'api-keys', label: 'API Keys' },
-  { id: 'live-probes', label: 'Live Probes' },
-  { id: 'account-intelligence', label: 'Account Intelligence' },
-  { id: 'campaigns', label: 'Campaigns' },
-  { id: 'billing', label: 'Billing' },
-  { id: 'grok', label: 'Grok' },
-  { id: 'tutorials', label: 'Tutorials' },
-  { id: 'health', label: 'System Health' },
-  { id: 'system', label: 'System' },
+  { id: 'overview', label: 'Overview', group: 'Core', locked: true },
+  { id: 'campaigns', label: 'Campaigns', group: 'Core' },
+  { id: 'billing', label: 'Billing', group: 'Core' },
+  { id: 'playbooks', label: 'Strategy Playbooks', group: 'Strategy' },
+  { id: 'site-health', label: 'Traffic & Rankings', group: 'Strategy' },
+  { id: 'account-intelligence', label: 'Account Intelligence', group: 'Strategy' },
+  { id: 'api-keys', label: 'API Keys', group: 'Connect' },
+  { id: 'live-probes', label: 'Live Probes', group: 'Connect' },
+  { id: 'grok', label: 'Grok', group: 'Connect' },
+  { id: 'tutorials', label: 'Tutorials', group: 'System' },
+  { id: 'health', label: 'System Health', group: 'System' },
+  { id: 'system', label: 'System', group: 'System' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -119,6 +121,11 @@ function SettingsContent() {
   }, []);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
+
+  useEffect(() => {
+    const q = searchParams.get('tab') as TabId | null;
+    if (q && TABS.some((t) => t.id === q)) setTab(q);
+  }, [searchParams]);
 
   useEffect(() => {
     const plan = searchParams.get('plan');
@@ -316,13 +323,24 @@ function SettingsContent() {
         </div>
       )}
 
-      <div className="tabs settings-tabs">
-        {TABS.map((t) => (
-          <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTabAndUrl(t.id)}>{t.label}</button>
-        ))}
-      </div>
+      <ManageableTabNav
+        pageId="settings"
+        catalog={[...TABS]}
+        active={tab}
+        onChange={(id) => { if (TABS.some((t) => t.id === id)) setTabAndUrl(id as TabId); }}
+        grouped
+        className="settings-tabs"
+      />
 
       {tab === 'overview' && (
+        <>
+        <div className="settings-quick-links">
+          <Link href="/content-hub" className="btn">Content Hub</Link>
+          <Link href="/integrations" className="btn">Integrations Hub</Link>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('grok')}>Grok & Browser</button>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('playbooks')}>Strategy Playbooks</button>
+          <Link href="/account-hub" className="btn">Account Hub</Link>
+        </div>
         <div className="grid grid-2">
           <DataPanel title="Connection Pulse" live>
             <SparkRow items={[
@@ -365,6 +383,7 @@ function SettingsContent() {
             </div>
           </DataPanel>
         </div>
+        </>
       )}
 
       {tab === 'playbooks' && <SitePlaybooksPanel />}
@@ -494,6 +513,14 @@ function SettingsContent() {
       )}
 
       {tab === 'grok' && (
+        <div className="settings-grok-stack">
+        <div className="settings-quick-links">
+          <Link href="/content-hub?tab=grok" className="btn">Content Hub → Grok</Link>
+          <Link href="/content-hub?tab=thumbnails" className="btn">Thumbnail Studio</Link>
+          <Link href="/integrations" className="btn">Integrations Hub</Link>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('tutorials')}>Setup Tutorial (tut_grok)</button>
+        </div>
+        <NativeBrowserPanel />
         <DataPanel title="Grok Engine (Browser Session)" live>
           <p className="settings-panel-desc">
             Grok Text, <strong>Grok Imagine</strong> (images), Grok Video + Extend, and Infographics run through a persistent
@@ -518,6 +545,7 @@ function SettingsContent() {
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <button className="btn primary" onClick={saveGrok}>Save Credentials</button>
             <button className="btn" onClick={async () => {
+              await saveGrok();
               setGrokStatus(await invoke<Record<string, unknown>>('grok-connect'));
               setMsg('Grok connect initiated — complete CAPTCHA in Edge if prompted');
             }}>Connect & Authorize</button>
@@ -526,6 +554,7 @@ function SettingsContent() {
             }}>Refresh Status</button>
           </div>
         </DataPanel>
+        </div>
       )}
 
       {tab === 'tutorials' && (

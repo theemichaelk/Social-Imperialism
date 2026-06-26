@@ -19,11 +19,35 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 
 **Default browser:** Microsoft Edge, dedicated `edge/grok` profile.
 
-## Content Hub (existing)
+## Content Hub (existing + June 2026 parity pass)
 
 - AI generation, RSS, stock media, publish queue, calendar scheduling
-- Thumbnail studio (FLUX, FAL, Grok Imagine, Advanced Workflow)
-- Grok bar on: `content-hub`, `design-studio`, `brand`, `integrations`, `dns`, `content-library`
+- Thumbnail studio (FLUX, FAL, Grok Imagine, Advanced Workflow) — **web tabs: Thumbnails, Grok & Infographic**
+- Grok bar on: `content-hub`, `design-studio`, `brand`, `integrations`, `dns`, `content-library` — **web `GrokToolbar` on all six surfaces**
+- **Web tabs added:** Media/Video, Repurpose, Q&A Composer, Comments inbox, Post Analytics, Content Utilities
+- **Desktop tabs unchanged** — full tab set already in `content-hub.html`
+
+## Settings parity (June 2026)
+
+| Panel | Desktop | Web |
+|-------|---------|-----|
+| Strategy Playbooks | `settings.html` → Playbooks | Settings → Strategy Playbooks |
+| Traffic & Rankings | `settings.html` → Traffic | Settings → Traffic & Rankings |
+| Account Intelligence | `settings.html` → Intelligence | Settings → Account Intelligence |
+| Native Browser | Grok tab + API Keys | Settings → Grok + `NativeBrowserPanel` |
+
+## Integrations parity (June 2026)
+
+| Panel | Desktop | Web |
+|-------|---------|-----|
+| Email auto-reply campaigns | `integrations.html` (toggle + test send) | Integrations → Email Campaigns |
+| S3 storage health | `integrations.html` AWS card | `S3StatusPanel` on Connections tab |
+| Partner API / Webhooks | Desktop basic | Web full hub (unchanged) |
+
+## Scheduler parity
+
+- Web `/scheduler` now includes `BackgroundRunPanel` (slot CRUD) — same component as `/rules`
+- Desktop: `calendar.html#scheduler` (unchanged)
 
 ## Settings & integrations (existing)
 

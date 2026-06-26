@@ -1,0 +1,179 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { groupVisibleTabs } from '@/lib/manageableTabs';
+import { useManageableTabs } from '@/hooks/useManageableTabs';
+import type { TabCatalogItem } from '@/lib/manageableTabs';
+
+type Props = {
+  pageId: string;
+  catalog: TabCatalogItem[];
+  active: string;
+  onChange: (id: string) => void;
+  grouped?: boolean;
+  className?: string;
+};
+
+export function ManageableTabNav({
+  pageId,
+  catalog,
+  active,
+  onChange,
+  grouped = false,
+  className = '',
+}: Props) {
+  const {
+    visibleTabs,
+    hiddenTabs,
+    layout,
+    closeTab,
+    deleteTab,
+    restoreTab,
+    addCustomTab,
+    reorderTab,
+    toggleGroupCollapse,
+    toggleNavCollapse,
+    resetLayout,
+    resolveActive,
+    handleTabSelect,
+    catalog: fullCatalog,
+  } = useManageableTabs(pageId, catalog);
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const addRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    resolveActive(active, onChange);
+  }, [active, onChange, resolveActive, visibleTabs]);
+
+  useEffect(() => {
+    if (!addOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (addRef.current && !addRef.current.contains(e.target as Node)) setAddOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [addOpen]);
+
+  const onSelect = useCallback((tab: typeof visibleTabs[number]) => {
+    handleTabSelect(tab, onChange);
+  }, [handleTabSelect, onChange]);
+
+  const promptCustomTab = () => {
+    const label = window.prompt('Tab name (shortcut label):');
+    if (!label?.trim()) return;
+    const target = window.prompt(
+      `Link to existing tab id (optional).\nAvailable: ${fullCatalog.map((t) => t.id).join(', ')}`,
+    );
+    const id = addCustomTab(label, {
+      targetTabId: target?.trim() || undefined,
+      group: 'Shortcuts',
+    });
+    if (id) onChange(target?.trim() || id);
+    setAddOpen(false);
+  };
+
+  const renderTab = (tab: typeof visibleTabs[number], group?: string) => {
+    const locked = !tab.custom && fullCatalog.find((t) => t.id === tab.id)?.locked;
+    return (
+      <div
+        key={tab.id}
+        className={`mtab-chip ${active === tab.id || (tab.custom && tab.targetTabId === active) ? 'active' : ''} ${dragId === tab.id ? 'dragging' : ''}`}
+        draggable
+        onDragStart={() => setDragId(tab.id)}
+        onDragEnd={() => setDragId(null)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={() => {
+          if (dragId) reorderTab(dragId, tab.id, group);
+          setDragId(null);
+        }}
+      >
+        <button
+          type="button"
+          className="mtab-chip-label"
+          onClick={() => onSelect(tab)}
+          title={tab.custom ? 'Shortcut tab' : tab.label}
+        >
+          {tab.custom && <span className="mtab-shortcut">★</span>}
+          {tab.label}
+        </button>
+        {!locked && (
+          <button
+            type="button"
+            className="mtab-chip-close"
+            title={tab.custom ? 'Delete shortcut' : 'Close tab'}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (tab.custom) deleteTab(tab.id);
+              else closeTab(tab.id);
+              if (active === tab.id) {
+                const next = visibleTabs.find((t) => t.id !== tab.id);
+                if (next) onChange(next.targetTabId || next.id);
+              }
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const groupedTabs = grouped ? groupVisibleTabs(visibleTabs) : [{ group: 'General', tabs: visibleTabs }];
+
+  return (
+    <div className={`mtab-nav ${grouped ? 'mtab-nav-grouped' : ''} ${className}`.trim()}>
+      <div className="mtab-toolbar">
+        <button type="button" className="mtab-tool" onClick={toggleNavCollapse} title={layout.navCollapsed ? 'Expand tabs' : 'Collapse tabs'}>
+          {layout.navCollapsed ? '▸ Tabs' : '▾ Tabs'}
+        </button>
+        <div className="mtab-add-wrap" ref={addRef}>
+          <button type="button" className="mtab-tool primary" onClick={() => setAddOpen((o) => !o)}>+ Add tab</button>
+          {addOpen && (
+            <div className="mtab-add-menu">
+              {hiddenTabs.length > 0 && (
+                <>
+                  <p className="mtab-add-heading">Restore closed</p>
+                  {hiddenTabs.map((t) => (
+                    <button key={t.id} type="button" className="mtab-add-item" onClick={() => { restoreTab(t.id); onChange(t.id); setAddOpen(false); }}>
+                      {t.label}
+                    </button>
+                  ))}
+                </>
+              )}
+              <p className="mtab-add-heading">New shortcut</p>
+              <button type="button" className="mtab-add-item" onClick={promptCustomTab}>Create named shortcut…</button>
+              {hiddenTabs.length === 0 && (
+                <p className="mtab-add-hint">All built-in tabs are visible. Add a shortcut or close tabs to restore later.</p>
+              )}
+            </div>
+          )}
+        </div>
+        <button type="button" className="mtab-tool" onClick={resetLayout} title="Reset tab order and visibility">Reset layout</button>
+      </div>
+
+      {!layout.navCollapsed && (
+        <div className={grouped ? 'ch-tab-nav' : 'tabs mtab-strip'}>
+          {groupedTabs.map(({ group, tabs }) => (
+            <div key={group} className={grouped ? 'ch-tab-group' : 'mtab-flat-group'}>
+              {grouped && (
+                <button type="button" className="ch-tab-group-label mtab-group-toggle" onClick={() => toggleGroupCollapse(group)}>
+                  {layout.collapsedGroups.includes(group) ? '▸' : '▾'} {group}
+                </button>
+              )}
+              {(!grouped || !layout.collapsedGroups.includes(group)) && (
+                <div className={grouped ? 'ch-tab-group-items' : 'mtab-strip-items'}>
+                  {tabs.map((t) => renderTab(t, group))}
+                </div>
+              )}
+            </div>
+          ))}
+          {!visibleTabs.length && (
+            <p className="mtab-empty">No tabs visible — use <strong>+ Add tab</strong> to restore.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

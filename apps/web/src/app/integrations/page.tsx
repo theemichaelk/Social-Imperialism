@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
@@ -10,8 +11,11 @@ import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { INTEGRATION_GROUPS, LIVE_INTEGRATION_TESTS } from '@/lib/integrationCatalog';
 import { PARTNER_CONNECTORS } from '@/lib/partnerConnectors';
 import { OAUTH_PLATFORM_SETUP, OAUTH_PRIMARY_REDIRECT } from '@/lib/oauthConfig';
+import { EmailCampaignsPanel } from '@/components/EmailCampaignsPanel';
+import { S3StatusPanel } from '@/components/S3StatusPanel';
+import { ManageableTabNav } from '@/components/ManageableTabNav';
 
-type TabId = 'connections' | 'probes' | 'partner-api' | 'webhooks' | 'connectors';
+type TabId = 'connections' | 'probes' | 'email-campaigns' | 'partner-api' | 'webhooks' | 'connectors';
 type TestResult = { id: string; label: string; status: 'idle' | 'running' | 'pass' | 'fail' | 'warn'; ms?: number; summary?: string };
 type KeySources = { sources?: Record<string, string>; isAdminEnv?: boolean; envKeyCount?: number; message?: string };
 type PartnerConfig = {
@@ -24,12 +28,13 @@ type PartnerConfig = {
 };
 type EventLog = { id: string; type: string; at: string; ok?: boolean; [k: string]: unknown };
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'connections', label: 'Connections' },
-  { id: 'probes', label: 'Live Probes' },
-  { id: 'partner-api', label: 'Partner API' },
-  { id: 'webhooks', label: 'Webhooks' },
-  { id: 'connectors', label: 'App Connectors' },
+const TABS: { id: TabId; label: string; group: string; locked?: boolean }[] = [
+  { id: 'connections', label: 'Connections', group: 'Setup', locked: true },
+  { id: 'probes', label: 'Live Probes', group: 'Setup' },
+  { id: 'email-campaigns', label: 'Email Campaigns', group: 'Outreach' },
+  { id: 'partner-api', label: 'Partner API', group: 'Partner' },
+  { id: 'webhooks', label: 'Webhooks', group: 'Partner' },
+  { id: 'connectors', label: 'App Connectors', group: 'Partner' },
 ];
 
 function summarize(data: unknown): string {
@@ -83,8 +88,11 @@ function validateTest(id: string, data: unknown): 'pass' | 'fail' | 'warn' {
   }
 }
 
-export default function IntegrationsPage() {
-  const [tab, setTab] = useState<TabId>('connections');
+function IntegrationsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get('tab') as TabId) || 'connections';
+  const [tab, setTab] = useState<TabId>(TABS.some((t) => t.id === initialTab) ? initialTab : 'connections');
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [keySources, setKeySources] = useState<KeySources>({});
   const [apiStatus, setApiStatus] = useState<Record<string, string>>({});
@@ -100,23 +108,44 @@ export default function IntegrationsPage() {
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [msg, setMsg] = useState('');
+  const [emailCampaignCount, setEmailCampaignCount] = useState(0);
+  const [emailCampaignsActive, setEmailCampaignsActive] = useState(0);
 
   const refresh = useCallback(async () => {
-    const [k, ks, a, p, log] = await Promise.all([
+    const [k, ks, a, p, log, email] = await Promise.all([
       invoke<Record<string, string>>('get-global-keys'),
       invoke<KeySources>('get-key-sources'),
       invoke<Record<string, string>>('check-api-status'),
       invoke<PartnerConfig>('get-partner-integration-config'),
       invoke<EventLog[]>('get-integration-events-log').catch(() => []),
+      invoke<{ campaigns?: Array<{ enabled?: boolean }> }>('get-email-campaigns').catch(() => ({ campaigns: [] })),
     ]);
     setKeys(k || {});
     setKeySources(ks || {});
     setApiStatus(a || {});
     setPartner(p || {});
     setEventLog(log || []);
+    const camps = email.campaigns || [];
+    setEmailCampaignCount(camps.length);
+    setEmailCampaignsActive(camps.filter((c) => c.enabled).length);
   }, []);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
+
+  useEffect(() => {
+    const q = searchParams.get('tab') as TabId | null;
+    if (q && TABS.some((t) => t.id === q)) setTab(q);
+  }, [searchParams]);
+
+  const setTabAndUrl = useCallback((t: TabId) => {
+    setTab(t);
+    router.replace(`/integrations?tab=${t}`, { scroll: false });
+  }, [router]);
+
+  const onEmailCampaignsChange = useCallback((active: number, total: number) => {
+    setEmailCampaignsActive(active);
+    setEmailCampaignCount(total);
+  }, []);
 
   const connected = Object.values(apiStatus).filter((v) => v === 'Connected').length;
   const total = Object.keys(apiStatus).length || 1;
@@ -155,9 +184,9 @@ export default function IntegrationsPage() {
     finally { setLoading(false); }
   }
 
-  async function runTest(testId: string) {
+  async function runTest(testId: string): Promise<'pass' | 'fail' | 'warn'> {
     const test = LIVE_INTEGRATION_TESTS.find((t) => t.id === testId);
-    if (!test) return;
+    if (!test) return 'fail';
     setResults((prev) => prev.map((r) => r.id === testId ? { ...r, status: 'running', summary: undefined } : r));
     const start = Date.now();
     try {
@@ -166,19 +195,29 @@ export default function IntegrationsPage() {
       setResults((prev) => prev.map((r) => r.id === testId ? {
         ...r, status: st, ms: Date.now() - start, summary: summarize(data),
       } : r));
+      return st;
     } catch (e) {
       setResults((prev) => prev.map((r) => r.id === testId ? {
         ...r, status: 'fail', ms: Date.now() - start, summary: (e as Error).message,
       } : r));
+      return 'fail';
     }
   }
 
   async function runAll() {
     setRunning(true);
-    for (const test of LIVE_INTEGRATION_TESTS) await runTest(test.id);
+    let pass = 0;
+    let warn = 0;
+    let fail = 0;
+    for (const test of LIVE_INTEGRATION_TESTS) {
+      const st = await runTest(test.id);
+      if (st === 'pass') pass++;
+      else if (st === 'warn') warn++;
+      else fail++;
+    }
     await refresh();
     setRunning(false);
-    setMsg(`Scan done — ${passCount} pass, ${warnCount} warn, ${failCount} fail`);
+    setMsg(`Scan done — ${pass} pass, ${warn} warn, ${fail} fail`);
   }
 
   async function genApiKey() {
@@ -266,6 +305,7 @@ export default function IntegrationsPage() {
             <MetricTile label="Warn" value={warnCount} accent="#f59e0b" />
             <MetricTile label="Partner API" value={partner.partnerApiKeyFull ? 'Active' : 'Setup'} accent="#a855f7" />
             <MetricTile label="API Calls" value={partner.usageCount ?? 0} />
+            <MetricTile label="Email Campaigns" value={`${emailCampaignsActive}/${emailCampaignCount}`} accent="#f59e0b" onClick={() => setTabAndUrl('email-campaigns')} />
           </div>
           <LivePulse label={running ? 'SCANNING' : connected >= 10 ? 'LIVE' : 'PARTIAL'} />
         </div>
@@ -278,11 +318,14 @@ export default function IntegrationsPage() {
       )}
       {msg && <div className="card settings-msg-card"><p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p></div>}
 
-      <div className="tabs integrations-tabs">
-        {TABS.map((t) => (
-          <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
-        ))}
-      </div>
+      <ManageableTabNav
+        pageId="integrations"
+        catalog={TABS}
+        active={tab}
+        onChange={(id) => { if (TABS.some((t) => t.id === id)) setTabAndUrl(id as TabId); }}
+        grouped
+        className="integrations-tabs"
+      />
 
       {tab === 'connections' && (
         <>
@@ -315,6 +358,24 @@ export default function IntegrationsPage() {
             </div>
           ))}
           <button className="btn primary" style={{ marginTop: 12 }} onClick={saveKeys} disabled={loading}>Save All Keys</button>
+          <div className="card" style={{ marginTop: 16, fontSize: '0.88rem' }}>
+            <p style={{ margin: '0 0 8px' }}>
+              Email auto-reply campaigns: <strong>{emailCampaignsActive}</strong> active of {emailCampaignCount}.
+              {' '}<button type="button" className="btn" style={{ marginLeft: 8 }} onClick={() => setTabAndUrl('email-campaigns')}>Configure →</button>
+            </p>
+          </div>
+          <div style={{ marginTop: 16 }}><S3StatusPanel /></div>
+        </>
+      )}
+
+      {tab === 'email-campaigns' && (
+        <>
+          <div className="settings-quick-links" style={{ marginBottom: 12 }}>
+            <button type="button" className="btn" onClick={() => setTabAndUrl('connections')}>← API Keys</button>
+            <button type="button" className="btn" onClick={() => setTabAndUrl('probes')}>Live Probes</button>
+            <Link href="/settings?tab=api-keys" className="btn">Settings → API Keys</Link>
+          </div>
+          <EmailCampaignsPanel onCampaignsChange={onEmailCampaignsChange} />
         </>
       )}
 
@@ -471,12 +532,20 @@ export default function IntegrationsPage() {
                 <span className="connector-icon">{c.icon}</span>
                 <strong>{c.name}</strong>
                 <p>{c.desc}</p>
-                <button className="btn" style={{ marginTop: 8, fontSize: '0.75rem' }} onClick={() => setTab('partner-api')}>Setup API →</button>
+                <button className="btn" style={{ marginTop: 8, fontSize: '0.75rem' }} onClick={() => setTabAndUrl('partner-api')}>Setup API →</button>
               </div>
             ))}
           </div>
         </DataPanel>
       )}
     </div>
+  );
+}
+
+export default function IntegrationsPage() {
+  return (
+    <Suspense fallback={<div className="card"><p>Loading Integrations…</p></div>}>
+      <IntegrationsContent />
+    </Suspense>
   );
 }

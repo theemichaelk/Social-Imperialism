@@ -1,0 +1,15 @@
+{
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "_386f4e8bfd70e0149e9fc79dfacd11d7.api.socialimperialism.com.",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          { "Value": "_a0e73565425333d2d4f48a857d36b245.jkddzztszm.acm-validations.aws." }
+        ]
+      }
+    }
+  ]
+}

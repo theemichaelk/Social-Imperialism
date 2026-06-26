@@ -5,6 +5,7 @@ import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { DataPanel } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { BackgroundRunPanel } from '@/components/BackgroundRunPanel';
 
 type ScheduledPost = {
   id: string;
@@ -166,6 +167,10 @@ export default function SchedulerPage() {
             </ul>
           )}
         </DataPanel>
+      </div>
+
+      <div style={{ marginTop: '1.5rem' }}>
+        <BackgroundRunPanel onMsg={setMsg} />
       </div>
     </div>
   );

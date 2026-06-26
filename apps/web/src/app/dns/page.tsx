@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { DataPanel, MetricTile } from '@/components/DashboardViz';
+import { GrokToolbar } from '@/components/GrokToolbar';
 
 type DnsSite = {
   id: string;
@@ -208,6 +209,7 @@ export default function DnsPage() {
           ? 'Admin view — all platform sites, Quantum Pages, and every client campaign domain'
           : 'Manage DNS records for your sites'}
       />
+      <GrokToolbar pageId="dns" compact />
 
       {msg && (
         <div className="card" style={{ borderColor: 'rgba(56,189,248,0.4)', marginBottom: 12 }}>

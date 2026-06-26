@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
+import { ManageableTabNav } from '@/components/ManageableTabNav';
+
+const QP_TABS = [
+  { id: 'article', label: 'Article', locked: true },
+  { id: 'report', label: 'Report' },
+  { id: 'outline', label: 'Outline' },
+  { id: 'meta', label: 'Meta' },
+];
 
 type QuantumResult = {
   title?: string;
@@ -186,13 +194,12 @@ export function QuantumPagesPanel({ keywords }: Props) {
 
       {result && (
         <div style={{ marginTop: 16 }}>
-          <div className="tabs" style={{ marginBottom: 8 }}>
-            {(['article', 'report', 'outline', 'meta'] as Tab[]).map((t) => (
-              <button key={t} type="button" className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-                {t === 'article' ? 'Article' : t === 'report' ? 'SEO Report' : t === 'outline' ? 'Outline' : 'Meta'}
-              </button>
-            ))}
-          </div>
+          <ManageableTabNav
+            pageId="quantum-pages-panel"
+            catalog={QP_TABS}
+            active={tab}
+            onChange={(id) => { if (QP_TABS.some((t) => t.id === id)) setTab(id as Tab); }}
+          />
           <pre className="qp-output">{tabContent()}</pre>
         </div>
       )}

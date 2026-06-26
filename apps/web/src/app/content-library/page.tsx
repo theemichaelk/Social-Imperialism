@@ -4,7 +4,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { GrokToolbar } from '@/components/GrokToolbar';
 import Link from 'next/link';
+import { ManageableTabNav } from '@/components/ManageableTabNav';
+
+const FILTER_TABS = [
+  { id: 'all', label: 'All', locked: true },
+  { id: 'image', label: 'Images' },
+  { id: 'video', label: 'Video' },
+  { id: 'copy', label: 'Copy' },
+];
 
 type Asset = {
   id: string;
@@ -105,6 +114,7 @@ export default function ContentLibraryPage() {
       />
 
       <SectionLivePanel section="content-library" />
+      <GrokToolbar pageId="content-library" compact />
 
       <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
         <div className="card">
@@ -133,13 +143,15 @@ export default function ContentLibraryPage() {
         </div>
       </div>
 
-      <div className="tabs">
-        {['all', 'image', 'video', 'copy'].map((t) => (
-          <button key={t} type="button" className={`tab ${filter === t ? 'active' : ''}`} onClick={() => setFilter(t)}>
-            {t === 'all' ? `All (${assets.length})` : t}
-          </button>
-        ))}
-      </div>
+      <ManageableTabNav
+        pageId="content-library"
+        catalog={FILTER_TABS.map((t) => ({
+          ...t,
+          label: t.id === 'all' ? `All (${assets.length})` : t.label,
+        }))}
+        active={filter}
+        onChange={setFilter}
+      />
 
       <div className="grid grid-2">
         {shown.map((a) => (

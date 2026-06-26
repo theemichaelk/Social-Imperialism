@@ -7,9 +7,10 @@ import { MetricTile } from '@/components/DashboardViz';
 
 type Props = {
   onStartCreate?: () => void;
+  onStatsChange?: (stats: { queue: number; scheduled: number; library: number }) => void;
 };
 
-export function ContentHubDashboard({ onStartCreate }: Props) {
+export function ContentHubDashboard({ onStartCreate, onStatsChange }: Props) {
   const [website, setWebsite] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,13 +24,15 @@ export function ContentHubDashboard({ onStartCreate }: Props) {
       invoke<unknown[]>('get-scheduled-posts').catch(() => []),
       invoke<{ brandName?: string; domain?: string }>('get-brand-guidelines').catch(() => ({ brandName: '', domain: '' })),
     ]);
-    setStats({
+    const next = {
       accounts: accounts?.length || 0,
       library: lib?.count || 0,
       queue: Array.isArray(queue) ? queue.length : 0,
       scheduled: Array.isArray(sched) ? sched.length : 0,
       brand: !!(brand?.brandName || brand?.domain),
-    });
+    };
+    setStats(next);
+    onStatsChange?.({ queue: next.queue, scheduled: next.scheduled, library: next.library });
   }
 
   useEffect(() => { refresh().catch(console.error); }, []);

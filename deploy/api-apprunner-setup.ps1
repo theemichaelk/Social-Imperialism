@@ -9,12 +9,12 @@ param(
   [string]$RoleName = "SocialImperialismApiRunnerRole"
 )
 
-$ErrorActionPreference = "Stop"
 $DeployDir = $PSScriptRoot
 $StateFile = Join-Path $DeployDir "apprunner-state.json"
 
 # --- IAM role for S3 access ---
-$roleArn = aws iam get-role --role-name $RoleName --query "Role.Arn" --output text 2>$null
+$roleArn = $null
+try { $roleArn = aws iam get-role --role-name $RoleName --query "Role.Arn" --output text 2>$null } catch {}
 if (-not $roleArn -or $roleArn -eq "None") {
   Write-Host "Creating IAM role $RoleName..."
   aws iam create-role --role-name $RoleName --assume-role-policy-document "file://$DeployDir/apprunner-trust-policy.json" | Out-Null

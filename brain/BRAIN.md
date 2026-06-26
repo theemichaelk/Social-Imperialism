@@ -6,6 +6,7 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 
 | File / folder | Purpose |
 |---------------|---------|
+| [GROWTH_ENGINE.md](./GROWTH_ENGINE.md) | **Autonomous Social Growth Brain Engine** — decision core, brain-check, validation loop, UI pass-back |
 | [FEATURES.md](./FEATURES.md) | Master feature catalog (desktop + web parity) |
 | [GROK.md](./GROK.md) | Grok Engine session, credentials, Edge profile, IPC |
 | [skills/grok-imagine/SKILL.md](./skills/grok-imagine/SKILL.md) | Skill: generate images via Grok Imagine in native Edge |
@@ -15,6 +16,7 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 
 ## Operating rules
 
+0. **Brain-check first** — read [GROWTH_ENGINE.md](./GROWTH_ENGINE.md) before any content, reply, publish, scan, or automation action.
 1. **Never delete existing features** when adding new ones — check PRD first.
 2. **Desktop is source of truth** for Grok browser automation (native Edge/Chrome/Firefox).
 3. **Web/SaaS** invokes the same IPC channels via the desktop bridge or API worker.
