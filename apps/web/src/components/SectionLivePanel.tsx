@@ -35,6 +35,11 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
     { key: 'scheduled', label: 'Scheduled', sub: 'calendar' },
     { key: 'monitors', label: 'Monitors', sub: 'watching' },
   ],
+  'prompt-vault': [
+    { key: 'keywords', label: 'Keywords', sub: 'tracked', accent: '#38bdf8' },
+    { key: 'library', label: 'Library', sub: 'assets' },
+    { key: 'accounts', label: 'Accounts', sub: 'linked' },
+  ],
   'content-hub': [
     { key: 'library', label: 'Library', sub: 'assets', accent: '#38bdf8' },
     { key: 'queue', label: 'Queue', sub: 'review', accent: '#f59e0b' },

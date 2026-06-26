@@ -7,6 +7,7 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 | File / folder | Purpose |
 |---------------|---------|
 | [GROWTH_ENGINE.md](./GROWTH_ENGINE.md) | **Autonomous Social Growth Brain Engine** — decision core, brain-check, validation loop, UI pass-back |
+| [PROMPT_VAULT.md](./PROMPT_VAULT.md) | Prompt Vault — create, search, load, export, delete templates per campaign |
 | [FEATURES.md](./FEATURES.md) | Master feature catalog (desktop + web parity) |
 | [GROK.md](./GROK.md) | Grok Engine session, credentials, Edge profile, IPC |
 | [skills/grok-imagine/SKILL.md](./skills/grok-imagine/SKILL.md) | Skill: generate images via Grok Imagine in native Edge |

@@ -13,6 +13,7 @@ export const NAV_SECTIONS = [
     { id: 'scheduler', href: '/scheduler', icon: '⏱️', label: 'Scheduler' },
   ]},
   { id: 'discovery', label: 'Discovery & Replies', items: [
+    { id: 'prompt-vault', href: '/prompt-vault', icon: '🗄️', label: 'Prompt Vault' },
     { id: 'engagement', href: '/engagement', icon: '👥', label: 'Engagement' },
     { id: 'history', href: '/history', icon: '📜', label: 'AI Replies' },
     { id: 'keywords', href: '/keywords', icon: '🏷️', label: 'Keywords' },

@@ -46,9 +46,25 @@ Before drafting content, replying to users, publishing posts, scanning feeds, bu
 
 ---
 
+## Prompt Vault and Template Management
+
+Before generating new copy, search the **Prompt Vault** (`get-prompt-vault`, `search-prompt-vault`) for reusable templates tagged by feature, keyword, platform, and campaign goal.
+
+| Action | IPC channel | Brain behavior |
+|--------|-------------|----------------|
+| **Create** | `create-prompt-vault-from-keyword` | Expand keyword + feature into a reusable template with `{{keyword}}`, `{{brandName}}`, `{{domain}}`, `{{tone}}` placeholders |
+| **Search** | `search-prompt-vault` | Match by keyword, intent, brand profile, platform, audience, or prior usage |
+| **Load** | `load-prompt-vault-item` | Resolve placeholders from active campaign; apply to Content Hub, Grok, Keywords, Replies, etc. |
+| **Export** | `export-prompt-vault` | Return clean JSON for backup or sharing — no secrets |
+| **Delete** | `delete-prompt-vault-item` | Remove one template without disturbing unrelated campaign or performance history |
+
+Storage key: `promptVault_{activeCampaignId}` per project. See [PROMPT_VAULT.md](./PROMPT_VAULT.md).
+
+---
+
 ## 1. Skill Relevancy Search and Campaign Memory Reuse
 
-- Search stored campaign and brand memory before every action: brand profile, tone, target audience, linked platforms, active keywords, post history, engagement outcomes, automation rules, content calendar, and prior reports.
+- Search stored campaign and brand memory **and Prompt Vault templates** before every action: brand profile, tone, target audience, linked platforms, active keywords, post history, engagement outcomes, automation rules, content calendar, and prior reports.
 - Reuse successful post formats, reply styles, content themes, campaign structures, keyword clusters, engagement workflows, and scheduling patterns when they match the current goal.
 - Expand simple user input into: campaign intent, target platforms, content angles, audience segments, posting cadence, engagement opportunities, reply strategy, and measurable outcomes.
 - Select the right Social Imperialism feature automatically, such as:

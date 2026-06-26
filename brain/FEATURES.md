@@ -19,6 +19,15 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 
 **Default browser:** Microsoft Edge, dedicated `edge/grok` profile.
 
+## Prompt Vault (June 2026)
+
+| Capability | Desktop / API | Web |
+|------------|---------------|-----|
+| Create from keyword | IPC `create-prompt-vault-from-keyword` | `/prompt-vault` + picker |
+| Search / load / delete / export | IPC channels in `promptVault.js` | `PromptVaultPanel`, `PromptVaultPicker` |
+| Feature routing | `feature` tag per template | Content Hub, Grok, Keywords pickers |
+| Brain doc | [PROMPT_VAULT.md](./PROMPT_VAULT.md) | Linked from Settings overview |
+
 ## Content Hub (existing + June 2026 parity pass)
 
 - AI generation, RSS, stock media, publish queue, calendar scheduling

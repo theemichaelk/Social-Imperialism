@@ -1024,6 +1024,9 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     return { success: true, formatted };
   });
 
+  const { registerPromptVaultHandlers } = require('./promptVault');
+  registerPromptVaultHandlers(ipcMain, { store, generateAI });
+
   ipcMain.handle('trigger-full-auto-search', async () => {
     try {
       const { fetchRealFeed } = require(path.join(deps.DESKTOP_SERVICES || '../../../apps/desktop/services', 'feedFetcher'));

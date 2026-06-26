@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { DataPanel } from '@/components/DashboardViz';
+import { PromptVaultPicker } from '@/components/PromptVaultPicker';
 
 type GrokResult = {
   success?: boolean;
@@ -97,6 +98,14 @@ export function GrokToolbar({
           ? <span className="status-ok">Grok session active</span>
           : <span className="status-partial">Not connected — save credentials and Connect in Settings → Grok</span>}
       </div>
+      <PromptVaultPicker
+        feature="grok"
+        compact={compact}
+        onLoad={(text) => {
+          setLocalPrompt(text);
+          setStatus('Prompt loaded from vault');
+        }}
+      />
       <textarea
         className="input"
         rows={compact ? 2 : 4}

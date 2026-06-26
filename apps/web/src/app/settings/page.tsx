@@ -336,6 +336,7 @@ function SettingsContent() {
         <>
         <div className="settings-quick-links">
           <Link href="/content-hub" className="btn">Content Hub</Link>
+          <Link href="/prompt-vault" className="btn">Prompt Vault</Link>
           <Link href="/integrations" className="btn">Integrations Hub</Link>
           <button type="button" className="btn" onClick={() => setTabAndUrl('grok')}>Grok & Browser</button>
           <button type="button" className="btn" onClick={() => setTabAndUrl('playbooks')}>Strategy Playbooks</button>

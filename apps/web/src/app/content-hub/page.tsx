@@ -28,6 +28,7 @@ import { ContentHubUtilitiesPanel } from '@/components/ContentHubUtilitiesPanel'
 import { RepurposeContentPanel } from '@/components/RepurposeContentPanel';
 import { ContentHubTabNav } from '@/components/ContentHubTabNav';
 import { MetricTile } from '@/components/DashboardViz';
+import { PromptVaultPicker } from '@/components/PromptVaultPicker';
 
 const TABS = [
   { id: 'home', label: 'Hub', group: 'Workflow' },
@@ -243,6 +244,7 @@ function ContentHubContent() {
         <div className="pw-compose-split">
           <div className="card">
             <h3>Quick Post</h3>
+            <PromptVaultPicker feature="content-hub" compact onLoad={(text) => { setContent(text); setStatus('Prompt loaded from vault'); }} />
             <textarea className="input" rows={8} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write on-brand copy — Social Imperialism enhances before publish…" />
             <label className="ac-label" style={{ marginTop: 12 }}>Media URL (optional)</label>
             <input className="input" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://… image or video" />

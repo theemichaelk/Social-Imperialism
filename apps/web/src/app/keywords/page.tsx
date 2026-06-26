@@ -7,6 +7,8 @@ import { BarChart, DataPanel, LivePulse, SparkRow } from '@/components/Dashboard
 import { ALL_PLATFORMS, INTENT_TAGS, platformDisplayName } from '@/lib/platforms';
 import { QuantumPagesPanel } from '@/components/QuantumPagesPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { PromptVaultPicker } from '@/components/PromptVaultPicker';
+import Link from 'next/link';
 
 type Keyword = {
   id: string;
@@ -132,7 +134,12 @@ export default function KeywordsPage() {
       <PageHeader
         title="Keywords & Platforms"
         subtitle="AI suggestions, manual keywords, per-platform targeting, intent tags, and custom prompts"
-        actions={<LivePulse label="TRACKING" />}
+        actions={
+          <>
+            <Link href="/prompt-vault" className="btn">Prompt Vault</Link>
+            <LivePulse label="TRACKING" />
+          </>
+        }
       />
 
       <SectionLivePanel section="keywords" showAccounts={false} />
@@ -163,6 +170,7 @@ export default function KeywordsPage() {
             <button className="btn" onClick={suggest} disabled={loading}>AI Suggest</button>
             <button className="btn" onClick={generateGlobalPrompt} disabled={loading}>Global Custom Prompt</button>
           </div>
+          <PromptVaultPicker feature="keywords" compact onLoad={(text) => { setGlobalPrompt(text); setMsg('Vault prompt loaded into global custom prompt'); }} />
           {globalPrompt && (
             <textarea className="input" rows={4} value={globalPrompt} onChange={(e) => setGlobalPrompt(e.target.value)} style={{ marginTop: 12 }} />
           )}
