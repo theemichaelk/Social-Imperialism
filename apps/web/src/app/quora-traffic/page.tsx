@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 
@@ -256,10 +256,7 @@ export default function QuoraTrafficPage() {
 
   return (
     <div className="quora-traffic-page">
-      <PageHeader
-        title="Quora Traffic Ops"
-        subtitle="Research → Generate → Publish — real traffic data, brand angles, proven frameworks"
-      />
+      <PageShell title="Quora Traffic Ops" />
 
       <SectionLivePanel section="quora-traffic" />
 

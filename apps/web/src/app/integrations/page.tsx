@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
 import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
@@ -29,13 +29,14 @@ type PartnerConfig = {
 type EventLog = { id: string; type: string; at: string; ok?: boolean; [k: string]: unknown };
 
 const TABS: { id: TabId; label: string; group: string; locked?: boolean }[] = [
-  { id: 'connections', label: 'Connections', group: 'Setup', locked: true },
-  { id: 'probes', label: 'Live Probes', group: 'Setup' },
+  { id: 'connections', label: 'Connections', group: "Today's Focus", locked: true },
+  { id: 'probes', label: 'Live Probes', group: "Today's Focus" },
   { id: 'email-campaigns', label: 'Email Campaigns', group: 'Outreach' },
   { id: 'partner-api', label: 'Partner API', group: 'Partner' },
   { id: 'webhooks', label: 'Webhooks', group: 'Partner' },
   { id: 'connectors', label: 'App Connectors', group: 'Partner' },
 ];
+const INTEGRATIONS_FOCUS = ['connections', 'probes', 'email-campaigns'];
 
 function summarize(data: unknown): string {
   if (data == null) return 'No data';
@@ -257,16 +258,20 @@ function IntegrationsContent() {
 
   return (
     <div className="integrations-page">
-      <PageHeader
-        title="Integrations Hub"
-        subtitle="Connect APIs, test live probes, Partner REST API, and webhooks for external apps"
+      <PageShell
+        title="Integrations"
         actions={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Link href="/settings?tab=api-keys" className="btn">Settings →</Link>
+            <Link href="/account-hub" className="btn">Accounts</Link>
             <button className="btn" onClick={() => refresh()} disabled={loading}>Refresh</button>
-            <button className="btn primary" onClick={runAll} disabled={running}>{running ? 'Scanning…' : 'Run All Probes'}</button>
+            <button className="btn primary" onClick={runAll} disabled={running}>{running ? 'Scanning…' : 'Test Connections'}</button>
           </div>
         }
+        focusStats={{ Connected: `${connected}/${total}`, Probes: `${passCount} pass` }}
+        onFocusAction={(a) => {
+          if (a.label === 'Test Connections') runAll();
+        }}
+        onFocusTab={(t) => { if (TABS.some((x) => x.id === t)) setTabAndUrl(t as TabId); }}
       />
 
       <SectionLivePanel section="integrations" showAccounts={false} />
@@ -325,6 +330,8 @@ function IntegrationsContent() {
         onChange={(id) => { if (TABS.some((t) => t.id === id)) setTabAndUrl(id as TabId); }}
         grouped
         className="integrations-tabs"
+        focusTabIds={INTEGRATIONS_FOCUS}
+        collapseGroups={['Partner']}
       />
 
       {tab === 'connections' && (

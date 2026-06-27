@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
@@ -523,9 +523,8 @@ export default function AccountCreatorPage() {
 
   return (
     <div className="account-creator-page">
-      <PageHeader
+      <PageShell
         title="Social Profile Account Creator"
-        subtitle="Generate complete multi-platform account kits — names, bios, AI profile photos, Unsplash covers, proxy/IP assignment, YouTube videos, and content schedules"
         actions={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <CampaignSwitcher onSwitch={() => refresh()} />

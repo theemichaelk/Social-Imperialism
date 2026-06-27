@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { BarChart, DataPanel, LivePulse, SparkRow } from '@/components/DashboardViz';
 import { ALL_PLATFORMS, INTENT_TAGS, platformDisplayName } from '@/lib/platforms';
 import { QuantumPagesPanel } from '@/components/QuantumPagesPanel';
@@ -144,9 +144,8 @@ export default function KeywordsPage() {
 
   return (
     <div className="keywords-page">
-      <PageHeader
+      <PageShell
         title="Keywords & Platforms"
-        subtitle="AI suggestions, manual keywords, per-platform targeting, intent tags, and custom prompts"
         actions={
           <>
             <Link href="/prompt-vault" className="btn">Prompt Vault</Link>

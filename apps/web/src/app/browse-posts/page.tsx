@@ -1,7 +1,9 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
+import { ManageableTabNav } from '@/components/ManageableTabNav';
+import { BROWSE_VIEW_TABS } from '@/lib/pageFocus';
 import { BROWSE_PLATFORMS } from '@/lib/platforms';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
 import { useIntelligence } from '@/hooks/useIntelligence';
@@ -161,6 +163,7 @@ export default function BrowsePostsPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [explorerPost, setExplorerPost] = useState<Post | null>(null);
+  const [view, setView] = useState('discover');
 
   const currentFetchFilters: FetchProfileFilters = {
     platform, keyword, language, location, time, minEngage, postType,
@@ -407,9 +410,8 @@ export default function BrowsePostsPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageShell
         title="Browse Posts"
-        subtitle="Live discovery across keywords and linked accounts — filter, draft, engage, schedule"
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn" onClick={() => loadFeed(false)} disabled={loading}>Quick Refresh</button>
@@ -418,6 +420,19 @@ export default function BrowsePostsPage() {
             </button>
           </div>
         }
+        focusStats={{ Posts: filtered.length, Monitors: monitors.length, Keywords: keywords.length }}
+        onFocusAction={(a) => { if (a.label === 'Full Scan') loadFeed(true); }}
+        onFocusTab={setView}
+      />
+
+      <ManageableTabNav
+        pageId="browse-posts"
+        catalog={[...BROWSE_VIEW_TABS]}
+        active={view}
+        onChange={setView}
+        grouped
+        focusTabIds={['discover', 'engage', 'monitors']}
+        collapseGroups={['Insights']}
       />
 
       <BrowsePostsLivePanel feedCount={filtered.length} />
@@ -499,8 +514,8 @@ export default function BrowsePostsPage() {
         </div>
       )}
 
-      {isSurfaceEnabled('browse-posts') && accountFilter && (() => {
-        const acc = intelAccounts.find((a) => a.id === accountFilter);
+      {(view === 'intelligence' || (view === 'discover' && accountFilter)) && isSurfaceEnabled('browse-posts') && (() => {
+        const acc = intelAccounts.find((a) => a.id === accountFilter) || intelAccounts[0];
         if (!acc) return null;
         return (
           <div className="card" style={{ marginBottom: 12 }}>
@@ -514,7 +529,20 @@ export default function BrowsePostsPage() {
         );
       })()}
 
-      <div className="grid grid-2">
+      {view === 'monitors' && monitors.length > 0 && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <h3>Be First Monitors</h3>
+          <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 0 }}>Watch high-value targets — remove stale monitors to stay focused.</p>
+          {monitors.map((m) => (
+            <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: '0.9rem' }}>
+              <span><span className="badge">{m.platform}</span> {m.label}</span>
+              <button type="button" className="btn" onClick={() => removeMonitor(m.id)}>Remove</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={`grid ${view === 'engage' ? 'grid-2' : ''}`} style={view !== 'engage' ? { gridTemplateColumns: '1fr' } : undefined}>
         <div className="card">
           <h3>Post Explorer</h3>
           {pagePosts.map((p, i) => {
@@ -554,6 +582,7 @@ export default function BrowsePostsPage() {
           )}
         </div>
 
+        {view === 'engage' && (
         <div>
           <div className="card" style={{ marginBottom: 12 }}>
             <h3>Headlines</h3>
@@ -563,18 +592,6 @@ export default function BrowsePostsPage() {
               </div>
             ))}
           </div>
-
-          {monitors.length > 0 && (
-            <div className="card" style={{ marginBottom: 12 }}>
-              <h3>Be First Monitors</h3>
-              {monitors.slice(0, 6).map((m) => (
-                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: '0.85rem' }}>
-                  <span><span className="badge">{m.platform}</span> {m.label}</span>
-                  <button type="button" className="btn" style={{ padding: '2px 8px', fontSize: '0.72rem' }} onClick={() => removeMonitor(m.id)}>Remove</button>
-                </div>
-              ))}
-            </div>
-          )}
 
           <div className="card">
             <h3>AI Draft Reply</h3>
@@ -611,6 +628,7 @@ export default function BrowsePostsPage() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       <PostExplorerModal

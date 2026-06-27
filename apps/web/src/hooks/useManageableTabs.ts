@@ -5,18 +5,30 @@ import {
   CustomTabItem,
   TabCatalogItem,
   TabLayoutStorage,
+  defaultFocusLayout,
   defaultLayout,
   loadTabLayout,
   resolveVisibleTabs,
   saveTabLayout,
 } from '@/lib/manageableTabs';
 
-export function useManageableTabs(pageId: string, catalog: TabCatalogItem[], initialActive?: string) {
-  const [layout, setLayout] = useState<TabLayoutStorage>(() => defaultLayout(catalog));
+type FocusOpts = { focusTabIds?: string[]; collapseGroups?: string[] };
+
+export function useManageableTabs(
+  pageId: string,
+  catalog: TabCatalogItem[],
+  initialActive?: string,
+  focus?: FocusOpts,
+) {
+  const [layout, setLayout] = useState<TabLayoutStorage>(() =>
+    focus?.focusTabIds?.length
+      ? defaultFocusLayout(catalog, focus.focusTabIds, focus.collapseGroups)
+      : defaultLayout(catalog),
+  );
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setLayout(loadTabLayout(pageId, catalog));
+    setLayout(loadTabLayout(pageId, catalog, focus));
     setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { DataPanel, SparkRow } from '@/components/DashboardViz';
 import { AutomationMatrixPanel } from '@/components/AutomationMatrixPanel';
 import { RulesEngineStatus } from '@/components/RulesEngineStatus';
@@ -182,10 +182,7 @@ export default function RulesPage() {
 
   return (
     <div className="rules-page">
-      <PageHeader
-        title="Auto-Rules Engine"
-        subtitle="Worker control, Be First monitors, crisis moderation, per-connection automation"
-      />
+      <PageShell title="Auto-Rules Engine" />
 
       <SectionLivePanel section="rules" />
 

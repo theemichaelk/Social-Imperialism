@@ -13,9 +13,11 @@ type Props = {
   tabs: ContentHubTab[];
   active: string;
   onChange: (id: string) => void;
+  focusTabIds?: string[];
+  collapseGroups?: string[];
 };
 
-export function ContentHubTabNav({ tabs, active, onChange }: Props) {
+export function ContentHubTabNav({ tabs, active, onChange, focusTabIds, collapseGroups }: Props) {
   return (
     <ManageableTabNav
       pageId="content-hub"
@@ -23,6 +25,8 @@ export function ContentHubTabNav({ tabs, active, onChange }: Props) {
       active={active}
       onChange={onChange}
       grouped
+      focusTabIds={focusTabIds}
+      collapseGroups={collapseGroups}
     />
   );
 }

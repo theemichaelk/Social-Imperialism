@@ -1,7 +1,7 @@
 'use client';
 
 import { LiveSupportPanel } from '@/components/LiveSupportPanel';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { NAV_SECTIONS } from '@/lib/nav';
 import { resolveSearchRoute } from '@/lib/liveSupportAgent';
 import Link from 'next/link';
@@ -30,10 +30,7 @@ export default function SupportPage() {
 
   return (
     <div className="page support-page">
-      <PageHeader
-        title="Live Support"
-        subtitle="Imperialism Brain for setup, troubleshooting, and campaign optimization"
-      />
+      <PageShell title="Live Support" />
 
       <div className="support-layout">
         <div className="support-sidebar-col">

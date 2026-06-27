@@ -127,18 +127,26 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
               )}
               {(!isSecCollapsed || collapsed) && (
                 <div className="nav-section-items">
-                  {section.items.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      className={`nav-link ${pathname === item.href ? 'active' : ''}`}
-                      title={collapsed ? item.label : undefined}
-                      onClick={() => onMobileClose?.()}
-                    >
-                      <span className="nav-link-icon">{item.icon}</span>
-                      {!collapsed && <span>{item.label}</span>}
-                    </Link>
-                  ))}
+                  {section.items.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        className={`nav-link ${isActive ? 'active' : ''}`}
+                        title={collapsed ? `${item.label}${item.hint ? ` — ${item.hint}` : ''}` : item.hint}
+                        onClick={() => onMobileClose?.()}
+                      >
+                        <span className="nav-link-icon">{item.icon}</span>
+                        {!collapsed && (
+                          <span className="nav-link-text">
+                            <span className="nav-link-label">{item.label}</span>
+                            {item.hint && <span className="nav-link-hint">{item.hint}</span>}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>

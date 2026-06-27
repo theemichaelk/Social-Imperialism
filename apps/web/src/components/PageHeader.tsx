@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { NAV_SECTIONS } from '@/lib/nav';
+import { getPageFocus } from '@/lib/pageFocus';
 import { LivePulse } from './DashboardViz';
 
 function navEyebrow(pathname: string): string {
@@ -17,14 +18,19 @@ export function PageHeader({
   subtitle,
   actions,
   eyebrow,
+  useFocusSubtitle = true,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   eyebrow?: string;
+  /** When true and no subtitle passed, use pageFocus subtitle */
+  useFocusSubtitle?: boolean;
 }) {
   const pathname = usePathname();
+  const focus = getPageFocus(pathname);
   const sectionLabel = eyebrow || navEyebrow(pathname);
+  const resolvedSubtitle = subtitle ?? (useFocusSubtitle ? focus?.subtitle : undefined);
 
   return (
     <header className="page-header dash-page-header">
@@ -39,7 +45,7 @@ export function PageHeader({
           <div className="dash-page-header-row">
             <div>
               <h1 className="page-title dash-gradient-title">{title}</h1>
-              {subtitle && <p className="page-sub">{subtitle}</p>}
+              {resolvedSubtitle && <p className="page-sub">{resolvedSubtitle}</p>}
             </div>
             <div className="dash-page-header-actions">
               {actions}

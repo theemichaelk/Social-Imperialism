@@ -12,6 +12,8 @@ type Props = {
   onChange: (id: string) => void;
   grouped?: boolean;
   className?: string;
+  focusTabIds?: string[];
+  collapseGroups?: string[];
 };
 
 export function ManageableTabNav({
@@ -21,7 +23,10 @@ export function ManageableTabNav({
   onChange,
   grouped = false,
   className = '',
+  focusTabIds,
+  collapseGroups,
 }: Props) {
+  const focus = focusTabIds?.length ? { focusTabIds, collapseGroups } : undefined;
   const {
     visibleTabs,
     hiddenTabs,
@@ -37,7 +42,7 @@ export function ManageableTabNav({
     resolveActive,
     handleTabSelect,
     catalog: fullCatalog,
-  } = useManageableTabs(pageId, catalog);
+  } = useManageableTabs(pageId, catalog, undefined, focus);
 
   const [addOpen, setAddOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -125,6 +130,11 @@ export function ManageableTabNav({
   return (
     <div className={`mtab-nav ${grouped ? 'mtab-nav-grouped' : ''} ${className}`.trim()}>
       <div className="mtab-toolbar">
+        {focusTabIds && focusTabIds.length > 0 && (
+          <span className="mtab-focus-badge" title="Showing focus tabs first — use + Add tab to reveal more">
+            Focus mode
+          </span>
+        )}
         <button type="button" className="mtab-tool" onClick={toggleNavCollapse} title={layout.navCollapsed ? 'Expand tabs' : 'Collapse tabs'}>
           {layout.navCollapsed ? '▸ Tabs' : '▾ Tabs'}
         </button>

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { InvokePanel } from '@/components/InvokePanel';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow, platformBreakdown } from '@/components/DashboardViz';
@@ -296,13 +296,14 @@ export default function DashboardPage() {
   }
 
   const DASHBOARD_TABS = [
-    { id: 'overview', label: 'Overview', locked: true },
-    { id: 'feed', label: 'Feed' },
-    { id: 'qa', label: 'Q&A' },
-    { id: 'growth', label: 'Growth' },
-    { id: 'worker', label: 'Worker' },
-    { id: 'analytics', label: 'Analytics' },
+    { id: 'overview', label: 'Overview', group: "Today's Focus", locked: true },
+    { id: 'feed', label: 'Live Feed', group: "Today's Focus" },
+    { id: 'growth', label: 'Growth & Leads', group: "Today's Focus" },
+    { id: 'qa', label: 'Q&A Discovery', group: 'Deep Dive' },
+    { id: 'worker', label: 'Worker', group: 'Deep Dive' },
+    { id: 'analytics', label: 'Analytics', group: 'Insights' },
   ];
+  const DASHBOARD_FOCUS = ['overview', 'feed', 'growth'];
   const apiEntries = Object.entries(stats.apiMetrics || setup.apiMetrics as Record<string, string> || {});
   const connectedApis = apiEntries.filter(([, v]) => v === 'Connected').length;
   const totalApis = apiEntries.length || 1;
@@ -317,9 +318,10 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageShell
         title="Mission Control"
-        subtitle={`${campaign.brandName || 'Campaign'} · ${campaign.domain || 'no domain'} · real-time social intelligence`}
+        subtitle={`${campaign.brandName || 'Campaign'} · ${campaign.domain || 'no domain'}`}
+        useFocusSubtitle={false}
         actions={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <CampaignSwitcher onSwitch={() => refresh(false)} />
@@ -329,6 +331,15 @@ export default function DashboardPage() {
             </button>
           </div>
         }
+        focusStats={{
+          Drafts: stats.aiDrafts ?? 0,
+          Leads: stats.leadsGenerated ?? 0,
+          Queue: engagementQueue.length,
+        }}
+        onFocusAction={(a) => {
+          if (a.label === 'Full Scan') refresh(true);
+        }}
+        onFocusTab={setTab}
       />
 
       <SectionLivePanel section="dashboard" className="dash-section-live" />
@@ -386,6 +397,9 @@ export default function DashboardPage() {
         catalog={DASHBOARD_TABS}
         active={tab}
         onChange={setTab}
+        grouped
+        focusTabIds={DASHBOARD_FOCUS}
+        collapseGroups={['Insights']}
       />
 
       {tab === 'overview' && (

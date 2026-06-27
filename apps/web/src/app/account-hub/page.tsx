@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { openOAuthPopup, pollOAuthUntilComplete } from '@/lib/oauthConnect';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { IntelligenceProfilePanel } from '@/components/IntelligenceProfilePanel';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
 import { useIntelligence } from '@/hooks/useIntelligence';
@@ -342,7 +342,7 @@ export default function AccountHubPage() {
 
   return (
     <div>
-      <PageHeader title="Account Hub" subtitle="Connect 16 platforms — OAuth, credentials, sub-accounts, automation targets" />
+      <PageShell title="Account Hub" />
 
       <SectionLivePanel section="account-hub" />
 

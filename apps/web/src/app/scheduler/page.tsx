@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { DataPanel } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { BackgroundRunPanel } from '@/components/BackgroundRunPanel';
@@ -87,10 +87,7 @@ export default function SchedulerPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Post Scheduler"
-        subtitle="Queue management, due-post processing, and background run windows"
-      />
+      <PageShell title="Post Scheduler" />
       <SectionLivePanel section="scheduler" />
       {msg && <p className="page-msg">{msg}</p>}
 

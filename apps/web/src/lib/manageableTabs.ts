@@ -38,11 +38,46 @@ export function defaultLayout(catalog: TabCatalogItem[]): TabLayoutStorage {
   };
 }
 
-export function loadTabLayout(pageId: string, catalog: TabCatalogItem[]): TabLayoutStorage {
-  if (typeof window === 'undefined') return defaultLayout(catalog);
+/** First-time layout: show only focus tabs; collapse advanced groups */
+export function defaultFocusLayout(
+  catalog: TabCatalogItem[],
+  focusTabIds: string[],
+  collapseGroups: string[] = [],
+): TabLayoutStorage {
+  const focusSet = new Set(focusTabIds);
+  const hidden = catalog
+    .filter((t) => !t.locked && !focusSet.has(t.id))
+    .map((t) => t.id);
+  const focusOrder = focusTabIds.filter((id) => catalog.some((t) => t.id === id));
+  const rest = catalog.map((t) => t.id).filter((id) => !focusOrder.includes(id));
+  return {
+    version: 1,
+    order: [...focusOrder, ...rest],
+    hidden,
+    collapsedGroups: collapseGroups,
+    navCollapsed: false,
+    groupOverrides: {},
+    customTabs: [],
+  };
+}
+
+export function loadTabLayout(
+  pageId: string,
+  catalog: TabCatalogItem[],
+  focus?: { focusTabIds?: string[]; collapseGroups?: string[] },
+): TabLayoutStorage {
+  if (typeof window === 'undefined') {
+    return focus?.focusTabIds?.length
+      ? defaultFocusLayout(catalog, focus.focusTabIds, focus.collapseGroups)
+      : defaultLayout(catalog);
+  }
   try {
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${pageId}`);
-    if (!raw) return defaultLayout(catalog);
+    if (!raw) {
+      return focus?.focusTabIds?.length
+        ? defaultFocusLayout(catalog, focus.focusTabIds, focus.collapseGroups)
+        : defaultLayout(catalog);
+    }
     const parsed = JSON.parse(raw) as TabLayoutStorage;
     const catalogIds = new Set(catalog.map((t) => t.id));
     const customIds = new Set((parsed.customTabs || []).map((t) => t.id));

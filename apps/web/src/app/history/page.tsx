@@ -1,7 +1,9 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
+import { ManageableTabNav } from '@/components/ManageableTabNav';
+import { HISTORY_VIEW_TABS } from '@/lib/pageFocus';
 import { BarChart } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { buildCsvExport, downloadCsv } from '@/lib/csvExport';
@@ -59,7 +61,7 @@ export default function HistoryPage() {
   const [dashStats, setDashStats] = useState<DashStats>({});
   const [workerStatus, setWorkerStatus] = useState<Record<string, unknown>>({});
   const [autoRules, setAutoRules] = useState<Record<string, unknown>>({});
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('draft');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [intentFilter, setIntentFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
@@ -67,6 +69,14 @@ export default function HistoryPage() {
   const [keywordFilter, setKeywordFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Reply | null>(null);
+  const [viewTab, setViewTab] = useState('pending');
+
+  const setViewAndFilter = useCallback((id: string) => {
+    setViewTab(id);
+    if (id === 'pending') setFilter('draft');
+    else if (id === 'published') setFilter('published');
+    else if (id === 'all') setFilter('all');
+  }, []);
 
   const filterPayload = useMemo(() => ({
     status: filter === 'all' ? 'all' : filter,
@@ -151,15 +161,30 @@ export default function HistoryPage() {
 
   return (
     <div>
-      <PageHeader
-        title="AI Replies Command Center"
-        subtitle="Approval workflow, filters, charts, export, and agency reports"
+      <PageShell
+        title="AI Replies"
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn" onClick={exportAll}>Export Data</button>
+            <button className="btn" onClick={exportAll}>Export</button>
             <button className="btn primary" onClick={exportAgency}>Agency Report</button>
           </div>
         }
+        focusStats={{
+          Pending: stats.byStatus?.draft ?? 0,
+          Published: stats.byStatus?.published ?? 0,
+          Total: stats.total ?? replies.length,
+        }}
+        onFocusTab={setViewAndFilter}
+      />
+
+      <ManageableTabNav
+        pageId="history"
+        catalog={[...HISTORY_VIEW_TABS]}
+        active={viewTab}
+        onChange={setViewAndFilter}
+        grouped
+        focusTabIds={['pending', 'published', 'all']}
+        collapseGroups={['Insights']}
       />
 
       <SectionLivePanel section="history" />
@@ -179,6 +204,8 @@ export default function HistoryPage() {
         <div className="card"><h3>By Platform</h3><BarChart items={platformChart.length ? platformChart : [{ label: '—', value: 0 }]} maxHeight={100} /></div>
       </div>
 
+      {viewTab !== 'insights' && (
+      <>
       <div className="card">
         <div className="source-tabs" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
           <button className={`tab ${sourceFilter === 'all' ? 'active' : ''}`} onClick={() => setSourceFilter('all')}>All Sources</button>
@@ -251,6 +278,8 @@ export default function HistoryPage() {
         ))}
         {!replies.length && <p style={{ color: '#94a3b8' }}>No replies match filters — run auto-rules or draft from Browse Posts.</p>}
       </div>
+      </>
+      )}
 
       {editing && (
         <div className="card">

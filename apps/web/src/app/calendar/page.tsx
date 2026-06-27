@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { InvokePanel } from '@/components/InvokePanel';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
 import { useIntelligence } from '@/hooks/useIntelligence';
@@ -117,7 +117,7 @@ export default function CalendarPage() {
 
   return (
     <div>
-      <PageHeader title="Content Calendar" subtitle="Schedule, edit, publish, and optimize post timing" />
+      <PageShell title="Content Calendar" />
 
       <SectionLivePanel section="calendar" />
 

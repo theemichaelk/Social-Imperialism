@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { getSeoToolForm, SeoToolResults } from '@/components/SeoToolResults';
 
@@ -63,7 +63,7 @@ export default function SeoToolsPage() {
 
   return (
     <div>
-      <PageHeader title="SEO Research Tools" subtitle="KGR, scrapers, autocomplete, indexing, Reddit & Quora discovery" />
+      <PageShell title="SEO Research Tools" />
 
       <SectionLivePanel section="seo-tools" showAccounts={false} />
 

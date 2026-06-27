@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { AccountSelectField } from '@/components/AccountSelectField';
 
@@ -158,7 +158,7 @@ Keep it under 300 characters, human, and compliant with LinkedIn norms. Return o
 
   return (
     <div>
-      <PageHeader title="Engagement CRM" subtitle="LinkedIn lists, per-post AI comments, quick like, auto-engage" />
+      <PageShell title="Engagement CRM" />
 
       <SectionLivePanel section="engagement" />
 

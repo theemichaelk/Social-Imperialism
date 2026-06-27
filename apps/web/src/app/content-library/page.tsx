@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { GrokToolbar } from '@/components/GrokToolbar';
 import Link from 'next/link';
@@ -107,9 +107,8 @@ export default function ContentLibraryPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageShell
         title="Content Library"
-        subtitle="Central hub for images, video, copy, and imports — drag assets into Create or Design Studio"
         actions={<Link href="/content-hub?tab=studio" className="btn primary">Open Create →</Link>}
       />
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SocialPostCard } from '@/components/SocialPostCard';
 import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
@@ -93,9 +93,8 @@ export default function DesignStudioPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageShell
         title="Design Studio"
-        subtitle="Visual Builder — pick a template, fill slots from your library, generate on-brand graphics and captions"
         actions={<Link href="/content-library" className="btn">Content Library →</Link>}
       />
 

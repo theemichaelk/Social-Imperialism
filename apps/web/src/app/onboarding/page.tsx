@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { invoke, getProjectId } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { LivePulse, RingChart, BarChart, DataPanel } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
@@ -275,9 +275,8 @@ export default function OnboardingPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageShell
         title="Setup Wizard"
-        subtitle="Integrate your brand, keywords, and social platforms — then go live"
         actions={<LivePulse label="SETUP" />}
       />
 

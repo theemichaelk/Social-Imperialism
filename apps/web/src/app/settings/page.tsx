@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke, clearSession } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
 import { SitePlaybooksPanel } from '@/components/SitePlaybooksPanel';
@@ -38,20 +38,23 @@ type KeySources = {
 };
 
 const TABS = [
-  { id: 'overview', label: 'Overview', group: 'Core', locked: true },
-  { id: 'campaigns', label: 'Campaigns', group: 'Core' },
-  { id: 'billing', label: 'Billing', group: 'Core' },
+  { id: 'overview', label: 'Overview', group: "Today's Focus", locked: true },
+  { id: 'campaigns', label: 'Campaigns', group: "Today's Focus" },
+  { id: 'api-keys', label: 'API Keys', group: "Today's Focus" },
+  { id: 'guardian-api', label: 'Guardian & API', group: "Today's Focus" },
+  { id: 'billing', label: 'Billing', group: 'Account' },
   { id: 'playbooks', label: 'Strategy Playbooks', group: 'Strategy' },
   { id: 'site-health', label: 'Traffic & Rankings', group: 'Strategy' },
   { id: 'account-intelligence', label: 'Account Intelligence', group: 'Strategy' },
-  { id: 'api-keys', label: 'API Keys', group: 'Connect' },
   { id: 'live-probes', label: 'Live Probes', group: 'Connect' },
   { id: 'grok', label: 'Grok', group: 'Connect' },
   { id: 'tutorials', label: 'Tutorials', group: 'System' },
   { id: 'health', label: 'System Health', group: 'System' },
-  { id: 'guardian-api', label: 'Guardian & API', group: 'System' },
   { id: 'system', label: 'System', group: 'System' },
 ] as const;
+
+const SETTINGS_FOCUS_TABS = ['overview', 'campaigns', 'api-keys', 'guardian-api'];
+const SETTINGS_COLLAPSE_GROUPS = ['Strategy', 'System'];
 
 type TabId = (typeof TABS)[number]['id'];
 
@@ -291,15 +294,16 @@ function SettingsContent() {
 
   return (
     <div className="settings-page">
-      <PageHeader
+      <PageShell
         title="Settings"
-        subtitle="Strategy playbooks, traffic analytics, external services, and system configuration"
         actions={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <CampaignSwitcher onSwitch={() => refresh()} />
             <button className="btn" onClick={() => refresh()} disabled={loading}>Refresh</button>
           </div>
         }
+        focusStats={{ APIs: `${connected}/${totalApis}`, Campaigns: campaigns.length, Plan: billing.planName || 'Starter' }}
+        onFocusTab={(t) => { if (TABS.some((x) => x.id === t)) setTabAndUrl(t as TabId); }}
       />
 
       <SectionLivePanel section="settings" showAccounts={false} />
@@ -332,6 +336,8 @@ function SettingsContent() {
         onChange={(id) => { if (TABS.some((t) => t.id === id)) setTabAndUrl(id as TabId); }}
         grouped
         className="settings-tabs"
+        focusTabIds={SETTINGS_FOCUS_TABS}
+        collapseGroups={SETTINGS_COLLAPSE_GROUPS}
       />
 
       {tab === 'overview' && (

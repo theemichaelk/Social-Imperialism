@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 
 const MODULES = [
@@ -156,7 +156,7 @@ export default function RedditAiPage() {
 
   return (
     <div>
-      <PageHeader title="AI Growth Lab" subtitle="Six Reddit growth modules — configure, enable, run, approve" />
+      <PageShell title="AI Growth Lab" />
 
       <SectionLivePanel section="reddit-ai" />
 

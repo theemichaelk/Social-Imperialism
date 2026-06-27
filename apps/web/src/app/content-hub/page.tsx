@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { InvokePanel } from '@/components/InvokePanel';
 import { IntelligenceProfilePanel } from '@/components/IntelligenceProfilePanel';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
@@ -31,22 +31,25 @@ import { MetricTile } from '@/components/DashboardViz';
 import { PromptVaultPicker } from '@/components/PromptVaultPicker';
 
 const TABS = [
-  { id: 'home', label: 'Hub', group: 'Workflow' },
-  { id: 'studio', label: 'Generate', group: 'Workflow', locked: true },
-  { id: 'standard', label: 'Quick Post', group: 'Workflow' },
-  { id: 'queue', label: 'Review Queue', group: 'Workflow' },
-  { id: 'media', label: 'Media / Video', group: 'Create' },
-  { id: 'repurpose', label: 'Repurpose', group: 'Create' },
-  { id: 'qa', label: 'Q&A Composer', group: 'Create' },
-  { id: 'grok', label: 'Grok & Infographic', group: 'Create' },
-  { id: 'thumbnails', label: 'Thumbnails', group: 'Create' },
-  { id: 'comments', label: 'Comments', group: 'Create' },
+  { id: 'studio', label: 'Generate', group: "Today's Focus", locked: true },
+  { id: 'queue', label: 'Review Queue', group: "Today's Focus" },
+  { id: 'standard', label: 'Quick Post', group: "Today's Focus" },
+  { id: 'wizard', label: 'Publish Wizard', group: "Today's Focus" },
+  { id: 'home', label: 'Hub Overview', group: 'Overview' },
+  { id: 'media', label: 'Media / Video', group: 'Create More' },
+  { id: 'repurpose', label: 'Repurpose', group: 'Create More' },
+  { id: 'qa', label: 'Q&A Composer', group: 'Create More' },
+  { id: 'grok', label: 'Grok & Infographic', group: 'Create More' },
+  { id: 'thumbnails', label: 'Thumbnails', group: 'Create More' },
+  { id: 'comments', label: 'Comments', group: 'Create More' },
   { id: 'analytics', label: 'Analytics', group: 'Insights' },
   { id: 'utilities', label: 'Utilities', group: 'Insights' },
-  { id: 'wizard', label: 'Publish Wizard', group: 'Tools' },
   { id: 'rss', label: 'RSS Import', group: 'Tools' },
   { id: 'batch', label: 'Batch Studio', group: 'Tools' },
 ] as const;
+
+const FOCUS_TABS = ['studio', 'queue', 'standard', 'wizard'];
+const COLLAPSE_GROUPS = ['Insights', 'Tools', 'Create More'];
 
 type TabId = (typeof TABS)[number]['id'];
 
@@ -177,22 +180,28 @@ function ContentHubContent() {
 
   return (
     <div>
-      <PageHeader
+      <PageShell
         title="Create"
-        subtitle="Generate on-brand posts from your library, brand guidelines, and topics"
         actions={
           <>
+            <Link href="/calendar" className="btn primary">Calendar</Link>
             <Link href="/content-library" className="btn">Library</Link>
-            <Link href="/design-studio" className="btn">Design Studio</Link>
             <Link href="/brand" className="btn">Brand</Link>
-            <Link href="/calendar" className="btn">Calendar</Link>
           </>
         }
+        focusStats={{ Queue: hubStats.queue, Scheduled: hubStats.scheduled, Library: hubStats.library }}
+        onFocusTab={(t) => setTabAndUrl(t as TabId)}
       />
 
       <SectionLivePanel section="content-hub" />
 
-      <ContentHubTabNav tabs={[...TABS]} active={tab} onChange={(id) => setTabAndUrl(id as TabId)} />
+      <ContentHubTabNav
+        tabs={[...TABS]}
+        active={tab}
+        onChange={(id) => setTabAndUrl(id as TabId)}
+        focusTabIds={FOCUS_TABS}
+        collapseGroups={COLLAPSE_GROUPS}
+      />
 
       {tab !== 'home' && (
         <div className="dash-hero ch-compact-hero">

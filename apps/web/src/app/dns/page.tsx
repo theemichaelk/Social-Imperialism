@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { DataPanel, MetricTile } from '@/components/DashboardViz';
 import { GrokToolbar } from '@/components/GrokToolbar';
 
@@ -203,8 +203,9 @@ export default function DnsPage() {
 
   return (
     <div className="page-stack">
-      <PageHeader
+      <PageShell
         title="DNS Management"
+        useFocusSubtitle={false}
         subtitle={isAdmin
           ? 'Admin view — all platform sites, Quantum Pages, and every client campaign domain'
           : 'Manage DNS records for your sites'}

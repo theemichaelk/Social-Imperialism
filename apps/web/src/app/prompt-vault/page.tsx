@@ -1,16 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { PageHeader } from '@/components/PageHeader';
+import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { PromptVaultPanel } from '@/components/PromptVaultPanel';
 
 export default function PromptVaultPage() {
   return (
     <div>
-      <PageHeader
+      <PageShell
         title="Prompt Vault"
-        subtitle="Create, search, load, export, and delete reusable prompt templates — routed to the right features and brain workflows"
         actions={
           <>
             <Link href="/content-hub" className="btn">Content Hub</Link>
