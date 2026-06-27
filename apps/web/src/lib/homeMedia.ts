@@ -1,3 +1,5 @@
+import { BLUEPRINT_METRICS, getTickerItems } from '@/lib/siteBlueprint';
+
 export type HeroSlide = {
   id: string;
   tag: string;
@@ -39,7 +41,7 @@ export const HERO_SLIDES: HeroSlide[] = [
   {
     id: 'scale',
     tag: 'Agency Scale',
-    title: '14+ platforms. Zero friction.',
+    title: `${BLUEPRINT_METRICS.platformLabel} platforms. Zero friction.`,
     subtitle: 'OAuth-connected accounts, keyword intelligence, and API health monitoring.',
     video: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-futuristic-devices-99786-large.mp4',
     image: '/hero/slide-01.jpg',
@@ -56,8 +58,5 @@ export const SHOWCASE_SLIDES = [
   { id: 'integrate', title: 'Integrations Hub', caption: 'Live API probes, connection matrix, and credential management.', image: '/hero/slide-02.jpg', href: '/integrations' },
 ];
 
-export const TICKER_ITEMS = [
-  '230+ IPC Channels', '14+ Social Platforms', 'Live NewsAPI Feed', 'AI Reply Engine',
-  'Reddit Prospector', 'DomDetailer SEO', 'Visual Automations', 'Multi-Campaign',
-  'Engagement Queue', 'Worker Automation', 'Grok Imagine (Edge)', 'Grok Video + Extend', 'Stock Media APIs',
-];
+/** Recomputed from nav + brain blueprint on each import */
+export const TICKER_ITEMS = getTickerItems();

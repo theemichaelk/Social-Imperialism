@@ -135,6 +135,7 @@ const featureIndexes = [
   'PAGE_FOCUS_UX.md',
   'PROMPT_VAULT.md',
   'GROK_ENGINE.md',
+  'SITE_BLUEPRINT.md',
 ];
 for (const f of featureIndexes) {
   const p = path.join(ROOT, 'brain/features', f);
@@ -166,7 +167,35 @@ for (const f of brainAgentDocs) {
 
 const homePage = path.join(ROOT, 'apps/web/src/app/page.tsx');
 if (read(homePage).includes('18 modules')) {
-  fail('apps/web/src/app/page.tsx still claims 18 modules — should be 24');
+  fail('apps/web/src/app/page.tsx still claims 18 modules — should match siteBlueprint');
+}
+if (!read(homePage).includes('siteBlueprint')) {
+  fail('apps/web/src/app/page.tsx must import from siteBlueprint for self-updating public pages');
+}
+
+const siteBlueprint = path.join(ROOT, 'apps/web/src/lib/siteBlueprint.ts');
+if (!exists(siteBlueprint)) fail('Missing apps/web/src/lib/siteBlueprint.ts');
+else if (!read(siteBlueprint).includes('NAV_SECTIONS')) {
+  fail('siteBlueprint.ts must derive modules from NAV_SECTIONS');
+}
+
+const navTs = path.join(ROOT, 'apps/web/src/lib/nav.ts');
+const navModuleCount = (read(navTs).match(/href:\s*'\//g) || []).length;
+if (navModuleCount !== 24) {
+  fail(`nav.ts module items: expected 24, got ${navModuleCount} — update siteBlueprint + audit rule`);
+}
+
+const founderTs = path.join(ROOT, 'apps/web/src/lib/founder.ts');
+if (read(founderTs).includes("value: '18'")) {
+  fail('founder.ts still hardcodes 18 modules — must use siteBlueprint');
+}
+if (!read(founderTs).includes('siteBlueprint')) {
+  fail('founder.ts must import from siteBlueprint');
+}
+
+const homeFooter = path.join(ROOT, 'apps/web/src/components/HomeFooter.tsx');
+if (!read(homeFooter).includes('FOOTER_LINKS')) {
+  fail('HomeFooter.tsx must use FOOTER_LINKS from siteBlueprint');
 }
 
 // --- Report ---

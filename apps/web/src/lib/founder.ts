@@ -1,3 +1,10 @@
+import {
+  BLUEPRINT_METRICS,
+  getFounderBioIntro,
+  getFounderHighlights,
+  getModuleCount,
+} from '@/lib/siteBlueprint';
+
 export const FOUNDER = {
   name: 'Michael K',
   title: 'Founder & Author',
@@ -7,17 +14,16 @@ export const FOUNDER = {
   tagline: 'Building the command center for AI-powered social dominance.',
   email: 'theesaintmichael@gmail.com',
   github: 'https://github.com/theemichaelk/Social-Imperialism',
-  bio: `Michael K is the founder and architect behind Social Imperialism — a full-stack social automation platform that connects 14+ networks, 230+ IPC channels, and 100+ AI models into one mission-control dashboard.
+  get bio() {
+    return `${getFounderBioIntro()}
 
 He built the platform to solve a problem every growth team faces: scattered tools, disconnected APIs, and manual engagement that never scales. Social Imperialism unifies discovery, AI replies, content publishing, Reddit prospecting, Quora ops, visual automations, and real-time analytics — all wired to live OAuth and API credentials.
 
-As both engineer and operator, Michael designed every module end-to-end: from the Setup Wizard and Integrations Hub to the Partner REST API and webhook layer that lets Zapier, Make, and custom apps plug in natively.`,
-  highlights: [
-    { label: 'Platforms Built', value: '18', sub: 'end-to-end modules' },
-    { label: 'API Integrations', value: '50+', sub: 'live connections' },
-    { label: 'IPC Channels', value: '230+', sub: 'desktop parity' },
-    { label: 'Vision', value: '1', sub: 'dominate your niche' },
-  ],
+As both engineer and operator, Michael designed every module end-to-end: from the Setup Wizard and Integrations Hub to the Partner REST API and webhook layer that lets Zapier, Make, and custom apps plug in natively.`;
+  },
+  get highlights() {
+    return getFounderHighlights();
+  },
   principles: [
     { title: 'Real APIs, Not Mocks', desc: 'Every feed, probe, and chart pulls live data — OAuth, API keys, and .env-backed credentials.' },
     { title: 'Agency-Scale by Default', desc: 'Multi-campaign isolation, per-brand keywords, and white-label-ready workflows from day one.' },
@@ -26,7 +32,7 @@ As both engineer and operator, Michael designed every module end-to-end: from th
   ],
   timeline: [
     { year: '2024', event: 'Concept — unified social command center for multi-brand agencies' },
-    { year: '2025', event: 'Desktop app — 230+ IPC handlers, live feeds, AI reply engine' },
-    { year: '2026', event: 'SaaS launch — web dashboard, Integrations Hub, Partner API' },
+    { year: '2025', event: `Desktop app — ${BLUEPRINT_METRICS.ipcChannels} IPC handlers, live feeds, AI reply engine` },
+    { year: '2026', event: `SaaS launch — ${getModuleCount()} web modules, Integrations Hub, Partner API` },
   ],
 };

@@ -2,8 +2,8 @@
 
 import { NavAnchor } from '@/components/NavAnchor';
 import { FounderPortrait } from '@/components/FounderPortrait';
-import { Logo } from '@/components/Logo';
 import { HomeFooter } from '@/components/HomeFooter';
+import { HomePublicNav } from '@/components/HomePublicNav';
 import { FOUNDER } from '@/lib/founder';
 
 export default function FounderPage() {
@@ -13,19 +13,7 @@ export default function FounderPage() {
       <div className="home-floating-orb home-orb-1" aria-hidden />
       <div className="home-floating-orb home-orb-2" aria-hidden />
 
-      <header className="home-nav home-nav-glass">
-        <div className="home-nav-brand">
-          <NavAnchor href="/" style={{ textDecoration: 'none' }}><Logo size="sm" showText /></NavAnchor>
-        </div>
-        <nav className="home-nav-links">
-          <a href="/">Home</a>
-          <a href="/#showcase">Demo</a>
-          <NavAnchor href="/dashboard">Integrations</NavAnchor>
-        </nav>
-        <div className="home-nav-actions">
-          <NavAnchor href="/login" className="btn primary home-btn-glow">Get Started</NavAnchor>
-        </div>
-      </header>
+      <HomePublicNav variant="founder" />
 
       <section className="founder-hero">
         <div className="home-container founder-hero-inner">
@@ -100,14 +88,7 @@ export default function FounderPage() {
         </div>
       </section>
 
-      <HomeFooter
-        links={[
-          { href: '/', label: 'Home' },
-          { href: '/founder', label: 'Founder' },
-          { href: '/integrations', label: 'Integrations' },
-          { href: '/login', label: 'Sign In' },
-        ]}
-      />
+      <HomeFooter />
     </div>
   );
 }

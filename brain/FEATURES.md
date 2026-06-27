@@ -60,6 +60,10 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 - Web `/scheduler` now includes `BackgroundRunPanel` (slot CRUD) — same component as `/rules`
 - Desktop: `calendar.html#scheduler` (unchanged)
 
+## Site blueprint (June 2026)
+
+Public marketing pages (`/`, `/founder`, footer, nav) self-update from `apps/web/src/lib/siteBlueprint.ts`, which derives module count, features grid, platforms, and stats from `nav.ts` + brain catalog. See [features/SITE_BLUEPRINT.md](./features/SITE_BLUEPRINT.md).
+
 ## Page focus UX (June 2026)
 
 | Surface | Coverage |

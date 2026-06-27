@@ -1,43 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Logo } from '@/components/Logo';
 import { NavAnchor } from '@/components/NavAnchor';
 import { HomeHeroBanner } from '@/components/HomeHeroBanner';
 import { HomeShowcaseSlider } from '@/components/HomeShowcaseSlider';
 import { HomeTicker } from '@/components/HomeTicker';
 import { HomeFounderSection } from '@/components/HomeFounderSection';
 import { HomeFooter } from '@/components/HomeFooter';
+import { HomePublicNav } from '@/components/HomePublicNav';
 import { getApiBase, getToken } from '@/lib/api';
-import { NAV_SECTIONS } from '@/lib/nav';
-
-const PLATFORMS = [
-  'Twitter / X', 'LinkedIn', 'Reddit', 'Meta', 'Instagram', 'YouTube',
-  'TikTok', 'Pinterest', 'Discord', 'Telegram', 'Twitch', 'Quora', 'NewsAPI', 'SerpAPI',
-];
-
-const STEPS = [
-  { n: 1, title: 'Brand Profile', desc: 'Integrate your brand, domain, and tone — AI uses this for every reply and post.' },
-  { n: 2, title: 'Keywords & Platforms', desc: 'AI-suggested keywords across 14+ networks. Track what matters to your audience.' },
-  { n: 3, title: 'Live Feed Preview', desc: 'Quick scan or full discovery — see real posts from connected APIs instantly.' },
-  { n: 4, title: 'Go Live', desc: 'Worker starts automatically. Mission Control tracks engagement in real time.' },
-];
-
-const PLANS = [
-  { id: 'starter', name: 'Starter', price: '$49', period: '/mo', highlight: false,
-    features: ['3 Social Accounts', '500 AI Generations/mo', 'Content Calendar', 'Keyword Tracking', 'Setup Wizard'] },
-  { id: 'growth', name: 'Growth', price: '$149', period: '/mo', highlight: true,
-    features: ['15 Social Accounts', '5,000 AI Generations', 'Reddit Prospector', 'Visual Automations', 'Auto-Rules Engine', 'Advanced Analytics'] },
-  { id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', highlight: false,
-    features: ['Unlimited Accounts', '24/7 Crisis Monitoring', 'Dedicated Manager', 'Custom Routing', 'SLA & Priority Support'] },
-];
-
-const CAPABILITIES = [
-  { label: 'IPC Channels', value: '230+', sub: 'full desktop parity' },
-  { label: 'Platforms', value: '14+', sub: 'OAuth & API' },
-  { label: 'AI Models', value: '100+', sub: 'OpenRouter & Gemini' },
-  { label: 'App Modules', value: '18', sub: 'end-to-end workflows' },
-];
+import {
+  BILLING_PLANS,
+  getAllModuleFeatures,
+  getFeaturesSectionCopy,
+  getIntelligenceHighlights,
+  getMarketingPlatforms,
+  getOnboardingSteps,
+  getSiteCapabilities,
+} from '@/lib/siteBlueprint';
 
 const DASH_STATS = [
   { label: 'Overview', pct: 92, color: '#38bdf8' },
@@ -58,7 +38,12 @@ export default function HomePage() {
       .catch(() => setApiOk(false));
   }, []);
 
-  const allFeatures = NAV_SECTIONS.flatMap((s) => s.items.map((item) => ({ ...item, section: s.label })));
+  const allFeatures = getAllModuleFeatures();
+  const featuresCopy = getFeaturesSectionCopy();
+  const capabilities = getSiteCapabilities();
+  const platforms = getMarketingPlatforms();
+  const steps = getOnboardingSteps();
+  const intelligenceBullets = getIntelligenceHighlights();
   const apiLabel = apiOk ? 'API LIVE' : apiOk === false ? 'OFFLINE' : 'CONNECTING';
 
   return (
@@ -69,32 +54,14 @@ export default function HomePage() {
       <div className="home-floating-orb home-orb-2" aria-hidden />
       <div className="dash-scanlines" aria-hidden />
 
-      <header className="home-nav home-nav-glass">
-        <div className="home-nav-brand">
-          <NavAnchor href="/" style={{ textDecoration: 'none' }}>
-            <Logo size="sm" showText />
-          </NavAnchor>
-        </div>
-        <nav className="home-nav-links">
-          <a href="#showcase">Demo</a>
-          <a href="#features">Features</a>
-          <a href="#platforms">Platforms</a>
-          <a href="#how-it-works">How It Works</a>
-          <a href="#pricing">Pricing</a>
-          <NavAnchor href="/founder">Founder</NavAnchor>
-        </nav>
-        <div className="home-nav-actions">
-          <NavAnchor href="/login" className="btn home-btn-glass">Sign In</NavAnchor>
-          <NavAnchor href="/dashboard" className="btn primary home-btn-glow">Open Dashboard</NavAnchor>
-        </div>
-      </header>
+      <HomePublicNav loggedIn={loggedIn} variant="home" />
 
       <HomeHeroBanner loggedIn={loggedIn} apiLabel={apiLabel} />
       <HomeTicker />
 
       <section className="home-metrics-band">
         <div className="home-container home-cap-grid-wide">
-          {CAPABILITIES.map((c) => (
+          {capabilities.map((c) => (
             <div key={c.label} className="home-cap-tile home-cap-glow">
               <div className="home-cap-val">{c.value}</div>
               <div className="home-cap-label">{c.label}</div>
@@ -114,7 +81,7 @@ export default function HomePage() {
           <h2>Connected to the networks that matter</h2>
           <p className="home-section-sub">Real OAuth, API keys, and live feeds — not mocks.</p>
           <div className="home-platform-strip">
-            {PLATFORMS.map((p) => (
+            {platforms.map((p) => (
               <span key={p} className="home-platform-chip home-platform-glow">{p}</span>
             ))}
           </div>
@@ -123,9 +90,9 @@ export default function HomePage() {
 
       <section id="features" className="home-section">
         <div className="home-container">
-          <span className="home-section-eyebrow">Platform</span>
-          <h2>Everything your team needs</h2>
-          <p className="home-section-sub">24 modules — from discovery to publish to growth automation.</p>
+          <span className="home-section-eyebrow">{featuresCopy.eyebrow}</span>
+          <h2>{featuresCopy.title}</h2>
+          <p className="home-section-sub">{featuresCopy.subtitle}</p>
           <div className="home-feature-grid">
             {allFeatures.map((f) => (
               <NavAnchor key={f.id} href={f.href} className="home-feature-card home-feature-glow">
@@ -152,13 +119,7 @@ export default function HomePage() {
               actionable charts on every dashboard tab.
             </p>
             <ul className="home-checklist">
-              {[
-                'Live feed across keywords & linked accounts',
-                'AI draft, like, reply & schedule',
-                'Q&A discovery & auto-compose answers',
-                'Reddit prospector & lead capture',
-                'Visual automation builder & auto-rules',
-              ].map((t) => <li key={t}>{t}</li>)}
+              {intelligenceBullets.map((t) => <li key={t}>{t}</li>)}
             </ul>
             <NavAnchor href="/dashboard" className="btn primary home-cta-lg home-btn-glow">
               Open Mission Control
@@ -184,7 +145,7 @@ export default function HomePage() {
           <h2>Go live in four steps</h2>
           <p className="home-section-sub">Setup Wizard walks you from zero to automated engagement.</p>
           <div className="home-steps">
-            {STEPS.map((s) => (
+            {steps.map((s) => (
               <div key={s.n} className="home-step-card home-glass-panel">
                 <div className="home-step-num">{s.n}</div>
                 <h3>{s.title}</h3>
@@ -208,7 +169,7 @@ export default function HomePage() {
           <h2>Simple, scalable pricing</h2>
           <p className="home-section-sub">Start small, grow into agency-scale automation.</p>
           <div className="home-pricing-grid">
-            {PLANS.map((plan) => (
+            {BILLING_PLANS.map((plan) => (
               <div key={plan.id} className={`home-plan-card home-glass-panel ${plan.highlight ? 'highlight' : ''}`}>
                 {plan.highlight && <span className="home-plan-badge">Most Popular</span>}
                 <h3>{plan.name}</h3>

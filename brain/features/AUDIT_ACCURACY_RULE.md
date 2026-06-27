@@ -70,6 +70,7 @@ All feature updates must also comply with [SOVEREIGN_THREAT_CAPTURE.md](../SOVER
 | [PAGE_FOCUS_UX.md](./PAGE_FOCUS_UX.md) | Focus rails + tab UX |
 | [PROMPT_VAULT.md](./PROMPT_VAULT.md) | Prompt templates |
 | [GROK_ENGINE.md](./GROK_ENGINE.md) | Grok browser automation |
+| [SITE_BLUEPRINT.md](./SITE_BLUEPRINT.md) | Public pages self-update from nav + brain |
 
 ---
 
@@ -97,3 +98,5 @@ When implementing, documenting, or summarizing any Social Imperialism change:
 | `brain/GROK.md` | Grok Engine |
 | `brain/SOVEREIGN_THREAT_CAPTURE.md` | Sovereign security layer |
 | `brain/features/*.md` | Per-feature indexes |
+| `brain/features/SITE_BLUEPRINT.md` | Public pages self-update rule |
+| `apps/web/src/lib/siteBlueprint.ts` | Marketing nav, footer, stats source |
