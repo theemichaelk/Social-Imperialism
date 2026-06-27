@@ -30,6 +30,39 @@ function filterDemoList(raw, predicate = (item) => !DEMO_ENTRY_IDS.has(item?.id)
   }
 }
 
+function isQaTestReply(reply) {
+  const post = String(reply?.originalPost || '').trim();
+  const content = String(reply?.replyContent || '');
+  if (/^(test|best crm\?|test browse)$/i.test(post)) return true;
+  if (/test reply content here/i.test(content)) return true;
+  if (/hubspot and pipedrive are solid picks/i.test(content)) return true;
+  if (/we recommend evaluating hubspot and pipedrive/i.test(content)) return true;
+  if (/updated (via page )?qa/i.test(content)) return true;
+  if (/acme growth labs|acmegrowth\.com/i.test(content)) return true;
+  return false;
+}
+
+function isQaEngagementList(list) {
+  if (DEMO_ENTRY_IDS.has(list?.id)) return true;
+  return /^qa(\s|[-_])/i.test(String(list?.name || ''));
+}
+
+function isQaKeyword(kw) {
+  const term = String(kw?.term || '').trim().toLowerCase();
+  return term === 'qa-test-keyword' || term.startsWith('qa-test') || term === 'qa page test';
+}
+
+function isQaScheduledPost(post) {
+  const content = String(post?.content || '');
+  return /qa (page test|publish|scheduled|test)/i.test(content)
+    || /Acme Growth Labs tip/i.test(content)
+    || DEMO_ENTRY_IDS.has(post?.id);
+}
+
+function isQaPostHistory(post) {
+  return /qa (page test|publish|scheduled)/i.test(String(post?.content || ''));
+}
+
 function stripDemoSeedData(store, projectId) {
   if (!projectId) return;
 
@@ -40,11 +73,12 @@ function stripDemoSeedData(store, projectId) {
   const demoTerms = ['social media automation', 'B2B marketing', 'content marketing', 'lead generation', 'growth hacking'];
   const kwPrefix = `kw_${String(projectId).slice(0, 4)}_`;
   const keys = [
-    ['keywords', (k) => !(demoTerms.includes(k?.term) && String(k?.id || '').startsWith(kwPrefix))],
-    ['engagementLists', (e) => !DEMO_ENTRY_IDS.has(e?.id)],
-    ['aiRepliesHistory', (r) => !DEMO_ENTRY_IDS.has(r?.id)],
+    ['keywords', (k) => !(demoTerms.includes(k?.term) && String(k?.id || '').startsWith(kwPrefix)) && !isQaKeyword(k)],
+    ['engagementLists', (e) => !isQaEngagementList(e)],
+    ['aiRepliesHistory', (r) => !DEMO_ENTRY_IDS.has(r?.id) && !isQaTestReply(r)],
     ['leads', (l) => !DEMO_ENTRY_IDS.has(l?.id)],
-    ['scheduled_posts', (p) => !DEMO_ENTRY_IDS.has(p?.id) && !/Acme Growth Labs tip/i.test(p?.content || '')],
+    ['scheduled_posts', (p) => !isQaScheduledPost(p)],
+    ['postHistory', (p) => !isQaPostHistory(p)],
   ];
 
   for (const [key, pred] of keys) {
@@ -177,5 +211,7 @@ module.exports = {
   buildDefaults,
   stripDemoSeedData,
   isDemoLinkedAccount,
+  isQaTestReply,
+  isQaKeyword,
   DEMO_ENTRY_IDS,
 };
