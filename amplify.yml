@@ -6,11 +6,14 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm install
+            - npm ci
         build:
           commands:
             - export NEXT_PUBLIC_BUILD_SHA=${AWS_COMMIT_ID:-manual}
             - npm run build -w @si/web
+      environment:
+        variables:
+          AMPLIFY_MONOREPO_APP_ROOT: apps/web
       artifacts:
         baseDirectory: apps/web/.next
         files:
