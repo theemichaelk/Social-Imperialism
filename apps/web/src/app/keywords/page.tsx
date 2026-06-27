@@ -42,7 +42,7 @@ export default function KeywordsPage() {
       const handoff = JSON.parse(raw) as { type?: string; keyword?: string };
       if (handoff.type === 'keyword' && handoff.keyword) {
         setNewTerm(handoff.keyword);
-        setMsg('Keyword loaded from Omni-Brain');
+        setMsg('Keyword loaded from Imperialism Brain');
         sessionStorage.removeItem('si_omni_handoff');
       }
     } catch { /* ignore */ }

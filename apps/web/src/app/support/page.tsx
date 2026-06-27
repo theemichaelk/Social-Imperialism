@@ -32,7 +32,7 @@ export default function SupportPage() {
     <div className="page support-page">
       <PageHeader
         title="Live Support"
-        subtitle="Growth agent for setup, troubleshooting, and campaign optimization"
+        subtitle="Imperialism Brain for setup, troubleshooting, and campaign optimization"
       />
 
       <div className="support-layout">

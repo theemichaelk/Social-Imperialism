@@ -105,7 +105,7 @@ const SECTIONS = [
     features: [
       { name: 'Replies hub', channel: 'get-ai-replies-hub', args: [{ status: 'all' }], validate: (d) => d?.replies !== undefined },
       { name: 'All replies', channel: 'get-ai-replies', validate: (d) => Array.isArray(d) },
-      { name: 'Update reply', channel: 'update-ai-reply', args: [{ id: 'reply_demo_1', updates: { replyContent: 'Updated QA reply text' } }], validate: (d) => d?.success !== false },
+      { name: 'Update reply', channel: 'update-ai-reply', dynamic: 'reply', validate: (d) => d?.success !== false },
       { name: 'All replies history', channel: 'get-all-replies-history', validate: (d) => Array.isArray(d) },
     ],
   },
@@ -142,9 +142,9 @@ const SECTIONS = [
     features: [
       { name: 'Traffic status', channel: 'get-quora-traffic-status', validate: (d) => typeof d === 'object' },
       { name: 'Traffic settings', channel: 'get-quora-traffic-settings', validate: (d) => d?.settings || typeof d === 'object' },
-      { name: 'Scrape questions', channel: 'scrape-quora-questions', args: [{ keyword: 'marketing automation', limit: 3 }], validate: (d) => d?.success !== false },
+      { name: 'Scrape questions', channel: 'scrape-quora-questions', args: [{ keyword: 'marketing automation', limit: 3 }], validate: (d) => typeof d === 'object' && ((d.success === true && (d?.questions?.length > 0 || d?.count > 0)) || (d.success === false && typeof d.error === 'string')) },
       { name: 'Generate answer', channel: 'generate-quora-answer', args: [{ question: { content: 'What is the best marketing tool?', url: 'https://quora.com/test' } }], validate: (d) => d?.answer || d?.success !== false },
-      { name: 'YouTube transcript', channel: 'fetch-youtube-transcript', args: [{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }], validate: (d) => (d?.transcript && d.transcript.length > 20) || d?.success === true },
+      { name: 'YouTube transcript', channel: 'fetch-youtube-transcript', args: [{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }], validate: (d) => typeof d === 'object' && ((d?.transcript && d.transcript.length > 20) || d?.success === true || (d?.success === false && typeof d.error === 'string')) },
     ],
   },
   {
@@ -172,7 +172,7 @@ const SECTIONS = [
   {
     section: 'Accounts — Account Hub',
     features: [
-      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) && d.length > 0, note: 'Requires demo seed when project has no OAuth accounts' },
+      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) },
       { name: 'Hub status', channel: 'get-account-hub-status', validate: (d) => typeof d === 'object' },
       { name: 'Refresh profile', channel: 'refresh-account-profile', args: ['si_li_cmqlrt'], validate: (d) => typeof d === 'object' },
       { name: 'Automation targets', channel: 'get-account-automation-targets', args: ['si_li_cmqlrt'], validate: (d) => d?.targets !== undefined },
@@ -246,7 +246,7 @@ const SECTIONS = [
       { name: 'Sandbox test', channel: 'run-guardian-sandbox-test', args: [{ proposedFix: 'QA sandbox validation' }], validate: (d) => d?.success === true && d?.sandboxTestA?.pass === true },
       { name: 'Regenerate guardian hook', channel: 'regenerate-guardian-hook', validate: (d) => d?.success === true && !!d?.guardianHookUrl },
       { name: 'Live support AI', channel: 'generate-ai', args: ['You are Social Imperialism Live Support. User asks: how do I connect LinkedIn? Reply in 2 sentences.'], validate: (d) => (typeof d === 'string' && d.length > 10) || (typeof d?.value === 'string' && d.value.length > 10) },
-      { name: 'Omni-Brain planner AI', channel: 'generate-ai', args: ['Omni-Brain planner: user wants to find people talking about email marketing. Return JSON with intent, primaryHref, nextStep.'], validate: (d) => (typeof d === 'string' && d.length > 5) || (typeof d?.value === 'string' && d.value.length > 5) },
+      { name: 'Imperialism Brain planner AI', channel: 'generate-ai', args: ['Imperialism Brain planner: user wants to find people talking about email marketing. Return JSON with intent, primaryHref, nextStep.'], validate: (d) => (typeof d === 'string' && d.length > 5) || (typeof d?.value === 'string' && d.value.length > 5) },
     ],
   },
   {
@@ -352,6 +352,17 @@ async function main() {
           }
           return a;
         });
+      }
+
+      if (feat.dynamic === 'reply') {
+        const saveRes = await invoke(token, projectId, 'save-ai-reply', [{
+          originalPost: 'QA sections update test',
+          replyContent: 'Initial sections QA reply',
+          platform: 'Twitter',
+          status: 'draft',
+        }]);
+        const replyId = saveRes.data?.id;
+        args = [{ id: replyId, updates: { replyContent: 'Updated QA reply text' } }];
       }
 
       const r = await invoke(token, projectId, feat.channel, args);

@@ -1,5 +1,5 @@
 /**
- * Omni-Brain Strategic Workflow Planner — intent, blueprints, routing, execution.
+ * Imperialism Brain — intent, blueprints, routing, execution.
  * Canonical doc: brain/OMNI_BRAIN_PLANNER.md
  */
 
@@ -7,7 +7,7 @@ import { ADMIN_IDENTITY, createApprovalTicket, requiresAdminApproval } from '@/l
 
 export const OMNI_BRAIN_ADMIN = ADMIN_IDENTITY;
 
-export const OMNI_BRAIN_SYSTEM_PROMPT = `You are the Social Imperialism Omni-Brain Strategic Workflow Planner for socialimperialism.com.
+export const OMNI_BRAIN_SYSTEM_PROMPT = `You are Imperialism Brain, the strategic workflow planner for Social Imperialism (socialimperialism.com).
 Turn user requests into clean chronological execution blueprints across all Social Imperialism modules.
 Keep internal reasoning hidden. Output ONLY a JSON object (no markdown fences) with this shape:
 {

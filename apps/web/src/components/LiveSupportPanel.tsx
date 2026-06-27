@@ -110,7 +110,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     <div className={`live-support-panel ${embedded ? 'live-support-embedded' : ''}`}>
       <div className="live-support-header">
         <div>
-          <p className="live-support-eyebrow">Growth Agent</p>
+          <p className="live-support-eyebrow">Imperialism Brain</p>
           <h3 className="live-support-title">Live Support</h3>
         </div>
         <div className="live-support-header-actions">

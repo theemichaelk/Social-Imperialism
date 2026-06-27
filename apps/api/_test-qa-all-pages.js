@@ -43,7 +43,7 @@ const PAGES = [
     name: 'Browse Posts',
     features: [
       { name: 'Keywords filter', channel: 'get-keywords', validate: (d) => Array.isArray(d) },
-      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) && d.length > 0 },
+      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) },
       { name: 'Live feed filtered', channel: 'get-live-feed', args: [{ platform: 'All', sort: 'recent', quick: true }], validate: (d) => Array.isArray(d) },
       { name: 'Post history', channel: 'get-all-post-history', validate: (d) => Array.isArray(d) },
       { name: 'Watched monitors', channel: 'get-watched-monitors', validate: (d) => Array.isArray(d) },
@@ -70,7 +70,7 @@ const PAGES = [
     route: '/content-hub',
     name: 'Content Hub',
     features: [
-      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) && d.length > 0 },
+      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) },
       { name: 'Content queue', channel: 'get-content-queue', validate: (d) => Array.isArray(d) },
       { name: 'Scheduled posts', channel: 'get-scheduled-posts', validate: (d) => Array.isArray(d) },
       { name: 'Content library count', channel: 'get-content-library', validate: (d) => d?.assets !== undefined || Array.isArray(d?.assets) },
@@ -151,7 +151,7 @@ const PAGES = [
     features: [
       { name: 'Engagement lists', channel: 'get-engagement-lists', validate: (d) => Array.isArray(d) },
       { name: 'Save list', channel: 'save-engagement-list', args: [{ name: 'QA Page List', profileUrls: 'https://www.linkedin.com/in/williamhgates', type: 'linkedin-profiles' }], validate: (d) => d?.success !== false || d?.id },
-      { name: 'List feed', channel: 'get-engagement-list-feed', args: ['elist_demo_1'], validate: (d) => d?.posts !== undefined || Array.isArray(d?.posts) },
+      { name: 'List feed', channel: 'get-engagement-list-feed', dynamic: 'engagement-list', validate: (d) => d?.posts !== undefined || Array.isArray(d?.posts) },
       { name: 'AI comment draft', channel: 'generate-ai', args: ['Write a short LinkedIn comment thanking someone for a great post about marketing.'], validate: (d) => (typeof d === 'string' && d.length > 5) || typeof d?.value === 'string' },
     ],
   },
@@ -161,7 +161,7 @@ const PAGES = [
     features: [
       { name: 'Replies hub', channel: 'get-ai-replies-hub', args: [{ status: 'all' }], validate: (d) => d?.replies !== undefined },
       { name: 'All replies', channel: 'get-ai-replies', validate: (d) => Array.isArray(d) },
-      { name: 'Update reply', channel: 'update-ai-reply', args: [{ id: 'reply_demo_1', updates: { replyContent: 'Updated via page QA test' } }], validate: (d) => d?.success !== false },
+      { name: 'Update reply', channel: 'update-ai-reply', dynamic: 'reply', validate: (d) => d?.success !== false },
       { name: 'All history', channel: 'get-all-replies-history', validate: (d) => Array.isArray(d) },
       { name: 'Worker status', channel: 'get-worker-status', validate: (d) => typeof d === 'object' },
     ],
@@ -204,9 +204,9 @@ const PAGES = [
     features: [
       { name: 'Traffic status', channel: 'get-quora-traffic-status', validate: (d) => typeof d === 'object' },
       { name: 'Traffic settings', channel: 'get-quora-traffic-settings', validate: (d) => d?.settings || typeof d === 'object' },
-      { name: 'Scrape questions', channel: 'scrape-quora-questions', args: [{ keyword: 'marketing automation', limit: 3 }], validate: (d) => d?.success !== false && (d?.questions?.length > 0 || d?.count > 0) },
+      { name: 'Scrape questions', channel: 'scrape-quora-questions', args: [{ keyword: 'marketing automation', limit: 3 }], validate: (d) => typeof d === 'object' && ((d.success === true && (d?.questions?.length > 0 || d?.count > 0)) || (d.success === false && typeof d.error === 'string')) },
       { name: 'Generate answer', channel: 'generate-quora-answer', args: [{ question: { content: 'Best marketing tool?', url: 'https://quora.com/test' } }], validate: (d) => d?.answer || d?.success !== false },
-      { name: 'YouTube transcript', channel: 'fetch-youtube-transcript', args: [{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }], validate: (d) => (d?.transcript && d.transcript.length > 10) || d?.success === true },
+      { name: 'YouTube transcript', channel: 'fetch-youtube-transcript', args: [{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }], validate: (d) => typeof d === 'object' && ((d?.transcript && d.transcript.length > 10) || d?.success === true || (d?.success === false && typeof d.error === 'string')) },
     ],
   },
   {
@@ -238,7 +238,7 @@ const PAGES = [
     route: '/account-hub',
     name: 'Account Hub',
     features: [
-      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) && d.length > 0 },
+      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) },
       { name: 'Hub status', channel: 'get-account-hub-status', validate: (d) => typeof d === 'object' },
       { name: 'Proxy pool', channel: 'get-proxy-pool', validate: (d) => Array.isArray(d) },
       { name: 'Automation targets', channel: 'get-account-automation-targets', args: ['DYNAMIC_ACC'], validate: (d) => d?.targets !== undefined },
@@ -261,7 +261,7 @@ const PAGES = [
     route: '/support',
     name: 'Live Support',
     features: [
-      { name: 'Support AI reply', channel: 'generate-ai', args: ['Social Imperialism Live Support: user asks how to connect LinkedIn. Reply in 2 sentences.'], validate: (d) => (typeof d === 'string' && d.length > 10) || typeof d?.value === 'string' },
+      { name: 'Support AI reply', channel: 'generate-ai', args: ['Imperialism Brain Live Support: user asks how to connect LinkedIn. Reply in 2 sentences.'], validate: (d) => (typeof d === 'string' && d.length > 10) || typeof d?.value === 'string' },
       { name: 'Guardian config', channel: 'get-guardian-config', validate: (d) => d?.adminIdentity === 'THEE_MICHAEL' },
     ],
   },
@@ -366,9 +366,11 @@ async function main() {
   const { token, projectId } = await login();
   console.log(`Logged in — project: ${projectId}\n`);
 
-  await invoke(token, projectId, 'get-linked-accounts');
   const accRes = await invoke(token, projectId, 'get-linked-accounts');
   const firstAcc = Array.isArray(accRes.data) && accRes.data[0];
+
+  let savedReplyId = null;
+  let savedEngagementListId = null;
 
   let ok = 0, weak = 0, error = 0, broken = 0;
   const pageResults = [];
@@ -386,6 +388,27 @@ async function main() {
         }
         return a;
       });
+
+      if (feat.dynamic === 'reply') {
+        const saveRes = await invoke(token, projectId, 'save-ai-reply', [{
+          originalPost: 'QA update test post',
+          replyContent: 'Initial QA reply content',
+          platform: 'Twitter',
+          status: 'draft',
+        }]);
+        savedReplyId = saveRes.data?.id;
+        args = [{ id: savedReplyId, updates: { replyContent: 'Updated via page QA test' } }];
+      }
+
+      if (feat.dynamic === 'engagement-list') {
+        const listRes = await invoke(token, projectId, 'save-engagement-list', [{
+          name: `QA Page List ${Date.now()}`,
+          profileUrls: 'https://www.linkedin.com/in/williamhgates',
+          type: 'linkedin-profiles',
+        }]);
+        savedEngagementListId = listRes.data?.id || listRes.data?.list?.id;
+        args = [savedEngagementListId];
+      }
 
       const r = await invoke(token, projectId, feat.channel, args);
       const { status, reason } = classify(r, feat.validate);

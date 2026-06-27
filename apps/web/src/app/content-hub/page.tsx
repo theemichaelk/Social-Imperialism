@@ -88,7 +88,7 @@ function ContentHubContent() {
       if (handoff.type === 'content' && handoff.content) {
         setContent(handoff.content);
         setTab('studio');
-        setStatus('Loaded from Omni-Brain');
+        setStatus('Loaded from Imperialism Brain');
         sessionStorage.removeItem('si_omni_handoff');
       }
     } catch { /* ignore */ }

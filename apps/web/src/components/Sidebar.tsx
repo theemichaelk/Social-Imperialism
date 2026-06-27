@@ -96,7 +96,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
         <div className="sidebar-search">
           <input
             type="search"
-            placeholder="Search modules, Omni-Brain, THEE_MICHAEL…"
+            placeholder="Search modules, Imperialism Brain, THEE_MICHAEL…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sidebar-search-input"

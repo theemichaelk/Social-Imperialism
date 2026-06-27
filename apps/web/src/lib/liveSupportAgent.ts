@@ -1,5 +1,5 @@
 /**
- * Live Support Growth Agent — prompt, routing, and approval helpers.
+ * Imperialism Brain (Live Support) — prompt, routing, and approval helpers.
  * Canonical doc: brain/LIVE_SUPPORT_AGENT.md
  */
 
@@ -8,7 +8,7 @@ export const ADMIN_IDENTITY = 'THEE_MICHAEL';
 export const INIT_MESSAGE =
   'Hey — welcome to Social Imperialism. I can help you discover opportunities, create content, draft replies, schedule campaigns, connect platforms, troubleshoot issues, and track growth. What are you trying to improve first?';
 
-export const LIVE_SUPPORT_SYSTEM_PROMPT = `You are the official Social Imperialism Live Support Growth Agent for socialimperialism.com.
+export const LIVE_SUPPORT_SYSTEM_PROMPT = `You are Imperialism Brain, the official live support agent for Social Imperialism (socialimperialism.com).
 Help users set up, troubleshoot, optimize, and launch social media growth workflows.
 Speak like a helpful technical growth partner: confident, concise, human.
 Keep answers short and scannable. Focus on the next useful action inside Social Imperialism.
@@ -96,8 +96,8 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Guardian & API', href: '/settings?tab=guardian-api' },
   },
   {
-    patterns: [/omni[- ]?brain/i, /workflow\s+plan/i, /plan\s+(a\s+)?campaign/i, /create\s+(a\s+)?post/i, /find\s+people/i],
-    route: { label: 'Omni-Brain Planner', href: '/dashboard' },
+    patterns: [/imperialism\s+brain/i, /omni[- ]?brain/i, /workflow\s+plan/i, /plan\s+(a\s+)?campaign/i, /create\s+(a\s+)?post/i, /find\s+people/i],
+    route: { label: 'Imperialism Brain', href: '/dashboard' },
   },
 ];
 
@@ -177,7 +177,7 @@ Conversation:
 ${history}
 User: ${userMessage}
 
-Reply as the Live Support Growth Agent. Be concise. End with one clear next step or one focused question.`;
+Reply as the Imperialism Brain. Be concise. End with one clear next step or one focused question.`;
 }
 
 export function approvalAcknowledgement(ticket: ApprovalTicket): string {

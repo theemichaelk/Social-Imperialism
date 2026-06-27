@@ -68,7 +68,7 @@ export function OmniBrainPromptBar() {
       const bp = fallbackBlueprint(trimmed);
       setBlueprint(bp);
       saveBlueprint(bp);
-      setMsg('Used local Omni-Brain planner — blueprint ready.');
+      setMsg('Used local Imperialism Brain planner — blueprint ready.');
     } finally {
       setLoading(false);
     }
@@ -124,9 +124,9 @@ export function OmniBrainPromptBar() {
   return (
     <div className={`omni-brain-bar ${expanded ? 'omni-brain-expanded' : ''}`}>
       <form className="omni-brain-form" onSubmit={onSubmit}>
-        <div className="omni-brain-badge" title="Omni-Brain Planner">
+        <div className="omni-brain-badge" title="Imperialism Brain">
           <span className="omni-brain-icon">🧠</span>
-          <span className="omni-brain-label">Omni-Brain</span>
+          <span className="omni-brain-label">Imperialism Brain</span>
         </div>
         <input
           ref={inputRef}
@@ -137,7 +137,7 @@ export function OmniBrainPromptBar() {
           onFocus={() => setExpanded(true)}
           placeholder={OMNI_PLACEHOLDERS[placeholderIdx]}
           disabled={loading}
-          aria-label="Omni-Brain keyword prompt"
+          aria-label="Imperialism Brain keyword prompt"
         />
         <button type="submit" className="btn omni-brain-plan-btn" disabled={loading || !query.trim()}>
           {loading ? 'Planning…' : 'Plan'}
