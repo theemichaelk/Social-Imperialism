@@ -4,7 +4,10 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/api",
+    "apps/web",
+    "apps/worker",
+    "apps/desktop"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
@@ -17,7 +20,10 @@
     "db:migrate": "npm run migrate:deploy -w @si/db",
     "db:seed": "npm run seed -w @si/db",
     "start:api": "npm run start -w @si/api",
-    "start:web": "npm run start -w @si/web"
+    "start:web": "npm run start -w @si/web",
+    "dev:mobile-ios": "echo Open apps/mobile-ios in Xcode — see apps/mobile-ios/README.md",
+    "dev:mobile-android": "cd apps/mobile-android && gradlew.bat :app:installDebug",
+    "dev:mobile": "cd apps/mobile && npm start"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Social Imperialism",
+    "slug": "social-imperialism",
+    "sdkVersion": "52.0.0",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "socialimperialism",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.socialimperialism.mobile.preview"
+    },
+    "android": {
+      "package": "com.socialimperialism.mobile.preview",
+      "adaptiveIcon": {
+        "backgroundColor": "#020408",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#020408"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "baseUrl": "/mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    }
+  }
+}
