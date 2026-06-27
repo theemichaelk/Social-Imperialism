@@ -441,7 +441,7 @@ async function sendEmail(keys, payload = {}) {
   throw new Error(errors.length ? errors.join(' | ') : 'No email provider configured');
 }
 
-function buildDefaultCampaigns(brand = 'Acme Growth Labs', domain = 'acmegrowth.com') {
+function buildDefaultCampaigns(brand = '', domain = '') {
   return [
     {
       id: 'email_camp_mention_digest',
@@ -497,7 +497,7 @@ function buildDefaultCampaigns(brand = 'Acme Growth Labs', domain = 'acmegrowth.
     ...c,
     brandName: brand,
     domain,
-    brandUrl: `https://${domain}`,
+    brandUrl: domain ? `https://${domain.replace(/^https?:\/\//, '')}` : '',
   }));
 }
 
@@ -513,8 +513,8 @@ function ensureEmailCampaigns(store, campaign = {}) {
   const existing = loadEmailCampaigns(store);
   if (existing.campaigns?.length) return existing;
 
-  const brand = campaign.brandName || campaign.name || 'Acme Growth Labs';
-  const domain = campaign.domain || 'acmegrowth.com';
+  const brand = campaign.brandName || campaign.name || 'Your Brand';
+  const domain = campaign.domain || '';
   const seeded = {
     settings: {
       defaultProvider: 'auto',

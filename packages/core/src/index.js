@@ -63,7 +63,6 @@ async function persistActiveCampaignToProject(store, projectId) {
 
 async function syncProjectToStore(store, projectId) {
   const { prisma } = require('@si/db');
-  const { ensureProjectDefaults } = require('./projectDefaults');
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: { socialAccounts: true, keywords: true },
@@ -107,9 +106,10 @@ async function syncProjectToStore(store, projectId) {
   }
   // Keys are resolved at request time (admin gets .env merge; clients use saved keys only).
 
+  const { ensureProjectDefaults, stripDemoSeedData, isDemoLinkedAccount } = require('./projectDefaults');
   ensureProjectDefaults(store, project);
+  stripDemoSeedData(store, project.id);
 
-  const { demoLinkedAccounts } = require('./projectDefaults');
   const activeCampaignId = store.getItem('activeCampaignId') || project.id;
   const linkedKey = `linkedAccounts_${activeCampaignId}`;
   let linked = [];
@@ -119,25 +119,42 @@ async function syncProjectToStore(store, projectId) {
   if (linkedEmpty && previousActive && previousActive !== activeCampaignId) {
     try {
       const legacy = JSON.parse(store.getItem(`linkedAccounts_${previousActive}`) || '[]');
-      if (Array.isArray(legacy) && legacy.length) {
-        store.setItem(linkedKey, JSON.stringify(legacy));
+      const realLegacy = Array.isArray(legacy) ? legacy.filter((a) => !isDemoLinkedAccount(a)) : [];
+      if (realLegacy.length) {
+        store.setItem(linkedKey, JSON.stringify(realLegacy));
         linkedEmpty = false;
       }
     } catch (e) { /* ignore */ }
   }
 
   if (project.socialAccounts?.length && linkedEmpty) {
-    const accounts = project.socialAccounts.map((a) => ({
-      id: a.id,
-      platform: a.platform,
-      handle: a.handle,
-      type: a.accountType,
-      ...(a.metadata ? JSON.parse(a.metadata) : {}),
-    }));
-    store.setItem(linkedKey, JSON.stringify(accounts));
-  } else if (linkedEmpty) {
-    store.setItem(linkedKey, JSON.stringify(demoLinkedAccounts(project.id)));
+    const accounts = project.socialAccounts
+      .filter((a) => !isDemoLinkedAccount({ id: a.id, handle: a.handle, platform: a.platform }))
+      .map((a) => ({
+        id: a.id,
+        platform: a.platform,
+        handle: a.handle,
+        type: a.accountType,
+        ...(a.metadata ? JSON.parse(a.metadata) : {}),
+      }));
+    if (accounts.length) store.setItem(linkedKey, JSON.stringify(accounts));
   }
+
+  try {
+    const { prisma } = require('@si/db');
+    const demoAccounts = await prisma.socialAccount.findMany({
+      where: { projectId: project.id },
+    });
+    const demoIds = demoAccounts
+      .filter((a) => isDemoLinkedAccount({ id: a.id, handle: a.handle, platform: a.platform }))
+      .map((a) => a.id);
+    if (demoIds.length) {
+      await prisma.socialAccount.deleteMany({ where: { id: { in: demoIds } } });
+    }
+    await prisma.scheduledPost.deleteMany({
+      where: { projectId: project.id, content: { contains: 'Acme Growth Labs tip' } },
+    });
+  } catch { /* desktop-only */ }
 
   if (project.keywords?.length && !store.getItem('keywords')) {
     store.setItem('keywords', JSON.stringify(project.keywords.map((k) => ({

@@ -112,10 +112,6 @@ function youtubeEmbedHtml(videoId, title = 'Related video') {
   return `<p><div class="embed-responsive embed-responsive-16by9 mx-auto"><iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen title="${title}"></iframe></div></p>`;
 }
 
-const YT_TRANSCRIPT_CACHE = {
-  dQw4w9WgXcQ: 'Never gonna give you up, never gonna let you down. Never gonna run around and desert you. Never gonna make you cry, never gonna say goodbye.',
-};
-
 async function fetchCaptionFromTracks(tracks) {
   const en = tracks.find((t) => t.languageCode === 'en') || tracks[0];
   if (!en?.baseUrl) return '';
@@ -166,16 +162,7 @@ async function fetchYouTubeTranscript(videoUrl) {
     }
   }
 
-  if (YT_TRANSCRIPT_CACHE[videoId]) {
-    return { videoId, transcript: YT_TRANSCRIPT_CACHE[videoId], source: 'cache_fallback' };
-  }
-
-  return {
-    videoId,
-    transcript: `Video ${videoId} — transcript unavailable from YouTube captions. Use video URL and title for Quora answer context.`,
-    source: 'synthetic_fallback',
-    note: 'Live captions unavailable — synthetic context provided for AI drafting.',
-  };
+  throw new Error('YouTube transcript unavailable — captions could not be loaded for this video.');
 }
 
 const METRICS_PAGE_SCRIPT = () => {
@@ -610,32 +597,6 @@ function resolveAIModel(model, keys) {
   return 'gemini';
 }
 
-function demoQuestionsForKeyword(keyword, limit = 25) {
-  const k = String(keyword || 'marketing').trim() || 'marketing';
-  const templates = [
-    `What are the best tools for ${k}?`,
-    `How do I get started with ${k} for a B2B brand?`,
-    `What mistakes should I avoid when implementing ${k}?`,
-    `Is ${k} worth it for small businesses?`,
-    `How does ${k} compare to manual outreach?`,
-  ];
-  return templates.slice(0, limit).map((title, i) => ({
-    id: `qq_demo_${Date.now()}_${i}`,
-    question: title,
-    title,
-    url: `https://www.quora.com/${encodeURIComponent(title.replace(/\s+/g, '-').slice(0, 80))}`,
-    keyword: k,
-    views: 5000 + i * 1200,
-    viewsLabel: formatMetric(5000 + i * 1200),
-    upvotes: 120 + i * 15,
-    upvotesLabel: formatMetric(120 + i * 15),
-    answerCount: 3 + i,
-    score: 85 - i * 3,
-    metricsSource: 'demo',
-    demo: true,
-  }));
-}
-
 async function scrapeQuestions(keyword, keys, options = {}) {
   const limit = options.limit || 25;
   const enrich = options.enrich !== false;
@@ -682,7 +643,7 @@ async function scrapeQuestions(keyword, keys, options = {}) {
   }
 
   if (!results.length) {
-    return demoQuestionsForKeyword(keyword, limit);
+    throw new Error('No Quora questions found for that keyword. Try another keyword or paste a Quora question URL below.');
   }
 
   let batch = results.slice(0, limit);

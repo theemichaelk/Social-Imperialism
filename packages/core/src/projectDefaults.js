@@ -1,74 +1,82 @@
 /**
  * Seeds desktop-compatible localStorage keys for new SaaS projects.
  * Only writes keys that are missing — never overwrites user data.
+ * No mock/dummy accounts, posts, leads, or sample content.
  */
 
-function demoLinkedAccounts(projectId) {
-  return [
-    {
-      id: `si_li_${projectId.slice(0, 6)}`,
-      platform: 'LinkedIn',
-      handle: 'Acme Growth Labs',
-      type: 'Profile',
-      linkedAt: new Date().toISOString(),
-      profile: { name: 'Acme Growth Labs', headline: 'B2B SaaS marketing automation' },
-    },
-    {
-      id: `si_tw_${projectId.slice(0, 6)}`,
-      platform: 'Twitter',
-      handle: '@acmegrowth',
-      type: 'Profile',
-      linkedAt: new Date().toISOString(),
-    },
-    {
-      id: `si_rd_${projectId.slice(0, 6)}`,
-      platform: 'Reddit',
-      handle: 'u/acmegrowth',
-      type: 'User',
-      subreddit: 'marketing',
-      linkedAt: new Date().toISOString(),
-    },
-  ];
+const DEMO_ENTRY_IDS = new Set(['reply_demo_1', 'lead_demo_1', 'sched_demo_1', 'elist_demo_1']);
+const DEMO_QUORA_URLS = new Set([
+  'https://www.quora.com/What-are-the-best-social-media-automation-tools',
+  'https://www.quora.com/How-do-I-grow-a-B2B-SaaS-brand-on-LinkedIn',
+]);
+const DEMO_HANDLES = new Set(['Acme Growth Labs', '@acmegrowth', 'u/acmegrowth']);
+
+function isDemoLinkedAccount(acc) {
+  if (!acc || typeof acc !== 'object') return false;
+  if (DEMO_HANDLES.has(String(acc.handle || '').trim())) return true;
+  if (acc.profile?.name === 'Acme Growth Labs') return true;
+  if (/^si_(li|tw|rd)_/.test(String(acc.id || '')) && /acme/i.test(String(acc.handle || ''))) return true;
+  return false;
 }
 
-function demoKeywords(projectId) {
-  const terms = [
-    'social media automation',
-    'B2B marketing',
-    'content marketing',
-    'lead generation',
-    'growth hacking',
+function filterDemoList(raw, predicate = (item) => !DEMO_ENTRY_IDS.has(item?.id)) {
+  try {
+    const list = JSON.parse(raw || '[]');
+    if (!Array.isArray(list)) return null;
+    const filtered = list.filter(predicate);
+    return filtered.length === list.length ? null : filtered;
+  } catch {
+    return null;
+  }
+}
+
+function stripDemoSeedData(store, projectId) {
+  if (!projectId) return;
+
+  const linkedKey = `linkedAccounts_${projectId}`;
+  const linked = filterDemoList(store.getItem(linkedKey), (acc) => !isDemoLinkedAccount(acc));
+  if (linked) store.setItem(linkedKey, JSON.stringify(linked));
+
+  const demoTerms = ['social media automation', 'B2B marketing', 'content marketing', 'lead generation', 'growth hacking'];
+  const kwPrefix = `kw_${String(projectId).slice(0, 4)}_`;
+  const keys = [
+    ['keywords', (k) => !(demoTerms.includes(k?.term) && String(k?.id || '').startsWith(kwPrefix))],
+    ['engagementLists', (e) => !DEMO_ENTRY_IDS.has(e?.id)],
+    ['aiRepliesHistory', (r) => !DEMO_ENTRY_IDS.has(r?.id)],
+    ['leads', (l) => !DEMO_ENTRY_IDS.has(l?.id)],
+    ['scheduled_posts', (p) => !DEMO_ENTRY_IDS.has(p?.id) && !/Acme Growth Labs tip/i.test(p?.content || '')],
   ];
-  return terms.map((term, i) => ({
-    id: `kw_${projectId.slice(0, 4)}_${i}`,
-    term,
-    campaignId: projectId,
-    platforms: ['Twitter', 'LinkedIn', 'Reddit'],
-  }));
+
+  for (const [key, pred] of keys) {
+    const filtered = filterDemoList(store.getItem(key), pred);
+    if (filtered) store.setItem(key, JSON.stringify(filtered));
+  }
+
+  try {
+    const qKey = 'quoraTrafficOps';
+    const all = JSON.parse(store.getItem(qKey) || '{}');
+    const cur = all[projectId];
+    if (cur?.cachedQuestions?.length) {
+      const cached = cur.cachedQuestions.filter((q) => !DEMO_QUORA_URLS.has(q?.url) && !q?.demo);
+      if (cached.length !== cur.cachedQuestions.length) {
+        all[projectId] = { ...cur, cachedQuestions: cached };
+        if (!cached.length) delete all[projectId].lastScrape;
+        store.setItem(qKey, JSON.stringify(all));
+      }
+    }
+  } catch { /* ignore */ }
 }
 
 function buildDefaults(project) {
   const id = project.id;
-  const brand = project.brandName || project.name || 'Brand';
+  const brand = project.brandName || project.name || '';
   return {
-    keywords: demoKeywords(id),
-    [`linkedAccounts_${id}`]: demoLinkedAccounts(id),
-    engagementLists: [
-      {
-        id: 'elist_demo_1',
-        name: 'SaaS Founders',
-        type: 'linkedin-profiles',
-        profileUrls: ['https://www.linkedin.com/in/example'],
-        autoEngage: false,
-        campaignId: id,
-      },
-    ],
-    watchedMonitors: [
-      { id: 'mon_1', label: 'Brand mentions', type: 'keyword', target: brand, platform: 'Twitter' },
-      { id: 'mon_2', label: 'Competitor watch', type: 'keyword', target: 'marketing automation', platform: 'Reddit' },
-    ],
+    keywords: [],
+    [`linkedAccounts_${id}`]: [],
+    engagementLists: [],
+    watchedMonitors: [],
     autoRulesEngine: {
-      enabled: true,
+      enabled: false,
       replyMode: 'smart',
       spamFilter: true,
       crisisMode: false,
@@ -76,54 +84,24 @@ function buildDefaults(project) {
       platforms: ['Twitter', 'LinkedIn', 'Reddit'],
       updatedAt: new Date().toISOString(),
     },
-    aiRepliesHistory: [
-      {
-        id: 'reply_demo_1',
-        originalPost: 'What is the best tool for social media scheduling?',
-        replyContent: `Great question! ${brand} helps teams automate scheduling, engagement, and analytics across every major platform.`,
-        platform: 'Twitter',
-        status: 'draft',
-        campaignId: id,
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    leads: [
-      {
-        id: 'lead_demo_1',
-        platform: 'Reddit',
-        author: 'startup_founder',
-        content: 'Looking for social media automation recommendations',
-        url: 'https://reddit.com/r/marketing/comments/demo',
-        capturedAt: new Date().toISOString(),
-      },
-    ],
+    aiRepliesHistory: [],
+    leads: [],
     postHistory: [],
-    scheduled_posts: [
-      {
-        id: 'sched_demo_1',
-        campaignId: id,
-        platform: 'LinkedIn',
-        accountId: `si_li_${id.slice(0, 6)}`,
-        content: `🚀 ${brand} tip: Batch your content creation on Monday, schedule for the week, engage daily.`,
-        timestamp: new Date(Date.now() + 3 * 86400000).toISOString(),
-        status: 'scheduled',
-        createdAt: new Date().toISOString(),
-      },
-    ],
+    scheduled_posts: [],
     fanpageSettings: {
-      enabled: true,
-      targetPlatforms: ['Facebook', 'LinkedIn'],
-      rssUrl: 'https://feeds.feedburner.com/TechCrunch',
+      enabled: false,
+      targetPlatforms: [],
+      rssUrl: '',
       autoPublish: false,
     },
     qaSettings: {
-      enabled: true,
+      enabled: false,
       platforms: ['Quora', 'Reddit'],
       minViews: 1000,
       autoCompose: false,
     },
     qaSources: { reddit: true, quora: true, stackexchange: false },
-    autoSearchSettings: { dailyEnabled: true, frequency: 'daily' },
+    autoSearchSettings: { dailyEnabled: false, frequency: 'daily' },
     autoContentSettings: { enabled: false, scheduleMode: 'daily', postsPerDay: 2 },
     automationFlow: { nodes: [], edges: [], status: 'draft' },
     quoraTrafficOps: {
@@ -133,62 +111,23 @@ function buildDefaults(project) {
         angles: [{ id: 'default', name: 'Default Brand Angle', brandPositioning: brand }],
         answers: [],
         publishedLog: [],
-        cachedQuestions: [
-          { title: 'What are the best social media automation tools?', url: 'https://www.quora.com/What-are-the-best-social-media-automation-tools', keyword: 'marketing', score: 85, views: 12000 },
-          { title: 'How do I grow a B2B SaaS brand on LinkedIn?', url: 'https://www.quora.com/How-do-I-grow-a-B2B-SaaS-brand-on-LinkedIn', keyword: 'marketing', score: 78, views: 8500 },
-        ],
-        lastScrape: { keyword: 'marketing', at: new Date().toISOString(), count: 2 },
+        cachedQuestions: [],
       },
     },
     workerTasks: [],
     workerRunningFlag: 'false',
-    onboardingComplete: 'true',
+    onboardingComplete: 'false',
     emailCampaigns: {
       settings: {
         defaultProvider: 'auto',
         providerPriority: ['acumbamail', 'ses', 'vbout', 'mailchimp'],
-        fromEmail: 'michaelk@tsbrenterprises.com',
-        fromName: 'Social Imperialism',
-        alertEmail: 'theesaintmichael@gmail.com',
+        fromEmail: '',
+        fromName: brand || 'Social Imperialism',
+        alertEmail: '',
         shortenLinks: true,
-        enabled: true,
+        enabled: false,
       },
-      campaigns: [
-        {
-          id: 'email_camp_mention_digest',
-          name: 'Social Mention Auto-Reply Digest',
-          description: 'Email digest when AI drafts a social auto-reply.',
-          provider: 'auto',
-          trigger: 'reply.generated',
-          enabled: true,
-          autoReply: true,
-          shortenLinks: true,
-          subject: `${brand} — AI Reply Drafted on {{platform}}`,
-          html: `<p>Hi,</p><p>Auto-reply drafted on <strong>{{platform}}</strong>:</p><blockquote>{{preview}}</blockquote><p><a href="https://www.socialimperialism.com/history">Review in dashboard</a></p>`,
-        },
-        {
-          id: 'email_camp_keyword_nurture',
-          name: 'Keyword Match Lead Nurture',
-          provider: 'auto',
-          trigger: 'keyword.matched',
-          enabled: true,
-          autoReply: true,
-          shortenLinks: true,
-          subject: `${brand} — Keyword Match: {{matchedKeyword}}`,
-          html: `<p>Keyword <strong>{{matchedKeyword}}</strong> matched on {{platform}}.</p><p>{{topic}}</p>`,
-        },
-        {
-          id: 'email_camp_welcome',
-          name: 'Brand Welcome & Onboarding',
-          provider: 'auto',
-          trigger: 'lead.captured',
-          enabled: true,
-          autoReply: true,
-          shortenLinks: true,
-          subject: `Welcome to ${brand}`,
-          html: `<p>Welcome! Your ${brand} automation is live.</p>`,
-        },
-      ],
+      campaigns: [],
       log: [],
     },
   };
@@ -211,9 +150,7 @@ function ensureProjectDefaults(store, project) {
 
   for (const [key, value] of Object.entries(defaults)) {
     if (key === linkedKey) {
-      const existing = parseJsonArray(store.getItem(key));
-      if (existing?.length) continue;
-      store.setItem(key, JSON.stringify(defaults[linkedKey]));
+      if (!store.getItem(key)) store.setItem(key, '[]');
       continue;
     }
     if (!store.getItem(key)) {
@@ -221,24 +158,24 @@ function ensureProjectDefaults(store, project) {
     }
   }
 
-  if (!parseJsonArray(store.getItem(linkedKey))?.length) {
-    store.setItem(linkedKey, JSON.stringify(defaults[linkedKey]));
-  }
+  if (!store.getItem(linkedKey)) store.setItem(linkedKey, '[]');
 
   try {
     const qKey = 'quoraTrafficOps';
     const all = JSON.parse(store.getItem(qKey) || '{}');
-    const seed = defaults.quoraTrafficOps[project.id];
-    if (seed) {
-      const cur = all[project.id] || {};
-      if (!all[project.id]) {
-        all[project.id] = seed;
-      } else if (!cur.cachedQuestions?.length && seed.cachedQuestions?.length) {
-        all[project.id] = { ...cur, cachedQuestions: seed.cachedQuestions, lastScrape: cur.lastScrape || seed.lastScrape };
-      }
+    if (!all[project.id]) {
+      all[project.id] = defaults.quoraTrafficOps[project.id];
       store.setItem(qKey, JSON.stringify(all));
     }
   } catch { /* ignore */ }
+
+  stripDemoSeedData(store, project.id);
 }
 
-module.exports = { ensureProjectDefaults, demoLinkedAccounts, demoKeywords, buildDefaults };
+module.exports = {
+  ensureProjectDefaults,
+  buildDefaults,
+  stripDemoSeedData,
+  isDemoLinkedAccount,
+  DEMO_ENTRY_IDS,
+};
