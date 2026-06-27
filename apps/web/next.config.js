@@ -10,6 +10,11 @@ const nextConfig = {
         images: { unoptimized: true },
       }
     : {
+        async redirects() {
+          return [
+            { source: '/mobile', destination: '/mobile/index.html', permanent: false },
+          ];
+        },
         async rewrites() {
           const apiOrigin = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
           return [

@@ -3,6 +3,8 @@ import { useLayoutEffect, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
+import { LiveSupportPanel } from './LiveSupportPanel';
+import { OmniBrainPromptBar } from './OmniBrainPromptBar';
 import { bootstrapSession, getToken } from '@/lib/api';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
@@ -86,8 +88,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <span className="mobile-top-title">Social Imperialism</span>
         </div>
+        <OmniBrainPromptBar />
         {children}
         <FooterCredit className="app-footer-credit" />
+        <LiveSupportPanel />
         <div className="build-stamp" title="Deployed build">{BUILD_STAMP.slice(0, 7)}</div>
       </main>
     </div>

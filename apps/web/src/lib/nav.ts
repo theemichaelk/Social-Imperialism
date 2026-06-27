@@ -32,6 +32,7 @@ export const NAV_SECTIONS = [
     { id: 'account-creator', href: '/account-creator', icon: '➕', label: 'Acct Creator' },
   ]},
   { id: 'system', label: 'System', items: [
+    { id: 'support', href: '/support', icon: '💬', label: 'Live Support' },
     { id: 'dns', href: '/dns', icon: '🌐', label: 'DNS' },
     { id: 'integrations', href: '/integrations', icon: '🔌', label: 'Integrations' },
     { id: 'settings', href: '/settings', icon: '🎛️', label: 'Settings' },

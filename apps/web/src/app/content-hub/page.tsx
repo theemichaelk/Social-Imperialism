@@ -81,6 +81,17 @@ function ContentHubContent() {
   useEffect(() => {
     const q = searchParams.get('tab') as TabId | null;
     if (q && TABS.some((t) => t.id === q)) setTab(q);
+    try {
+      const raw = sessionStorage.getItem('si_omni_handoff');
+      if (!raw) return;
+      const handoff = JSON.parse(raw) as { type?: string; content?: string };
+      if (handoff.type === 'content' && handoff.content) {
+        setContent(handoff.content);
+        setTab('studio');
+        setStatus('Loaded from Omni-Brain');
+        sessionStorage.removeItem('si_omni_handoff');
+      }
+    } catch { /* ignore */ }
   }, [searchParams]);
 
   const refreshHubMeta = useCallback(async () => {

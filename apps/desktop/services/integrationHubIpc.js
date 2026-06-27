@@ -18,6 +18,10 @@ const OUTBOUND_EVENTS = [
   { id: 'campaign.switched', label: 'Campaign Switched', desc: 'When the active campaign changes' },
   { id: 'integration.test', label: 'Integration Test', desc: 'Test ping from Integrations Hub' },
   { id: 'webhook.inbound', label: 'Inbound Webhook', desc: 'When an external app POSTs to your inbound URL' },
+  { id: 'guardian.alert', label: 'Guardian Alert', desc: 'Health degradation detected by Guardian Gatekeeper' },
+  { id: 'guardian.approval_pending', label: 'Guardian Approval Pending', desc: 'Production fix awaiting THEE_MICHAEL approval' },
+  { id: 'guardian.fix_released', label: 'Guardian Fix Released', desc: 'Approved fix applied to production' },
+  { id: 'guardian.scan_complete', label: 'Guardian Scan Complete', desc: 'Scheduled guardian health scan finished' },
 ];
 
 function loadConfig(store) {

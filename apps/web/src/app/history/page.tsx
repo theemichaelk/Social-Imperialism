@@ -93,6 +93,15 @@ export default function HistoryPage() {
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('si_omni_handoff');
+      if (!raw) return;
+      const handoff = JSON.parse(raw) as { type?: string };
+      if (handoff.type === 'reply') sessionStorage.removeItem('si_omni_handoff');
+    } catch { /* ignore */ }
+  }, []);
+
   async function publish(id: string) {
     await invoke('publish-ai-reply', id);
     refresh();

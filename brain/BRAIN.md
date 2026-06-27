@@ -7,6 +7,10 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 | File / folder | Purpose |
 |---------------|---------|
 | [GROWTH_ENGINE.md](./GROWTH_ENGINE.md) | **Autonomous Social Growth Brain Engine** — decision core, brain-check, validation loop, UI pass-back |
+| [OMNI_BRAIN_PLANNER.md](./OMNI_BRAIN_PLANNER.md) | **Omni-Brain Strategic Workflow Planner** — cross-module blueprints, universal prompt bar |
+| [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) | **Live Support Growth Agent** — in-product support, troubleshooting, THEE_MICHAEL approvals |
+| [GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md) | **Guardian & Self-Healing Gatekeeper** — monitoring, sandbox tests, webhooks, admin gate |
+| [AGENTS.md](./AGENTS.md) | Agent registry — IDs, surfaces, routing keywords |
 | [PROMPT_VAULT.md](./PROMPT_VAULT.md) | Prompt Vault — create, search, load, export, delete templates per campaign |
 | [FEATURES.md](./FEATURES.md) | Master feature catalog (desktop + web parity) |
 | [GROK.md](./GROK.md) | Grok Engine session, credentials, Edge profile, IPC |

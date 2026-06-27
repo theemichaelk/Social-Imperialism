@@ -22,8 +22,10 @@ router.get('/docs', (req, res) => {
     endpoints: [
       { method: 'GET', path: '/api/v1/status', auth: true },
       { method: 'GET', path: '/api/v1/docs', auth: false },
+      { method: 'GET', path: '/api/v1/guardian/status', auth: true },
       { method: 'POST', path: '/api/v1/invoke/:channel', auth: true, body: { args: 'array' } },
       { method: 'POST', path: '/api/v1/hooks/:webhookId', auth: false, body: { event: 'string', data: 'object' } },
+      { method: 'POST', path: '/api/v1/guardian/hooks/:hookId', auth: false, body: { severity: 'string', module: 'string', summary: 'string' } },
     ],
     channels: [...ALLOWED_CHANNELS],
   });
@@ -66,6 +68,76 @@ router.post('/invoke/:channel', requirePartnerAuth, async (req, res) => {
     res.json({ success: true, data });
   } catch (e) {
     if (e.code === 'UNKNOWN_CHANNEL') return res.status(404).json({ error: e.message });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/guardian/status', requirePartnerAuth, async (req, res) => {
+  try {
+    const [scan, alerts, cfg] = await Promise.all([
+      invoke({ projectId: req.partner.projectId, organizationId: req.partner.organizationId, channel: 'run-guardian-scan', args: [] }).catch(() => null),
+      invoke({ projectId: req.partner.projectId, organizationId: req.partner.organizationId, channel: 'get-guardian-alerts', args: [] }),
+      invoke({ projectId: req.partner.projectId, organizationId: req.partner.organizationId, channel: 'get-guardian-config', args: [] }),
+    ]);
+    res.json({
+      ok: true,
+      guardian: {
+        enabled: cfg?.enabled !== false,
+        lastScanAt: cfg?.lastScanAt,
+        lastScanStatus: cfg?.lastScanStatus || scan?.status,
+        alertCount: alerts?.pending?.length || 0,
+        pendingApprovals: (await invoke({
+          projectId: req.partner.projectId,
+          organizationId: req.partner.organizationId,
+          channel: 'get-guardian-approvals',
+          args: [],
+        }))?.pending?.length || 0,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/guardian/hooks/:hookId', async (req, res) => {
+  const { hookId } = req.params;
+  const secret = req.headers['x-si-guardian-secret'] || req.headers['x-si-webhook-secret'] || req.body?.secret;
+  try {
+    const mapping = await prisma.projectSetting.findFirst({
+      where: { key: 'guardianHookId', value: hookId },
+      include: { project: { include: { organization: true } } },
+    });
+    if (!mapping?.project) return res.status(404).json({ error: 'Guardian hook not found' });
+
+    const cfgRaw = await prisma.projectSetting.findUnique({
+      where: { projectId_key: { projectId: mapping.projectId, key: 'guardianGatekeeperConfig' } },
+    });
+    let cfg = {};
+    try { cfg = JSON.parse(cfgRaw?.value || '{}'); } catch { /* ignore */ }
+    if (process.env.NODE_ENV === 'production' && cfg.guardianHookSecret && secret !== cfg.guardianHookSecret) {
+      return res.status(401).json({ error: 'Invalid guardian webhook secret' });
+    }
+
+    const payload = {
+      severity: req.body?.severity || 'medium',
+      module: req.body?.module || 'External Monitor',
+      summary: req.body?.summary || req.body?.message || 'Inbound guardian alert',
+      recommendedAction: req.body?.recommendedAction,
+      source: req.body?.source || req.headers['user-agent'] || 'external',
+      data: req.body?.data || req.body,
+    };
+
+    const result = await invoke({
+      projectId: mapping.projectId,
+      organizationId: mapping.project.organizationId,
+      channel: 'receive-guardian-webhook',
+      args: [payload],
+    });
+
+    res.json({ success: true, received: true, alertId: result?.alert?.alertId });
+  } catch (e) {
+    console.error('guardian webhook:', e.message);
     res.status(500).json({ error: e.message });
   }
 });

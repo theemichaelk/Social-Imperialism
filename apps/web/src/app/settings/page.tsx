@@ -17,6 +17,7 @@ import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
 import { NativeBrowserPanel } from '@/components/NativeBrowserPanel';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
+import { GuardianGatekeeperPanel } from '@/components/GuardianGatekeeperPanel';
 
 type Campaign = {
   id: string; brandName?: string; domain?: string; status?: string;
@@ -48,6 +49,7 @@ const TABS = [
   { id: 'grok', label: 'Grok', group: 'Connect' },
   { id: 'tutorials', label: 'Tutorials', group: 'System' },
   { id: 'health', label: 'System Health', group: 'System' },
+  { id: 'guardian-api', label: 'Guardian & API', group: 'System' },
   { id: 'system', label: 'System', group: 'System' },
 ] as const;
 
@@ -580,6 +582,16 @@ function SettingsContent() {
       )}
 
       {tab === 'health' && <SettingsHealthPanel />}
+
+      {tab === 'guardian-api' && (
+        <>
+          <p className="settings-panel-desc" style={{ marginBottom: '1rem' }}>
+            Guardian Gatekeeper monitors modules, workers, APIs, and scheduling — sandbox-tests fixes and routes production changes to{' '}
+            <strong>THEE_MICHAEL</strong> for approval. Brain doc: <code>brain/GUARDIAN_GATEKEEPER.md</code>
+          </p>
+          <GuardianGatekeeperPanel onMsg={setMsg} />
+        </>
+      )}
 
       {tab === 'system' && (
         <div className="grid grid-2">

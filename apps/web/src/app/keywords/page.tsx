@@ -35,6 +35,19 @@ export default function KeywordsPage() {
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('si_omni_handoff');
+      if (!raw) return;
+      const handoff = JSON.parse(raw) as { type?: string; keyword?: string };
+      if (handoff.type === 'keyword' && handoff.keyword) {
+        setNewTerm(handoff.keyword);
+        setMsg('Keyword loaded from Omni-Brain');
+        sessionStorage.removeItem('si_omni_handoff');
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   async function addKeyword() {
     if (!newTerm.trim()) return;
     setLoading(true);

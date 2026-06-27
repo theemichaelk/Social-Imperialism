@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NAV_SECTIONS } from '@/lib/nav';
+import { resolveSearchRoute } from '@/lib/liveSupportAgent';
 import { Logo } from '@/components/Logo';
 import { invoke } from '@/lib/api';
 
@@ -59,13 +60,21 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
     });
   }, []);
 
+  const searchRoute = useMemo(() => resolveSearchRoute(search), [search]);
+
   const filteredSections = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return NAV_SECTIONS;
+    const extraMatch = (label: string) =>
+      (q.includes('thee') && label.toLowerCase().includes('support'))
+      || (q.includes('admin') && label.toLowerCase().includes('support'))
+      || (q.includes('help') && label.toLowerCase().includes('support'));
     return NAV_SECTIONS.map((section) => ({
       ...section,
       items: section.items.filter((item) =>
-        item.label.toLowerCase().includes(q) || section.label.toLowerCase().includes(q),
+        item.label.toLowerCase().includes(q)
+        || section.label.toLowerCase().includes(q)
+        || extraMatch(item.label),
       ),
     })).filter((s) => s.items.length > 0);
   }, [search]);
@@ -87,11 +96,16 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
         <div className="sidebar-search">
           <input
             type="search"
-            placeholder="Search modules…"
+            placeholder="Search modules, Omni-Brain, THEE_MICHAEL…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sidebar-search-input"
           />
+          {searchRoute && (
+            <Link href={searchRoute.href} className="sidebar-search-route" onClick={onMobileClose}>
+              {searchRoute.label} →
+            </Link>
+          )}
         </div>
       )}
 
