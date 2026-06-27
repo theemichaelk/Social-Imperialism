@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
         <FooterCredit className="app-footer-credit" />
         <LiveSupportPanel />
-        <div className="build-stamp" title="Deployed build">{BUILD_STAMP.slice(0, 7)}</div>
+        <div className="build-stamp" title={`Deployed build ${BUILD_STAMP}`}>v{BUILD_STAMP.slice(0, 7)}</div>
       </main>
     </div>
   );
