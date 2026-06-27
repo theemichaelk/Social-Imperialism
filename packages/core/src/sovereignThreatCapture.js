@@ -4,6 +4,8 @@
  * Canonical doc: brain/SOVEREIGN_THREAT_CAPTURE.md
  */
 const crypto = require('crypto');
+const path = require('path');
+const axios = require('axios');
 
 const ADMIN_IDENTITY = 'THEE_MICHAEL';
 const SITE_DOMAIN = 'socialimperialism.com';
@@ -245,7 +247,67 @@ function isAuthorizedAdmin(email) {
   return email && admins.includes(String(email).toLowerCase());
 }
 
-function requestKinetic2FA(store, { email }) {
+async function deliverKineticChallenge(store, { email, challengeId, code }, handlers = {}) {
+  const delivery = [];
+  const subject = `[${SITE_DOMAIN}] Kinetic 2FA verification code`;
+  const text = [
+    `Administrator verification for ${SITE_DOMAIN}`,
+    '',
+    `Code: ${code}`,
+    `Challenge: ${challengeId}`,
+    'Expires in 5 minutes.',
+    '',
+    'If you did not request this, ignore immediately.',
+  ].join('\n');
+  const html = `<p>Your verification code: <strong>${code}</strong></p><p>Challenge: ${challengeId}</p><p>Expires in 5 minutes.</p>`;
+
+  try {
+    const emailService = require(path.join(__dirname, '../../../apps/desktop/services/emailService'));
+    let keys = {};
+    try { keys = JSON.parse(store.getItem('globalApiKeys') || '{}'); } catch { /* ignore */ }
+    const sent = await emailService.sendEmail(keys, {
+      to: email,
+      subject,
+      text,
+      html,
+      providerPriority: ['ses', 'acumbamail', 'vbout'],
+    });
+    delivery.push({ channel: 'email', ok: !!(sent?.ok || sent?.success), provider: sent?.provider });
+  } catch (e) {
+    delivery.push({ channel: 'email', ok: false, error: e.message });
+  }
+
+  try {
+    if (handlers['get-guardian-config']) {
+      const cfg = await handlers['get-guardian-config'](null);
+      const url = cfg?.alertWebhookUrl?.trim();
+      if (url) {
+        const res = await axios.post(url, {
+          event: 'sovereign.kinetic_2fa',
+          source: 'sovereign-threat-capture',
+          timestamp: new Date().toISOString(),
+          data: {
+            challengeId,
+            email,
+            domain: SITE_DOMAIN,
+            message: 'Kinetic 2FA challenge issued — check authorized administrator email',
+          },
+        }, {
+          timeout: 10000,
+          headers: { 'Content-Type': 'application/json', 'X-SI-Event': 'sovereign.kinetic_2fa' },
+          validateStatus: () => true,
+        });
+        delivery.push({ channel: 'webhook', ok: res.status >= 200 && res.status < 300, status: res.status });
+      }
+    }
+  } catch (e) {
+    delivery.push({ channel: 'webhook', ok: false, error: e.message });
+  }
+
+  return delivery;
+}
+
+async function requestKinetic2FA(store, { email }, handlers = {}) {
   if (!isAuthorizedAdmin(email)) {
     return { success: false, error: 'Not an authorized administrator channel' };
   }
@@ -262,14 +324,27 @@ function requestKinetic2FA(store, { email }) {
   });
   store.setItem(STORAGE_KINETIC, JSON.stringify(sessions.slice(0, 20)));
 
-  const devEcho = process.env.NODE_ENV !== 'production' ? code : undefined;
+  const delivery = await deliverKineticChallenge(store, { email, challengeId, code }, handlers);
+  const emailSent = delivery.some((d) => d.channel === 'email' && d.ok);
+  const webhookSent = delivery.some((d) => d.channel === 'webhook' && d.ok);
+
+  let message = `Kinetic 2FA challenge issued to authorized ${SITE_DOMAIN} administrator channel.`;
+  if (process.env.NODE_ENV === 'production') {
+    if (emailSent) message += ' Verification code sent to registered admin email.';
+    else if (webhookSent) message += ' Admin channel notified via Guardian webhook.';
+    else message += ' Configure SMTP (SES/Acumbamail) or Guardian alert webhook for delivery.';
+  } else {
+    message += ' Physical verification required.';
+  }
+
   return {
     success: true,
     challengeId,
     routedTo: ADMIN_IDENTITY,
-    message: `Kinetic 2FA challenge issued to authorized ${SITE_DOMAIN} administrator channel. Physical verification required.`,
+    message,
     expiresInSeconds: 300,
-    devCode: devEcho,
+    delivery,
+    devCode: process.env.NODE_ENV !== 'production' ? code : undefined,
   };
 }
 
@@ -334,8 +409,8 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
     return { success: true, event: getRedactedEvents(store).find((e) => e.eventId === captured.eventId), message: captured.templateBanner };
   });
 
-  ipcMain.handle('request-kinetic-2fa-challenge', (event, payload = {}) => {
-    return requestKinetic2FA(store, payload);
+  ipcMain.handle('request-kinetic-2fa-challenge', async (event, payload = {}) => {
+    return requestKinetic2FA(store, payload, handlers);
   });
 
   ipcMain.handle('verify-kinetic-2fa', (event, payload = {}) => {

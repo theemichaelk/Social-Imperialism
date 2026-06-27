@@ -33,6 +33,18 @@ Applies to every module — past, current, and future:
 
 Stored in Brain — see banner block in [SOVEREIGN_THREAT_CAPTURE.md](../SOVEREIGN_THREAT_CAPTURE.md).
 
+## Platform coverage
+
+| Surface | Implementation |
+|---------|----------------|
+| SaaS API `/api/invoke` | `sovereignThreatShield` middleware |
+| Partner API `/api/v1/invoke` | Same middleware |
+| Auth login failures | `sovereignAuthFailureCapture` |
+| Web app | `SovereignThreatBanner`, `SovereignThreatPanel`, `api.ts` client hook |
+| Desktop Electron | Native IPC in `apps/desktop/index.js` |
+| Static S3 landing | `s3-website/sovereign-landing-shield.js` |
+| Kinetic 2FA | Email + Guardian webhook delivery in production |
+
 ## Development checklist (every PR)
 
 - [ ] New routes pass sovereignThreatShield or document exemption

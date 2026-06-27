@@ -33,12 +33,19 @@ export function SovereignThreatPanel({ onMsg }: { onMsg?: (m: string) => void })
     if (!adminEmail.trim()) { onMsg?.('Enter authorized administrator email'); return; }
     setLoading(true);
     try {
-      const res = await invoke<{ challengeId?: string; devCode?: string; message?: string }>(
+      const res = await invoke<{
+        challengeId?: string;
+        devCode?: string;
+        message?: string;
+        delivery?: Array<{ channel: string; ok?: boolean }>;
+      }>(
         'request-kinetic-2fa-challenge',
         { email: adminEmail.trim() },
       );
       setChallengeId(res.challengeId || '');
       onMsg?.(res.message || 'Kinetic 2FA challenge sent');
+      const sent = res.delivery?.filter((d) => d.ok).map((d) => d.channel).join(', ');
+      if (sent) onMsg?.(`Delivered via: ${sent}`);
       if (res.devCode) onMsg?.(`Dev verification code: ${res.devCode}`);
     } catch (e) { onMsg?.((e as Error).message); }
     finally { setLoading(false); }

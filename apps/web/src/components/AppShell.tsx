@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
 import { LiveSupportPanel } from './LiveSupportPanel';
-import { OmniBrainPromptBar } from './OmniBrainPromptBar';
+import { ImperialismBrainPromptBar } from './ImperialismBrainPromptBar';
 import { bootstrapSession, getToken } from '@/lib/api';
 import { SovereignThreatBanner } from './SovereignThreatBanner';
 
@@ -89,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <span className="mobile-top-title">Social Imperialism</span>
         </div>
-        <OmniBrainPromptBar />
+        <ImperialismBrainPromptBar />
         <SovereignThreatBanner />
         {children}
         <FooterCredit className="app-footer-credit" />

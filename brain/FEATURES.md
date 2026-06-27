@@ -79,6 +79,9 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 | Kinetic 2FA | `request-kinetic-2fa-challenge`, `verify-kinetic-2fa` | Settings → Guardian & API |
 | Decrypt / release | `decrypt-sovereign-threat-telemetry`, `approve-sovereign-threat-release` | Admin-only; Guardian gate |
 | Partner status | `GET /api/v1/sovereign/status` | Integrations hub |
+| Kinetic 2FA delivery | Email (SES/Acumbamail) + Guardian webhook | Settings → Sovereign panel |
+| Desktop native IPC | `apps/desktop/index.js` | Electron app |
+| S3 landing shield | `s3-website/sovereign-landing-shield.js` | Static site |
 | Prompt Vault seed | `pv_seed_sovereign_threat` | `feature: sovereign` |
 
 Persistent requirement for all past, current, and future modules — see security event template in Brain doc.

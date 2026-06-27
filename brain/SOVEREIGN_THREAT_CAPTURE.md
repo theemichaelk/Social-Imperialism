@@ -52,7 +52,9 @@ System horizon: threat neutralized, contained, and resolved inside the sandbox. 
 
 | Surface | Protection |
 |---------|------------|
-| Public website / landing | Static export; threat reporting via authenticated app shell |
+| Public website / landing | `s3-website/sovereign-landing-shield.js` client probe containment + authenticated app shell |
+| Desktop Electron | Native IPC via `apps/desktop/index.js` (Guardian + Sovereign handlers) |
+| Kinetic 2FA production | Admin email (SES/Acumbamail) + Guardian alert webhook; dev code echo non-production only |
 | `/api/invoke/*` | sovereignThreatShield middleware |
 | `/api/v1/invoke/*` (Partner API) | sovereignThreatShield middleware |
 | `/api/auth/login` failures | sovereignAuthFailureCapture (brute-force logging) |

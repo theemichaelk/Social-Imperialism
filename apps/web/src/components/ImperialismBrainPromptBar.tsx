@@ -20,7 +20,7 @@ import {
   type WorkflowBlueprint,
 } from '@/lib/omniBrainPlanner';
 
-export function OmniBrainPromptBar() {
+export function ImperialismBrainPromptBar() {
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState('');
@@ -122,16 +122,16 @@ export function OmniBrainPromptBar() {
   };
 
   return (
-    <div className={`omni-brain-bar ${expanded ? 'omni-brain-expanded' : ''}`}>
-      <form className="omni-brain-form" onSubmit={onSubmit}>
-        <div className="omni-brain-badge" title="Imperialism Brain">
-          <span className="omni-brain-icon">🧠</span>
-          <span className="omni-brain-label">Imperialism Brain</span>
+    <div className={`imperialism-brain-bar ${expanded ? 'imperialism-brain-expanded' : ''}`}>
+      <form className="imperialism-brain-form" onSubmit={onSubmit}>
+        <div className="imperialism-brain-badge" title="Imperialism Brain">
+          <span className="imperialism-brain-icon">🧠</span>
+          <span className="imperialism-brain-label">Imperialism Brain</span>
         </div>
         <input
           ref={inputRef}
           type="text"
-          className="omni-brain-input"
+          className="imperialism-brain-input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setExpanded(true)}
@@ -139,13 +139,13 @@ export function OmniBrainPromptBar() {
           disabled={loading}
           aria-label="Imperialism Brain keyword prompt"
         />
-        <button type="submit" className="btn omni-brain-plan-btn" disabled={loading || !query.trim()}>
+        <button type="submit" className="btn imperialism-brain-plan-btn" disabled={loading || !query.trim()}>
           {loading ? 'Planning…' : 'Plan'}
         </button>
         {blueprint && (
           <button
             type="button"
-            className="btn primary omni-brain-run-btn"
+            className="btn primary imperialism-brain-run-btn"
             onClick={executePrimary}
             disabled={executing || blueprint.requiresApproval}
             title={blueprint.requiresApproval ? `Requires ${OMNI_BRAIN_ADMIN} approval` : 'Run primary action'}
@@ -155,7 +155,7 @@ export function OmniBrainPromptBar() {
         )}
         <button
           type="button"
-          className="omni-brain-toggle"
+          className="imperialism-brain-toggle"
           onClick={() => setExpanded((e) => !e)}
           aria-expanded={expanded}
           title={expanded ? 'Collapse' : 'Expand blueprint'}
@@ -165,35 +165,35 @@ export function OmniBrainPromptBar() {
       </form>
 
       {expanded && (blueprint || msg) && (
-        <div className="omni-brain-panel">
-          {msg && <p className="omni-brain-msg">{msg}</p>}
+        <div className="imperialism-brain-panel">
+          {msg && <p className="imperialism-brain-msg">{msg}</p>}
           {blueprint && (
             <>
-              <div className="omni-brain-summary">
+              <div className="imperialism-brain-summary">
                 <strong>{blueprint.summary}</strong>
                 {blueprint.requiresApproval && (
-                  <span className="omni-brain-approval-badge">Requires {OMNI_BRAIN_ADMIN} approval</span>
+                  <span className="imperialism-brain-approval-badge">Requires {OMNI_BRAIN_ADMIN} approval</span>
                 )}
               </div>
-              <ol className="omni-brain-steps">
+              <ol className="imperialism-brain-steps">
                 {blueprint.steps.map((step) => (
-                  <li key={step.order} className={step.approvalRequired ? 'omni-step-approval' : ''}>
-                    <div className="omni-step-head">
-                      <span className="omni-step-order">{step.order}</span>
+                  <li key={step.order} className={step.approvalRequired ? 'imperialism-step-approval' : ''}>
+                    <div className="imperialism-step-head">
+                      <span className="imperialism-step-order">{step.order}</span>
                       <div>
                         <strong>{step.module}</strong> — {step.action}
                         {step.href && (
-                          <Link href={step.href} className="omni-step-link">Open →</Link>
+                          <Link href={step.href} className="imperialism-step-link">Open →</Link>
                         )}
                       </div>
                     </div>
-                    <span className="omni-step-check">✓ {step.successCheck}</span>
+                    <span className="imperialism-step-check">✓ {step.successCheck}</span>
                   </li>
                 ))}
               </ol>
-              <div className="omni-brain-footer">
+              <div className="imperialism-brain-footer">
                 <span>Next: <strong>{blueprint.nextStep.module}</strong> — {blueprint.nextStep.action}</span>
-                <div className="omni-brain-footer-actions">
+                <div className="imperialism-brain-footer-actions">
                   <Link href={blueprint.nextStep.href} className="btn">Go to next step</Link>
                   {!blueprint.requiresApproval && (
                     <button type="button" className="btn primary" onClick={executePrimary} disabled={executing}>
@@ -212,3 +212,6 @@ export function OmniBrainPromptBar() {
     </div>
   );
 }
+
+/** @deprecated Use ImperialismBrainPromptBar */
+export const OmniBrainPromptBar = ImperialismBrainPromptBar;

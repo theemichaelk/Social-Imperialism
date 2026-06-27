@@ -5,7 +5,7 @@
 | `live-support-growth` | Imperialism Brain (Live Support) | [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) | Web panel (`LiveSupportPanel`), `/support`, sidebar search routing |
 | `guardian-gatekeeper` | Guardian & Self-Healing Gatekeeper | [GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md) | Settings → Guardian & API, Partner API `/guardian/status`, inbound `/guardian/hooks/:id` |
 | `sovereign-threat-capture` | Sovereign Threat Capture Layer | [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) | API edge shield, Settings → Sovereign panel, all modules — see [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md) |
-| `omni-brain-planner` | Imperialism Brain (Planner) | [OMNI_BRAIN_PLANNER.md](./OMNI_BRAIN_PLANNER.md) | Universal prompt bar (`OmniBrainPromptBar`), all authenticated pages |
+| `omni-brain-planner` | Imperialism Brain (Planner) | [OMNI_BRAIN_PLANNER.md](./OMNI_BRAIN_PLANNER.md) | Universal prompt bar (`ImperialismBrainPromptBar`), all authenticated pages |
 | `grok-engine` | Grok Engine | `brain/GROK.md` (desktop + settings) | Content Hub, Design Studio, Grok Imagine |
 | `growth-lab` | Growth Lab | `brain/GROWTH_ENGINE.md` | Reddit AI, Quora Ops |
 

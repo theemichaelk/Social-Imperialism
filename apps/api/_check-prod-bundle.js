@@ -18,7 +18,7 @@ function get(url) {
   for (const p of paths) {
     try {
       const js = await get(base + p);
-      if (/OmniBrain|LiveSupport|get-guardian-config|omni-brain-prompt|THEE_MICHAEL/.test(js)) hits.push(p);
+      if (/ImperialismBrain|LiveSupport|get-guardian-config|imperialism-brain|THEE_MICHAEL/.test(js)) hits.push(p);
     } catch { /* skip */ }
   }
   console.log('JS bundles:', paths.length);

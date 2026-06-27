@@ -2597,7 +2597,7 @@ textarea.input { min-height: 100px; resize: vertical; }
 .guardian-alert-card { border-left: 3px solid var(--warn); }
 
 /* Imperialism Brain universal prompt bar */
-.omni-brain-bar {
+.imperialism-brain-bar {
   position: sticky; top: 0; z-index: 90;
   margin: 0 0 1rem; padding: 0.65rem 0.85rem;
   background: linear-gradient(135deg, rgba(10, 18, 35, 0.95), rgba(15, 25, 50, 0.92));
@@ -2605,53 +2605,53 @@ textarea.input { min-height: 100px; resize: vertical; }
   box-shadow: var(--neon-purple);
   backdrop-filter: blur(10px);
 }
-.omni-brain-form {
+.imperialism-brain-form {
   display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
 }
-.omni-brain-badge {
+.imperialism-brain-badge {
   display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;
   padding: 0.25rem 0.5rem; border-radius: 8px;
   background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35);
 }
-.omni-brain-icon { font-size: 1rem; }
-.omni-brain-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent2); }
-.omni-brain-input {
+.imperialism-brain-icon { font-size: 1rem; }
+.imperialism-brain-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent2); }
+.imperialism-brain-input {
   flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; border-radius: 8px;
   border: 1px solid var(--border); background: rgba(5, 10, 20, 0.65); color: var(--text); font-size: 0.9rem;
 }
-.omni-brain-input:focus { outline: none; border-color: var(--accent2); box-shadow: var(--neon-purple); }
-.omni-brain-plan-btn, .omni-brain-run-btn { font-size: 0.8rem; padding: 0.45rem 0.75rem; }
-.omni-brain-toggle {
+.imperialism-brain-input:focus { outline: none; border-color: var(--accent2); box-shadow: var(--neon-purple); }
+.imperialism-brain-plan-btn, .imperialism-brain-run-btn { font-size: 0.8rem; padding: 0.45rem 0.75rem; }
+.imperialism-brain-toggle {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; padding: 0.25rem;
 }
-.omni-brain-panel {
+.imperialism-brain-panel {
   margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid var(--border);
 }
-.omni-brain-msg { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--muted); }
-.omni-brain-summary { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem; }
-.omni-brain-approval-badge {
+.imperialism-brain-msg { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--muted); }
+.imperialism-brain-summary { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.imperialism-brain-approval-badge {
   font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 999px;
   background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: var(--warn);
 }
-.omni-brain-steps { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
-.omni-brain-steps li {
+.imperialism-brain-steps { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+.imperialism-brain-steps li {
   padding: 0.45rem 0.55rem; border-radius: 8px; border: 1px solid var(--border);
   background: rgba(5, 10, 20, 0.45); font-size: 0.82rem;
 }
-.omni-brain-steps li.omni-step-approval { border-color: rgba(245, 158, 11, 0.4); }
-.omni-step-head { display: flex; gap: 0.5rem; align-items: flex-start; }
-.omni-step-order {
+.imperialism-brain-steps li.imperialism-step-approval { border-color: rgba(245, 158, 11, 0.4); }
+.imperialism-step-head { display: flex; gap: 0.5rem; align-items: flex-start; }
+.imperialism-step-order {
   width: 1.35rem; height: 1.35rem; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   font-size: 0.65rem; font-weight: 700; background: rgba(168, 85, 247, 0.2); color: var(--accent2);
 }
-.omni-step-link { margin-left: 0.5rem; font-size: 0.75rem; }
-.omni-step-check { display: block; margin-top: 0.2rem; font-size: 0.72rem; color: var(--muted); }
-.omni-brain-footer {
+.imperialism-step-link { margin-left: 0.5rem; font-size: 0.75rem; }
+.imperialism-step-check { display: block; margin-top: 0.2rem; font-size: 0.72rem; color: var(--muted); }
+.imperialism-brain-footer {
   margin-top: 0.65rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;
   font-size: 0.8rem;
 }
-.omni-brain-footer-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.imperialism-brain-footer-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
 @media (max-width: 768px) {
   .si-editor-layout { grid-template-columns: 1fr; }
@@ -2666,8 +2666,8 @@ textarea.input { min-height: 100px; resize: vertical; }
   .live-support-panel:not(.live-support-embedded) {
     right: 0.75rem; left: 0.75rem; width: auto; bottom: 0.75rem;
   }
-  .omni-brain-form { flex-direction: column; align-items: stretch; }
-  .omni-brain-badge { align-self: flex-start; }
+  .imperialism-brain-form { flex-direction: column; align-items: stretch; }
+  .imperialism-brain-badge { align-self: flex-start; }
 }
 
 /* Page focus rail — outcome-driven navigation */

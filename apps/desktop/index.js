@@ -1,4 +1,11 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
+
+const desktopIpcHandlers = {};
+const _ipcHandle = ipcMain.handle.bind(ipcMain);
+ipcMain.handle = function patchedIpcHandle(channel, listener) {
+  desktopIpcHandlers[channel] = listener;
+  return _ipcHandle(channel, listener);
+};
 require('dotenv').config();
 const axios = require('axios');
 const path = require('path');
@@ -3351,5 +3358,11 @@ ipcMain.handle('test-all-connections', async () => {
     return { success: false, output: e.stdout || '', error: e.stderr || e.message };
   }
 });
+
+const { registerGuardianGatekeeperHandlers } = require('../../packages/core/src/guardianGatekeeper');
+const { registerSovereignThreatHandlers } = require('../../packages/core/src/sovereignThreatCapture');
+registerGuardianGatekeeperHandlers({ ipcMain, store, handlers: desktopIpcHandlers });
+registerSovereignThreatHandlers({ ipcMain, store, handlers: desktopIpcHandlers });
+console.log('[desktop] Guardian Gatekeeper + Sovereign Threat Capture native IPC registered');
 
 
