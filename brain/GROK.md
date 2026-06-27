@@ -2,6 +2,8 @@
 
 Social Imperialism uses **native browser automation** against https://grok.com/ — not the xAI API. A persistent Microsoft Edge profile keeps the login alive between runs.
 
+**Audit accuracy rule (mandatory):** Before any past/current/future update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md): verify claims against code, run `node apps/api/_audit-accuracy-check.js`, run production QA, update Brain docs if counts change.
+
 ## Account (keep these)
 
 | Field | Value |

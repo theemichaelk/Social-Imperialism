@@ -2,6 +2,8 @@
 
 Reusable prompt templates per campaign — searched by the Growth Brain before drafting, replying, or automating.
 
+**Audit accuracy rule (mandatory):** Before any past/current/future update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md): verify claims against code, run `node apps/api/_audit-accuracy-check.js`, run production QA, update Brain docs if counts change.
+
 ## Web UI
 
 - **Route:** `/prompt-vault`

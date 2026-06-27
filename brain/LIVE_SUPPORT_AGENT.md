@@ -8,6 +8,8 @@ Canonical system prompt for in-product live support, help search routing, and gr
 **Admin identity:** `THEE_MICHAEL`  
 **Product:** [socialimperialism.com](https://www.socialimperialism.com)
 
+**Audit accuracy rule (mandatory):** Before any past/current/future update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md): verify claims against code, run `node apps/api/_audit-accuracy-check.js`, run production QA, update Brain docs if counts change.
+
 ---
 
 ## System Prompt

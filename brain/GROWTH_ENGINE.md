@@ -4,6 +4,8 @@ This prompt defines the **always-on intelligence layer** for Social Imperialism 
 
 Agents, automations, and orchestration code should read this file **before** drafting content, replying, publishing, scanning feeds, building automations, or routing users to features.
 
+**Audit accuracy rule (mandatory):** Before any past/current/future update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md): verify claims against code, run `node apps/api/_audit-accuracy-check.js`, run production QA, update Brain docs if counts change.
+
 ---
 
 ## Role and Core Objective

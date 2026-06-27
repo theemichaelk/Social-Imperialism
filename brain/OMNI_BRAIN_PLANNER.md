@@ -9,6 +9,8 @@ Unified planning intelligence for socialimperialism.com. Translates user request
 **Stack position:** Planning layer above Live Support and Guardian Gatekeeper  
 **Security layer:** [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) — all planned workflows must respect containment and live-freeze state
 
+**Audit accuracy rule (mandatory):** Before any past/current/future update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md): verify claims against code, run `node apps/api/_audit-accuracy-check.js`, run production QA, update Brain docs if counts change.
+
 ---
 
 ## System Prompt

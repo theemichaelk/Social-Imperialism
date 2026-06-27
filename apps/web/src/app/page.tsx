@@ -125,7 +125,7 @@ export default function HomePage() {
         <div className="home-container">
           <span className="home-section-eyebrow">Platform</span>
           <h2>Everything your team needs</h2>
-          <p className="home-section-sub">18 modules — from discovery to publish to growth automation.</p>
+          <p className="home-section-sub">24 modules — from discovery to publish to growth automation.</p>
           <div className="home-feature-grid">
             {allFeatures.map((f) => (
               <NavAnchor key={f.id} href={f.href} className="home-feature-card home-feature-glow">

@@ -2,6 +2,8 @@
 
 Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the brain's feature index.
 
+**Audit accuracy rule (mandatory):** Before any feature update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md). Run `node apps/api/_audit-accuracy-check.js` and production QA. Feature indexes live in `brain/features/*.md`.
+
 ## Grok Engine (browser — no API)
 
 **Status:** Live (June 2026)  
@@ -63,7 +65,7 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 | Surface | Coverage |
 |---------|----------|
 | `PageShell` + `PageFocusRail` | 24 authenticated module routes in `pageFocus.ts` |
-| `ManageableTabNav` focus mode | Tab-heavy pages: Dashboard, Browse Posts, History, Settings, Integrations, Content Library, Account Creator |
+| `ManageableTabNav` focus mode | **7** tab-heavy pages: Dashboard, Browse Posts, History, Settings, Integrations, Content Library, Account Creator |
 | `ContentHubTabNav` focus mode | Content Hub (dedicated tab catalog) |
 | Sidebar hints | All nav items in `nav.ts` |
 

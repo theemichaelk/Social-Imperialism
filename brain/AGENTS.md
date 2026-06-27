@@ -1,5 +1,7 @@
 # Agent Registry
 
+**Audit rule (mandatory):** All agents and features must comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md) before any past/current/future update is documented or deployed.
+
 | ID | Name | System prompt | Surfaces |
 |----|------|---------------|----------|
 | `live-support-growth` | Imperialism Brain (Live Support) | [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) | Web panel (`LiveSupportPanel`), `/support`, sidebar search routing |

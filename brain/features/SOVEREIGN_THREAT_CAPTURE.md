@@ -45,8 +45,13 @@ Stored in Brain — see banner block in [SOVEREIGN_THREAT_CAPTURE.md](../SOVEREI
 | Static S3 landing | `s3-website/sovereign-landing-shield.js` |
 | Kinetic 2FA | Email + Guardian webhook delivery in production |
 
+## Audit accuracy rule (mandatory)
+
+Before any past/current/future update, comply with [AUDIT_ACCURACY_RULE.md](./AUDIT_ACCURACY_RULE.md): verify claims against code, run `node apps/api/_audit-accuracy-check.js`, run production QA, update Brain docs if counts change.
+
 ## Development checklist (every PR)
 
+- [ ] [AUDIT_ACCURACY_RULE.md](./AUDIT_ACCURACY_RULE.md) checklist complete
 - [ ] New routes pass sovereignThreatShield or document exemption
 - [ ] No credentials in logs or Brain docs
 - [ ] Production changes require THEE_MICHAEL / kinetic path when security-impacting

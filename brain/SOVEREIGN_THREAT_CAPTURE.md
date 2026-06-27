@@ -6,6 +6,8 @@ Persistent security requirement for **all** Social Imperialism surfaces: public 
 **Admin identity:** `THEE_MICHAEL`  
 **Runs with:** [GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md) (Guardian handles ops health; Sovereign handles threat capture, encryption, containment)
 
+**Audit accuracy rule (mandatory):** Before any past/current/future update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md): verify claims against code, run `node apps/api/_audit-accuracy-check.js`, run production QA, update Brain docs if counts change.
+
 ---
 
 ## Security Event Template
