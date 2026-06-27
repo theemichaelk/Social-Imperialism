@@ -107,7 +107,7 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
       <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
         <DataPanel title="Guardian Status" live>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <LivePulse active={cfg.enabled !== false} />
+            <LivePulse label={cfg.enabled !== false ? 'ON' : 'OFF'} />
             <span>{cfg.enabled !== false ? 'Monitoring ON' : 'Monitoring OFF'}</span>
           </div>
           <SparkRow items={[
