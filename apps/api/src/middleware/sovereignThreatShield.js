@@ -34,14 +34,22 @@ function checkRate(req) {
 }
 
 async function getProjectStore(req) {
-  if (!req.user?.orgId) return null;
-  const projectId = req.body?.projectId || req.headers['x-project-id'];
-  if (!projectId) return null;
+  const orgId = req.user?.orgId || req.partner?.organizationId;
+  const projectId = req.partner?.projectId || req.body?.projectId || req.headers['x-project-id'];
+  if (!orgId || !projectId) return null;
   try {
-    return await createPrismaStore({ projectId, organizationId: req.user.orgId });
+    return await createPrismaStore({ projectId, organizationId: orgId });
   } catch {
     return null;
   }
+}
+
+function requestActor(req) {
+  if (req.user) return req.user;
+  if (req.partner) {
+    return { userId: `partner:${req.partner.projectId}`, orgId: req.partner.organizationId };
+  }
+  return {};
 }
 
 async function sovereignThreatShield(req, res, next) {
@@ -69,7 +77,7 @@ async function sovereignThreatShield(req, res, next) {
           vector: worst.vector,
           summary: `Blocked ${worst.vector} probe on ${req.path}`,
           requestMeta: { path: req.path, method: req.method, ip: req.ip, userAgent: req.headers['user-agent'] },
-          userContext: req.user || {},
+          userContext: requestActor(req),
           autoContain: worst.severity === 'critical' || worst.severity === 'high',
         });
       }
@@ -107,10 +115,37 @@ async function sovereignThreatShield(req, res, next) {
   }
 }
 
-function sovereignAuthFailureCapture(req, reason) {
+async function sovereignAuthFailureCapture(req, reason) {
   const hits = scanRequestSurface(req);
   if (!hits.length && reason !== 'brute_force') return;
   console.warn(`[sovereign] auth failure captured: ${reason} ${req.path}`);
+  const email = req.body?.email;
+  if (!email) return;
+  try {
+    const { prisma } = require('@si/db');
+    const user = await prisma.user.findUnique({ where: { email: String(email).toLowerCase() } });
+    if (!user) return;
+    const membership = await prisma.organizationMember.findFirst({ where: { userId: user.id } });
+    if (!membership) return;
+    const project = await prisma.project.findFirst({
+      where: { organizationId: membership.organizationId, isActive: true },
+    }) || await prisma.project.findFirst({ where: { organizationId: membership.organizationId } });
+    if (!project) return;
+    const store = await createPrismaStore({ projectId: project.id, organizationId: membership.organizationId });
+    captureThreatEvent(store, {
+      source: 'auth',
+      surface: req.path,
+      module: 'Authentication',
+      severity: reason === 'brute_force' ? 'high' : 'medium',
+      vector: reason === 'brute_force' ? 'auth_brute_force' : 'auth_anomaly',
+      summary: `Auth failure (${reason}) on ${req.path}`,
+      requestMeta: { path: req.path, method: req.method, ip: req.ip, userAgent: req.headers['user-agent'] },
+      userContext: { userId: user.id, orgId: membership.organizationId },
+      autoContain: false,
+    });
+  } catch (e) {
+    console.warn('[sovereign] auth capture store failed:', e.message);
+  }
 }
 
 module.exports = { sovereignThreatShield, sovereignAuthFailureCapture, checkRate };

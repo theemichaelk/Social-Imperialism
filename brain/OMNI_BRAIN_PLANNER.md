@@ -1,6 +1,8 @@
-# Social Imperialism Omni-Brain Strategic Workflow Planner
+# Imperialism Brain — Strategic Workflow Planner
 
 Unified planning intelligence for socialimperialism.com. Translates user requests into precise, safe, cross-module execution blueprints.
+
+> User-facing name: **Imperialism Brain** (prompt bar). Internal agent id remains `omni-brain-planner`.
 
 **Agent id:** `omni-brain-planner`  
 **Admin identity:** `THEE_MICHAEL`  

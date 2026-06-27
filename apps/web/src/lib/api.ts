@@ -1,3 +1,5 @@
+import { reportClientThreat } from '@/lib/sovereignThreatCapture';
+
 export function getApiBase(): string {
   // Browser: same-origin /api proxy (Next.js rewrites → production API, no CORS issues).
   if (typeof window !== 'undefined') return '';
@@ -94,29 +96,17 @@ function reportSovereignClientAnomaly(path: string, code: string, msg: string) {
     if (sessionStorage.getItem(dedupeKey)) return;
     sessionStorage.setItem(dedupeKey, '1');
   } catch { /* ignore */ }
-  const token = getToken();
-  const projectId = getProjectId();
-  if (!token) return;
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
-  if (projectId) headers['x-project-id'] = projectId;
-  fetch(`${getApiBase()}/api/invoke/capture-sovereign-threat`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      args: [{
-        source: 'web_client',
-        surface: path,
-        module: 'Web Application',
-        severity: code === 'SOVEREIGN_THREAT_CAPTURED' ? 'high' : 'medium',
-        vector: code.toLowerCase(),
-        summary: `Client observed ${code}: ${msg}`.slice(0, 240),
-        autoContain: false,
-      }],
-    }),
-  }).catch(() => {});
+  if (!getToken()) return;
+  reportClientThreat(
+    (channel, payload) => invoke(channel, payload),
+    {
+      surface: path,
+      module: 'Web Application',
+      severity: code === 'SOVEREIGN_THREAT_CAPTURED' ? 'high' : 'medium',
+      vector: code.toLowerCase(),
+      summary: `Client observed ${code}: ${msg}`.slice(0, 240),
+    },
+  ).catch(() => {});
 }
 
 async function sleep(ms: number) {

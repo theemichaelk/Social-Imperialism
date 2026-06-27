@@ -52,9 +52,11 @@ System horizon: threat neutralized, contained, and resolved inside the sandbox. 
 
 | Surface | Protection |
 |---------|------------|
-| Public website / landing | Edge scan, rate limits |
+| Public website / landing | Static export; threat reporting via authenticated app shell |
 | `/api/invoke/*` | sovereignThreatShield middleware |
-| Dashboards, sidebars, menus | Client report hook |
+| `/api/v1/invoke/*` (Partner API) | sovereignThreatShield middleware |
+| `/api/auth/login` failures | sovereignAuthFailureCapture (brute-force logging) |
+| Dashboards, sidebars, menus | Client `api.ts` + `SovereignThreatBanner` |
 | Content publish / schedule | Channel freeze when contained |
 | Admin tools / Settings | SovereignThreatPanel + kinetic 2FA |
 | Partner API / webhooks | Guardian + sovereign status |

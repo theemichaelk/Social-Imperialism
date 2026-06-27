@@ -30,7 +30,7 @@ export default function SupportPage() {
 
   return (
     <div className="page support-page">
-      <PageShell title="Live Support" />
+      <PageShell title="Imperialism Brain" subtitle="Live support — setup, troubleshooting, and growth guidance" />
 
       <div className="support-layout">
         <div className="support-sidebar-col">

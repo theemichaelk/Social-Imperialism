@@ -59,10 +59,12 @@ export async function reportClientThreat(
     summary: string;
     severity?: string;
     vector?: string;
+    autoContain?: boolean;
   },
 ) {
   return invoke<{ success?: boolean; message?: string }>('capture-sovereign-threat', {
     source: 'web_client',
+    autoContain: false,
     ...payload,
   });
 }

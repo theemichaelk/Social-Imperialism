@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { prisma } = require('@si/db');
 const { signToken, requireAuth } = require('../middleware/auth');
 const { ensureDefaultProject } = require('../projectEnsure');
+const { sovereignAuthFailureCapture } = require('../middleware/sovereignThreatShield');
 
 const router = express.Router();
 
@@ -60,6 +61,7 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      await sovereignAuthFailureCapture(req, 'brute_force');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 

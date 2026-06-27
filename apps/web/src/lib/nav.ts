@@ -46,7 +46,7 @@ export const NAV_SECTIONS: NavSection[] = [
     { id: 'account-creator', href: '/account-creator', icon: '➕', label: 'Acct Creator', hint: 'New profiles' },
   ]},
   { id: 'system', label: 'System', items: [
-    { id: 'support', href: '/support', icon: '💬', label: 'Live Support', hint: 'Get unstuck' },
+    { id: 'support', href: '/support', icon: '💬', label: 'Imperialism Brain', hint: 'Live support' },
     { id: 'dns', href: '/dns', icon: '🌐', label: 'DNS', hint: 'Domain routing' },
     { id: 'integrations', href: '/integrations', icon: '🔌', label: 'Integrations', hint: 'APIs & OAuth' },
     { id: 'settings', href: '/settings', icon: '🎛️', label: 'Settings', hint: 'Campaign & keys' },

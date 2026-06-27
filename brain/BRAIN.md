@@ -7,8 +7,8 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 | File / folder | Purpose |
 |---------------|---------|
 | [GROWTH_ENGINE.md](./GROWTH_ENGINE.md) | **Autonomous Social Growth Brain Engine** — decision core, brain-check, validation loop, UI pass-back |
-| [OMNI_BRAIN_PLANNER.md](./OMNI_BRAIN_PLANNER.md) | **Omni-Brain Strategic Workflow Planner** — cross-module blueprints, universal prompt bar |
-| [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) | **Live Support Growth Agent** — in-product support, troubleshooting, THEE_MICHAEL approvals |
+| [OMNI_BRAIN_PLANNER.md](./OMNI_BRAIN_PLANNER.md) | **Imperialism Brain (Planner)** — cross-module blueprints, universal prompt bar |
+| [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) | **Imperialism Brain (Live Support)** — in-product support, troubleshooting, THEE_MICHAEL approvals |
 | [GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md) | **Guardian & Self-Healing Gatekeeper** — monitoring, sandbox tests, webhooks, admin gate |
 | [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) | **Sovereign Threat Capture Layer** — capture, contain, encrypt, kinetic 2FA, production freeze |
 | [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md) | Feature index — security requirement for all modules |

@@ -1,6 +1,7 @@
 const express = require('express');
 const { invoke } = require('@si/core');
 const { requirePartnerAuth } = require('../middleware/partnerAuth');
+const { sovereignThreatShield } = require('../middleware/sovereignThreatShield');
 const { prisma } = require('@si/db');
 
 const router = express.Router();
@@ -53,7 +54,7 @@ router.get('/status', requirePartnerAuth, async (req, res) => {
   }
 });
 
-router.post('/invoke/:channel', requirePartnerAuth, async (req, res) => {
+router.post('/invoke/:channel', requirePartnerAuth, sovereignThreatShield, async (req, res) => {
   const channel = req.params.channel;
   if (!ALLOWED_CHANNELS.has(channel)) {
     return res.status(403).json({ error: `Channel not allowed: ${channel}` });

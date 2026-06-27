@@ -10,11 +10,12 @@ import {
   type SovereignStatus,
   type SovereignThreatEvent,
 } from '@/lib/sovereignThreatCapture';
+import { loadKineticSession, saveKineticSession } from '@/lib/sovereignKineticSession';
 
 export function SovereignThreatPanel({ onMsg }: { onMsg?: (m: string) => void }) {
   const [status, setStatus] = useState<SovereignStatus>({});
   const [challengeId, setChallengeId] = useState('');
-  const [sessionToken, setSessionToken] = useState('');
+  const [sessionToken, setSessionToken] = useState(() => loadKineticSession() || '');
   const [adminEmail, setAdminEmail] = useState('');
   const [kineticCode, setKineticCode] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
@@ -51,7 +52,9 @@ export function SovereignThreatPanel({ onMsg }: { onMsg?: (m: string) => void })
         code: kineticCode.trim(),
         email: adminEmail.trim(),
       });
-      setSessionToken(res.sessionToken || '');
+      const token = res.sessionToken || '';
+      setSessionToken(token);
+      if (token) saveKineticSession(token);
       onMsg?.(res.message || 'Verified');
     } catch (e) { onMsg?.((e as Error).message); }
     finally { setLoading(false); }

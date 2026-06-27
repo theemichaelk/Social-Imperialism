@@ -58,6 +58,15 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 - Web `/scheduler` now includes `BackgroundRunPanel` (slot CRUD) — same component as `/rules`
 - Desktop: `calendar.html#scheduler` (unchanged)
 
+## Page focus UX (June 2026)
+
+| Surface | Coverage |
+|---------|----------|
+| `PageShell` + `PageFocusRail` | 24 authenticated module routes in `pageFocus.ts` |
+| `ManageableTabNav` focus mode | Tab-heavy pages: Dashboard, Browse Posts, History, Settings, Integrations, Content Library, Account Creator |
+| `ContentHubTabNav` focus mode | Content Hub (dedicated tab catalog) |
+| Sidebar hints | All nav items in `nav.ts` |
+
 ## Sovereign Threat Capture Layer (June 2026)
 
 **Status:** Live  

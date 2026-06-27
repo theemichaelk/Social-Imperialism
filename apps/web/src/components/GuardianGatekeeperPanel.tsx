@@ -12,6 +12,7 @@ import {
   type GuardianApproval,
   type GuardianConfig,
 } from '@/lib/guardianGatekeeper';
+import { loadKineticSession } from '@/lib/sovereignKineticSession';
 
 type PartnerConfig = {
   partnerApiKeyFull?: string | null;
@@ -83,6 +84,31 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
     onMsg?.(res?.success ? 'Alert webhook test sent' : (res?.error || 'Webhook test failed'));
   }
 
+  async function approveTicket(ticketId: string) {
+    setLoading(true);
+    try {
+      const res = await invoke<{ success?: boolean; error?: string }>('approve-guardian-change', { ticketId });
+      onMsg?.(res?.success ? `Approved — ${GUARDIAN_ADMIN}` : (res?.error || 'Approval failed'));
+      await refresh();
+    } catch (e) { onMsg?.((e as Error).message); }
+    finally { setLoading(false); }
+  }
+
+  async function releaseTicket(ticketId: string) {
+    const sessionToken = loadKineticSession();
+    if (!sessionToken) {
+      onMsg?.('Complete kinetic 2FA in the Sovereign panel above before releasing while live paths are frozen.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await invoke<{ success?: boolean; error?: string }>('release-guardian-fix', { ticketId, sessionToken });
+      onMsg?.(res?.success ? 'Fix released to production' : (res?.error || 'Release failed'));
+      await refresh();
+    } catch (e) { onMsg?.((e as Error).message); }
+    finally { setLoading(false); }
+  }
+
   const pendingAlerts = alerts.filter((a) => a.status === 'open' || a.status === 'pending_approval');
   const pendingApprovals = approvals.filter((a) => a.status === 'pending' || a.status === 'sandbox_required');
   const apiBase = cfg.apiBase || partner.apiBase || 'https://api.socialimperialism.com/api/v1';
@@ -139,6 +165,7 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
           <div className="guardian-endpoint-list">
             <div><code>GET {apiBase}/status</code> — connection health</div>
             <div><code>GET {apiBase}/guardian/status</code> — guardian health</div>
+            <div><code>GET {apiBase}/sovereign/status</code> — threat containment state</div>
             <div><code>POST {apiBase}/invoke/:channel</code> — whitelisted channels</div>
             <div><code>POST {apiBase}/hooks/:id</code> — partner inbound</div>
             <div><code>POST {apiBase}/guardian/hooks/:id</code> — guardian inbound</div>
@@ -233,9 +260,23 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
                 { label: 'Sandbox B', value: t.sandboxTestB?.pass ? '✓' : '—' },
                 { label: 'Status', value: statusLabel(t.status) },
               ]} />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                {(t.status === 'pending' || t.status === 'sandbox_required') && (
+                  <button type="button" className="btn primary" onClick={() => approveTicket(t.ticketId)} disabled={loading}>
+                    Approve ({GUARDIAN_ADMIN})
+                  </button>
+                )}
+                {t.status === 'approved' && (
+                  <button type="button" className="btn" onClick={() => releaseTicket(t.ticketId)} disabled={loading}>
+                    Release to Production
+                  </button>
+                )}
+              </div>
             </div>
           ))}
-          <p className="settings-panel-desc">Production changes require {GUARDIAN_ADMIN} approval before release.</p>
+          <p className="settings-panel-desc">
+            Production changes require {GUARDIAN_ADMIN} approval. When Sovereign live-freeze is active, release also requires kinetic 2FA (Sovereign panel above).
+          </p>
         </DataPanel>
       )}
     </div>
