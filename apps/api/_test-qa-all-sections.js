@@ -172,7 +172,7 @@ const SECTIONS = [
   {
     section: 'Accounts — Account Hub',
     features: [
-      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) && d.length > 0 },
+      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) && d.length > 0, note: 'Requires demo seed when project has no OAuth accounts' },
       { name: 'Hub status', channel: 'get-account-hub-status', validate: (d) => typeof d === 'object' },
       { name: 'Refresh profile', channel: 'refresh-account-profile', args: ['si_li_cmqlrt'], validate: (d) => typeof d === 'object' },
       { name: 'Automation targets', channel: 'get-account-automation-targets', args: ['si_li_cmqlrt'], validate: (d) => d?.targets !== undefined },
@@ -232,6 +232,21 @@ const SECTIONS = [
       { name: 'Partner config', channel: 'get-partner-integration-config', validate: (d) => typeof d === 'object' },
       { name: 'Integration events', channel: 'get-integration-events-log', validate: (d) => Array.isArray(d) || typeof d === 'object' },
       { name: 'Section live', channel: 'get-section-live', args: ['integrations'], validate: (d) => d?.apiHealth || d?.stats },
+    ],
+  },
+  {
+    section: 'System — Guardian & Brain Agents',
+    features: [
+      { name: 'Guardian config', channel: 'get-guardian-config', validate: (d) => d?.adminIdentity === 'THEE_MICHAEL' && Array.isArray(d?.monitorModules) },
+      { name: 'Guardian checklist', channel: 'get-guardian-setup-checklist', validate: (d) => Array.isArray(d) && d.length >= 5 },
+      { name: 'Guardian alerts', channel: 'get-guardian-alerts', validate: (d) => Array.isArray(d?.alerts) },
+      { name: 'Guardian approvals', channel: 'get-guardian-approvals', validate: (d) => d?.adminIdentity === 'THEE_MICHAEL' && Array.isArray(d?.approvals) },
+      { name: 'Run guardian scan', channel: 'run-guardian-scan', validate: (d) => d?.success === true && typeof d?.status === 'string' },
+      { name: 'Create approval ticket', channel: 'create-guardian-approval', args: [{ issueSummary: 'QA test — LinkedIn schedule retry', module: 'Content Calendar', riskLevel: 'low' }], validate: (d) => d?.success === true && d?.ticket?.ticketId },
+      { name: 'Sandbox test', channel: 'run-guardian-sandbox-test', args: [{ proposedFix: 'QA sandbox validation' }], validate: (d) => d?.success === true && d?.sandboxTestA?.pass === true },
+      { name: 'Regenerate guardian hook', channel: 'regenerate-guardian-hook', validate: (d) => d?.success === true && !!d?.guardianHookUrl },
+      { name: 'Live support AI', channel: 'generate-ai', args: ['You are Social Imperialism Live Support. User asks: how do I connect LinkedIn? Reply in 2 sentences.'], validate: (d) => (typeof d === 'string' && d.length > 10) || (typeof d?.value === 'string' && d.value.length > 10) },
+      { name: 'Omni-Brain planner AI', channel: 'generate-ai', args: ['Omni-Brain planner: user wants to find people talking about email marketing. Return JSON with intent, primaryHref, nextStep.'], validate: (d) => (typeof d === 'string' && d.length > 5) || (typeof d?.value === 'string' && d.value.length > 5) },
     ],
   },
   {

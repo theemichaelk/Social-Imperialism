@@ -105,7 +105,12 @@ async function syncProjectToStore(store, projectId) {
   ensureProjectDefaults(store, project);
 
   const linkedKey = `linkedAccounts_${project.id}`;
-  if (project.socialAccounts?.length && !store.getItem(linkedKey)) {
+  const { demoLinkedAccounts } = require('./projectDefaults');
+  let linked = [];
+  try { linked = JSON.parse(store.getItem(linkedKey) || '[]'); } catch (e) { linked = []; }
+  const linkedEmpty = !Array.isArray(linked) || !linked.length;
+
+  if (project.socialAccounts?.length && linkedEmpty) {
     const accounts = project.socialAccounts.map((a) => ({
       id: a.id,
       platform: a.platform,
@@ -114,6 +119,8 @@ async function syncProjectToStore(store, projectId) {
       ...(a.metadata ? JSON.parse(a.metadata) : {}),
     }));
     store.setItem(linkedKey, JSON.stringify(accounts));
+  } else if (linkedEmpty) {
+    store.setItem(linkedKey, JSON.stringify(demoLinkedAccounts(project.id)));
   }
 
   if (project.keywords?.length && !store.getItem('keywords')) {

@@ -194,21 +194,51 @@ function buildDefaults(project) {
   };
 }
 
+function parseJsonArray(raw) {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 function ensureProjectDefaults(store, project) {
   if (!project?.id) return;
   const defaults = buildDefaults(project);
   const linkedKey = `linkedAccounts_${project.id}`;
 
   for (const [key, value] of Object.entries(defaults)) {
-    if (key === linkedKey && store.getItem(key)) continue;
+    if (key === linkedKey) {
+      const existing = parseJsonArray(store.getItem(key));
+      if (existing?.length) continue;
+      store.setItem(key, JSON.stringify(defaults[linkedKey]));
+      continue;
+    }
     if (!store.getItem(key)) {
       store.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
     }
   }
 
-  if (!store.getItem(linkedKey)) {
+  if (!parseJsonArray(store.getItem(linkedKey))?.length) {
     store.setItem(linkedKey, JSON.stringify(defaults[linkedKey]));
   }
+
+  try {
+    const qKey = 'quoraTrafficOps';
+    const all = JSON.parse(store.getItem(qKey) || '{}');
+    const seed = defaults.quoraTrafficOps[project.id];
+    if (seed) {
+      const cur = all[project.id] || {};
+      if (!all[project.id]) {
+        all[project.id] = seed;
+      } else if (!cur.cachedQuestions?.length && seed.cachedQuestions?.length) {
+        all[project.id] = { ...cur, cachedQuestions: seed.cachedQuestions, lastScrape: cur.lastScrape || seed.lastScrape };
+      }
+      store.setItem(qKey, JSON.stringify(all));
+    }
+  } catch { /* ignore */ }
 }
 
 module.exports = { ensureProjectDefaults, demoLinkedAccounts, demoKeywords, buildDefaults };

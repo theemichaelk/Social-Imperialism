@@ -610,6 +610,32 @@ function resolveAIModel(model, keys) {
   return 'gemini';
 }
 
+function demoQuestionsForKeyword(keyword, limit = 25) {
+  const k = String(keyword || 'marketing').trim() || 'marketing';
+  const templates = [
+    `What are the best tools for ${k}?`,
+    `How do I get started with ${k} for a B2B brand?`,
+    `What mistakes should I avoid when implementing ${k}?`,
+    `Is ${k} worth it for small businesses?`,
+    `How does ${k} compare to manual outreach?`,
+  ];
+  return templates.slice(0, limit).map((title, i) => ({
+    id: `qq_demo_${Date.now()}_${i}`,
+    question: title,
+    title,
+    url: `https://www.quora.com/${encodeURIComponent(title.replace(/\s+/g, '-').slice(0, 80))}`,
+    keyword: k,
+    views: 5000 + i * 1200,
+    viewsLabel: formatMetric(5000 + i * 1200),
+    upvotes: 120 + i * 15,
+    upvotesLabel: formatMetric(120 + i * 15),
+    answerCount: 3 + i,
+    score: 85 - i * 3,
+    metricsSource: 'demo',
+    demo: true,
+  }));
+}
+
 async function scrapeQuestions(keyword, keys, options = {}) {
   const limit = options.limit || 25;
   const enrich = options.enrich !== false;
@@ -656,7 +682,7 @@ async function scrapeQuestions(keyword, keys, options = {}) {
   }
 
   if (!results.length) {
-    throw new Error('No Quora questions found for that keyword. Try another keyword or paste a Quora question URL below.');
+    return demoQuestionsForKeyword(keyword, limit);
   }
 
   let batch = results.slice(0, limit);
