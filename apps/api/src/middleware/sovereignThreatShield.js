@@ -12,7 +12,9 @@ const { createPrismaStore } = require('@si/core');
 
 const rateMap = new Map();
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 120;
+const RATE_MAX_ANON = 80;
+const RATE_MAX_AUTH = 500;
+const RATE_MAX_PARTNER = 300;
 
 function rateKey(req) {
   return `${req.ip || req.headers['x-forwarded-for'] || 'unknown'}:${req.user?.userId || 'anon'}`;
@@ -20,6 +22,7 @@ function rateKey(req) {
 
 function checkRate(req) {
   const key = rateKey(req);
+  const max = req.partner ? RATE_MAX_PARTNER : (req.user?.userId ? RATE_MAX_AUTH : RATE_MAX_ANON);
   const now = Date.now();
   let entry = rateMap.get(key);
   if (!entry || now - entry.start > RATE_WINDOW_MS) {
@@ -27,10 +30,10 @@ function checkRate(req) {
     rateMap.set(key, entry);
   }
   entry.count += 1;
-  if (entry.count > RATE_MAX) {
-    return { exceeded: true, count: entry.count };
+  if (entry.count > max) {
+    return { exceeded: true, count: entry.count, max };
   }
-  return { exceeded: false, count: entry.count };
+  return { exceeded: false, count: entry.count, max };
 }
 
 async function getProjectStore(req) {
