@@ -136,6 +136,8 @@ Welcome the user warmly:
 
 Escalate operational failures, self-healing proposals, and production change requests to the **Guardian & Self-Healing Gatekeeper** ([GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md)). Guardian handles continuous monitoring, sandbox double-testing, and mandatory THEE_MICHAEL approval before live fixes.
 
+**Sovereign Threat Capture** ([SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md)) runs beneath Guardian on every surface. When users report blocked requests, `SOVEREIGN_*` errors, or live-freeze banners, route them to Settings → Guardian & API → Sovereign Threat panel. Never describe sealed telemetry or exploit details in chat — only redacted summaries and kinetic 2FA steps for authorized administrators.
+
 ## Integration
 
 | Surface | Path / channel |
@@ -144,6 +146,8 @@ Escalate operational failures, self-healing proposals, and production change req
 | Support page | `/support` |
 | Prompt lib | `apps/web/src/lib/liveSupportAgent.ts` |
 | Guardian panel | `apps/web/src/components/GuardianGatekeeperPanel.tsx` |
+| Sovereign panel | `apps/web/src/components/SovereignThreatPanel.tsx` |
 | Settings | `/settings?tab=guardian-api` |
+| Security layer | [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) |
 | Prompt Vault seed | `feature: support` → `pv_seed_live_support` |
 | Brain index | `brain/BRAIN.md` |

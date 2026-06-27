@@ -18,6 +18,7 @@ import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
 import { NativeBrowserPanel } from '@/components/NativeBrowserPanel';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
 import { GuardianGatekeeperPanel } from '@/components/GuardianGatekeeperPanel';
+import { SovereignThreatPanel } from '@/components/SovereignThreatPanel';
 
 type Campaign = {
   id: string; brandName?: string; domain?: string; status?: string;
@@ -593,8 +594,10 @@ function SettingsContent() {
         <>
           <p className="settings-panel-desc" style={{ marginBottom: '1rem' }}>
             Guardian Gatekeeper monitors modules, workers, APIs, and scheduling — sandbox-tests fixes and routes production changes to{' '}
-            <strong>THEE_MICHAEL</strong> for approval. Brain doc: <code>brain/GUARDIAN_GATEKEEPER.md</code>
+            <strong>THEE_MICHAEL</strong> for approval. Sovereign Threat Capture encrypts and contains all attack events before they reach live traffic.
+            Brain docs: <code>brain/GUARDIAN_GATEKEEPER.md</code>, <code>brain/SOVEREIGN_THREAT_CAPTURE.md</code>
           </p>
+          <SovereignThreatPanel onMsg={setMsg} />
           <GuardianGatekeeperPanel onMsg={setMsg} />
         </>
       )}

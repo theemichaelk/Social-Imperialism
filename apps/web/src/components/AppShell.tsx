@@ -6,6 +6,7 @@ import { FooterCredit } from './FooterCredit';
 import { LiveSupportPanel } from './LiveSupportPanel';
 import { OmniBrainPromptBar } from './OmniBrainPromptBar';
 import { bootstrapSession, getToken } from '@/lib/api';
+import { SovereignThreatBanner } from './SovereignThreatBanner';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
@@ -89,6 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="mobile-top-title">Social Imperialism</span>
         </div>
         <OmniBrainPromptBar />
+        <SovereignThreatBanner />
         {children}
         <FooterCredit className="app-footer-credit" />
         <LiveSupportPanel />

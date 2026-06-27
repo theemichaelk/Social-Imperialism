@@ -76,6 +76,49 @@ function isRetryableResponse(status: number, json: Record<string, unknown>) {
     || /timeout|ECONNRESET|503|502|429/i.test(String(json.error || ''));
 }
 
+const SOVEREIGN_CODES = new Set([
+  'SOVEREIGN_CONTAINED',
+  'SOVEREIGN_THREAT_CAPTURED',
+  'SOVEREIGN_LIVE_FROZEN',
+  'SOVEREIGN_CHANNEL_BLOCKED',
+]);
+
+export function isSovereignError(code?: string) {
+  return !!code && SOVEREIGN_CODES.has(code);
+}
+
+function reportSovereignClientAnomaly(path: string, code: string, msg: string) {
+  if (typeof window === 'undefined' || path.includes('capture-sovereign-threat')) return;
+  const dedupeKey = `sov_client_${code}_${path}`;
+  try {
+    if (sessionStorage.getItem(dedupeKey)) return;
+    sessionStorage.setItem(dedupeKey, '1');
+  } catch { /* ignore */ }
+  const token = getToken();
+  const projectId = getProjectId();
+  if (!token) return;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (projectId) headers['x-project-id'] = projectId;
+  fetch(`${getApiBase()}/api/invoke/capture-sovereign-threat`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      args: [{
+        source: 'web_client',
+        surface: path,
+        module: 'Web Application',
+        severity: code === 'SOVEREIGN_THREAT_CAPTURED' ? 'high' : 'medium',
+        vector: code.toLowerCase(),
+        summary: `Client observed ${code}: ${msg}`.slice(0, 240),
+        autoContain: false,
+      }],
+    }),
+  }).catch(() => {});
+}
+
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -107,6 +150,9 @@ export async function apiFetch(path: string, options: RequestInit = {}, retrySta
     const err = new Error(msg) as Error & { retryable?: boolean; code?: string };
     err.retryable = !!json.retryable;
     err.code = json.code as string | undefined;
+    if (isSovereignError(err.code)) {
+      reportSovereignClientAnomaly(path, err.code!, msg);
+    }
     throw err;
   }
   return json;

@@ -2768,3 +2768,18 @@ textarea.input { min-height: 100px; resize: vertical; }
   background: rgba(56, 189, 248, 0.1);
 }
 .pfr-related { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+
+/* Sovereign Threat Capture Layer */
+.sovereign-banner-card {
+  margin-bottom: 1rem;
+  border-color: rgba(239, 68, 68, 0.35);
+  background: linear-gradient(135deg, rgba(30, 15, 25, 0.9), rgba(15, 23, 42, 0.95));
+}
+.sovereign-banner-text {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fca5a5;
+}
+.sovereign-threat-panel { margin-bottom: 1.5rem; }

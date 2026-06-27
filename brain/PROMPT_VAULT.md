@@ -22,7 +22,7 @@ Reusable prompt templates per campaign — searched by the Growth Brain before d
 
 ## Feature tags (`feature` field)
 
-`general`, `content-hub`, `grok`, `keywords`, `replies`, `engagement`, `quora`, `reddit`, `seo`, `automations`, `analytics`
+`general`, `content-hub`, `grok`, `keywords`, `replies`, `engagement`, `quora`, `reddit`, `seo`, `automations`, `analytics`, `sovereign`, `guardian`, `support`, `omni-brain`
 
 Pickers filter by feature + `general` fallbacks.
 
@@ -38,6 +38,10 @@ Pickers filter by feature + `general` fallbacks.
 - Desktop / SaaS bridge: `promptVault_{activeCampaignId}` in project store
 - Seeded with 4 starter templates on first access
 - Does not overwrite keywords, post history, or automation rules on delete
+
+## Sovereign Threat Capture (security)
+
+All Prompt Vault workflows on socialimperialism.com must comply with [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md). Seeded template: `pv_seed_sovereign_threat` (`feature: sovereign`). Never store credentials, exploit details, or raw PII in vault templates.
 
 ## Brain integration
 

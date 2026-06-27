@@ -61,6 +61,14 @@ const DEFAULT_SEED = [
     feature: 'omni-brain',
     tags: ['planner', 'workflow', 'omni'],
   },
+  {
+    id: 'pv_seed_sovereign_threat',
+    title: 'Sovereign Threat Capture — incident response',
+    body: 'You are the Social Imperialism Sovereign Threat Capture Layer for socialimperialism.com. Analyze {{keyword}} as a contained security event. Follow the Brain security template: capture, contain, encrypt telemetry, isolate live paths, require THEE_MICHAEL kinetic 2FA before decrypt or production release. Return redacted summary only: severity, surface, module, containment status, sandbox readiness. Never expose credentials, exploit recipes, raw PII, or sealed attack vectors. Route production patch approval through Guardian when approvalGateEnabled.',
+    keywords: ['sovereign', 'threat', 'security', 'containment', 'kinetic', '2fa', 'telemetry', 'sandbox', 'live frozen', 'SOVEREIGN'],
+    feature: 'sovereign',
+    tags: ['security', 'sovereign', 'incident'],
+  },
 ];
 
 function vaultKey(store) {

@@ -23,6 +23,7 @@ router.get('/docs', (req, res) => {
       { method: 'GET', path: '/api/v1/status', auth: true },
       { method: 'GET', path: '/api/v1/docs', auth: false },
       { method: 'GET', path: '/api/v1/guardian/status', auth: true },
+      { method: 'GET', path: '/api/v1/sovereign/status', auth: true },
       { method: 'POST', path: '/api/v1/invoke/:channel', auth: true, body: { args: 'array' } },
       { method: 'POST', path: '/api/v1/hooks/:webhookId', auth: false, body: { event: 'string', data: 'object' } },
       { method: 'POST', path: '/api/v1/guardian/hooks/:hookId', auth: false, body: { severity: 'string', module: 'string', summary: 'string' } },
@@ -68,6 +69,37 @@ router.post('/invoke/:channel', requirePartnerAuth, async (req, res) => {
     res.json({ success: true, data });
   } catch (e) {
     if (e.code === 'UNKNOWN_CHANNEL') return res.status(404).json({ error: e.message });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/sovereign/status', requirePartnerAuth, async (req, res) => {
+  try {
+    const [status, scan] = await Promise.all([
+      invoke({ projectId: req.partner.projectId, organizationId: req.partner.organizationId, channel: 'get-sovereign-threat-status', args: [] }),
+      invoke({ projectId: req.partner.projectId, organizationId: req.partner.organizationId, channel: 'run-sovereign-threat-scan', args: [] }).catch(() => null),
+    ]);
+    res.json({
+      ok: true,
+      sovereign: {
+        enabled: status?.enabled !== false,
+        domain: status?.domain || 'socialimperialism.com',
+        adminIdentity: status?.adminIdentity || 'THEE_MICHAEL',
+        liveFrozen: !!status?.liveFrozen,
+        openThreatCount: status?.openThreatCount || 0,
+        criticalCount: status?.criticalCount || 0,
+        kinetic2faRequired: status?.kinetic2faRequired !== false,
+        containment: status?.containment || {},
+        eventCount: status?.events?.length || 0,
+      },
+      scan: scan ? {
+        scannedAt: scan.scannedAt,
+        openThreats: scan.openThreats,
+        modulesProtected: scan.modulesProtected,
+      } : null,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });

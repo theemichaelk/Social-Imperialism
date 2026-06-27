@@ -303,6 +303,8 @@ const PAGES = [
       { name: 'Page health', channel: 'get-page-health', validate: (d) => d?.ok !== false },
       { name: 'Guardian config', channel: 'get-guardian-config', validate: (d) => d?.adminIdentity === 'THEE_MICHAEL' },
       { name: 'Guardian scan', channel: 'run-guardian-scan', validate: (d) => d?.success === true },
+      { name: 'Sovereign status', channel: 'get-sovereign-threat-status', validate: (d) => d?.enabled === true && d?.domain === 'socialimperialism.com' },
+      { name: 'Sovereign scan', channel: 'run-sovereign-threat-scan', validate: (d) => d?.success === true && Array.isArray(d?.modulesProtected) },
       { name: 'Export data', channel: 'export-data', validate: (d) => typeof d === 'object' },
     ],
   },

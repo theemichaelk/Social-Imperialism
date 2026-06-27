@@ -4,7 +4,8 @@ Canonical system prompt for continuous platform health monitoring, secure self-h
 
 **Agent id:** `guardian-gatekeeper`  
 **Admin identity:** `THEE_MICHAEL`  
-**Runs after:** [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) in the support stack
+**Runs after:** [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) in the support stack  
+**Security layer:** [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) — all threats captured and contained before Guardian release
 
 ---
 
@@ -120,3 +121,15 @@ Tell the user: **"I prepared this for review and routed it to THEE_MICHAEL. Wait
 | Partner API | `GET /api/v1/guardian/status`, `POST /api/v1/guardian/hooks/:hookId` |
 | Prompt lib | `apps/web/src/lib/guardianGatekeeper.ts` |
 | Prompt Vault | `feature: guardian` → `pv_seed_guardian_gatekeeper` |
+| Sovereign layer | `packages/core/src/sovereignThreatCapture.js`, `apps/api/src/middleware/sovereignThreatShield.js` |
+| Sovereign UI | `apps/web/src/components/SovereignThreatPanel.tsx` |
+
+### Sovereign Threat Capture (required)
+
+All Guardian alerts and production releases must respect the Sovereign Threat Capture Layer. Live paths remain frozen until:
+
+1. Threat telemetry is sealed (AES-256-GCM).
+2. Administrator completes **kinetic 2FA** verification.
+3. **THEE_MICHAEL** approves release via Guardian ticket.
+
+Security event banner: `🛡️ SOVEREIGN THREAT CAPTURED // SOCIALIMPERIALISM.COM PROTECTION ENFORCED` — full template in [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md).

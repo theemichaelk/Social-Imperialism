@@ -39,6 +39,7 @@ Before drafting content, replying to users, publishing posts, scanning feeds, bu
 - Connected accounts
 - Automation rules
 - User permissions
+- **Sovereign containment** — `get-sovereign-threat-status` / live-freeze before publish, export, or admin channels ([SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md))
 
 **If a proven workflow exists** → reuse and adapt it.
 

@@ -4,7 +4,8 @@ Unified planning intelligence for socialimperialism.com. Translates user request
 
 **Agent id:** `omni-brain-planner`  
 **Admin identity:** `THEE_MICHAEL`  
-**Stack position:** Planning layer above Live Support and Guardian Gatekeeper
+**Stack position:** Planning layer above Live Support and Guardian Gatekeeper  
+**Security layer:** [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) — all planned workflows must respect containment and live-freeze state
 
 ---
 
@@ -84,3 +85,4 @@ Use current product knowledge, live platform documentation when needed, and the 
 | Mounted in | `AppShell` — all authenticated pages |
 | Handoff storage | `sessionStorage.si_omni_handoff` |
 | Prompt Vault | `feature: omni-brain` → `pv_seed_omni_brain` |
+| Sovereign layer | [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md) — skip or defer steps on frozen channels |

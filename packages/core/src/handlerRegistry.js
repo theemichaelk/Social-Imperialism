@@ -169,6 +169,9 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerGuardianGatekeeperHandlers } = require('./guardianGatekeeper');
   registerGuardianGatekeeperHandlers({ ipcMain, store, handlers });
 
+  const { registerSovereignThreatHandlers } = require('./sovereignThreatCapture');
+  registerSovereignThreatHandlers({ ipcMain, store, handlers });
+
   const { registerEmailCampaignHandlers } = require(path.join(DESKTOP_SERVICES, 'emailCampaignIpc'));
   registerEmailCampaignHandlers({ ipcMain, store });
 

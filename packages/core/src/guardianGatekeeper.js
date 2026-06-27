@@ -4,6 +4,7 @@
  */
 const crypto = require('crypto');
 const axios = require('axios');
+const { readContainment, assertKineticSession } = require('./sovereignThreatCapture');
 
 const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
@@ -291,6 +292,17 @@ function registerGuardianGatekeeperHandlers({ ipcMain, store, handlers = {} }) {
   });
 
   ipcMain.handle('release-guardian-fix', async (event, payload = {}) => {
+    const containment = readContainment(store);
+    if (containment.liveFrozen) {
+      const gate = assertKineticSession(store, payload.sessionToken);
+      if (!gate.ok) {
+        return {
+          success: false,
+          error: `${ADMIN_IDENTITY} kinetic verification required — live paths frozen by Sovereign Threat Capture`,
+          code: 'SOVEREIGN_LIVE_FROZEN',
+        };
+      }
+    }
     const ticketId = payload.ticketId || payload.id;
     const items = readApprovals(store);
     const idx = items.findIndex((t) => t.ticketId === ticketId);

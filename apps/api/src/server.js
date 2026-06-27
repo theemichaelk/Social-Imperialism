@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const orgRoutes = require('./routes/orgs');
 const partnerRoutes = require('./routes/partner');
 const { requireAuth } = require('./middleware/auth');
+const { sovereignThreatShield } = require('./middleware/sovereignThreatShield');
 const { resolveActiveProject } = require('./projectEnsure');
 const s3 = require('./s3');
 
@@ -142,7 +143,7 @@ app.get('/api/channels', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/invoke/:channel', requireAuth, async (req, res) => {
+app.post('/api/invoke/:channel', requireAuth, sovereignThreatShield, async (req, res) => {
   try {
     const project = await getActiveProject(req.user.orgId, req.body?.projectId || req.headers['x-project-id']);
     const args = Array.isArray(req.body?.args) ? req.body.args : (req.body?.arg != null ? [req.body.arg] : []);

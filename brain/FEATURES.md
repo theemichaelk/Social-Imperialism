@@ -58,6 +58,22 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 - Web `/scheduler` now includes `BackgroundRunPanel` (slot CRUD) — same component as `/rules`
 - Desktop: `calendar.html#scheduler` (unchanged)
 
+## Sovereign Threat Capture Layer (June 2026)
+
+**Status:** Live  
+**Brain:** [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) · **Feature index:** [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md)
+
+| Capability | API / Core | Web |
+|------------|------------|-----|
+| Edge scan + rate limit | `sovereignThreatShield` on `/api/invoke/*` | Client `api.ts` reports `SOVEREIGN_*` |
+| Capture + AES-256-GCM seal | `capture-sovereign-threat` | `SovereignThreatPanel` |
+| Kinetic 2FA | `request-kinetic-2fa-challenge`, `verify-kinetic-2fa` | Settings → Guardian & API |
+| Decrypt / release | `decrypt-sovereign-threat-telemetry`, `approve-sovereign-threat-release` | Admin-only; Guardian gate |
+| Partner status | `GET /api/v1/sovereign/status` | Integrations hub |
+| Prompt Vault seed | `pv_seed_sovereign_threat` | `feature: sovereign` |
+
+Persistent requirement for all past, current, and future modules — see security event template in Brain doc.
+
 ## Settings & integrations (existing)
 
 - Live connection probes (13+ real API tests including Grok session)
