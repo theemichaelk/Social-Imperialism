@@ -97,18 +97,34 @@ async function syncProjectToStore(store, projectId) {
   }
   store.setItem('campaigns', JSON.stringify(campaigns));
 
-  const activeId = store.getItem('activeCampaignId');
-  const hasValidActive = activeId && campaigns.some((c) => c.id === activeId);
-  if (!hasValidActive) store.setItem('activeCampaignId', project.id);
+  const isSaas = process.env.SAAS_MODE === '1' || process.env.SAAS_MODE === 'true';
+  const previousActive = store.getItem('activeCampaignId');
+  if (isSaas) {
+    store.setItem('activeCampaignId', project.id);
+  } else {
+    const hasValidActive = previousActive && campaigns.some((c) => c.id === previousActive);
+    if (!hasValidActive) store.setItem('activeCampaignId', project.id);
+  }
   // Keys are resolved at request time (admin gets .env merge; clients use saved keys only).
 
   ensureProjectDefaults(store, project);
 
-  const linkedKey = `linkedAccounts_${project.id}`;
   const { demoLinkedAccounts } = require('./projectDefaults');
+  const activeCampaignId = store.getItem('activeCampaignId') || project.id;
+  const linkedKey = `linkedAccounts_${activeCampaignId}`;
   let linked = [];
   try { linked = JSON.parse(store.getItem(linkedKey) || '[]'); } catch (e) { linked = []; }
-  const linkedEmpty = !Array.isArray(linked) || !linked.length;
+  let linkedEmpty = !Array.isArray(linked) || !linked.length;
+
+  if (linkedEmpty && previousActive && previousActive !== activeCampaignId) {
+    try {
+      const legacy = JSON.parse(store.getItem(`linkedAccounts_${previousActive}`) || '[]');
+      if (Array.isArray(legacy) && legacy.length) {
+        store.setItem(linkedKey, JSON.stringify(legacy));
+        linkedEmpty = false;
+      }
+    } catch (e) { /* ignore */ }
+  }
 
   if (project.socialAccounts?.length && linkedEmpty) {
     const accounts = project.socialAccounts.map((a) => ({
