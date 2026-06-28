@@ -12,7 +12,9 @@ const SITE_DOMAIN = 'socialimperialism.com';
 const STORAGE_EVENTS = 'sovereignThreatEvents';
 const STORAGE_CONTAINMENT = 'sovereignContainment';
 const STORAGE_KINETIC = 'sovereignKineticSessions';
+const STORAGE_ACTION_HISTORY = 'theeMichaelActionHistory';
 const MAX_EVENTS = 200;
+const MAX_ACTION_HISTORY = 500;
 
 const THREAT_PATTERNS = [
   { id: 'xss_probe', re: /<script|javascript:|onerror\s*=|onload\s*=/i, severity: 'high', vector: 'cross_site_scripting' },
@@ -110,9 +112,199 @@ function writeContainment(store, state) {
   store.setItem(STORAGE_CONTAINMENT, JSON.stringify({ ...state, updatedAt: new Date().toISOString() }));
 }
 
+function readActionHistory(store) {
+  try { return JSON.parse(store.getItem(STORAGE_ACTION_HISTORY) || '[]'); } catch { return []; }
+}
+
+function writeActionHistory(store, entries) {
+  store.setItem(STORAGE_ACTION_HISTORY, JSON.stringify(entries.slice(0, MAX_ACTION_HISTORY)));
+}
+
+function appendActionLog(store, entry) {
+  const history = readActionHistory(store);
+  const action = {
+    actionId: entry.actionId || `tma_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
+    eventId: entry.eventId || null,
+    type: entry.type || 'decision',
+    decision: entry.decision || null,
+    status: entry.status || 'final',
+    summary: String(entry.summary || '').slice(0, 320),
+    module: entry.module || null,
+    channel: entry.channel || null,
+    severity: entry.severity || null,
+    containmentBefore: entry.containmentBefore || null,
+    containmentAfter: entry.containmentAfter || null,
+    createdAt: entry.createdAt || new Date().toISOString(),
+    decidedAt: entry.decidedAt || null,
+    decidedBy: entry.decidedBy || ADMIN_IDENTITY,
+    undoneAt: null,
+    undoneBy: null,
+    canUndo: entry.canUndo !== false,
+  };
+  history.unshift(action);
+  writeActionHistory(store, history);
+  return action;
+}
+
+function releaseEventContainment(store, event) {
+  const c = readContainment(store);
+  const before = { ...c, frozenModules: [...(c.frozenModules || [])], blockedChannels: [...(c.blockedChannels || [])] };
+  c.frozenModules = (c.frozenModules || []).filter((m) => m !== event.module);
+  if (event.channel) c.blockedChannels = (c.blockedChannels || []).filter((ch) => ch !== event.channel);
+  const open = readEvents(store).filter((e) => e.eventId !== event.eventId && e.adminDecision !== 'approved' && !e.releasedAt && e.adminDecision !== 'denied');
+  const stillFrozen = open.some((e) => e.severity === 'critical' || e.severity === 'high');
+  if (!stillFrozen) c.liveFrozen = false;
+  writeContainment(store, c);
+  return { before, after: readContainment(store) };
+}
+
+function theeMichaelDecideThreat(store, { eventId, decision, email }) {
+  if (!isAuthorizedAdmin(email)) {
+    return { success: false, error: `Authorized administrator required (${ADMIN_IDENTITY})` };
+  }
+  const events = readEvents(store);
+  const idx = events.findIndex((e) => e.eventId === eventId);
+  if (idx < 0) return { success: false, error: 'Event not found' };
+  const ev = events[idx];
+  if (ev.adminDecision === 'approved' || ev.adminDecision === 'denied') {
+    return { success: false, error: 'Already decided — use Undo in history to revert' };
+  }
+
+  const containmentBefore = readContainment(store);
+  const now = new Date().toISOString();
+
+  if (decision === 'approve') {
+    ev.adminDecision = 'approved';
+    ev.status = 'released';
+    ev.releasedAt = now;
+    ev.releasedBy = ADMIN_IDENTITY;
+    ev.approvedAt = now;
+    const { after } = releaseEventContainment(store, ev);
+    ev.sandboxLog = { ...ev.sandboxLog, containmentStatus: 'resolved', liveFrozen: false };
+    writeEvents(store, events);
+    const action = appendActionLog(store, {
+      eventId,
+      type: 'decision',
+      decision: 'approve',
+      status: 'final',
+      summary: `Approved: ${ev.summary}`,
+      module: ev.module,
+      channel: ev.channel,
+      severity: ev.severity,
+      containmentBefore,
+      containmentAfter: after,
+      decidedAt: now,
+      decidedBy: ADMIN_IDENTITY,
+    });
+    return {
+      success: true,
+      eventId,
+      adminDecision: 'approved',
+      message: `${ADMIN_IDENTITY} approved this action. Containment released.`,
+      action,
+      containment: readContainment(store),
+    };
+  }
+
+  if (decision === 'deny') {
+    ev.adminDecision = 'denied';
+    ev.status = 'denied';
+    ev.deniedAt = now;
+    ev.deniedBy = ADMIN_IDENTITY;
+    writeEvents(store, events);
+    const action = appendActionLog(store, {
+      eventId,
+      type: 'decision',
+      decision: 'deny',
+      status: 'final',
+      summary: `Denied: ${ev.summary}`,
+      module: ev.module,
+      channel: ev.channel,
+      severity: ev.severity,
+      containmentBefore,
+      containmentAfter: readContainment(store),
+      decidedAt: now,
+      decidedBy: ADMIN_IDENTITY,
+    });
+    return {
+      success: true,
+      eventId,
+      adminDecision: 'denied',
+      message: `${ADMIN_IDENTITY} denied this action. Containment remains active.`,
+      action,
+      containment: readContainment(store),
+    };
+  }
+
+  return { success: false, error: 'decision must be approve or deny' };
+}
+
+function theeMichaelUndoAction(store, { actionId, email }) {
+  if (!isAuthorizedAdmin(email)) {
+    return { success: false, error: `Authorized administrator required (${ADMIN_IDENTITY})` };
+  }
+  const history = readActionHistory(store);
+  const idx = history.findIndex((a) => a.actionId === actionId && !a.undoneAt);
+  if (idx < 0) return { success: false, error: 'Action not found or already undone' };
+  const action = history[idx];
+  if (!action.canUndo) return { success: false, error: 'This action cannot be undone' };
+
+  const now = new Date().toISOString();
+
+  if (action.containmentBefore) {
+    writeContainment(store, {
+      ...action.containmentBefore,
+      updatedAt: now,
+    });
+  }
+
+  if (action.eventId) {
+    const events = readEvents(store);
+    const evIdx = events.findIndex((e) => e.eventId === action.eventId);
+    if (evIdx >= 0) {
+      events[evIdx].adminDecision = 'pending';
+      events[evIdx].status = 'contained';
+      events[evIdx].releasedAt = null;
+      events[evIdx].releasedBy = null;
+      events[evIdx].approvedAt = null;
+      events[evIdx].deniedAt = null;
+      events[evIdx].deniedBy = null;
+      events[evIdx].undoneAt = now;
+      writeEvents(store, events);
+    }
+  }
+
+  history[idx].undoneAt = now;
+  history[idx].undoneBy = ADMIN_IDENTITY;
+  history[idx].status = 'undone';
+  writeActionHistory(store, history);
+
+  appendActionLog(store, {
+    eventId: action.eventId,
+    type: 'undo',
+    decision: null,
+    status: 'final',
+    summary: `Undone ${action.decision || action.type}: ${action.summary}`,
+    module: action.module,
+    channel: action.channel,
+    severity: action.severity,
+    containmentBefore: readContainment(store),
+    containmentAfter: action.containmentBefore,
+    decidedAt: now,
+    canUndo: false,
+  });
+
+  return {
+    success: true,
+    actionId,
+    message: `${ADMIN_IDENTITY} undid action. Event returned to pending review.`,
+    containment: readContainment(store),
+  };
+}
+
 function buildSecurityTemplate(sealedPayload) {
   return {
-    banner: '🛡️ SOVEREIGN THREAT CAPTURED // SOCIALIMPERIALISM.COM PROTECTION ENFORCED',
+    banner: `🛡️ ${ADMIN_IDENTITY} SECURITY REVIEW REQUIRED // ${SITE_DOMAIN.toUpperCase()} PROTECTION ENFORCED`,
     supremeAuthority: `authorized ${SITE_DOMAIN} ownership and security administration`,
     physicalSteward: 'registered site owner or designated platform operator',
     executiveControl: `authorized ${SITE_DOMAIN} administrators only`,
@@ -166,6 +358,8 @@ function clearFalsePositiveContainment(store) {
       && (ev.vector === 'credential_exfiltration_attempt' || ev.summary?.includes('credential_exfil'));
     if (!fp) continue;
     ev.status = 'released';
+    ev.adminDecision = 'approved';
+    ev.approvedAt = now;
     ev.releasedAt = now;
     ev.releasedBy = ADMIN_IDENTITY;
     ev.releaseNote = 'false_positive_credential_field';
@@ -243,22 +437,39 @@ function captureThreatEvent(store, {
     surface,
     module,
     channel: channel || null,
-    summary: String(summary || 'Threat captured and contained').slice(0, 240),
+    summary: String(summary || 'Threat captured — awaiting THEE_MICHAEL review').slice(0, 240),
     templateBanner: template.banner,
     containment: { active: true, liveFrozen: autoContain },
     sandboxLog,
     requiresKinetic2fa: true,
     requiresAdminRelease: true,
     adminIdentity: ADMIN_IDENTITY,
+    adminDecision: 'pending',
     createdAt: new Date().toISOString(),
     decryptedAt: null,
     releasedAt: null,
+    deniedAt: null,
+    approvedAt: null,
     sealedTelemetry: sealed,
   };
 
   const events = readEvents(store);
   events.unshift(event);
   writeEvents(store, events);
+
+  appendActionLog(store, {
+    eventId,
+    type: 'capture',
+    decision: null,
+    status: 'pending',
+    summary: event.summary,
+    module,
+    channel,
+    severity,
+    containmentBefore: readContainment(store),
+    containmentAfter: null,
+    canUndo: false,
+  });
 
   if (autoContain) {
     const c = readContainment(store);
@@ -271,8 +482,8 @@ function captureThreatEvent(store, {
   return event;
 }
 
-function getRedactedEvents(store) {
-  return readEvents(store).map((e) => ({
+function getRedactedEvents(store, limit = 100) {
+  return readEvents(store).slice(0, limit).map((e) => ({
     eventId: e.eventId,
     status: e.status,
     severity: e.severity,
@@ -291,9 +502,32 @@ function getRedactedEvents(store) {
     requiresKinetic2fa: true,
     requiresAdminRelease: e.requiresAdminRelease,
     adminIdentity: ADMIN_IDENTITY,
+    adminDecision: e.adminDecision || (e.releasedAt ? 'approved' : e.deniedAt ? 'denied' : 'pending'),
     createdAt: e.createdAt,
     releasedAt: e.releasedAt,
+    deniedAt: e.deniedAt,
+    approvedAt: e.approvedAt,
     telemetrySealed: true,
+  }));
+}
+
+function getActionHistoryRedacted(store, limit = 100) {
+  return readActionHistory(store).slice(0, limit).map((a) => ({
+    actionId: a.actionId,
+    eventId: a.eventId,
+    type: a.type,
+    decision: a.decision,
+    status: a.status,
+    summary: a.summary,
+    module: a.module,
+    channel: a.channel,
+    severity: a.severity,
+    createdAt: a.createdAt,
+    decidedAt: a.decidedAt,
+    decidedBy: a.decidedBy,
+    undoneAt: a.undoneAt,
+    undoneBy: a.undoneBy,
+    canUndo: a.canUndo && !a.undoneAt && a.status === 'final' && (a.decision === 'approve' || a.decision === 'deny'),
   }));
 }
 
@@ -448,19 +682,48 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
   ipcMain.handle('get-sovereign-threat-status', () => {
     const containment = readContainment(store);
     const events = readEvents(store);
-    const open = events.filter((e) => e.status === 'contained' && !e.releasedAt);
+    const pending = events.filter((e) => (e.adminDecision || 'pending') === 'pending' && !e.releasedAt && !e.deniedAt);
+    const open = events.filter((e) => e.status === 'contained' && !e.releasedAt && e.adminDecision !== 'approved');
     return {
       enabled: true,
       domain: SITE_DOMAIN,
       adminIdentity: ADMIN_IDENTITY,
-      layer: 'Sovereign Threat Capture',
+      layer: `${ADMIN_IDENTITY} Security Control`,
       containment,
       openThreatCount: open.length,
+      pendingReviewCount: pending.length,
       criticalCount: open.filter((e) => e.severity === 'critical').length,
       liveFrozen: containment.liveFrozen,
       kinetic2faRequired: true,
-      events: getRedactedEvents(store).slice(0, 30),
+      events: getRedactedEvents(store, 50),
+      actionHistory: getActionHistoryRedacted(store, 100),
     };
+  });
+
+  ipcMain.handle('get-thee-michael-action-history', () => ({
+    success: true,
+    adminIdentity: ADMIN_IDENTITY,
+    history: getActionHistoryRedacted(store, 200),
+    events: getRedactedEvents(store, 100),
+  }));
+
+  ipcMain.handle('thee-michael-decide-threat', (event, payload = {}) => {
+    const ctx = store._invokeContext || {};
+    const email = payload.adminEmail || ctx.email;
+    return theeMichaelDecideThreat(store, {
+      eventId: payload.eventId,
+      decision: payload.decision,
+      email,
+    });
+  });
+
+  ipcMain.handle('thee-michael-undo-action', (event, payload = {}) => {
+    const ctx = store._invokeContext || {};
+    const email = payload.adminEmail || ctx.email;
+    return theeMichaelUndoAction(store, {
+      actionId: payload.actionId,
+      email,
+    });
   });
 
   ipcMain.handle('capture-sovereign-threat', (event, payload = {}) => {
@@ -520,6 +783,8 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
     if (idx < 0) return { success: false, error: 'Event not found' };
 
     events[idx].status = 'released';
+    events[idx].adminDecision = 'approved';
+    events[idx].approvedAt = new Date().toISOString();
     events[idx].releasedAt = new Date().toISOString();
     events[idx].releasedBy = ADMIN_IDENTITY;
     events[idx].sandboxLog = {
@@ -556,10 +821,23 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
       return { success: false, error: 'Authorized administrator required (THEE_MICHAEL)' };
     }
     const result = clearFalsePositiveContainment(store);
+    if (result.released > 0) {
+      appendActionLog(store, {
+        type: 'false_positive_clear',
+        decision: 'approve',
+        status: 'final',
+        summary: `Cleared ${result.released} false-positive threat(s)`,
+        containmentBefore: null,
+        containmentAfter: result.containment,
+        decidedAt: new Date().toISOString(),
+        canUndo: true,
+      });
+    }
     return {
       success: true,
-      message: `Cleared ${result.released} false-positive threat(s). Live paths restored.`,
+      message: `${ADMIN_IDENTITY} cleared ${result.released} false-positive threat(s). Live paths restored.`,
       ...result,
+      actionHistory: getActionHistoryRedacted(store, 20),
     };
   });
 
@@ -579,7 +857,7 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
     };
   });
 
-  console.log('[sovereignThreatCapture] Sovereign Threat Capture Layer active for', SITE_DOMAIN);
+  console.log(`[sovereignThreatCapture] ${ADMIN_IDENTITY} Security Control active for`, SITE_DOMAIN);
 }
 
 module.exports = {
@@ -589,8 +867,12 @@ module.exports = {
   scanTextForThreats,
   redactSensitiveFields,
   clearFalsePositiveContainment,
+  theeMichaelDecideThreat,
+  theeMichaelUndoAction,
   getRedactedEvents,
+  getActionHistoryRedacted,
   readContainment,
+  readActionHistory,
   PROTECTED_CHANNELS,
   TRUSTED_CREDENTIAL_CHANNELS,
   ADMIN_IDENTITY,

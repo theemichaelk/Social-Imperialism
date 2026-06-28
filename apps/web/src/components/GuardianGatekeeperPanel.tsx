@@ -97,7 +97,7 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
   async function releaseTicket(ticketId: string) {
     const sessionToken = loadKineticSession();
     if (!sessionToken) {
-      onMsg?.('Complete kinetic 2FA in the Sovereign panel above before releasing while live paths are frozen.');
+      onMsg?.('Complete kinetic 2FA in THEE_MICHAEL Security Control above before releasing while live paths are frozen.');
       return;
     }
     setLoading(true);
@@ -275,7 +275,7 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
             </div>
           ))}
           <p className="settings-panel-desc">
-            Production changes require {GUARDIAN_ADMIN} approval. When Sovereign live-freeze is active, release also requires kinetic 2FA (Sovereign panel above).
+            Production changes require {GUARDIAN_ADMIN} approval. When THEE_MICHAEL live-freeze is active, release also requires kinetic 2FA (Security Control panel above).
           </p>
         </DataPanel>
       )}

@@ -92,5 +92,50 @@ test('TRUSTED_CREDENTIAL_CHANNELS includes connect-platform', () => {
   assert.ok(TRUSTED_CREDENTIAL_CHANNELS.has('connect-platform'));
 });
 
+test('THEE_MICHAEL approve/deny/undo workflow', () => {
+  const {
+    captureThreatEvent,
+    theeMichaelDecideThreat,
+    theeMichaelUndoAction,
+    getActionHistoryRedacted,
+    readContainment,
+    ADMIN_IDENTITY,
+  } = require('../../packages/core/src/sovereignThreatCapture');
+
+  const store = {
+    projectId: 'test',
+    _data: {},
+    getItem(k) { return this._data[k] || null; },
+    setItem(k, v) { this._data[k] = v; },
+  };
+
+  const ev = captureThreatEvent(store, {
+    source: 'test',
+    module: 'Test',
+    channel: 'test-channel',
+    severity: 'high',
+    summary: 'Test threat for THEE_MICHAEL review',
+    autoContain: true,
+  });
+  assert.strictEqual(ev.adminDecision, 'pending');
+
+  process.env.SEED_EMAIL = 'admin@test.com';
+  const deny = theeMichaelDecideThreat(store, { eventId: ev.eventId, decision: 'deny', email: 'admin@test.com' });
+  assert.strictEqual(deny.success, true);
+  assert.strictEqual(deny.adminDecision, 'denied');
+
+  const undo = theeMichaelUndoAction(store, { actionId: deny.action.actionId, email: 'admin@test.com' });
+  assert.strictEqual(undo.success, true);
+
+  const approve = theeMichaelDecideThreat(store, { eventId: ev.eventId, decision: 'approve', email: 'admin@test.com' });
+  assert.strictEqual(approve.success, true);
+  assert.strictEqual(approve.adminDecision, 'approved');
+  assert.strictEqual(readContainment(store).liveFrozen, false);
+
+  const history = getActionHistoryRedacted(store);
+  assert.ok(history.length >= 2);
+  assert.strictEqual(ADMIN_IDENTITY, 'THEE_MICHAEL');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

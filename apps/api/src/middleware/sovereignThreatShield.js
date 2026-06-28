@@ -60,7 +60,7 @@ async function sovereignThreatShield(req, res, next) {
     const rate = checkRate(req);
     if (rate.exceeded) {
       return res.status(429).json({
-        error: 'Rate limit exceeded — request contained by Sovereign Threat Capture',
+        error: 'Rate limit exceeded — request held for THEE_MICHAEL review',
         code: 'SOVEREIGN_CONTAINED',
         domain: SITE_DOMAIN,
       });
@@ -85,7 +85,7 @@ async function sovereignThreatShield(req, res, next) {
         });
       }
       return res.status(403).json({
-        error: 'Request contained — Sovereign Threat Capture enforced',
+        error: 'Request held — THEE_MICHAEL must approve or deny before this action is final',
         code: 'SOVEREIGN_THREAT_CAPTURED',
         severity: worst.severity,
       });
