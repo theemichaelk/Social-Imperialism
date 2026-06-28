@@ -82,6 +82,18 @@ export function SovereignThreatPanel({ onMsg }: { onMsg?: (m: string) => void })
     finally { setLoading(false); }
   }
 
+  async function clearFalsePositives() {
+    setLoading(true);
+    try {
+      const res = await invoke<{ message?: string; released?: number }>('admin-clear-sovereign-false-positives', {
+        adminEmail: adminEmail || undefined,
+      });
+      onMsg?.(res.message || `Cleared ${res.released ?? 0} false positive(s)`);
+      await refresh();
+    } catch (e) { onMsg?.((e as Error).message); }
+    finally { setLoading(false); }
+  }
+
   async function releaseEvent(eventId: string) {
     if (!sessionToken) { onMsg?.('Complete kinetic 2FA first'); return; }
     setLoading(true);
@@ -121,6 +133,18 @@ export function SovereignThreatPanel({ onMsg }: { onMsg?: (m: string) => void })
         </div>
         <LivePulse label={frozen ? 'CONTAINED' : 'SHIELDED'} />
       </div>
+
+      {(frozen || (status.openThreatCount ?? 0) > 0) && (
+        <DataPanel title="Restore access — false positive cleanup" live>
+          <p className="settings-panel-desc">
+            If OAuth, LinkedIn connect, or API key saves were blocked by credential-field scanning,
+            authorized admins can clear false-positive containment without kinetic 2FA.
+          </p>
+          <button type="button" className="btn primary" onClick={clearFalsePositives} disabled={loading}>
+            Clear False Positives &amp; Restore Live Paths
+          </button>
+        </DataPanel>
+      )}
 
       <DataPanel title="Kinetic 2FA — Administrator Verification Channel" live>
         <p className="settings-panel-desc">

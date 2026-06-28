@@ -18,15 +18,46 @@ const THREAT_PATTERNS = [
   { id: 'xss_probe', re: /<script|javascript:|onerror\s*=|onload\s*=/i, severity: 'high', vector: 'cross_site_scripting' },
   { id: 'sqli_probe', re: /(\bunion\b.*\bselect\b|';\s*drop\b|or\s+1\s*=\s*1)/i, severity: 'critical', vector: 'sql_injection_probe' },
   { id: 'path_traversal', re: /(\.\.\/|\.\.\\|%2e%2e)/i, severity: 'high', vector: 'path_traversal' },
-  { id: 'credential_exfil', re: /(api[_-]?key|secret|password|bearer\s+[a-z0-9._-]{20,})/i, severity: 'medium', vector: 'credential_exfiltration_attempt' },
+  // Match exfil-style leaks in URLs/query — not redacted JSON field names (see redactSensitiveFields)
+  { id: 'credential_exfil', re: /(api[_-]?key\s*[:=]\s*['"]?[a-z0-9._-]{8,}|bearer\s+[a-z0-9._-]{32,})/i, severity: 'medium', vector: 'credential_exfiltration_attempt' },
   { id: 'cmd_injection', re: /(\$\(|`|\|\||;\s*cat\s|;\s*curl\s)/i, severity: 'critical', vector: 'command_injection' },
   { id: 'bot_flood', re: /.{8000,}/, severity: 'medium', vector: 'payload_flood' },
 ];
+
+/** Channels that legitimately carry credentials — never block on credential_exfil alone */
+const TRUSTED_CREDENTIAL_CHANNELS = new Set([
+  'connect-platform',
+  'connect-with-credentials',
+  'begin-platform-oauth',
+  'poll-platform-oauth',
+  'finish-platform-oauth-connect',
+  'save-global-keys',
+  'get-global-keys',
+  'save-grok-settings',
+  'get-grok-settings',
+  'grok-connect',
+]);
 
 const PROTECTED_CHANNELS = new Set([
   'export-data', 'save-global-keys', 'release-guardian-fix', 'approve-guardian-change',
   'decrypt-sovereign-threat-telemetry', 'approve-sovereign-threat-release',
 ]);
+
+const SENSITIVE_FIELD_RE = /^(password|passwd|secret|token|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|.*secret|.*token|.*password|.*apikey)$/i;
+
+function redactSensitiveFields(input, depth = 0) {
+  if (depth > 10) return '[MAX_DEPTH]';
+  if (input == null) return input;
+  if (Array.isArray(input)) return input.map((x) => redactSensitiveFields(x, depth + 1));
+  if (typeof input === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(input)) {
+      out[k] = SENSITIVE_FIELD_RE.test(k) ? '[REDACTED]' : redactSensitiveFields(v, depth + 1);
+    }
+    return out;
+  }
+  return input;
+}
 
 function deriveKey(projectId) {
   const secret = process.env.SOVEREIGN_TELEMETRY_KEY || process.env.JWT_SECRET || 'si-sovereign-dev-key';
@@ -105,16 +136,44 @@ function scanTextForThreats(text) {
   return hits;
 }
 
+function filterBlockingHits(hits, channel) {
+  if (!channel || !TRUSTED_CREDENTIAL_CHANNELS.has(channel)) return hits;
+  return hits.filter((h) => h.id !== 'credential_exfil');
+}
+
 function scanRequestSurface(req) {
+  const channel = req.params?.channel;
+  const sanitizedBody = redactSensitiveFields(req.body || {});
+  const sanitizedQuery = redactSensitiveFields(req.query || {});
   const parts = [
     req.path,
     req.originalUrl,
-    JSON.stringify(req.body || {}),
-    JSON.stringify(req.query || {}),
+    JSON.stringify(sanitizedBody),
+    JSON.stringify(sanitizedQuery),
     req.headers['user-agent'],
     req.headers['x-forwarded-for'],
   ].filter(Boolean).join(' ');
-  return scanTextForThreats(parts);
+  return filterBlockingHits(scanTextForThreats(parts), channel);
+}
+
+function clearFalsePositiveContainment(store) {
+  const events = readEvents(store);
+  let released = 0;
+  const now = new Date().toISOString();
+  for (const ev of events) {
+    if (ev.releasedAt) continue;
+    const fp = ev.source === 'api_edge'
+      && (ev.vector === 'credential_exfiltration_attempt' || ev.summary?.includes('credential_exfil'));
+    if (!fp) continue;
+    ev.status = 'released';
+    ev.releasedAt = now;
+    ev.releasedBy = ADMIN_IDENTITY;
+    ev.releaseNote = 'false_positive_credential_field';
+    released += 1;
+  }
+  if (released) writeEvents(store, events);
+  writeContainment(store, { frozenModules: [], blockedChannels: [], liveFrozen: false });
+  return { released, containment: readContainment(store) };
 }
 
 function captureThreatEvent(store, {
@@ -490,6 +549,20 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
     };
   });
 
+  ipcMain.handle('admin-clear-sovereign-false-positives', (event, payload = {}) => {
+    const ctx = store._invokeContext || {};
+    const email = payload.adminEmail || ctx.email;
+    if (!isAuthorizedAdmin(email)) {
+      return { success: false, error: 'Authorized administrator required (THEE_MICHAEL)' };
+    }
+    const result = clearFalsePositiveContainment(store);
+    return {
+      success: true,
+      message: `Cleared ${result.released} false-positive threat(s). Live paths restored.`,
+      ...result,
+    };
+  });
+
   ipcMain.handle('run-sovereign-threat-scan', () => {
     const containment = readContainment(store);
     const events = readEvents(store);
@@ -514,9 +587,12 @@ module.exports = {
   captureThreatEvent,
   scanRequestSurface,
   scanTextForThreats,
+  redactSensitiveFields,
+  clearFalsePositiveContainment,
   getRedactedEvents,
   readContainment,
   PROTECTED_CHANNELS,
+  TRUSTED_CREDENTIAL_CHANNELS,
   ADMIN_IDENTITY,
   SITE_DOMAIN,
   buildSecurityTemplate,
