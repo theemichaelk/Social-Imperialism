@@ -326,7 +326,12 @@ function registerIndexHandlers(deps) {
 
   // Auto content / queue
   ipcMain.handle('get-auto-content-settings', () => {
-    const defaults = { enabled: false, rssUrls: [], targetAccountIds: [], frequency: 'daily', publishMode: 'queue', targetPlatforms: ['Facebook', 'LinkedIn', 'Twitter'] };
+    const defaults = {
+      enabled: false, rssUrls: [], targetAccountIds: [], frequency: 'daily', publishMode: 'queue',
+      targetPlatforms: ['Facebook', 'LinkedIn', 'Twitter'],
+      formatIntelligenceEnabled: false, formatTemplateIds: [], formatKeywords: [],
+      formatKeywordSource: 'both', formatPostsPerRun: 1, formatGenerateImages: true,
+    };
     try { return { ...defaults, ...JSON.parse(store.getItem('autoContentSettings') || '{}') }; } catch (e) { return defaults; }
   });
   ipcMain.handle('save-auto-content-settings', (event, settings) => {

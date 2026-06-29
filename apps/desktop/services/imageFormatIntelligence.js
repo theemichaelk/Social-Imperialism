@@ -328,6 +328,95 @@ Include 3 hashtags.`,
   };
 }
 
+function resolveSchedulerKeywords(store, campaign, settings) {
+  let keywords = (settings.formatKeywords || [])
+    .map((k) => String(k).trim())
+    .filter(Boolean);
+  const source = settings.formatKeywordSource || 'both';
+  if (source === 'brand-keywords' || source === 'both') {
+    const campaignId = store.getItem('activeCampaignId') || 'default';
+    try {
+      const brandKw = JSON.parse(store.getItem('keywords') || '[]')
+        .filter((k) => k.campaignId === campaignId)
+        .map((k) => k.keyword || k.text || k.name)
+        .filter(Boolean);
+      keywords = [...keywords, ...brandKw];
+    } catch (e) { /* noop */ }
+  }
+  if (!keywords.length) keywords = [campaign?.brandName || 'brand update'];
+  return [...new Set(keywords)];
+}
+
+async function runFormatIntelligenceScheduler({
+  store, generateAI, generateImage, campaign, settings, publishFn, queueContentFn,
+}) {
+  if (!settings.formatIntelligenceEnabled) {
+    return { processed: 0, skipped: true, reason: 'Format intelligence disabled' };
+  }
+
+  const allTemplates = getFormatTemplates(store);
+  const selectedIds = settings.formatTemplateIds || [];
+  const templates = selectedIds.length
+    ? allTemplates.filter((t) => selectedIds.includes(t.id))
+    : allTemplates;
+  if (!templates.length) {
+    return { processed: 0, skipped: true, reason: 'No saved format templates — study images in Content Library' };
+  }
+
+  const keywords = resolveSchedulerKeywords(store, campaign, settings);
+  const postsPerRun = Math.max(1, Math.min(settings.formatPostsPerRun || 1, 5));
+  let rotateIdx = parseInt(store.getItem('formatIntelligenceRotateIdx') || '0', 10);
+  const results = [];
+  let processed = 0;
+
+  for (let i = 0; i < postsPerRun; i++) {
+    const template = templates[rotateIdx % templates.length];
+    const keyword = keywords[(rotateIdx + i) % keywords.length];
+    rotateIdx += 1;
+
+    try {
+      const recreated = await recreateFromFormatTemplate({
+        store,
+        generateAI,
+        generateImage,
+        templateId: template.id,
+        keyword,
+        generateNewImage: settings.formatGenerateImages !== false,
+      });
+      if (!recreated.success || !recreated.post) continue;
+
+      for (const platform of (settings.targetPlatforms || ['Facebook'])) {
+        const curated = {
+          title: recreated.post.headline || template.label,
+          content: recreated.post.content,
+          mediaUrl: recreated.post.mediaUrl,
+          platform,
+          source: 'format-intelligence',
+          formatTemplateId: template.id,
+          category: template.category,
+          keywords: keyword,
+          curatedFor: campaign?.brandName || 'brand',
+        };
+
+        if (settings.publishMode === 'auto' && publishFn) {
+          await publishFn(curated, settings.targetAccountIds || []);
+          results.push({ action: 'published', platform, template: template.label, keyword });
+        } else if (queueContentFn) {
+          queueContentFn(store, curated);
+          results.push({ action: 'queued', platform, template: template.label, keyword });
+        }
+        processed += 1;
+      }
+    } catch (e) {
+      console.error('Format intelligence scheduler error:', e.message);
+    }
+  }
+
+  store.setItem('formatIntelligenceRotateIdx', String(rotateIdx));
+  store.setItem('formatIntelligenceLastRun', String(Date.now()));
+  return { processed, results, templatesUsed: templates.length, keywordsUsed: keywords.length };
+}
+
 module.exports = {
   CATEGORIES,
   getFormatTemplates,
@@ -339,4 +428,6 @@ module.exports = {
   recreateFromFormatTemplate,
   analysisToFormatTemplate,
   buildLabels,
+  resolveSchedulerKeywords,
+  runFormatIntelligenceScheduler,
 };

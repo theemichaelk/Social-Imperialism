@@ -27,6 +27,7 @@ export const PAGE_CHANNELS = {
     'seed-brand-from-website', 'get-design-templates', 'render-design-post',
     'get-dns-sites', 'get-dns-records', 'save-dns-record', 'apply-dns-records', 'sync-dns-sites',
     'generate-from-library-assets', 'schedule-content-batch', 'get-section-live',
+    'get-format-templates', 'recreate-from-format-template',
     'remove-content-queue-item', 'seed-brand-from-website', 'get-active-campaign', 'get-keywords',
     'grok-build-prompt-preview', 'discover-site-rss', 'run-category-rss-router', 'run-content-scheduler-now',
     'get-ai-replies', 'update-ai-reply', 'delete-ai-reply', 'deepl-translate', 'play-tts', 'generate-carousel-fal',

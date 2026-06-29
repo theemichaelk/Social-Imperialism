@@ -149,16 +149,22 @@ async function runContentScheduler({
   const settings = loadJson(store, 'autoContentSettings', {
     enabled: false, rssUrls: [], targetAccountIds: [], frequency: 'daily',
     publishMode: 'queue', targetPlatforms: ['Facebook'],
+    formatIntelligenceEnabled: false, formatTemplateIds: [], formatKeywords: [],
+    formatKeywordSource: 'both', formatPostsPerRun: 1, formatGenerateImages: true,
   });
-  if (!settings.enabled || !settings.rssUrls?.length) {
-    return { processed: 0, skipped: true, reason: 'Auto content disabled or no RSS URLs' };
+
+  const rssActive = settings.enabled && settings.rssUrls?.length;
+  const formatActive = settings.formatIntelligenceEnabled;
+  if (!rssActive && !formatActive) {
+    return { processed: 0, skipped: true, reason: 'RSS and format intelligence both disabled' };
   }
 
   const seen = getSeenRssGuids(store);
-  let processed = 0;
+  let rssProcessed = 0;
   const results = [];
+  let formatResult = { processed: 0, results: [] };
 
-  for (const rssUrl of settings.rssUrls) {
+  if (rssActive) for (const rssUrl of settings.rssUrls) {
     let items = [];
     try {
       items = await parseRssItems(rssUrl, 3);
@@ -184,7 +190,7 @@ async function runContentScheduler({
             queueContent(store, curated);
             results.push({ action: 'queued', platform, title: item.title });
           }
-          processed += 1;
+          rssProcessed += 1;
         } catch (e) {
           console.error('Curate/publish error:', e.message);
         }
@@ -193,8 +199,38 @@ async function runContentScheduler({
     }
   }
 
+  if (formatActive) {
+    const { runFormatIntelligenceScheduler } = require('./imageFormatIntelligence');
+    const generateImage = falKey
+      ? async (prompt) => {
+        const url = await generateFalImage(prompt, falKey);
+        return url ? { success: true, imageUrl: url } : { success: false, error: 'Image generation failed' };
+      }
+      : null;
+    formatResult = await runFormatIntelligenceScheduler({
+      store,
+      generateAI,
+      generateImage,
+      campaign,
+      settings,
+      publishFn,
+      queueContentFn: queueContent,
+    });
+    if (formatResult.results?.length) results.push(...formatResult.results);
+  }
+
+  const processed = rssProcessed + (formatResult.processed || 0);
   store.setItem('autoContentLastRun', String(Date.now()));
-  return { processed, results };
+  return {
+    processed,
+    results,
+    rssProcessed,
+    formatProcessed: formatResult.processed || 0,
+    formatIntelligence: formatResult,
+    message: formatResult.processed
+      ? `Format intelligence: ${formatResult.processed} post(s) ${settings.publishMode === 'auto' ? 'published' : 'queued'}`
+      : undefined,
+  };
 }
 
 function reuseAnswerAsContent(answer, campaign, format = 'blog') {

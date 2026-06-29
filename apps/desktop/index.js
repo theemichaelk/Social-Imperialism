@@ -2859,7 +2859,8 @@ async function workerLoop() {
         try {
             const autoSettingsRaw = store.getItem('autoContentSettings');
             const autoSettings = autoSettingsRaw ? JSON.parse(autoSettingsRaw) : { enabled: false };
-            if (autoSettings.enabled && autoSettings.rssUrls?.length) {
+            const formatSchedulerOn = autoSettings.formatIntelligenceEnabled;
+            if ((autoSettings.enabled && autoSettings.rssUrls?.length) || formatSchedulerOn) {
                 const now = Date.now();
                 const lastRun = parseInt(store.getItem('autoContentLastRun') || '0');
                 let freqMs = 86400000;
@@ -2875,9 +2876,14 @@ async function workerLoop() {
                     });
                     if (schedResult.processed > 0) {
                         let tasks = JSON.parse(store.getItem('workerTasks') || '[]');
+                        const fmt = schedResult.formatProcessed || 0;
+                        const rss = schedResult.rssProcessed || 0;
+                        const parts = [];
+                        if (rss) parts.push(`${rss} RSS`);
+                        if (fmt) parts.push(`${fmt} format`);
                         tasks.unshift({
                             time: new Date().toLocaleTimeString(),
-                            action: `Auto content: ${schedResult.processed} RSS item(s) ${autoSettings.publishMode === 'auto' ? 'posted' : 'queued'}`,
+                            action: `Auto content: ${parts.join(' + ') || schedResult.processed} item(s) ${autoSettings.publishMode === 'auto' ? 'posted' : 'queued'}`,
                             platform: 'Multi',
                         });
                         store.setItem('workerTasks', JSON.stringify(tasks.slice(0, 10)));

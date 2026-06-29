@@ -11,6 +11,7 @@ import { ManageableTabNav } from '@/components/ManageableTabNav';
 const FILTER_TABS = [
   { id: 'all', label: 'All', locked: true },
   { id: 'image', label: 'Images' },
+  { id: 'format-intel', label: 'Format Intelligence' },
   { id: 'video', label: 'Video' },
   { id: 'copy', label: 'Copy' },
 ];
@@ -205,8 +206,11 @@ export default function ContentLibraryPage() {
     }
   }
 
+  const studiedAssets = assets.filter((a) => !!(a.imageAnalysis || a.formatTemplateId));
+
   const shown = assets.filter((a) => {
     if (filter === 'all') return true;
+    if (filter === 'format-intel') return !!(a.imageAnalysis || a.formatTemplateId);
     if (filter === 'copy') return a.type === 'copy' || a.type === 'text';
     return a.type === filter;
   });
@@ -261,7 +265,13 @@ export default function ContentLibraryPage() {
         pageId="content-library"
         catalog={FILTER_TABS.map((t) => ({
           ...t,
-          label: t.id === 'all' ? `All (${assets.length})` : t.label,
+          label: t.id === 'all'
+            ? `All (${assets.length})`
+            : t.id === 'format-intel'
+              ? `Format Intelligence (${studiedAssets.length})`
+              : t.id === 'image'
+                ? `Images (${assets.filter((a) => a.type === 'image').length})`
+                : t.label,
         }))}
         active={filter}
         onChange={setFilter}
@@ -323,7 +333,15 @@ export default function ContentLibraryPage() {
             </div>
           </div>
         ))}
-        {!shown.length && <div className="card"><p className="settings-panel-desc">No assets yet — upload or import above.</p></div>}
+        {!shown.length && (
+          <div className="card">
+            <p className="settings-panel-desc">
+              {filter === 'format-intel'
+                ? 'No studied formats yet — upload an image with "Study format on upload" enabled.'
+                : 'No assets yet — upload or import above.'}
+            </p>
+          </div>
+        )}
       </div>
       {msg && (
         <div className="card" style={{ marginTop: 12, borderColor: msg.includes('failed') || msg.includes('error') || msg.includes('No ') ? '#f59e0b' : '#10b981' }}>
