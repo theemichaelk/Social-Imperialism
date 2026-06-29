@@ -118,7 +118,9 @@ const PAGES = [
       { name: 'Design templates', channel: 'get-design-templates', validate: (d) => d?.templates?.length > 0 || Array.isArray(d?.templates) },
       { name: 'Library assets', channel: 'get-content-library', validate: (d) => d?.assets !== undefined },
       { name: 'Render design post', channel: 'render-design-post', args: [{ templateId: 'promo-bold', fields: { headline: 'QA Test', body: 'Design studio dummy', cta: 'Learn more' }, useAiCaption: false }], validate: (d) => d?.success === true && d?.post?.content },
+      { name: 'Generate from library', channel: 'generate-from-library-assets', args: [{ assetIds: [], keywords: ['brand'], templateId: 'promo-bold' }], validate: (d) => d?.success === true && d?.items?.length > 0 },
       { name: 'Section live', channel: 'get-section-live', args: ['design-studio'], validate: (d) => d?.success !== false },
+      { name: 'Grok status', channel: 'grok-get-status', validate: (d) => typeof d === 'object' },
     ],
   },
   {
