@@ -23,7 +23,7 @@ function saveUserTemplates(store, templates) {
   store.setItem(templatesKey(store), JSON.stringify(templates));
 }
 
-function registerDesignStudioHandlers({ ipcMain, store, generateAI }) {
+function registerDesignStudioHandlers({ ipcMain, store, generateAI, generateImage }) {
   const { getLibrary } = require('./contentLibraryIpc');
 
   const channels = [
@@ -111,7 +111,28 @@ function registerDesignStudioHandlers({ ipcMain, store, generateAI }) {
   });
 
   ipcMain.handle('generate-from-library-assets', async (event, payload = {}) => {
-    const { assetIds = [], keywords = [], templateId, model } = payload;
+    const { assetIds = [], keywords = [], templateId, formatTemplateId, model, generateNewImage } = payload;
+
+    if (formatTemplateId) {
+      const { recreateFromFormatTemplate } = require('./imageFormatIntelligence');
+      const topics = Array.isArray(keywords) ? keywords : String(keywords).split(/[,\n]+/).map((s) => s.trim()).filter(Boolean);
+      const topic = topics[0] || 'brand content';
+      const recreated = await recreateFromFormatTemplate({
+        store,
+        generateAI,
+        generateImage,
+        templateId: formatTemplateId,
+        keyword: topic,
+        generateNewImage: generateNewImage !== false,
+      });
+      if (!recreated.success) return recreated;
+      return {
+        success: true,
+        items: [{ ...recreated.post, model: model || 'gemini' }],
+        count: 1,
+      };
+    }
+
     const lib = getLibrary(store);
     const assets = lib.filter((a) => assetIds.includes(a.id));
     if (!assets.length && !keywords.length) {
@@ -121,19 +142,46 @@ function registerDesignStudioHandlers({ ipcMain, store, generateAI }) {
     const topics = Array.isArray(keywords) ? keywords : String(keywords).split(/[,\n]+/).map((s) => s.trim()).filter(Boolean);
     const copyAssets = assets.filter((a) => a.type === 'copy' || a.text);
     const imageAssets = assets.filter((a) => a.type === 'image' && a.url);
+    const studiedAsset = imageAssets.find((a) => a.formatTemplateId);
     const context = copyAssets.map((a) => a.text).join('\n').slice(0, 1500);
     const topicStr = topics.join(', ') || 'brand content';
+
+    if (studiedAsset?.formatTemplateId && generateImage) {
+      const { recreateFromFormatTemplate } = require('./imageFormatIntelligence');
+      const recreated = await recreateFromFormatTemplate({
+        store,
+        generateAI,
+        generateImage,
+        templateId: studiedAsset.formatTemplateId,
+        keyword: topicStr,
+        generateNewImage: generateNewImage !== false,
+      });
+      if (recreated.success) {
+        return { success: true, items: [{ ...recreated.post, model: model || 'gemini' }], count: 1 };
+      }
+    }
+
+    const analysisContext = imageAssets
+      .filter((a) => a.imageAnalysis)
+      .map((a) => `Image "${a.name}": ${a.imageAnalysis?.content?.whatItSays || ''} | Category: ${a.imageAnalysis?.category?.primary || ''} | Psychology: ${a.imageAnalysis?.psychology?.engagementStyle || ''}`)
+      .join('\n');
 
     let caption = '';
     if (generateAI) {
       caption = await generateAI(
-        `Create a social post caption from these library assets and topics.\nTopics: ${topicStr}\nLibrary copy:\n${context}\nUse brand voice. Include hashtags.`,
+        `Create a social post caption from these library assets and topics.\nTopics: ${topicStr}\nLibrary copy:\n${context}\nStudied image formats:\n${analysisContext}\nUse brand voice. Include hashtags.`,
       );
     } else {
       caption = `${topicStr}\n\n${context}`.trim();
     }
 
-    const imageUrl = imageAssets[0]?.url || null;
+    let imageUrl = imageAssets[0]?.url || null;
+    const studied = imageAssets.find((a) => a.imageAnalysis?.recreationPrompt);
+    if (studied?.imageAnalysis?.recreationPrompt && generateImage && generateNewImage !== false) {
+      const imgRes = await generateImage(`${studied.imageAnalysis.recreationPrompt}. Topic: ${topicStr}`);
+      if (imgRes?.imageUrl) imageUrl = imgRes.imageUrl;
+    }
+
     const all = [...getUserTemplates(store), ...SEED_TEMPLATES];
     const template = all.find((t) => t.id === templateId) || SEED_TEMPLATES[0];
 

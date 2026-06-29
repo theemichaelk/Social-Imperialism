@@ -74,7 +74,9 @@ async function registerAllHandlers(store, deps = {}) {
   };
 
   const { createAiEngine } = require(path.join(DESKTOP_ROOT, 'saasAi'));
-  const generateAI = deps.generateAI || createAiEngine(store).generateAI;
+  const aiEngine = createAiEngine(store);
+  const generateAI = deps.generateAI || aiEngine.generateAI;
+  const generateAIVision = deps.generateAIVision || aiEngine.generateAIVision;
 
   const { registerCalendarHandlers } = require(path.join(DESKTOP_SERVICES, 'calendarIpc'));
   const calendarApi = registerCalendarHandlers({
@@ -224,7 +226,12 @@ async function registerAllHandlers(store, deps = {}) {
   registerContentLibraryHandlers({ ipcMain, store, generateAI });
 
   const { registerDesignStudioHandlers } = require(path.join(DESKTOP_SERVICES, 'designStudioIpc'));
-  registerDesignStudioHandlers({ ipcMain, store, generateAI });
+  registerDesignStudioHandlers({ ipcMain, store, generateAI, generateImage: generateImageForStudio });
+
+  const { registerImageFormatIntelligenceHandlers } = require(path.join(DESKTOP_SERVICES, 'imageFormatIntelligenceIpc'));
+  registerImageFormatIntelligenceHandlers({
+    ipcMain, store, generateAIVision, generateAI, generateImage: generateImageForStudio,
+  });
 
   const { fetchTrendingTopics } = require(path.join(DESKTOP_SERVICES, 'feedFetcher'));
   const { registerBrowsePostsHandlers } = require(path.join(DESKTOP_SERVICES, 'browsePostsIpc'));

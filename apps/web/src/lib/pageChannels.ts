@@ -43,11 +43,14 @@ export const PAGE_CHANNELS = {
     'get-content-library', 'save-content-asset', 'delete-content-asset', 'import-website-to-library',
     'import-rss-to-library', 'import-text-to-library', 'upload-local-media', 'get-section-live',
     'get-brand-guidelines', 'grok-get-status', 'grok-imagine', 'grok-ask-text',
+    'analyze-library-image', 'save-format-template-from-asset', 'get-format-templates',
   ],
   designStudio: [
     'get-design-templates', 'save-design-template', 'delete-design-template', 'render-design-post',
     'generate-from-library-assets', 'get-content-library', 'get-section-live',
     'get-brand-guidelines', 'grok-get-status', 'grok-imagine', 'grok-ask-text',
+    'get-format-templates', 'recreate-from-format-template', 'analyze-library-image',
+    'save-format-template-from-asset', 'generate-image',
   ],
   brand: [
     'get-brand-guidelines', 'save-brand-guidelines', 'seed-brand-from-website', 'get-active-campaign',

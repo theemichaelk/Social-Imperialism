@@ -15,6 +15,15 @@ const FILTER_TABS = [
   { id: 'copy', label: 'Copy' },
 ];
 
+type ImageAnalysis = {
+  category?: { primary?: string; isNews?: boolean; isTrending?: boolean; hasFamousPeople?: boolean };
+  content?: { whatItSays?: string; whyItSays?: string; headline?: string };
+  psychology?: { engagementStyle?: string; emotionalTriggers?: string[]; responseIntent?: string };
+  format?: { layout?: string; orientation?: string };
+  dimensions?: { width?: number; height?: number; aspectRatio?: number; orientation?: string };
+  labels?: string[];
+};
+
 type Asset = {
   id: string;
   name: string;
@@ -23,6 +32,8 @@ type Asset = {
   text?: string;
   tags?: string[];
   source?: string;
+  imageAnalysis?: ImageAnalysis;
+  formatTemplateId?: string;
 };
 
 export default function ContentLibraryPage() {
@@ -33,6 +44,8 @@ export default function ContentLibraryPage() {
   const [pasteText, setPasteText] = useState('');
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [studyOnUpload, setStudyOnUpload] = useState(true);
+  const [studyingId, setStudyingId] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -62,15 +75,24 @@ export default function ContentLibraryPage() {
       if (!uploaded || typeof uploaded !== 'string') {
         throw new Error('Upload failed — media could not be processed');
       }
-      await invoke('save-content-asset', {
+      const saved = await invoke<{ success?: boolean; asset?: Asset; error?: string }>('save-content-asset', {
         name: file.name,
         type: file.type.startsWith('video') ? 'video' : 'image',
         url: uploaded,
         tags: ['upload'],
         source: 'upload',
       });
-      setMsg(`Uploaded ${file.name}`);
-      await refresh();
+      if (saved && typeof saved === 'object' && 'success' in saved && saved.success === false) {
+        throw new Error(saved.error || 'Save failed');
+      }
+      const assetId = saved?.asset?.id;
+      if (studyOnUpload && assetId && !file.type.startsWith('video')) {
+        setMsg(`Studying format of ${file.name}…`);
+        await studyImage(assetId, true);
+      } else {
+        setMsg(`Uploaded ${file.name}`);
+        await refresh();
+      }
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -128,6 +150,50 @@ export default function ContentLibraryPage() {
     }
   }
 
+  async function studyImage(assetId: string, autoSaveTemplate = false) {
+    setStudyingId(assetId);
+    setLoading(true);
+    setMsg('Studying image format, psychology, and category…');
+    try {
+      const analyzed = await invoke<{ success?: boolean; asset?: Asset; error?: string }>('analyze-library-image', { assetId });
+      if (!analyzed.success) throw new Error(analyzed.error || 'Analysis failed');
+      if (autoSaveTemplate) {
+        const saved = await invoke<{ success?: boolean; template?: { label?: string }; error?: string }>(
+          'save-format-template-from-asset',
+          { assetId },
+        );
+        if (!saved.success) throw new Error(saved.error || 'Could not save format template');
+        setMsg(`Studied & saved format: ${saved.template?.label || 'template ready in Design Studio'}`);
+      } else {
+        setMsg('Image studied — labels and psychology saved to library');
+      }
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setStudyingId('');
+      setLoading(false);
+    }
+  }
+
+  async function saveFormatTemplate(assetId: string) {
+    setLoading(true);
+    setMsg('Saving format template…');
+    try {
+      const res = await invoke<{ success?: boolean; template?: { label?: string }; error?: string }>(
+        'save-format-template-from-asset',
+        { assetId },
+      );
+      if (!res.success) throw new Error(res.error || 'Save failed');
+      setMsg(`Format saved: ${res.template?.label || 'ready in Design Studio'}`);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function removeAsset(id: string) {
     setMsg('Removing asset…');
     try {
@@ -164,7 +230,11 @@ export default function ContentLibraryPage() {
         <div className="card">
           <h3>Upload</h3>
           <input type="file" accept="image/*,video/*" onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])} />
-          <p className="settings-panel-desc" style={{ marginTop: 8 }}>Images and video save to your campaign library.</p>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: '0.85rem', color: '#94a3b8' }}>
+            <input type="checkbox" checked={studyOnUpload} onChange={(e) => setStudyOnUpload(e.target.checked)} />
+            Study format on upload (size, psychology, category, news type)
+          </label>
+          <p className="settings-panel-desc" style={{ marginTop: 8 }}>Images are analyzed, labeled, and saved as reusable formats for Design Studio.</p>
         </div>
         <div className="card">
           <h3>Import website</h3>
@@ -210,7 +280,47 @@ export default function ContentLibraryPage() {
               <img src={a.url} alt="" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 8, marginTop: 8 }} />
             )}
             {a.text && <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 8 }}>{a.text.slice(0, 280)}{a.text.length > 280 ? '…' : ''}</p>}
-            <button type="button" className="btn" style={{ marginTop: 8 }} onClick={() => removeAsset(a.id)}>Remove</button>
+            {a.imageAnalysis && (
+              <div style={{ marginTop: 8, fontSize: '0.8rem', color: '#94a3b8' }}>
+                <div><strong>Category:</strong> {a.imageAnalysis.category?.primary || '—'}
+                  {a.imageAnalysis.category?.isNews ? ' · news' : ''}
+                  {a.imageAnalysis.category?.hasFamousPeople ? ' · celebrity' : ''}
+                  {a.imageAnalysis.category?.isTrending ? ' · trending' : ''}
+                </div>
+                {a.imageAnalysis.content?.whatItSays && (
+                  <div style={{ marginTop: 4 }}><strong>Says:</strong> {a.imageAnalysis.content.whatItSays.slice(0, 120)}</div>
+                )}
+                {a.imageAnalysis.psychology?.engagementStyle && (
+                  <div style={{ marginTop: 4 }}><strong>Psychology:</strong> {a.imageAnalysis.psychology.engagementStyle}
+                    {(a.imageAnalysis.psychology.emotionalTriggers || []).length > 0 && ` · ${a.imageAnalysis.psychology.emotionalTriggers?.join(', ')}`}
+                  </div>
+                )}
+                {(a.imageAnalysis.labels || a.tags || []).length > 0 && (
+                  <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {(a.imageAnalysis.labels || a.tags || []).slice(0, 8).map((tag) => (
+                      <span key={tag} className="badge" style={{ fontSize: '0.7rem' }}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+                {a.formatTemplateId && <div style={{ marginTop: 6, color: '#10b981' }}>Format saved for Design Studio</div>}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+              {a.type === 'image' && a.url && (
+                <>
+                  <button type="button" className="btn" onClick={() => studyImage(a.id)} disabled={loading || studyingId === a.id}>
+                    {studyingId === a.id ? 'Studying…' : a.imageAnalysis ? 'Re-study' : 'Study format'}
+                  </button>
+                  {a.imageAnalysis && !a.formatTemplateId && (
+                    <button type="button" className="btn" onClick={() => saveFormatTemplate(a.id)} disabled={loading}>Save format</button>
+                  )}
+                  {a.formatTemplateId && (
+                    <Link href="/design-studio" className="btn primary">Recreate in Design →</Link>
+                  )}
+                </>
+              )}
+              <button type="button" className="btn" onClick={() => removeAsset(a.id)}>Remove</button>
+            </div>
           </div>
         ))}
         {!shown.length && <div className="card"><p className="settings-panel-desc">No assets yet — upload or import above.</p></div>}

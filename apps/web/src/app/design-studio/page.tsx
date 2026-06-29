@@ -19,7 +19,25 @@ type DesignTemplate = {
   builtin?: boolean;
 };
 
-type Asset = { id: string; name: string; type: string; url?: string; text?: string };
+type Asset = {
+  id: string;
+  name: string;
+  type: string;
+  url?: string;
+  text?: string;
+  formatTemplateId?: string;
+  imageAnalysis?: { category?: { primary?: string }; labels?: string[] };
+};
+
+type FormatTemplate = {
+  id: string;
+  label: string;
+  category: string;
+  labels?: string[];
+  sourceImageUrl?: string;
+  keywords?: string[];
+  analysis?: { psychology?: { engagementStyle?: string } };
+};
 
 export default function DesignStudioPage() {
   const [templates, setTemplates] = useState<DesignTemplate[]>([]);
@@ -28,22 +46,29 @@ export default function DesignStudioPage() {
   const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
+  const [formatTemplates, setFormatTemplates] = useState<FormatTemplate[]>([]);
+  const [selectedFormat, setSelectedFormat] = useState('');
+  const [formatKeyword, setFormatKeyword] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
-      const [tplRes, libRes] = await Promise.all([
+      const [tplRes, libRes, fmtRes] = await Promise.all([
         invoke<{ templates?: DesignTemplate[]; success?: boolean; error?: string }>('get-design-templates'),
         invoke<{ assets?: Asset[]; success?: boolean; error?: string }>('get-content-library'),
+        invoke<{ templates?: FormatTemplate[]; success?: boolean; error?: string }>('get-format-templates'),
       ]);
       if (tplRes && typeof tplRes === 'object' && 'success' in tplRes && tplRes.success === false) {
         throw new Error(tplRes.error || 'Failed to load templates');
       }
       const tpls = tplRes.templates || [];
+      const fmts = fmtRes.templates || [];
       setTemplates(tpls);
       setAssets(libRes.assets || []);
+      setFormatTemplates(fmts);
       setSelectedTpl((prev) => prev || tpls[0]?.id || '');
+      setSelectedFormat((prev) => prev || fmts[0]?.id || '');
     } catch (e) {
       setMsg((e as Error).message);
     }
@@ -88,14 +113,39 @@ export default function DesignStudioPage() {
     }
   }
 
+  async function recreateFromFormat() {
+    if (!selectedFormat || !formatKeyword.trim()) {
+      setMsg('Pick a saved format and enter a keyword or topic');
+      return;
+    }
+    setLoading(true);
+    setMsg('Recreating in studied format…');
+    try {
+      const res = await invoke<{ success?: boolean; post?: Record<string, unknown>; error?: string }>('recreate-from-format-template', {
+        templateId: selectedFormat,
+        keyword: formatKeyword.trim(),
+        generateNewImage: true,
+      });
+      if (!res.success || !res.post) throw new Error(res.error || 'Recreation failed');
+      setPreview(res.post);
+      setMsg('Recreated from saved format — ready for Create or Calendar');
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function generateFromAssets() {
     setLoading(true);
     setMsg('Generating from library…');
     try {
       const res = await invoke<{ success?: boolean; items?: Record<string, unknown>[]; error?: string }>('generate-from-library-assets', {
         assetIds: selectedAssets,
-        keywords: fields.headline || fields.body || fields.quote || 'brand',
+        keywords: fields.headline || fields.body || fields.quote || formatKeyword || 'brand',
         templateId: selectedTpl,
+        formatTemplateId: selectedFormat || undefined,
+        generateNewImage: true,
       });
       if (!res.success || !res.items?.[0]) throw new Error(res.error || 'Generation failed');
       setPreview(res.items[0]);
@@ -128,6 +178,63 @@ export default function DesignStudioPage() {
         <div className="card" style={{ marginBottom: '1rem' }}>
           <p className="settings-panel-desc">No templates loaded — refresh the page or check your connection.</p>
           <button type="button" className="btn" style={{ marginTop: 8 }} onClick={() => refresh()}>Retry</button>
+        </div>
+      )}
+
+      {!!formatTemplates.length && (
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <h3>Saved formats (from studied images)</h3>
+          <p className="settings-panel-desc" style={{ marginBottom: 12 }}>
+            Recreate original post formats for your brand by keyword or automation.
+          </p>
+          <div className="grid grid-2">
+            <div>
+              <select className="input" value={selectedFormat} onChange={(e) => setSelectedFormat(e.target.value)}>
+                {formatTemplates.map((f) => (
+                  <option key={f.id} value={f.id}>{f.label} ({f.category})</option>
+                ))}
+              </select>
+              {formatTemplates.find((f) => f.id === selectedFormat)?.sourceImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={formatTemplates.find((f) => f.id === selectedFormat)?.sourceImageUrl}
+                  alt=""
+                  style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 8, marginTop: 8 }}
+                />
+              )}
+            </div>
+            <div>
+              <label className="form-group">Keyword or topic</label>
+              <input
+                className="input"
+                value={formatKeyword}
+                onChange={(e) => setFormatKeyword(e.target.value)}
+                placeholder="e.g. summer sale, industry news, product launch"
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                <button type="button" className="btn primary" onClick={recreateFromFormat} disabled={loading}>
+                  Recreate for brand
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={generateFromAssets}
+                  disabled={loading}
+                >
+                  Automate with library
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!formatTemplates.length && (
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <p className="settings-panel-desc">
+            No studied formats yet — upload images in{' '}
+            <Link href="/content-library">Content Library</Link> and use &quot;Study format&quot; to save reusable layouts.
+          </p>
         </div>
       )}
 

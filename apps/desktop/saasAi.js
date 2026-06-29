@@ -71,7 +71,78 @@ function createAiEngine(store) {
     throw new Error('AI generation failed');
   }
 
-  return { generateAI };
+  async function generateAIVision(imageUrl, prompt) {
+    let brandContext = '';
+    try {
+      const activeCampaignId = store.getItem('activeCampaignId');
+      const campsData = store.getItem('campaigns');
+      if (campsData && activeCampaignId) {
+        const camps = JSON.parse(campsData);
+        const camp = camps.find((c) => c.id === activeCampaignId);
+        if (camp) {
+          brandContext = `BRAND: ${camp.brandName || ''} | Tone: ${camp.tone || 'professional'}\n`;
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    const finalPrompt = brandContext + prompt;
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const openrouterKey = keys.openrouter || process.env.OPENROUTER_API_KEY;
+    const geminiKey = keys.gemini || process.env.GEMINI_API_KEY;
+
+    if (openrouterKey) {
+      try {
+        const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+          model: 'openai/gpt-4o-mini',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: finalPrompt },
+              { type: 'image_url', image_url: { url: imageUrl } },
+            ],
+          }],
+        }, {
+          headers: {
+            Authorization: `Bearer ${openrouterKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://socialimperialism.app',
+            'X-Title': 'Social Imperialism SaaS',
+          },
+          timeout: 90000,
+        });
+        return res.data.choices[0].message.content;
+      } catch (e) {
+        console.error('OpenRouter vision error:', e.message);
+      }
+    }
+
+    if (!geminiKey) throw new Error('No AI API key configured for vision.');
+    const match = String(imageUrl).match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error('Vision requires a data URL image (upload to library first).');
+    const mime = match[1];
+    const data = match[2];
+    const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+        const res = await axios.post(url, {
+          contents: [{
+            parts: [
+              { text: finalPrompt },
+              { inline_data: { mime_type: mime, data } },
+            ],
+          }],
+        }, { timeout: 90000 });
+        const text = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text;
+      } catch (e) {
+        console.warn(`Gemini vision ${model}:`, e.message);
+      }
+    }
+    throw new Error('Vision analysis failed');
+  }
+
+  return { generateAI, generateAIVision };
 }
 
 module.exports = { createAiEngine };
