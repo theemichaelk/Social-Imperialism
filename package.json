@@ -31,7 +31,8 @@
     "test:onboarding": "node apps/api/_test-setup-wizard-features.js",
     "test:content-hub": "node apps/api/_test-content-hub-features.js",
     "test:content-library": "node apps/api/_test-content-library-features.js",
-    "test:design-studio": "node apps/api/_test-design-studio-features.js"
+    "test:design-studio": "node apps/api/_test-design-studio-features.js",
+    "test:brand": "node apps/api/_test-brand-features.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

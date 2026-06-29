@@ -567,6 +567,24 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   ipcMain.handle('get-notification-settings', () => saasNotifications.getNotificationSettings(store));
   ipcMain.handle('save-notification-settings', (event, s) => saasNotifications.saveNotificationSettings(store, s));
 
+  function syncBrandGuidelinesStore(activeId, campaign) {
+    const payload = {
+      brandName: campaign.brandName || '',
+      domain: campaign.domain || '',
+      voice: campaign.description || '',
+      description: campaign.description || '',
+      tone: campaign.tone || '',
+      audience: campaign.audience || '',
+      doList: campaign.brandGuidelines?.doList || '',
+      dontList: campaign.brandGuidelines?.dontList || '',
+      sampleMessages: campaign.sampleMessages || '',
+      disallowedTopics: campaign.disallowedTopics || '',
+      affiliateLinks: campaign.affiliateLinks || '',
+      updatedAt: new Date().toISOString(),
+    };
+    store.setItem(`brandGuidelines_${activeId}`, JSON.stringify(payload));
+  }
+
   ipcMain.handle('get-brand-guidelines', () => {
     const activeId = store.getItem('activeCampaignId') || 'default';
     const campaigns = JSON.parse(store.getItem('campaigns') || '[]');
@@ -577,6 +595,7 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
       domain: campaign.domain || '',
       description: campaign.description || '',
       tone: campaign.tone || '',
+      audience: campaign.audience || '',
       disallowedTopics: campaign.disallowedTopics || '',
       sampleMessages: campaign.sampleMessages || '',
       affiliateLinks: campaign.affiliateLinks || '',
@@ -595,12 +614,14 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
       domain: payload?.domain ?? campaigns[idx].domain,
       description: payload?.description ?? campaigns[idx].description,
       tone: payload?.tone ?? campaigns[idx].tone,
+      audience: payload?.audience ?? campaigns[idx].audience,
       brandGuidelines: { ...(campaigns[idx].brandGuidelines || {}), ...(payload?.brandGuidelines || {}) },
       disallowedTopics: payload?.disallowedTopics ?? campaigns[idx].disallowedTopics,
       sampleMessages: payload?.sampleMessages ?? campaigns[idx].sampleMessages,
       affiliateLinks: payload?.affiliateLinks ?? campaigns[idx].affiliateLinks,
     };
     store.setItem('campaigns', JSON.stringify(campaigns));
+    syncBrandGuidelinesStore(activeId, campaigns[idx]);
     return { success: true, campaign: campaigns[idx] };
   });
 
@@ -644,6 +665,7 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
         },
       };
       store.setItem('campaigns', JSON.stringify(campaigns));
+      syncBrandGuidelinesStore(activeId, campaigns[idx]);
 
       try {
         const { importWebsiteToLibrary } = require(path.join(DESKTOP_SERVICES, 'contentLibraryIpc'));

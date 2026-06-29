@@ -49,6 +49,10 @@ export const PAGE_CHANNELS = {
     'generate-from-library-assets', 'get-content-library', 'get-section-live',
     'get-brand-guidelines', 'grok-get-status', 'grok-imagine', 'grok-ask-text',
   ],
+  brand: [
+    'get-brand-guidelines', 'save-brand-guidelines', 'seed-brand-from-website', 'get-active-campaign',
+    'get-section-live', 'grok-get-status', 'grok-ask-text', 'grok-imagine',
+  ],
   onboarding: [
     'get-setup-status', 'check-api-status', 'get-settings', 'save-settings', 'set-active-campaign',
     'get-active-campaign', 'save-brand-guidelines', 'get-global-keys', 'save-global-keys', 'get-key-sources',

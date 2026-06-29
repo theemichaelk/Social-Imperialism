@@ -9,6 +9,22 @@ function readJson(store, key, fallback) {
   }
 }
 
+function getActiveCampaignBrand(store, activeId) {
+  const campaigns = readJson(store, 'campaigns', []);
+  const campaign = campaigns.find((c) => c.id === activeId) || {};
+  const legacy = readJson(store, `brandGuidelines_${activeId}`, {});
+  const bg = campaign.brandGuidelines || {};
+  const name = campaign.brandName || legacy.brandName || '';
+  const domain = campaign.domain || legacy.domain || '';
+  const voice = campaign.description || legacy.voice || legacy.description || '';
+  const ruleLines = [
+    ...String(bg.doList || legacy.doList || '').split('\n').map((s) => s.trim()).filter(Boolean),
+    ...String(bg.dontList || legacy.dontList || '').split('\n').map((s) => s.trim()).filter(Boolean),
+    ...String(campaign.disallowedTopics || legacy.disallowedTopics || '').split('\n').map((s) => s.trim()).filter(Boolean),
+  ];
+  return { name, domain, voice, rulesCount: ruleLines.length, brandReady: !!(name || domain) };
+}
+
 function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
   const keywords = readJson(store, 'keywords', []).filter((k) => k.campaignId === activeId);
   const linkedAccounts = readJson(store, `linkedAccounts_${activeId}`, []);
@@ -18,7 +34,7 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
   const engagementQueue = readJson(store, 'engagementQueue', []);
   const monitors = readJson(store, 'watchedMonitors', []);
   const library = readJson(store, `contentLibrary_${activeId}`, []);
-  const brand = readJson(store, `brandGuidelines_${activeId}`, {});
+  const brandSnapshot = getActiveCampaignBrand(store, activeId);
   const engagementLists = readJson(store, 'engagementLists', []);
   const autoRules = readJson(store, 'autoRulesEngine', {});
   const apiMetrics = buildApiMetrics ? buildApiMetrics(keys) : {};
@@ -62,7 +78,7 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
           acc[t] = (acc[t] || 0) + 1;
           return acc;
         }, {}),
-        stats: { ...base.stats, brandReady: !!(brand.brandName || brand.domain) },
+        stats: { ...base.stats, brandReady: brandSnapshot.brandReady },
       };
     case 'design-studio':
       return {
@@ -73,11 +89,12 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
       return {
         ...base,
         brand: {
-          name: brand.brandName || '',
-          domain: brand.domain || '',
-          voice: brand.voice || '',
-          rulesCount: (brand.dontRules || []).length + (brand.doRules || []).length,
+          name: brandSnapshot.name,
+          domain: brandSnapshot.domain,
+          voice: brandSnapshot.voice,
+          rulesCount: brandSnapshot.rulesCount,
         },
+        stats: { ...base.stats, brandReady: brandSnapshot.brandReady },
       };
     case 'calendar':
     case 'scheduler': {

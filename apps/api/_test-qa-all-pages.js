@@ -127,9 +127,12 @@ const PAGES = [
     route: '/brand',
     name: 'Brand',
     features: [
-      { name: 'Brand guidelines', channel: 'get-brand-guidelines', validate: (d) => typeof d === 'object' },
-      { name: 'Save brand', channel: 'save-brand-guidelines', args: [{ brandName: 'QA Brand', tone: 'Professional', rules: 'Be helpful' }], validate: (d) => d?.success !== false },
+      { name: 'Brand guidelines', channel: 'get-brand-guidelines', validate: (d) => typeof d === 'object' && d.brandName !== undefined },
+      { name: 'Save brand', channel: 'save-brand-guidelines', args: [{ brandName: 'QA Brand', tone: 'Professional', description: 'QA voice', brandGuidelines: { doList: 'Be helpful' } }], validate: (d) => d?.success !== false },
+      { name: 'Active campaign', channel: 'get-active-campaign', validate: (d) => d && (d.id || d.brandName) },
+      { name: 'Seed from website', channel: 'seed-brand-from-website', args: [{ url: 'https://techcrunch.com' }], validate: (d) => d?.success === true || !!d?.error },
       { name: 'Section live', channel: 'get-section-live', args: ['brand'], validate: (d) => d?.brand || d?.stats },
+      { name: 'Grok status', channel: 'grok-get-status', validate: (d) => typeof d === 'object' },
     ],
   },
   {
