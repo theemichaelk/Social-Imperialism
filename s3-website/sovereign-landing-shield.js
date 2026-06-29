@@ -1,10 +1,10 @@
 /**
- * Sovereign Threat Capture — static landing edge (socialimperialism.com)
+ * THEE_MICHAEL Security Control — static landing edge (socialimperialism.com)
  * Client-side probe scan, local containment, no secrets exposed.
  */
 (function sovereignLandingShield() {
   var DOMAIN = 'socialimperialism.com';
-  var BANNER = '🛡️ SOVEREIGN THREAT CAPTURED // SOCIALIMPERIALISM.COM PROTECTION ENFORCED';
+  var BANNER = '🛡️ THEE_MICHAEL SECURITY REVIEW REQUIRED // SOCIALIMPERIALISM.COM PROTECTION ENFORCED';
   var PATTERNS = [
     /<script/i, /javascript:/i, /onerror\s*=/i, /union\s+select/i, /\.\.\//,
   ];

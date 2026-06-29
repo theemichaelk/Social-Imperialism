@@ -2,7 +2,7 @@
 
 Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the brain's feature index.
 
-**Audit accuracy rule (mandatory):** Before any feature update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md). Run `node apps/api/_audit-accuracy-check.js` and production QA. Feature indexes live in `brain/features/*.md`.
+**Audit accuracy rule (mandatory):** Before any feature update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md). Run `npm run audit:accuracy`, `npm run test:sovereign-scan`, and production QA (**152/152** page features, **138/138** section features — re-count after test changes). Feature indexes live in `brain/features/*.md`.
 
 ## Grok Engine (browser — no API)
 
@@ -73,24 +73,28 @@ Public marketing pages (`/`, `/founder`, footer, nav) self-update from `apps/web
 | `ContentHubTabNav` focus mode | Content Hub (dedicated tab catalog) |
 | Sidebar hints | All nav items in `nav.ts` |
 
-## Sovereign Threat Capture Layer (June 2026)
+## THEE_MICHAEL Security Control (June 2026)
 
 **Status:** Live  
-**Brain:** [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) · **Feature index:** [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md)
+**User-facing:** THEE_MICHAEL Security Control  
+**Brain:** [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) · **Feature indexes:** [features/THEE_MICHAEL_SECURITY.md](./features/THEE_MICHAEL_SECURITY.md), [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md)
 
 | Capability | API / Core | Web |
 |------------|------------|-----|
 | Edge scan + rate limit | `sovereignThreatShield` on `/api/invoke/*` | Client `api.ts` reports `SOVEREIGN_*` |
 | Capture + AES-256-GCM seal | `capture-sovereign-threat` | `SovereignThreatPanel` |
+| **Accept / Deny / Undo** | `thee-michael-decide-threat`, `thee-michael-undo-action` | Pending queue + full history |
+| Action history | `get-thee-michael-action-history` | History filters in panel |
 | Kinetic 2FA | `request-kinetic-2fa-challenge`, `verify-kinetic-2fa` | Settings → Guardian & API |
 | Decrypt / release | `decrypt-sovereign-threat-telemetry`, `approve-sovereign-threat-release` | Admin-only; Guardian gate |
+| False-positive cleanup | `admin-clear-sovereign-false-positives` | Panel button |
 | Partner status | `GET /api/v1/sovereign/status` | Integrations hub |
-| Kinetic 2FA delivery | Email (SES/Acumbamail) + Guardian webhook | Settings → Sovereign panel |
-| Desktop native IPC | `apps/desktop/index.js` | Electron app |
+| Kinetic 2FA delivery | Email (SES/Acumbamail) + Guardian webhook | Security Control panel |
+| Desktop native IPC | `apps/desktop/index.js` (**11** handlers) | Electron app |
 | S3 landing shield | `s3-website/sovereign-landing-shield.js` | Static site |
 | Prompt Vault seed | `pv_seed_sovereign_threat` | `feature: sovereign` |
 
-Persistent requirement for all past, current, and future modules — see security event template in Brain doc.
+Persistent requirement for all past, current, and future modules — every action pending until THEE_MICHAEL Accept or Deny.
 
 ## Settings & integrations (existing)
 

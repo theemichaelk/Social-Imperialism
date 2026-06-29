@@ -41,9 +41,9 @@ Pickers filter by feature + `general` fallbacks.
 - Seeded with 4 starter templates on first access
 - Does not overwrite keywords, post history, or automation rules on delete
 
-## Sovereign Threat Capture (security)
+## THEE_MICHAEL Security Control (security)
 
-All Prompt Vault workflows on socialimperialism.com must comply with [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md). Seeded template: `pv_seed_sovereign_threat` (`feature: sovereign`). Never store credentials, exploit details, or raw PII in vault templates.
+All Prompt Vault workflows on socialimperialism.com must comply with [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md). Seeded template: `pv_seed_sovereign_threat` (`feature: sovereign`) — user-facing title **THEE_MICHAEL Security Control — incident response**. Never store credentials, exploit details, or raw PII in vault templates.
 
 ## Brain integration
 

@@ -126,12 +126,12 @@ Tell the user: **"I prepared this for review and routed it to THEE_MICHAEL. Wait
 | Sovereign layer | `packages/core/src/sovereignThreatCapture.js`, `apps/api/src/middleware/sovereignThreatShield.js` |
 | Sovereign UI | `apps/web/src/components/SovereignThreatPanel.tsx` |
 
-### Sovereign Threat Capture (required)
+### THEE_MICHAEL Security Control (required)
 
-All Guardian alerts and production releases must respect the Sovereign Threat Capture Layer. Live paths remain frozen until:
+All Guardian alerts and production releases must respect the THEE_MICHAEL Security Control layer (internal: Sovereign Threat Capture). Live paths remain frozen until:
 
 1. Threat telemetry is sealed (AES-256-GCM).
 2. Administrator completes **kinetic 2FA** verification.
 3. **THEE_MICHAEL** approves release via Guardian ticket.
 
-Security event banner: `🛡️ SOVEREIGN THREAT CAPTURED // SOCIALIMPERIALISM.COM PROTECTION ENFORCED` — full template in [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md).
+Security event banner: `🛡️ THEE_MICHAEL SECURITY REVIEW REQUIRED // SOCIALIMPERIALISM.COM PROTECTION ENFORCED` — full template in [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md).

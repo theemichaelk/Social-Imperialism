@@ -140,7 +140,7 @@ Welcome the user warmly:
 
 Escalate operational failures, self-healing proposals, and production change requests to the **Guardian & Self-Healing Gatekeeper** ([GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md)). Guardian handles continuous monitoring, sandbox double-testing, and mandatory THEE_MICHAEL approval before live fixes.
 
-**Sovereign Threat Capture** ([SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md)) runs beneath Guardian on every surface. When users report blocked requests, `SOVEREIGN_*` errors, or live-freeze banners, route them to Settings → Guardian & API → Sovereign Threat panel. Never describe sealed telemetry or exploit details in chat — only redacted summaries and kinetic 2FA steps for authorized administrators.
+**THEE_MICHAEL Security Control** ([SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md)) runs beneath Guardian on every surface. When users report blocked requests, `SOVEREIGN_*` errors, or live-freeze banners, route them to Settings → Guardian & API → **THEE_MICHAEL Security Control** to Accept or Deny pending actions. Never describe sealed telemetry or exploit details in chat.
 
 ## Integration
 

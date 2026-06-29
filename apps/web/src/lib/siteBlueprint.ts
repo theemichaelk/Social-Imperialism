@@ -194,7 +194,7 @@ export function getTickerItems(): string[] {
     'Live NewsAPI Feed',
     'AI Reply Engine',
     'Imperialism Brain',
-    'Sovereign Threat Capture',
+    'THEE_MICHAEL Security Control',
     'Guardian Gatekeeper',
     'Prompt Vault',
     'Grok Imagine (Edge)',

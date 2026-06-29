@@ -1,10 +1,14 @@
-# Sovereign Threat Capture Layer — socialimperialism.com
+# THEE_MICHAEL Security Control — socialimperialism.com
+
+> **User-facing name:** THEE_MICHAEL Security Control  
+> **Internal layer id:** `sovereign-threat-capture` (stable IPC/file names)
 
 Persistent security requirement for **all** Social Imperialism surfaces: public website, web application, content systems, dashboards, admin tools, analytics, automation hooks, integrations, Brain memory, and future modules.
 
 **Layer id:** `sovereign-threat-capture`  
 **Admin identity:** `THEE_MICHAEL`  
-**Runs with:** [GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md) (Guardian handles ops health; Sovereign handles threat capture, encryption, containment)
+**Feature index:** [features/THEE_MICHAEL_SECURITY.md](./features/THEE_MICHAEL_SECURITY.md)  
+**Runs with:** [GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md) (Guardian handles ops health; THEE_MICHAEL Security Control handles threat capture, encryption, containment, Accept/Deny)
 
 **Audit accuracy rule (mandatory):** Before any past/current/future update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md): verify claims against code, run `node apps/api/_audit-accuracy-check.js`, run production QA, update Brain docs if counts change.
 
@@ -15,7 +19,7 @@ Persistent security requirement for **all** Social Imperialism surfaces: public 
 Every captured threat is stored using this canonical template (telemetry sealed; public view is redacted):
 
 ```
-🛡️ SOVEREIGN THREAT CAPTURED // SOCIALIMPERIALISM.COM PROTECTION ENFORCED
+🛡️ THEE_MICHAEL SECURITY REVIEW REQUIRED // SOCIALIMPERIALISM.COM PROTECTION ENFORCED
 
 Supreme governing authority: authorized SocialImperialism.com ownership and security administration.
 Physical system steward: registered site owner or designated platform operator.
@@ -62,23 +66,27 @@ System horizon: threat neutralized, contained, and resolved inside the sandbox. 
 | `/api/auth/login` failures | sovereignAuthFailureCapture (brute-force logging) |
 | Dashboards, sidebars, menus | Client `api.ts` + `SovereignThreatBanner` |
 | Content publish / schedule | Channel freeze when contained |
-| Admin tools / Settings | SovereignThreatPanel + kinetic 2FA |
+| Admin tools / Settings | THEE_MICHAEL Security Control (`SovereignThreatPanel`) — Accept/Deny/Undo + optional kinetic 2FA |
 | Partner API / webhooks | Guardian + sovereign status |
 | Brain `*.md` | This requirement referenced in all agent docs |
 | Future modules | Must register threat capture in PR checklist |
 
 ---
 
-## IPC / API Channels
+## IPC / API Channels (**11**)
 
 | Channel | Purpose |
 |---------|---------|
-| `get-sovereign-threat-status` | Redacted events + containment state |
+| `get-sovereign-threat-status` | Redacted events, containment, action history |
+| `get-thee-michael-action-history` | Full Accept/Deny/Undo history |
+| `thee-michael-decide-threat` | THEE_MICHAEL Accept (`approve`) or Deny (`deny`) |
+| `thee-michael-undo-action` | Revert a past decision |
 | `capture-sovereign-threat` | Log and contain threat |
 | `request-kinetic-2fa-challenge` | Admin physical verification step |
-| `verify-kinetic-2fa` | Unlock 15-minute decrypt/release session |
+| `verify-kinetic-2fa` | Unlock 15-minute decrypt session |
 | `decrypt-sovereign-threat-telemetry` | Authorized admin decrypt |
-| `approve-sovereign-threat-release` | Unfreeze + Guardian approval route |
+| `approve-sovereign-threat-release` | Legacy release + kinetic + Guardian |
+| `admin-clear-sovereign-false-positives` | False-positive cleanup |
 | `run-sovereign-threat-scan` | Layer health scan |
 
 ---
@@ -92,7 +100,7 @@ System horizon: threat neutralized, contained, and resolved inside the sandbox. 
 | Web panel | `apps/web/src/components/SovereignThreatPanel.tsx` |
 | Web lib | `apps/web/src/lib/sovereignThreatCapture.ts` |
 | Settings UI | `/settings?tab=guardian-api` |
-| Features index | [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md) |
+| Features index | [features/THEE_MICHAEL_SECURITY.md](./features/THEE_MICHAEL_SECURITY.md), [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md) |
 
 ---
 
@@ -100,4 +108,4 @@ System horizon: threat neutralized, contained, and resolved inside the sandbox. 
 
 All future work — content publishing, moderation, testing, incident recovery, performance optimization, integration, deployment — **must** reference this layer in design and PR notes.
 
-When in doubt: capture → contain → encrypt → sandbox → kinetic 2FA → Guardian approval → release.
+When in doubt: capture → pending → **THEE_MICHAEL Accept or Deny** → (optional kinetic 2FA for decrypt) → Guardian approval → release. Undo available in action history.

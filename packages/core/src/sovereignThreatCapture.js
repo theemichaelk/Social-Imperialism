@@ -766,9 +766,9 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
     const cfg = handlers['get-guardian-config'] ? await handlers['get-guardian-config'](null).catch(() => ({})) : {};
     if (cfg.approvalGateEnabled !== false) {
       const ticket = await handlers['create-guardian-approval']?.(null, {
-        module: 'Sovereign Threat Capture',
+        module: 'THEE_MICHAEL Security Control',
         component: 'production_release',
-        issueSummary: payload.summary || 'Sovereign threat release approval',
+        issueSummary: payload.summary || 'THEE_MICHAEL security release approval',
         proposedFix: 'Decrypt telemetry review complete — promote contained patch to production',
         riskLevel: payload.severity === 'critical' ? 'high' : 'medium',
         sandboxTestA: payload.sandboxTestA || { pass: true, notes: 'Threat contained in sandbox' },

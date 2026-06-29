@@ -10,7 +10,8 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 | [OMNI_BRAIN_PLANNER.md](./OMNI_BRAIN_PLANNER.md) | **Imperialism Brain (Planner)** — cross-module blueprints, universal prompt bar |
 | [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) | **Imperialism Brain (Live Support)** — in-product support, troubleshooting, THEE_MICHAEL approvals |
 | [GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md) | **Guardian & Self-Healing Gatekeeper** — monitoring, sandbox tests, webhooks, admin gate |
-| [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) | **Sovereign Threat Capture Layer** — capture, contain, encrypt, kinetic 2FA, production freeze |
+| [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md) | **THEE_MICHAEL Security Control** — capture, Accept/Deny/Undo, encrypt, kinetic 2FA |
+| [features/THEE_MICHAEL_SECURITY.md](./features/THEE_MICHAEL_SECURITY.md) | Feature index — THEE_MICHAEL Security Control |
 | [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md) | **Audit Accuracy Rule** — mandatory verify-before-merge for all features |
 | [features/SOVEREIGN_THREAT_CAPTURE.md](./features/SOVEREIGN_THREAT_CAPTURE.md) | Feature index — security requirement for all modules |
 | [features/IMPERIALISM_BRAIN.md](./features/IMPERIALISM_BRAIN.md) | Feature index — planner + live support |
@@ -31,7 +32,7 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 
 0. **Brain-check first** — read [GROWTH_ENGINE.md](./GROWTH_ENGINE.md) before any content, reply, publish, scan, or automation action.
 0a. **Audit accuracy** — every update must pass [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md); run `node apps/api/_audit-accuracy-check.js` and production QA before merge.
-0b. **Sovereign Threat Capture** — all modules must comply with [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md); threats captured, contained, encrypted; live release requires THEE_MICHAEL kinetic 2FA.
+0b. **THEE_MICHAEL Security Control** — all modules must comply with [SOVEREIGN_THREAT_CAPTURE.md](./SOVEREIGN_THREAT_CAPTURE.md); threats pending until THEE_MICHAEL Accept/Deny; run `npm run audit:accuracy` before claiming done.
 1. **Never delete existing features** when adding new ones — check PRD first.
 2. **Desktop is source of truth** for Grok browser automation (native Edge/Chrome/Firefox).
 3. **Web/SaaS** invokes the same IPC channels via the desktop bridge or API worker.

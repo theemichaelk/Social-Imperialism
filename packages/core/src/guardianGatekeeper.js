@@ -298,7 +298,7 @@ function registerGuardianGatekeeperHandlers({ ipcMain, store, handlers = {} }) {
       if (!gate.ok) {
         return {
           success: false,
-          error: `${ADMIN_IDENTITY} kinetic verification required — live paths frozen by Sovereign Threat Capture`,
+          error: `${ADMIN_IDENTITY} kinetic verification required — live paths frozen by THEE_MICHAEL Security Control`,
           code: 'SOVEREIGN_LIVE_FROZEN',
         };
       }

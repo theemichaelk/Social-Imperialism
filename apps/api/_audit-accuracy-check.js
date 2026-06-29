@@ -111,10 +111,19 @@ if (!read(desktopIndex).includes('registerSovereignThreatHandlers')) {
 
 const landingShield = path.join(ROOT, 's3-website/sovereign-landing-shield.js');
 if (!exists(landingShield)) fail('Missing s3-website/sovereign-landing-shield.js');
+if (read(landingShield).includes('SOVEREIGN THREAT CAPTURED //')) {
+  fail('s3-website/sovereign-landing-shield.js still uses outdated Sovereign banner — must use THEE_MICHAEL SECURITY REVIEW');
+}
+if (!read(landingShield).includes('THEE_MICHAEL SECURITY REVIEW')) {
+  fail('s3-website/sovereign-landing-shield.js missing THEE_MICHAEL SECURITY REVIEW banner');
+}
 
 const indexHtml = path.join(ROOT, 's3-website/index.html');
 if (!read(indexHtml).includes('sovereign-landing-shield.js')) {
   fail('s3-website/index.html missing sovereign-landing-shield.js script');
+}
+if (read(indexHtml).includes('title="Sovereign Threat Capture Layer"')) {
+  fail('s3-website/index.html still uses Sovereign user-facing badge title — must be THEE_MICHAEL Security Control');
 }
 if (read(indexHtml).includes('18</div><div class="lbl">App Modules')) {
   fail('s3-website/index.html still claims 18 App Modules — should be 24');
@@ -130,6 +139,7 @@ if (!exists(auditRule)) fail('Missing brain/features/AUDIT_ACCURACY_RULE.md');
 
 const featureIndexes = [
   'SOVEREIGN_THREAT_CAPTURE.md',
+  'THEE_MICHAEL_SECURITY.md',
   'IMPERIALISM_BRAIN.md',
   'GUARDIAN_GATEKEEPER.md',
   'PAGE_FOCUS_UX.md',
@@ -198,6 +208,60 @@ if (!read(homeFooter).includes('FOOTER_LINKS')) {
   fail('HomeFooter.tsx must use FOOTER_LINKS from siteBlueprint');
 }
 
+const sovereignCoreTxt = read(sovereignCore);
+const requiredSecurityHandlers = [
+  'thee-michael-decide-threat',
+  'thee-michael-undo-action',
+  'get-thee-michael-action-history',
+  'admin-clear-sovereign-false-positives',
+  'theeMichaelDecideThreat',
+];
+for (const h of requiredSecurityHandlers) {
+  if (!sovereignCoreTxt.includes(h)) fail(`sovereignThreatCapture.js missing ${h}`);
+}
+const ipcHandlerCount = (sovereignCoreTxt.match(/ipcMain\.handle\('/g) || []).length;
+if (ipcHandlerCount !== 11) {
+  fail(`sovereignThreatCapture.js IPC handlers: expected 11, got ${ipcHandlerCount}`);
+}
+
+const sovereignPanel = path.join(ROOT, 'apps/web/src/components/SovereignThreatPanel.tsx');
+if (!read(sovereignPanel).includes('THEE_MICHAEL_BANNER')) {
+  fail('SovereignThreatPanel.tsx must use THEE_MICHAEL_BANNER (user-facing brand)');
+}
+if (!read(sovereignPanel).includes('thee-michael-decide-threat')) {
+  fail('SovereignThreatPanel.tsx must wire Accept/Deny via thee-michael-decide-threat');
+}
+
+const sovereignLib = path.join(ROOT, 'apps/web/src/lib/sovereignThreatCapture.ts');
+if (!read(sovereignLib).includes('THEE_MICHAEL Security Control')) {
+  fail('sovereignThreatCapture.ts must document THEE_MICHAEL Security Control');
+}
+
+const rootSovereignBrain = path.join(ROOT, 'brain/SOVEREIGN_THREAT_CAPTURE.md');
+if (read(rootSovereignBrain).includes('SOVEREIGN THREAT CAPTURED //') && !read(rootSovereignBrain).includes('THEE_MICHAEL SECURITY REVIEW')) {
+  fail('brain/SOVEREIGN_THREAT_CAPTURE.md still has outdated Sovereign-only banner — update to THEE_MICHAEL');
+}
+
+const packageJson = path.join(ROOT, 'package.json');
+if (!read(packageJson).includes('audit:accuracy') || !read(packageJson).includes('test:sovereign-scan')) {
+  fail('package.json must include audit:accuracy and test:sovereign-scan scripts');
+}
+
+const guardianCore = path.join(ROOT, 'packages/core/src/guardianGatekeeper.js');
+if (read(guardianCore).includes('frozen by Sovereign Threat Capture')) {
+  fail('guardianGatekeeper.js still has user-facing Sovereign error — must say THEE_MICHAEL Security Control');
+}
+
+const promptVaultCore = path.join(ROOT, 'packages/core/src/promptVault.js');
+if (read(promptVaultCore).includes("title: 'Sovereign Threat Capture")) {
+  fail('promptVault.js seed still uses Sovereign user-facing title — must be THEE_MICHAEL Security Control');
+}
+
+const qaSections = path.join(__dirname, '_test-qa-all-sections.js');
+if (!read(qaSections).includes('get-thee-michael-action-history')) {
+  fail('_test-qa-all-sections.js missing THEE_MICHAEL action history QA test');
+}
+
 // --- Report ---
 console.log('══════════════════════════════════════════════════════════');
 console.log('AUDIT ACCURACY CHECK — Social Imperialism');
@@ -209,6 +273,8 @@ console.log(`QA page routes:       ${qaPages} (expect 24)`);
 console.log(`ImperialismBrain bar: ${exists(imperialBar) ? 'OK' : 'MISSING'}`);
 console.log(`Sovereign landing:    ${exists(landingShield) ? 'OK' : 'MISSING'}`);
 console.log(`Audit rule doc:       ${exists(auditRule) ? 'OK' : 'MISSING'}`);
+console.log(`Security IPC handlers: ${ipcHandlerCount} (expect 11)`);
+console.log(`THEE_MICHAEL panel:   ${read(sovereignPanel).includes('THEE_MICHAEL_BANNER') ? 'OK' : 'MISSING'}`);
 console.log('──────────────────────────────────────────────────────────');
 
 if (FAILURES.length) {
