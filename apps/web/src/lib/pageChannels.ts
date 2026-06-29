@@ -53,6 +53,17 @@ export const PAGE_CHANNELS = {
     'get-brand-guidelines', 'save-brand-guidelines', 'seed-brand-from-website', 'get-active-campaign',
     'get-section-live', 'grok-get-status', 'grok-ask-text', 'grok-imagine',
   ],
+  calendar: [
+    'get-scheduled-posts', 'get-calendar-status', 'get-best-post-times', 'schedule-post',
+    'publish-scheduled-post-now', 'delete-scheduled-post', 'process-due-scheduled-posts',
+    'get-upcoming-by-platform', 'get-calendar-settings', 'get-background-run-settings',
+    'get-linked-accounts', 'get-section-live',
+  ],
+  keywords: [
+    'get-keywords', 'save-keywords', 'delete-keyword', 'generate-keywords', 'research-keyword',
+    'generate-global-custom-prompt', 'get-keyword-api-status', 'get-active-campaign', 'get-settings',
+    'save-settings', 'get-section-live',
+  ],
   onboarding: [
     'get-setup-status', 'check-api-status', 'get-settings', 'save-settings', 'set-active-campaign',
     'get-active-campaign', 'save-brand-guidelines', 'get-global-keys', 'save-global-keys', 'get-key-sources',

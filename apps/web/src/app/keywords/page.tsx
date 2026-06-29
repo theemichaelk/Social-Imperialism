@@ -30,7 +30,16 @@ export default function KeywordsPage() {
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
-    setKeywords(await invoke<Keyword[]>('get-keywords') || []);
+    try {
+      const [kws, camp] = await Promise.all([
+        invoke<Keyword[]>('get-keywords'),
+        invoke<{ globalCustomPrompt?: string }>('get-active-campaign').catch(() => ({})),
+      ]);
+      setKeywords(Array.isArray(kws) ? kws : []);
+      if (camp?.globalCustomPrompt) setGlobalPrompt(camp.globalCustomPrompt);
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
   }, []);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
@@ -51,8 +60,9 @@ export default function KeywordsPage() {
   async function addKeyword() {
     if (!newTerm.trim()) return;
     setLoading(true);
+    setMsg('Adding keyword…');
     try {
-      await invoke('save-keywords', {
+      const res = await invoke<{ success?: boolean; error?: string }>('save-keywords', {
         merge: true,
         keywords: [{
           term: newTerm.trim(),
@@ -61,6 +71,9 @@ export default function KeywordsPage() {
           intent: 'mentions',
         }],
       });
+      if (res && typeof res === 'object' && 'success' in res && res.success === false) {
+        throw new Error(res.error || 'Save failed');
+      }
       setNewTerm('');
       setMsg('Keyword added');
       await refresh();
@@ -73,10 +86,34 @@ export default function KeywordsPage() {
 
   async function saveAll() {
     setLoading(true);
+    setMsg('Saving keywords…');
     try {
       await invoke('save-keywords', { keywords });
       setMsg(`Saved ${keywords.length} keywords`);
       await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveGlobalPrompt() {
+    if (!globalPrompt.trim()) {
+      setMsg('Enter a global custom prompt first');
+      return;
+    }
+    setLoading(true);
+    setMsg('Saving global prompt…');
+    try {
+      const camp = await invoke<{ id?: string }>('get-active-campaign');
+      if (!camp?.id) throw new Error('No active campaign — complete Setup Wizard first');
+      const camps = await invoke<Array<Record<string, string>>>('get-settings') || [];
+      const idx = camps.findIndex((c) => c.id === camp.id);
+      if (idx < 0) throw new Error('Campaign not found');
+      camps[idx] = { ...camps[idx], globalCustomPrompt: globalPrompt.trim() };
+      await invoke('save-settings', camps);
+      setMsg('Global custom prompt saved to campaign');
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -89,16 +126,16 @@ export default function KeywordsPage() {
     setMsg('AI researching keywords…');
     try {
       const camp = await invoke<{ brandName?: string; domain?: string; description?: string }>('get-active-campaign');
-      const terms = await invoke<string[]>('generate-keywords', camp || {});
-      await invoke('save-keywords', {
-        merge: true,
-        keywords: terms.map((t) => ({
-          term: t,
-          platforms: defaultPlatforms,
-          intentTags: ['brand'],
-          intent: 'mentions',
-        })),
-      });
+      const terms = await invoke<Array<string | { term?: string }>>('generate-keywords', camp || {});
+      if (!Array.isArray(terms) || !terms.length) throw new Error('No keywords generated');
+      const entries = terms.map((t) => ({
+        term: typeof t === 'string' ? t : (t.term || ''),
+        platforms: defaultPlatforms,
+        intentTags: ['brand'],
+        intent: 'mentions',
+      })).filter((k) => k.term);
+      if (!entries.length) throw new Error('No valid keyword terms returned');
+      await invoke('save-keywords', { merge: true, keywords: entries });
       setMsg(`${terms.length} AI keywords added`);
       await refresh();
     } catch (e) {
@@ -110,10 +147,16 @@ export default function KeywordsPage() {
 
   async function generateGlobalPrompt() {
     setLoading(true);
+    setMsg('Generating global prompt…');
     try {
-      const res = await invoke<{ prompt?: string; customPrompt?: string }>('generate-global-custom-prompt');
-      setGlobalPrompt(res.prompt || res.customPrompt || JSON.stringify(res));
-      setMsg('Global custom prompt generated');
+      const res = await invoke<{ prompt?: string; customPrompt?: string; success?: boolean; error?: string }>('generate-global-custom-prompt');
+      if (res && typeof res === 'object' && 'success' in res && res.success === false) {
+        throw new Error(res.error || 'Generation failed');
+      }
+      const text = res.prompt || res.customPrompt || '';
+      if (!text) throw new Error('No prompt returned');
+      setGlobalPrompt(text);
+      setMsg('Global custom prompt generated — click Save Global Prompt to persist');
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -122,7 +165,27 @@ export default function KeywordsPage() {
   }
 
   async function researchTerm(term: string) {
-    setResearch(await invoke('research-keyword', term));
+    setLoading(true);
+    setMsg(`Researching "${term}"…`);
+    try {
+      setResearch(await invoke('research-keyword', term));
+      setMsg(`Research complete for "${term}"`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteKeyword(id: string) {
+    setMsg('Deleting keyword…');
+    try {
+      await invoke('delete-keyword', id);
+      setMsg('Keyword removed');
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
   }
 
   function updateKeyword(id: string, patch: Partial<Keyword>) {
@@ -142,12 +205,17 @@ export default function KeywordsPage() {
     color: '#38bdf8',
   })).filter((b) => b.value > 0);
 
+  const msgIsError = /failed|error|first|enter|no /i.test(msg);
+
   return (
     <div className="keywords-page">
       <PageShell
-        title="Keywords & Platforms"
+        title="Keywords"
         actions={
           <>
+            <Link href="/browse-posts" className="btn primary">Browse Posts →</Link>
+            <Link href="/rules" className="btn">Auto-Rules</Link>
+            <Link href="/seo-tools" className="btn">SEO Tools</Link>
             <Link href="/prompt-vault" className="btn">Prompt Vault</Link>
             <LivePulse label="TRACKING" />
           </>
@@ -156,7 +224,11 @@ export default function KeywordsPage() {
 
       <SectionLivePanel section="keywords" showAccounts={false} />
 
-      {msg && <div className="card ac-msg-card"><p style={{ margin: 0 }}>{msg}</p></div>}
+      {msg && (
+        <div className="card" style={{ marginBottom: 12, borderColor: msgIsError ? '#f59e0b' : '#10b981' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
+        </div>
+      )}
 
       <div className="dash-hero" style={{ marginBottom: '1.25rem' }}>
         <SparkRow items={[
@@ -178,13 +250,16 @@ export default function KeywordsPage() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            <button className="btn primary" onClick={addKeyword} disabled={loading}>Add Keyword</button>
-            <button className="btn" onClick={suggest} disabled={loading}>AI Suggest</button>
-            <button className="btn" onClick={generateGlobalPrompt} disabled={loading}>Global Custom Prompt</button>
+            <button type="button" className="btn primary" onClick={addKeyword} disabled={loading}>Add Keyword</button>
+            <button type="button" className="btn" onClick={suggest} disabled={loading}>AI Suggest</button>
+            <button type="button" className="btn" onClick={generateGlobalPrompt} disabled={loading}>Generate Global Prompt</button>
+            {globalPrompt.trim() && (
+              <button type="button" className="btn" onClick={saveGlobalPrompt} disabled={loading}>Save Global Prompt</button>
+            )}
           </div>
-          <PromptVaultPicker feature="keywords" compact onLoad={(text) => { setGlobalPrompt(text); setMsg('Vault prompt loaded into global custom prompt'); }} />
+          <PromptVaultPicker feature="keywords" compact onLoad={(text) => { setGlobalPrompt(text); setMsg('Vault prompt loaded — save to persist'); }} />
           {globalPrompt && (
-            <textarea className="input" rows={4} value={globalPrompt} onChange={(e) => setGlobalPrompt(e.target.value)} style={{ marginTop: 12 }} />
+            <textarea className="input" rows={4} value={globalPrompt} onChange={(e) => setGlobalPrompt(e.target.value)} placeholder="Global override for all AI replies…" style={{ marginTop: 12 }} />
           )}
         </DataPanel>
 
@@ -194,14 +269,15 @@ export default function KeywordsPage() {
       </div>
 
       <DataPanel title={`Active Keywords (${keywords.length})`} live>
+        {!keywords.length && <p className="settings-panel-desc">No keywords yet — add manually or use AI Suggest.</p>}
         {keywords.map((k) => (
           <div key={k.id} className="post-card" style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <strong>{k.term}</strong>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn" onClick={() => setEditing(editing?.id === k.id ? null : k)}>{editing?.id === k.id ? 'Collapse' : 'Edit'}</button>
-                <button className="btn" onClick={() => researchTerm(k.term)}>Research</button>
-                <button className="btn" onClick={async () => { await invoke('delete-keyword', k.id); refresh(); }}>Delete</button>
+                <button type="button" className="btn" onClick={() => setEditing(editing?.id === k.id ? null : k)}>{editing?.id === k.id ? 'Collapse' : 'Edit'}</button>
+                <button type="button" className="btn" onClick={() => researchTerm(k.term)} disabled={loading}>Research</button>
+                <button type="button" className="btn" onClick={() => deleteKeyword(k.id)} disabled={loading}>Delete</button>
               </div>
             </div>
             {(editing?.id === k.id) && (
@@ -230,7 +306,7 @@ export default function KeywordsPage() {
             </div>
           </div>
         ))}
-        <button className="btn primary" style={{ marginTop: 8 }} onClick={saveAll} disabled={loading || !keywords.length}>Save All Keywords</button>
+        <button type="button" className="btn primary" style={{ marginTop: 8 }} onClick={saveAll} disabled={loading || !keywords.length}>Save All Keywords</button>
         {research != null && <pre style={{ fontSize: '0.75rem', marginTop: 12, overflow: 'auto' }}>{JSON.stringify(research, null, 2)}</pre>}
       </DataPanel>
 

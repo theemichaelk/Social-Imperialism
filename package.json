@@ -32,7 +32,9 @@
     "test:content-hub": "node apps/api/_test-content-hub-features.js",
     "test:content-library": "node apps/api/_test-content-library-features.js",
     "test:design-studio": "node apps/api/_test-design-studio-features.js",
-    "test:brand": "node apps/api/_test-brand-features.js"
+    "test:brand": "node apps/api/_test-brand-features.js",
+    "test:calendar": "node apps/api/_test-calendar-features.js",
+    "test:keywords": "node apps/api/_test-keywords-features.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

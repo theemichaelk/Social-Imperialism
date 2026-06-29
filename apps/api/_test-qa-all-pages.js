@@ -144,6 +144,9 @@ const PAGES = [
       { name: 'Best post times', channel: 'get-best-post-times', validate: (d) => typeof d === 'object' },
       { name: 'Process due posts', channel: 'process-due-scheduled-posts', validate: (d) => typeof d === 'object' },
       { name: 'Upcoming by platform', channel: 'get-upcoming-by-platform', args: [14], validate: (d) => typeof d === 'object' },
+      { name: 'Calendar settings', channel: 'get-calendar-settings', validate: (d) => typeof d === 'object' },
+      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) },
+      { name: 'Section live', channel: 'get-section-live', args: ['calendar'], validate: (d) => d?.stats },
     ],
   },
   {
@@ -197,6 +200,9 @@ const PAGES = [
       { name: 'Research keyword', channel: 'research-keyword', args: ['content marketing'], validate: (d) => typeof d === 'object' },
       { name: 'Global custom prompt', channel: 'generate-global-custom-prompt', validate: (d) => d?.prompt || d?.customPrompt },
       { name: 'Keyword API status', channel: 'get-keyword-api-status', validate: (d) => typeof d === 'object' },
+      { name: 'Save keyword', channel: 'save-keywords', args: [{ merge: true, keywords: [{ term: 'page-qa-kw', platforms: ['LinkedIn'], intent: 'mentions' }] }], validate: (d) => d?.success === true },
+      { name: 'Active campaign', channel: 'get-active-campaign', validate: (d) => d && (d.id || d.brandName) },
+      { name: 'Section live', channel: 'get-section-live', args: ['keywords'], validate: (d) => d?.stats },
     ],
   },
   {
