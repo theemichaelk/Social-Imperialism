@@ -22,13 +22,20 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
   const [saving, setSaving] = useState(false);
 
   const refresh = useCallback(async () => {
-    const res = await invoke<{ prompts?: VaultPrompt[]; total?: number }>('get-prompt-vault', {
-      query,
-      keyword: query,
-      feature: filterFeature === 'all' ? undefined : filterFeature,
-    });
-    setPrompts(res.prompts || []);
-    setTotal(res.total || res.prompts?.length || 0);
+    try {
+      const res = await invoke<{ prompts?: VaultPrompt[]; total?: number; success?: boolean; error?: string }>('get-prompt-vault', {
+        query,
+        keyword: query,
+        feature: filterFeature === 'all' ? undefined : filterFeature,
+      });
+      if (res && typeof res === 'object' && 'success' in res && res.success === false) {
+        throw new Error(res.error || 'Failed to load vault');
+      }
+      setPrompts(res.prompts || []);
+      setTotal(res.total || res.prompts?.length || 0);
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
   }, [query, filterFeature]);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
@@ -122,10 +129,29 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
   async function deleteSelected() {
     if (!edit.id) return;
     if (!window.confirm(`Delete "${edit.title}"?`)) return;
-    await invoke('delete-prompt-vault-item', { id: edit.id });
-    setMsg('Deleted');
-    newPrompt();
-    await refresh();
+    try {
+      const res = await invoke<{ success?: boolean; error?: string }>('delete-prompt-vault-item', { id: edit.id });
+      if (res && typeof res === 'object' && 'success' in res && res.success === false) {
+        throw new Error(res.error || 'Delete failed');
+      }
+      setMsg('Deleted');
+      newPrompt();
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  }
+
+  function useInCreate() {
+    const text = (edit.body || '').trim();
+    if (!text) {
+      setMsg('Add prompt body first');
+      return;
+    }
+    try {
+      sessionStorage.setItem('si_omni_handoff', JSON.stringify({ type: 'content', content: text }));
+    } catch { /* ignore */ }
+    window.location.assign('/content-hub?tab=studio');
   }
 
   async function exportVault() {
@@ -171,7 +197,11 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
         <button type="button" className="btn" onClick={exportVault}>Export JSON</button>
       </div>
 
-      {msg && <div className="card settings-msg-card"><p style={{ margin: 0 }}>{msg}</p></div>}
+      {msg && (
+        <div className="card" style={{ marginBottom: 12, borderColor: /failed|error|required|delete/i.test(msg) ? '#f59e0b' : '#10b981' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
+        </div>
+      )}
 
       <div className="grid grid-2 pv-grid">
         <DataPanel title={`Templates (${prompts.length})`} live>
@@ -236,8 +266,9 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
             Placeholders resolve on <strong>Load</strong> from your active campaign. Brain routes templates to the matching feature.
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="btn primary" onClick={save} disabled={saving}>Save</button>
-            <button type="button" className="btn" onClick={loadSelected} disabled={!edit.id}>Load (apply context)</button>
+            <button type="button" className="btn primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+            <button type="button" className="btn" onClick={loadSelected} disabled={!edit.id || saving}>Load (apply context)</button>
+            <button type="button" className="btn" onClick={useInCreate} disabled={!edit.body?.trim()}>Use in Create →</button>
             {onLoad && edit.body && (
               <button type="button" className="btn" onClick={() => onLoad(edit.body || '', edit as VaultPrompt)}>Apply to editor</button>
             )}

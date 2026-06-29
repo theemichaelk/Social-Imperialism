@@ -72,6 +72,14 @@ export const PAGE_CHANNELS = {
     'get-background-run-status', 'add-background-run-slot', 'delete-background-run-slot',
     'process-due-scheduled-posts', 'get-calendar-status', 'get-section-live',
   ],
+  promptVault: [
+    'get-prompt-vault', 'search-prompt-vault', 'save-prompt-vault-item', 'delete-prompt-vault-item',
+    'create-prompt-vault-from-keyword', 'load-prompt-vault-item', 'export-prompt-vault', 'get-section-live',
+  ],
+  redditAi: [
+    'get-reddit-ai-status', 'get-reddit-ai-queue', 'get-reddit-ai-settings', 'save-reddit-ai-settings',
+    'run-reddit-ai-module', 'approve-reddit-ai-action', 'dismiss-reddit-ai-action', 'get-leads', 'get-section-live',
+  ],
   onboarding: [
     'get-setup-status', 'check-api-status', 'get-settings', 'save-settings', 'set-active-campaign',
     'get-active-campaign', 'save-brand-guidelines', 'get-global-keys', 'save-global-keys', 'get-key-sources',

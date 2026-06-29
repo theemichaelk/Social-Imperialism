@@ -170,6 +170,8 @@ const PAGES = [
       { name: 'Create prompt', channel: 'save-prompt-vault-item', args: [{ title: 'QA Page Prompt', body: 'Test prompt for vault page', tags: ['qa'], category: 'general' }], validate: (d) => d?.success !== false && (d?.prompt?.id || d?.id) },
       { name: 'Export vault', channel: 'export-prompt-vault', args: [{}], validate: (d) => Array.isArray(d?.prompts) || typeof d === 'object' },
       { name: 'Section live', channel: 'get-section-live', args: ['prompt-vault'], validate: (d) => d?.success !== false || d?.stats },
+      { name: 'Create from keyword', channel: 'create-prompt-vault-from-keyword', args: [{ keyword: 'marketing', feature: 'general' }], validate: (d) => d?.success === true && d?.prompt?.id },
+      { name: 'Search vault', channel: 'search-prompt-vault', args: [{ query: 'marketing' }], validate: (d) => Array.isArray(d?.prompts) },
     ],
   },
   {
@@ -228,6 +230,8 @@ const PAGES = [
       { name: 'Reddit settings', channel: 'get-reddit-ai-settings', validate: (d) => typeof d === 'object' },
       { name: 'Run module', channel: 'run-reddit-ai-module', args: ['subreddit-ascent'], validate: (d) => d?.success !== false || d?.actions },
       { name: 'Leads', channel: 'get-leads', validate: (d) => Array.isArray(d) },
+      { name: 'Save settings', channel: 'save-reddit-ai-settings', args: [{ modules: { 'subreddit-ascent': { enabled: true } } }], validate: (d) => d?.success !== false || d?.settings },
+      { name: 'Section live', channel: 'get-section-live', args: ['reddit-ai'], validate: (d) => d?.stats },
     ],
   },
   {

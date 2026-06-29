@@ -12,9 +12,9 @@ export default function PromptVaultPage() {
         title="Prompt Vault"
         actions={
           <>
-            <Link href="/content-hub" className="btn">Content Hub</Link>
+            <Link href="/content-hub?tab=studio" className="btn primary">Create with Prompt →</Link>
             <Link href="/keywords" className="btn">Keywords</Link>
-            <Link href="/settings" className="btn">Settings</Link>
+            <Link href="/brand" className="btn">Brand</Link>
           </>
         }
       />
