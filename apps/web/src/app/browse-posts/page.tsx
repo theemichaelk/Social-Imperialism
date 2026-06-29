@@ -183,7 +183,8 @@ export default function BrowsePostsPage() {
     if (filters.minFollowers) setMinFollowers(filters.minFollowers);
     if (filters.media === 'only') setMediaOnly(true);
     setShowAdvanced(true);
-    setMsg('Profile loaded — refreshing feed');
+    setPage(0);
+    setMsg('Profile loaded — feed will refresh');
   }
 
   const filtered = useMemo(() => {
@@ -254,20 +255,21 @@ export default function BrowsePostsPage() {
       const accs = accounts.length ? accounts : asArray<LinkedAccount>(await invoke<LinkedAccount[]>('get-linked-accounts'));
       setRawPosts(mergeWithHistory(asArray<Post>(live), asArray(history), accs));
       setPage(0);
+      if (full) await loadMeta();
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [platform, sort, accounts, language, location, minFollowers, mediaOnly]);
+  }, [platform, sort, accounts, language, location, minFollowers, mediaOnly, loadMeta]);
 
   useEffect(() => {
-    loadMeta().then(() => loadFeed(false)).catch(console.error);
-  }, []);
+    loadMeta().catch(console.error);
+  }, [loadMeta]);
 
   useEffect(() => {
     loadFeed(false).catch(console.error);
-  }, [platform, sort, language, location, minFollowers, mediaOnly]);
+  }, [loadFeed]);
 
   async function draftReply(post: Post) {
     setSelected(post);
@@ -508,6 +510,15 @@ export default function BrowsePostsPage() {
         )}
       </div>
 
+      {!keywords.length && !loading && (
+        <div className="card" style={{ marginBottom: 12, borderColor: '#f59e0b' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>
+            No keywords tracked for this campaign — add keywords in{' '}
+            <a href="/keywords">Keywords</a> or run Setup Wizard so the feed can discover posts.
+          </p>
+        </div>
+      )}
+
       {msg && (
         <div className="card" style={{ marginBottom: 12, borderColor: msg.includes('error') || msg.includes('view-only') ? '#f59e0b' : '#10b981' }}>
           <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
@@ -529,11 +540,15 @@ export default function BrowsePostsPage() {
         );
       })()}
 
-      {view === 'monitors' && monitors.length > 0 && (
+      {view === 'monitors' && (
         <div className="card" style={{ marginBottom: 12 }}>
           <h3>Be First Monitors</h3>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 0 }}>Watch high-value targets — remove stale monitors to stay focused.</p>
-          {monitors.map((m) => (
+          <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 0 }}>
+            Watch high-value targets — click Watch on any post in Discover to add a monitor.
+          </p>
+          {monitors.length === 0 ? (
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No monitors yet. Open Discover and click Watch on a post you want to track.</p>
+          ) : monitors.map((m) => (
             <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: '0.9rem' }}>
               <span><span className="badge">{m.platform}</span> {m.label}</span>
               <button type="button" className="btn" onClick={() => removeMonitor(m.id)}>Remove</button>

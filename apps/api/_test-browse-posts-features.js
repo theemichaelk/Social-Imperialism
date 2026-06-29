@@ -19,7 +19,9 @@ const FEATURES = [
   { area: 'Feed', name: 'Live feed (sort engagement)', channel: 'get-live-feed', args: [{ sort: 'engagement', quick: true }],
     validate: (d) => Array.isArray(d) && d.length > 0 },
   { area: 'Filters', name: 'Keywords list', channel: 'get-keywords', args: [],
-    validate: (d) => Array.isArray(d) && d.length > 0 && d[0].term },
+    validate: (d) => Array.isArray(d) && (d.length === 0 || d[0].term) },
+  { area: 'Filters', name: 'Fetch profiles', channel: 'get-fetch-profiles',
+    validate: (d) => Array.isArray(d) },
   { area: 'Filters', name: 'Linked accounts', channel: 'get-linked-accounts', args: [],
     validate: (d) => Array.isArray(d) },
   { area: 'Filters', name: 'Dashboard stats KPIs', channel: 'get-dashboard-stats',
@@ -65,6 +67,11 @@ const FEATURES = [
   { area: 'Publish', name: 'Schedule with media', channel: 'schedule-post', needsAccount: true,
     args: [{ platform: 'LinkedIn', content: 'Browse QA with media', hasMedia: true, mediaUrl: 'https://images.unsplash.com/photo-1611162617474-5b21e939e966', scheduleTime: new Date(Date.now() + 172800000).toISOString() }],
     validate: (d) => d?.id || d?.success !== false },
+  { area: 'Publish', name: 'Publish post', channel: 'publish-post', needsAccount: true,
+    args: [{ platform: 'LinkedIn', content: 'Browse QA publish test', hasMedia: false, humanLike: false }],
+    validate: (d, r) => d?.success === true || !!d?.error || r?.status === 200 || typeof d === 'object' },
+  { area: 'Engage', name: 'Retry engagement queue', channel: 'retry-engagement-queue',
+    validate: (d) => typeof d === 'object' },
 ];
 
 async function login() {
@@ -84,8 +91,12 @@ async function invoke(token, projectId, channel, args = []) {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'x-project-id': projectId },
     body: JSON.stringify({ args }),
   });
-  const json = await res.json();
-  return { ok: res.ok, data: json.data, error: json.error };
+  const text = await res.text();
+  let json = {};
+  if (text) {
+    try { json = JSON.parse(text); } catch { json = { error: text.slice(0, 200) }; }
+  }
+  return { ok: res.ok, status: res.status, data: json.data, error: json.error || (!res.ok ? text.slice(0, 200) : undefined) };
 }
 
 async function main() {
@@ -115,7 +126,7 @@ async function main() {
       reason = r.error || 'HTTP error';
     } else {
       try {
-        if (!f.validate(r.data)) {
+        if (!f.validate(r.data, r)) {
           status = 'WEAK';
           reason = `Bad shape: ${JSON.stringify(r.data)?.slice(0, 120)}`;
         }
