@@ -78,6 +78,20 @@ const FEATURES = [
     validate: (d) => typeof d === 'object' && d.apiMetrics },
   { area: 'Setup', name: 'API status', channel: 'check-api-status',
     validate: (d) => Object.values(d).filter((v) => v === 'Connected').length >= 5 },
+  { area: 'Feed', name: 'Retry engagement queue', channel: 'retry-engagement-queue',
+    validate: (d) => typeof d === 'object' },
+  { area: 'Q&A', name: 'Q&A ad suggestions', channel: 'get-qa-ad-suggestions',
+    validate: (d) => Array.isArray(d?.suggestions) || Array.isArray(d) || typeof d === 'object' },
+  { area: 'Q&A', name: 'Search discovered posts', channel: 'search-discovered-posts', args: [{ q: '', limit: 10 }],
+    validate: (d) => Array.isArray(d?.posts) || Array.isArray(d) },
+  { area: 'Analytics', name: 'Serp research', channel: 'serp-search', args: ['social media automation'],
+    validate: (d) => typeof d === 'object' },
+  { area: 'Overview', name: 'Section live', channel: 'get-section-live', args: ['dashboard'],
+    validate: (d) => d?.stats && typeof d.stats === 'object' },
+  { area: 'Worker', name: 'Stop worker', channel: 'stop-worker',
+    validate: (d) => d?.success !== false },
+  { area: 'Worker', name: 'Auto search settings', channel: 'get-auto-search-settings',
+    validate: (d) => typeof d === 'object' },
 ];
 
 async function login() {

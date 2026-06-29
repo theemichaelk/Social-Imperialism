@@ -2,13 +2,14 @@
 export const PAGE_CHANNELS = {
   dashboard: [
     'get-dashboard-stats', 'get-live-feed', 'get-trending-topics', 'get-live-news', 'get-setup-status',
-    'get-domain-metrics', 'get-domdetailer-metrics', 'get-project-metrics', 'analyze-topic',
-    'discover-best-questions', 'get-unanswered-questions', 'get-qa-settings', 'get-qa-sources',
-    'compose-qa-answer', 'publish-qa-answer', 'get-leads', 'scan-reddit-now', 'get-watched-monitors',
-    'get-worker-status', 'get-worker-tasks', 'start-worker', 'stop-worker', 'trigger-full-auto-search',
-    'get-fanpage-settings', 'get-fanpage-metrics', 'save-fanpage-settings', 'run-fan-acquisition-now',
-    'run-fanpage-hands-free-now', 'engage-post', 'draft-post-reply', 'save-ai-reply', 'export-data',
-    'curate-from-rss', 'search-stock-photo', 'generate-image', 'schedule-post', 'publish-post',
+    'get-active-campaign', 'get-domain-metrics', 'get-domdetailer-metrics', 'get-project-metrics', 'analyze-topic',
+    'discover-best-questions', 'get-unanswered-questions', 'get-qa-settings', 'get-qa-sources', 'get-qa-ad-suggestions',
+    'search-discovered-posts', 'compose-qa-answer', 'publish-qa-answer', 'get-leads', 'scan-reddit-now',
+    'get-watched-monitors', 'get-auto-search-settings', 'get-worker-status', 'get-worker-tasks', 'start-worker',
+    'stop-worker', 'trigger-full-auto-search', 'get-fanpage-settings', 'get-fanpage-metrics', 'save-fanpage-settings',
+    'run-fan-acquisition-now', 'run-fanpage-hands-free-now', 'get-engagement-queue', 'retry-engagement-queue',
+    'engage-post', 'draft-post-reply', 'save-ai-reply', 'export-data', 'curate-from-rss', 'search-stock-photo',
+    'serp-search', 'generate-image', 'schedule-post', 'publish-post', 'get-section-live',
   ],
   contentHub: [
     'publish-post', 'schedule-post', 'generate-ai', 'generate-image', 'search-stock-photo',

@@ -183,8 +183,18 @@ export default function DashboardPage() {
       setEngagementQueue(asArray(eq));
 
       if (c?.domain) {
-        invoke<Record<string, unknown>>('get-domdetailer-metrics', c.domain).then(setDomain).catch(() => setDomain({}));
+        invoke<Record<string, unknown>>('get-domdetailer-metrics', c.domain)
+          .then((d) => {
+            if (d && typeof d === 'object' && 'error' in d && (d as { error?: string }).error) {
+              setDomain({ error: String((d as { error: string }).error) });
+            } else {
+              setDomain(d || {});
+            }
+          })
+          .catch((e) => setDomain({ error: (e as Error).message || 'Domain metrics request failed' }));
         if (c.id) invoke('get-project-metrics', c.id).then(setProjectMetrics).catch(() => setProjectMetrics({}));
+      } else {
+        setDomain({});
       }
       await loadFeed({ refresh: fullFeed, quick: !fullFeed });
     } catch (e) {
@@ -197,6 +207,11 @@ export default function DashboardPage() {
   }, [loadFeed]);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
+
+  useEffect(() => {
+    if (tab !== 'feed') return;
+    loadFeed({ refresh: false, quick: true }).catch(console.error);
+  }, [tab, feedPlatform, feedSort, feedLanguage, feedLocation, feedTime, feedMinEngage, loadFeed]);
 
   useSiEvents({
     onEvent: (evt) => {
@@ -315,6 +330,11 @@ export default function DashboardPage() {
     color: i % 2 ? '#a855f7' : '#38bdf8',
   }));
   const qaPlatforms = platformBreakdown(questions.map((q) => ({ platform: q.platform || 'Q' })));
+  const domainError = typeof (domain as { error?: string }).error === 'string' ? (domain as { error: string }).error : '';
+  const hasDomainMetrics =
+    (domain as { da?: number }).da != null
+    || (domain as { data?: { mozDA?: number } }).data?.mozDA != null
+    || (domain as { success?: boolean }).success === true;
 
   return (
     <div>
@@ -466,10 +486,10 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{feedLoading ? 'Streaming…' : 'Real-time discovery'}</span>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <select className="input" style={{ width: 'auto', padding: '4px 8px' }} value={feedPlatform} onChange={(e) => setFeedPlatform(e.target.value)}>
+                <select className="input" style={{ width: 'auto', padding: '4px 8px' }} value={feedPlatform} onChange={(e) => { setFeedPlatform(e.target.value); }}>
                   {['All', 'Twitter', 'Reddit', 'LinkedIn', 'News'].map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
-                <select className="input" style={{ width: 'auto', padding: '4px 8px' }} value={feedSort} onChange={(e) => setFeedSort(e.target.value)}>
+                <select className="input" style={{ width: 'auto', padding: '4px 8px' }} value={feedSort} onChange={(e) => { setFeedSort(e.target.value); }}>
                   {['recent', 'engagement', 'relevance'].map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <FetchProfilesPanel currentFilters={currentFetchFilters} onApply={applyFetchProfile} />
@@ -690,7 +710,7 @@ export default function DashboardPage() {
       {tab === 'analytics' && (
         <div className="grid grid-2">
           <DataPanel title={`Domain Authority — ${campaign.domain || '—'}`} live>
-            {(domain as { da?: number }).da != null || (domain as { data?: { mozDA?: number } }).data?.mozDA != null ? (
+            {hasDomainMetrics ? (
               <>
                 <BarChart items={[
                   { label: 'DA', value: Number((domain as { da?: number }).da ?? (domain as { data?: { mozDA?: number } }).data?.mozDA) || 0, color: '#38bdf8' },
@@ -705,8 +725,14 @@ export default function DashboardPage() {
                   { label: 'Leads', value: (projectMetrics as { leads?: number }).leads ?? 0 },
                 ]} />
               </>
+            ) : domainError ? (
+              <p style={{ color: '#f59e0b', fontSize: '0.85rem' }}>
+                Domain metrics unavailable: {domainError}. Add your DomDetailer API key in Settings → API Keys, then run Full Scan.
+              </p>
+            ) : !campaign.domain ? (
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Set a campaign domain in Setup Wizard to load domain authority.</p>
             ) : (
-              <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Loading domain metrics from DomDetailer…</p>
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No domain metrics yet — run Full Scan or check DomDetailer in Integrations.</p>
             )}
           </DataPanel>
           <DataPanel title="Project Performance" live>
