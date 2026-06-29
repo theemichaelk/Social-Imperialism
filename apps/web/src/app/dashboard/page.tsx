@@ -4,7 +4,7 @@ import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { InvokePanel } from '@/components/InvokePanel';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
-import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow, platformBreakdown } from '@/components/DashboardViz';
+import { BarChart, DataPanel, RingChart, SparkRow, platformBreakdown } from '@/components/DashboardViz';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
 import { useIntelligence } from '@/hooks/useIntelligence';
 import { FetchProfilesPanel } from '@/components/FetchProfilesPanel';
@@ -388,25 +388,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="dash-hero">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-          <RingChart percent={(connectedApis / totalApis) * 100} label="APIs Connected" color="#22c55e" />
-          <RingChart percent={Math.min(100, (stats.totalEngagement || 0) / 10)} label="Engagement Index" color="#38bdf8" />
-          <div className="dash-hero-grid" style={{ flex: 1, minWidth: 240 }}>
-            <MetricTile label="Published" value={stats.totalPosts ?? 0} sub="live posts" onClick={() => setTab('feed')} />
-            <MetricTile label="AI Drafts" value={stats.aiDrafts ?? 0} accent="#a855f7" onClick={() => setTab('feed')} />
-            <MetricTile label="Keywords" value={stats.activeKeywords ?? 0} onClick={() => window.location.assign('/keywords')} />
-            <MetricTile label="Leads" value={stats.leadsGenerated ?? 0} accent="#f59e0b" onClick={() => setTab('growth')} />
-            <MetricTile label="Scheduled" value={stats.scheduled ?? 0} onClick={() => window.location.assign('/calendar')} />
-            <MetricTile label="Worker" value={worker.pendingTasks ?? workerTasks.length} sub={worker.running ? 'active' : 'idle'} accent={worker.running ? '#22c55e' : undefined} onClick={() => setTab('worker')} />
-          </div>
-          <div>
-            <LivePulse label={worker.running || worker.isRunning ? 'SCANNING' : 'STANDBY'} />
-            <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>{worker.statusString || stats.workerStatus || 'Idle'}</p>
-          </div>
-        </div>
-      </div>
-
       {actionMsg && (
         <div className="card" style={{ marginBottom: 12, borderColor: actionMsg.includes('success') || actionMsg.includes('Liked') || actionMsg.includes('scheduled') ? '#10b981' : '#f59e0b' }}>
           <p style={{ margin: 0, fontSize: '0.9rem' }}>{actionMsg}</p>
@@ -427,31 +408,27 @@ export default function DashboardPage() {
         <>
         <div className="grid grid-2">
           <DataPanel title="Campaign Pulse" live>
+            <p style={{ color: '#e2e8f0', fontSize: '0.95rem', margin: '0 0 8px' }}>
+              <strong>{campaign.brandName || 'Campaign'}</strong> · {campaign.domain || 'no domain'}
+            </p>
             <SparkRow items={[
-              { label: 'Accounts', value: stats.linkedAccounts ?? 0, status: (stats.linkedAccounts ?? 0) > 0 ? 'ok' : 'warn' },
-              { label: 'Keywords', value: stats.activeKeywords ?? 0, status: 'ok' },
-              { label: 'Scheduled', value: stats.scheduled ?? 0 },
+              { label: 'Mode', value: stats.autoRulesEnabled ? 'Auto' : 'Manual', status: stats.autoRulesEnabled ? 'ok' : 'warn' },
+              { label: 'Setup', value: String(setup.nextStep ?? '—') },
               { label: 'Queue', value: engagementQueue.length, status: engagementQueue.length ? 'warn' : 'ok' },
+              { label: 'Worker', value: worker.running || worker.isRunning ? 'Active' : 'Idle', status: worker.running ? 'ok' : 'off' },
             ]} />
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: 12 }}>
-              {campaign.brandName} · {stats.autoRulesEnabled ? 'Auto-rules ON' : 'Manual mode'} · Setup step {String(setup.nextStep ?? '—')}
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: 12, marginBottom: 0 }}>
+              {worker.statusString || stats.workerStatus || 'Worker idle'} · {connectedApis}/{totalApis} APIs connected
             </p>
           </DataPanel>
-          <DataPanel title={`API Grid (${connectedApis}/${totalApis})`} live>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {apiEntries.map(([name, st]) => (
-                <span key={name} className={`api-pill ${st === 'Connected' ? 'ok' : 'warn'}`}>{name}</span>
-              ))}
-            </div>
-          </DataPanel>
-          <DataPanel title="Trending Intelligence" live action={<span style={{ fontSize: '0.7rem', color: '#64748b' }}>{trending.length} topics</span>}>
-            {trending.length > 0 && <BarChart items={trending.slice(0, 6).map((t, i) => ({ label: `#${i + 1}`, value: 6 - i, color: '#a855f7' }))} maxHeight={80} />}
-            {trending.map((t, i) => (
+          <DataPanel title="Topic analysis" live>
+            {trending.slice(0, 4).map((t, i) => (
               <div key={i} style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem' }}>{t.topic} {t.momentum && <small style={{ color: '#64748b' }}>({t.momentum})</small>}</span>
+                <span style={{ fontSize: '0.85rem' }}>{t.topic}</span>
                 <button className="btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => analyzeTopic(t.topic || '')}>Analyze</button>
               </div>
             ))}
+            {!trending.length && <p className="settings-panel-desc">Trending topics appear in the live strip above.</p>}
             {topicAnalysis && <div className="post-card" style={{ marginTop: 8, fontSize: '0.85rem' }}>{topicAnalysis}</div>}
           </DataPanel>
           <DataPanel title="Live Headlines" live>

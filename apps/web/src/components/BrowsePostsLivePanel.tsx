@@ -19,12 +19,8 @@ type LiveData = {
   };
   platformCounts?: Record<string, number>;
   queueByAction?: Record<string, number>;
-  trending?: Array<{ topic?: string; momentum?: string; platform?: string }>;
   engagementQueue?: Array<{ id: string; platform: string; action: string; status: string; queuedAt?: string }>;
   monitors?: Array<{ id: string; label: string; platform?: string }>;
-  accounts?: Array<{ id: string; platform: string; handle?: string; status?: string }>;
-  apiHealth?: { connected: number; total: number; pct: number };
-  apiMetrics?: Record<string, string>;
 };
 
 export function BrowsePostsLivePanel({ feedCount }: { feedCount?: number }) {
@@ -64,11 +60,6 @@ export function BrowsePostsLivePanel({ feedCount }: { feedCount?: number }) {
     color: ['#6366f1', '#22c55e', '#f59e0b'][i % 3],
   }));
 
-  const apiSpark = Object.entries(data.apiMetrics || {})
-    .filter(([, v]) => v === 'Connected')
-    .slice(0, 8)
-    .map(([label]) => ({ label: label.split(' ')[0], value: 'ON', status: 'ok' as const }));
-
   const engageTotal = (stats.engageable || 0) + (stats.viewOnly || 0);
   const engagePct = engageTotal ? Math.round(((stats.engageable || 0) / engageTotal) * 100) : 0;
 
@@ -79,10 +70,14 @@ export function BrowsePostsLivePanel({ feedCount }: { feedCount?: number }) {
           <MetricTile label="In feed" value={feedCount ?? stats.feedPosts ?? 0} sub="filtered" />
           <MetricTile label="API engageable" value={stats.engageable ?? 0} sub="live actions" accent="#22c55e" />
           <MetricTile label="Keywords" value={stats.keywords ?? 0} sub="tracked" accent="#38bdf8" />
-          <MetricTile label="Accounts" value={stats.accounts ?? 0} sub="connected" />
           <MetricTile label="Queue" value={stats.queuePending ?? 0} sub="pending" accent="#f59e0b" />
           <MetricTile label="Monitors" value={stats.monitors ?? 0} sub="watching" accent="#a855f7" />
         </div>
+        {data.updatedAt && (
+          <p className="settings-panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>
+            <LivePulse label="LIVE" /> {new Date(data.updatedAt).toLocaleTimeString()}
+          </p>
+        )}
       </div>
 
       <DataPanel title="Platform discovery" live action={
@@ -119,34 +114,15 @@ export function BrowsePostsLivePanel({ feedCount }: { feedCount?: number }) {
         ))}
       </DataPanel>
 
-      <DataPanel title="Trending now" live>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {(data.trending || []).slice(0, 5).map((t, i) => (
-            <div key={`${t.topic}-${i}`} className="spark-chip spark-ok" style={{ justifyContent: 'space-between' }}>
-              <span className="spark-chip-label">{t.topic}</span>
-              <span className="spark-chip-val" style={{ fontSize: '0.72rem' }}>{t.momentum}</span>
-            </div>
-          ))}
-          {!data.trending?.length && <p className="settings-panel-desc">Trending loads from keywords + live APIs.</p>}
-        </div>
-      </DataPanel>
-
-      <DataPanel title="API connections" live>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <RingChart percent={data.apiHealth?.pct ?? 0} label="connected" color="#38bdf8" />
-          <span className="settings-panel-desc" style={{ margin: 0 }}>
-            {data.apiHealth?.connected ?? 0} / {data.apiHealth?.total ?? 0} integrations active
-          </span>
-        </div>
-        {apiSpark.length ? <SparkRow items={apiSpark} /> : (
-          <p className="settings-panel-desc">Configure keys in Settings → Integrations.</p>
-        )}
-        {data.updatedAt && (
-          <p className="settings-panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>
-            <LivePulse label="LIVE" /> {new Date(data.updatedAt).toLocaleTimeString()}
-          </p>
-        )}
-      </DataPanel>
+      {(data.monitors || []).length > 0 && (
+        <DataPanel title="Active monitors" live>
+          <SparkRow items={(data.monitors || []).slice(0, 6).map((m) => ({
+            label: m.platform || 'Watch',
+            value: m.label.slice(0, 12),
+            status: 'ok' as const,
+          }))} />
+        </DataPanel>
+      )}
     </div>
   );
 }

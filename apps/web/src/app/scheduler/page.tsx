@@ -110,7 +110,7 @@ export default function SchedulerPage() {
 
   const dueCount = posts.filter((p) => new Date(p.timestamp).getTime() <= Date.now()).length;
   const upcoming = posts.filter((p) => new Date(p.timestamp).getTime() > Date.now()).length;
-  const weeklyWindows = bgSettings.weeklyWindows || bgStatus.weeklyWindows || [];
+  const weeklyWindows = bgSettings.weeklyWindows || [];
   const upcomingRuns = (bgStatus.upcomingRuns || bgSettings.scheduledRuns || []).filter(
     (r) => r.status !== 'cancelled' && r.status !== 'completed',
   );

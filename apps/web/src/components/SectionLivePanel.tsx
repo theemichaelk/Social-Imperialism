@@ -24,6 +24,65 @@ type LiveData = {
   brand?: { name?: string; domain?: string; rulesCount?: number };
 };
 
+type WidgetConfig = {
+  tiles: boolean;
+  trending: boolean;
+  apiHealth: boolean;
+  accounts: boolean;
+  breakdown: boolean;
+  scheduleWindows: boolean;
+  replyStats: boolean;
+  brand: boolean;
+  worker: boolean;
+  timestamp: boolean;
+};
+
+const COMPACT: WidgetConfig = {
+  tiles: true,
+  trending: false,
+  apiHealth: false,
+  accounts: false,
+  breakdown: false,
+  scheduleWindows: false,
+  replyStats: false,
+  brand: false,
+  worker: false,
+  timestamp: true,
+};
+
+const SECTION_WIDGETS: Record<string, WidgetConfig> = {
+  dashboard: {
+    tiles: true,
+    trending: true,
+    apiHealth: true,
+    accounts: true,
+    breakdown: true,
+    scheduleWindows: false,
+    replyStats: false,
+    brand: false,
+    worker: true,
+    timestamp: true,
+  },
+  'content-hub': { ...COMPACT, breakdown: true },
+  'content-library': { ...COMPACT, breakdown: true },
+  'design-studio': { ...COMPACT },
+  brand: { ...COMPACT, brand: true },
+  calendar: { ...COMPACT, scheduleWindows: true, accounts: true },
+  scheduler: { ...COMPACT, scheduleWindows: true },
+  engagement: { ...COMPACT, accounts: true },
+  history: { ...COMPACT, replyStats: true, breakdown: true },
+  keywords: { ...COMPACT, breakdown: true },
+  'seo-tools': { ...COMPACT },
+  'reddit-ai': { ...COMPACT, accounts: true },
+  'quora-traffic': { ...COMPACT, accounts: true },
+  automations: { ...COMPACT },
+  rules: { ...COMPACT, worker: true },
+  'account-hub': { ...COMPACT, accounts: true, apiHealth: true },
+  'account-creator': { ...COMPACT, accounts: true },
+  onboarding: { ...COMPACT, accounts: true },
+  'prompt-vault': { ...COMPACT },
+};
+
 const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: string; accent?: string }>> = {
   dashboard: [
     { key: 'published', label: 'Published', sub: 'all time' },
@@ -123,16 +182,6 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
     { key: 'proxies', label: 'Proxies', sub: 'pool' },
     { key: 'accounts', label: 'Linked', sub: 'upload' },
   ],
-  integrations: [
-    { key: 'apiConnected', label: 'Connected', sub: 'integrations', accent: '#22c55e' },
-    { key: 'apiTotal', label: 'Total', sub: 'services' },
-    { key: 'accounts', label: 'Accounts', sub: 'oauth' },
-  ],
-  settings: [
-    { key: 'apiConnected', label: 'APIs', sub: 'connected', accent: '#38bdf8' },
-    { key: 'accounts', label: 'Accounts', sub: 'linked' },
-    { key: 'keywords', label: 'Keywords', sub: 'campaign' },
-  ],
   onboarding: [
     { key: 'step', label: 'Step', sub: 'wizard' },
     { key: 'keywords', label: 'Keywords', sub: 'saved' },
@@ -157,6 +206,11 @@ function countBars(obj: Record<string, number> | undefined, colors?: string[]) {
     }));
 }
 
+function resolveWidgets(section: string, showAccounts: boolean): WidgetConfig {
+  const cfg = SECTION_WIDGETS[section] || COMPACT;
+  return { ...cfg, accounts: cfg.accounts && showAccounts };
+}
+
 type Props = {
   section: string;
   showAccounts?: boolean;
@@ -167,6 +221,7 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
   const [data, setData] = useState<LiveData>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const widgets = resolveWidgets(section, showAccounts);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -212,6 +267,8 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
     ? Math.round(((Number(stats.apiConnected) || 0) / Number(stats.apiTotal)) * 100)
     : 0);
 
+  const workerActive = stats.workerRunning === true;
+
   return (
     <div className={`ics-live-grid section-live-grid ${className || ''}`}>
       {error && (
@@ -224,31 +281,42 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
           </p>
         </div>
       )}
-      <div className="dash-hero" style={{ gridColumn: '1 / -1' }}>
-        <div className="dash-hero-grid">
-          {tiles.map((t) => {
-            const raw = stats[t.key];
-            const val = typeof raw === 'boolean' ? (raw ? 'ON' : 'OFF') : (raw ?? '—');
-            return (
-              <MetricTile key={t.key} label={t.label} value={val} sub={t.sub} accent={t.accent} />
-            );
-          })}
-        </div>
-      </div>
 
-      {(scheduleBars.length > 0 || hourBars.length > 0) && (
+      {widgets.tiles && (
+        <div className="dash-hero" style={{ gridColumn: '1 / -1' }}>
+          <div className="dash-hero-grid">
+            {tiles.map((t) => {
+              const raw = stats[t.key];
+              const val = typeof raw === 'boolean' ? (raw ? 'ON' : 'OFF') : (raw ?? '—');
+              return (
+                <MetricTile key={t.key} label={t.label} value={val} sub={t.sub} accent={t.accent} />
+              );
+            })}
+          </div>
+          {widgets.worker && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+              <LivePulse label={workerActive ? 'SCANNING' : 'STANDBY'} />
+              <span className="settings-panel-desc" style={{ margin: 0 }}>
+                {workerActive ? 'Background worker active' : 'Worker idle — enable auto-rules to scan'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {widgets.scheduleWindows && (scheduleBars.length > 0 || hourBars.length > 0) && (
         <DataPanel title={hourBars.length ? 'Best publish windows' : 'By platform'} live>
           <BarChart items={hourBars.length ? hourBars : scheduleBars} maxHeight={90} />
         </DataPanel>
       )}
 
-      {platformBars.length > 0 && (
+      {widgets.breakdown && platformBars.length > 0 && (
         <DataPanel title="Breakdown" live>
           <BarChart items={platformBars} maxHeight={90} />
         </DataPanel>
       )}
 
-      {data.replyStats && (
+      {widgets.replyStats && data.replyStats && (
         <DataPanel title="Reply pipeline" live>
           <SparkRow items={[
             { label: 'Drafts', value: data.replyStats.draft ?? 0, status: 'warn' },
@@ -258,7 +326,7 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
         </DataPanel>
       )}
 
-      {data.brand && (
+      {widgets.brand && data.brand && (
         <DataPanel title="Brand snapshot" live>
           <p className="settings-panel-desc" style={{ margin: 0 }}>
             <strong>{data.brand.name || '—'}</strong> · {data.brand.domain || 'no domain'}
@@ -267,33 +335,37 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
         </DataPanel>
       )}
 
-      <DataPanel title="Trending" live action={
-        <button type="button" className="btn" onClick={refresh} disabled={loading}>{loading ? '…' : 'Sync'}</button>
-      }>
-        {(data.trending || []).slice(0, 5).map((t, i) => (
-          <div key={`${t.topic}-${i}`} className="spark-chip spark-ok" style={{ marginBottom: 4, justifyContent: 'space-between' }}>
-            <span className="spark-chip-label">{t.topic}</span>
-            <span className="spark-chip-val" style={{ fontSize: '0.72rem' }}>{t.momentum}</span>
+      {widgets.trending && (
+        <DataPanel title="Trending" live action={
+          <button type="button" className="btn" onClick={refresh} disabled={loading}>{loading ? '…' : 'Sync'}</button>
+        }>
+          {(data.trending || []).slice(0, 5).map((t, i) => (
+            <div key={`${t.topic}-${i}`} className="spark-chip spark-ok" style={{ marginBottom: 4, justifyContent: 'space-between' }}>
+              <span className="spark-chip-label">{t.topic}</span>
+              <span className="spark-chip-val" style={{ fontSize: '0.72rem' }}>{t.momentum}</span>
+            </div>
+          ))}
+          {!data.trending?.length && <p className="settings-panel-desc">Live from keywords + APIs.</p>}
+        </DataPanel>
+      )}
+
+      {widgets.apiHealth && (
+        <DataPanel title="API health" live>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <RingChart percent={apiPct} label="connected" color="#38bdf8" />
+            <span className="settings-panel-desc" style={{ margin: 0 }}>
+              {stats.apiConnected ?? data.apiHealth?.connected ?? 0} / {stats.apiTotal ?? data.apiHealth?.total ?? 0} integrations
+            </span>
           </div>
-        ))}
-        {!data.trending?.length && <p className="settings-panel-desc">Live from keywords + APIs.</p>}
-      </DataPanel>
+          {widgets.timestamp && data.updatedAt && (
+            <p className="settings-panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>
+              <LivePulse /> {new Date(data.updatedAt).toLocaleTimeString()}
+            </p>
+          )}
+        </DataPanel>
+      )}
 
-      <DataPanel title="API health" live>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <RingChart percent={apiPct} label="connected" color="#38bdf8" />
-          <span className="settings-panel-desc" style={{ margin: 0 }}>
-            {stats.apiConnected ?? data.apiHealth?.connected ?? 0} / {stats.apiTotal ?? data.apiHealth?.total ?? 0} integrations
-          </span>
-        </div>
-        {data.updatedAt && (
-          <p className="settings-panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>
-            <LivePulse /> {new Date(data.updatedAt).toLocaleTimeString()}
-          </p>
-        )}
-      </DataPanel>
-
-      {showAccounts && (
+      {widgets.accounts && (
         <DataPanel title="Connected accounts" live className="ics-live-wide">
           {data.accounts?.length ? (
             <SparkRow items={data.accounts.map((a) => ({
@@ -307,6 +379,12 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
             </p>
           )}
         </DataPanel>
+      )}
+
+      {widgets.timestamp && !widgets.apiHealth && data.updatedAt && (
+        <p className="settings-panel-desc section-live-ts" style={{ gridColumn: '1 / -1', margin: '0 0 4px' }}>
+          <LivePulse /> {new Date(data.updatedAt).toLocaleTimeString()}
+        </p>
       )}
     </div>
   );

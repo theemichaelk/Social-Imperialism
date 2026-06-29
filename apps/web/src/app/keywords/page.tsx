@@ -33,10 +33,10 @@ export default function KeywordsPage() {
     try {
       const [kws, camp] = await Promise.all([
         invoke<Keyword[]>('get-keywords'),
-        invoke<{ globalCustomPrompt?: string }>('get-active-campaign').catch(() => ({})),
+        invoke<{ globalCustomPrompt?: string }>('get-active-campaign').catch(() => ({ globalCustomPrompt: undefined })),
       ]);
       setKeywords(Array.isArray(kws) ? kws : []);
-      if (camp?.globalCustomPrompt) setGlobalPrompt(camp.globalCustomPrompt);
+      if (camp.globalCustomPrompt) setGlobalPrompt(camp.globalCustomPrompt);
     } catch (e) {
       setMsg((e as Error).message);
     }

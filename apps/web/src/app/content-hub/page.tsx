@@ -27,7 +27,6 @@ import { ContentCommentsPanel } from '@/components/ContentCommentsPanel';
 import { ContentHubUtilitiesPanel } from '@/components/ContentHubUtilitiesPanel';
 import { RepurposeContentPanel } from '@/components/RepurposeContentPanel';
 import { ContentHubTabNav } from '@/components/ContentHubTabNav';
-import { MetricTile } from '@/components/DashboardViz';
 import { PromptVaultPicker } from '@/components/PromptVaultPicker';
 import {
   CONTENT_HUB_TABS,
@@ -201,7 +200,7 @@ function ContentHubContent() {
         onFocusTab={(t) => setTabAndUrl(t as TabId)}
       />
 
-      <SectionLivePanel section="content-hub" />
+      <SectionLivePanel section="content-hub" showAccounts={false} />
 
       <ContentHubTabNav
         tabs={[...TABS]}
@@ -210,18 +209,6 @@ function ContentHubContent() {
         focusTabIds={[...CONTENT_HUB_FOCUS_TABS]}
         collapseGroups={[...CONTENT_HUB_COLLAPSE_GROUPS]}
       />
-
-      <div className="dash-hero ch-compact-hero">
-          <div className="dash-hero-grid">
-            <MetricTile label="Accounts" value={accounts.length} sub="linked" onClick={() => window.location.assign('/account-hub')} />
-            <MetricTile label="Queue" value={hubStats.queue} sub="review" accent="#f59e0b" onClick={() => setTabAndUrl('queue')} />
-            <MetricTile label="Scheduled" value={hubStats.scheduled} sub="calendar" accent="#a855f7" onClick={() => window.location.assign('/calendar')} />
-            <MetricTile label="Library" value={hubStats.library} sub="assets" accent="#38bdf8" onClick={() => window.location.assign('/content-library')} />
-            {hasDraft && (
-              <MetricTile label="Draft" value={`${content.trim().length}ch`} sub={(mediaUrl || videoUrl) ? 'with media' : 'in progress'} accent="#a855f7" onClick={() => { setComposeMode('quick'); setTabAndUrl('compose'); }} />
-            )}
-          </div>
-        </div>
 
       {hasDraft && tab !== 'compose' && (
         <div className="ch-draft-banner">

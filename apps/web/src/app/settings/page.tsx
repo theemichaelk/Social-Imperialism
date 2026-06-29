@@ -13,7 +13,6 @@ import { SettingsHealthPanel } from '@/components/SettingsHealthPanel';
 import { IntelligenceSettingsPanel } from '@/components/IntelligenceSettingsPanel';
 import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { INTEGRATION_GROUPS } from '@/lib/integrationCatalog';
-import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
 import { NativeBrowserPanel } from '@/components/NativeBrowserPanel';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
@@ -328,8 +327,6 @@ function SettingsContent() {
         focusStats={{ APIs: `${connected}/${totalApis}`, Campaigns: campaigns.length, Plan: billing.planName || 'Starter' }}
         onFocusTab={(t) => { if (TABS.some((x) => x.id === t)) setTabAndUrl(t as TabId); }}
       />
-
-      <SectionLivePanel section="settings" showAccounts={false} />
 
       <div className="dash-hero">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>
