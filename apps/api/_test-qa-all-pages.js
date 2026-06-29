@@ -158,6 +158,8 @@ const PAGES = [
       { name: 'Calendar status', channel: 'get-calendar-status', validate: (d) => typeof d === 'object' },
       { name: 'Process due', channel: 'process-due-scheduled-posts', validate: (d) => typeof d === 'object' },
       { name: 'Section live', channel: 'get-section-live', args: ['scheduler'], validate: (d) => d?.stats },
+      { name: 'Scheduled posts', channel: 'get-scheduled-posts', validate: (d) => Array.isArray(d) },
+      { name: 'Save background settings', channel: 'save-background-run-settings', args: [{ enabled: true }], validate: (d) => d?.success !== false || typeof d === 'object' },
     ],
   },
   {
@@ -212,7 +214,9 @@ const PAGES = [
       { name: 'Tools list', channel: 'get-seo-tools-list', validate: (d) => d?.tools?.length > 0 },
       { name: 'Run KGR', channel: 'run-seo-tool', args: [{ toolId: 'kgr', payload: { keyword: 'email marketing' } }], validate: (d) => typeof d === 'object' },
       { name: 'Run Reddit topics', channel: 'run-seo-tool', args: [{ toolId: 'reddit-topics', payload: { keyword: 'saas' } }], validate: (d) => typeof d === 'object' },
-      { name: 'Run Quora finder', channel: 'run-seo-tool', args: [{ toolId: 'quora-finder', payload: { keyword: 'automation' } }], validate: (d) => typeof d === 'object' },
+      { name: 'Run Quora finder', channel: 'run-seo-tool', args: [{ toolId: 'quora-questions', payload: { keyword: 'automation' } }], validate: (d) => typeof d === 'object' },
+      { name: 'Run grouping', channel: 'run-seo-tool', args: [{ toolId: 'grouping', payload: { keywords: 'marketing\nautomation' } }], validate: (d) => typeof d === 'object' },
+      { name: 'Section live', channel: 'get-section-live', args: ['seo-tools'], validate: (d) => d?.stats },
     ],
   },
   {

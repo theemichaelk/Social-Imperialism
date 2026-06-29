@@ -64,6 +64,14 @@ export const PAGE_CHANNELS = {
     'generate-global-custom-prompt', 'get-keyword-api-status', 'get-active-campaign', 'get-settings',
     'save-settings', 'get-section-live',
   ],
+  seoTools: [
+    'get-seo-tools-list', 'run-seo-tool', 'get-section-live', 'get-keyword-api-status',
+  ],
+  scheduler: [
+    'get-scheduled-posts', 'get-background-run-settings', 'save-background-run-settings',
+    'get-background-run-status', 'add-background-run-slot', 'delete-background-run-slot',
+    'process-due-scheduled-posts', 'get-calendar-status', 'get-section-live',
+  ],
   onboarding: [
     'get-setup-status', 'check-api-status', 'get-settings', 'save-settings', 'set-active-campaign',
     'get-active-campaign', 'save-brand-guidelines', 'get-global-keys', 'save-global-keys', 'get-key-sources',

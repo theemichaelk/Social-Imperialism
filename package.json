@@ -34,7 +34,9 @@
     "test:design-studio": "node apps/api/_test-design-studio-features.js",
     "test:brand": "node apps/api/_test-brand-features.js",
     "test:calendar": "node apps/api/_test-calendar-features.js",
-    "test:keywords": "node apps/api/_test-keywords-features.js"
+    "test:keywords": "node apps/api/_test-keywords-features.js",
+    "test:seo-tools": "node apps/api/_test-seo-tools-features.js",
+    "test:scheduler": "node apps/api/_test-scheduler-features.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
