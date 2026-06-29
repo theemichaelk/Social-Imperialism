@@ -90,7 +90,7 @@ export function GrokToolbar({
       {!compact && (
         <p className="settings-panel-desc">
           Grok Text, Imagine, Video, and Infographics use a persistent Edge profile at grok.com — not an API key.
-          {' '}<Link href="/settings?tab=grok">Configure in Settings → Grok</Link>
+          {' '}<Link href="/settings?tab=connect">Configure in Settings → Grok</Link>
         </p>
       )}
       <div className="post-card" style={{ fontSize: '0.85rem', marginBottom: 12 }}>

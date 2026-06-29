@@ -14,8 +14,17 @@ import { OAUTH_PLATFORM_SETUP, OAUTH_PRIMARY_REDIRECT } from '@/lib/oauthConfig'
 import { EmailCampaignsPanel } from '@/components/EmailCampaignsPanel';
 import { S3StatusPanel } from '@/components/S3StatusPanel';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
+import {
+  INTEGRATIONS_COLLAPSE_GROUPS,
+  INTEGRATIONS_FOCUS_TABS,
+  INTEGRATIONS_LEGACY_TAB_MAP,
+  INTEGRATIONS_TABS,
+  resolveLegacyTab,
+  type IntegrationsTabId,
+} from '@/lib/smartTabs';
 
-type TabId = 'connections' | 'probes' | 'email-campaigns' | 'partner-api' | 'webhooks' | 'connectors';
+type TabId = IntegrationsTabId;
+type PartnerSection = 'partner-api' | 'webhooks' | 'connectors';
 type TestResult = { id: string; label: string; status: 'idle' | 'running' | 'pass' | 'fail' | 'warn'; ms?: number; summary?: string };
 type KeySources = { sources?: Record<string, string>; isAdminEnv?: boolean; envKeyCount?: number; message?: string };
 type PartnerConfig = {
@@ -28,15 +37,7 @@ type PartnerConfig = {
 };
 type EventLog = { id: string; type: string; at: string; ok?: boolean; [k: string]: unknown };
 
-const TABS: { id: TabId; label: string; group: string; locked?: boolean }[] = [
-  { id: 'connections', label: 'Connections', group: "Today's Focus", locked: true },
-  { id: 'probes', label: 'Live Probes', group: "Today's Focus" },
-  { id: 'email-campaigns', label: 'Email Campaigns', group: 'Outreach' },
-  { id: 'partner-api', label: 'Partner API', group: 'Partner' },
-  { id: 'webhooks', label: 'Webhooks', group: 'Partner' },
-  { id: 'connectors', label: 'App Connectors', group: 'Partner' },
-];
-const INTEGRATIONS_FOCUS = ['connections', 'probes', 'email-campaigns'];
+const TABS = [...INTEGRATIONS_TABS];
 
 function summarize(data: unknown): string {
   if (data == null) return 'No data';
@@ -92,8 +93,12 @@ function validateTest(id: string, data: unknown): 'pass' | 'fail' | 'warn' {
 function IntegrationsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as TabId) || 'connections';
-  const [tab, setTab] = useState<TabId>(TABS.some((t) => t.id === initialTab) ? initialTab : 'connections');
+  const rawTab = searchParams.get('tab');
+  const initialTab = resolveLegacyTab(rawTab, TABS, INTEGRATIONS_LEGACY_TAB_MAP, 'connections');
+  const [tab, setTab] = useState<TabId>(initialTab);
+  const [partnerSection, setPartnerSection] = useState<PartnerSection>(
+    rawTab === 'webhooks' ? 'webhooks' : rawTab === 'connectors' ? 'connectors' : 'partner-api',
+  );
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [keySources, setKeySources] = useState<KeySources>({});
   const [apiStatus, setApiStatus] = useState<Record<string, string>>({});
@@ -133,15 +138,22 @@ function IntegrationsContent() {
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
-  useEffect(() => {
-    const q = searchParams.get('tab') as TabId | null;
-    if (q && TABS.some((t) => t.id === q)) setTab(q);
-  }, [searchParams]);
-
-  const setTabAndUrl = useCallback((t: TabId) => {
-    setTab(t);
-    router.replace(`/integrations?tab=${t}`, { scroll: false });
+  const setTabAndUrl = useCallback((t: string) => {
+    if (t === 'partner-api' || t === 'webhooks' || t === 'connectors') {
+      setPartnerSection(t);
+      setTab('partner');
+      router.replace('/integrations?tab=partner', { scroll: false });
+      return;
+    }
+    const resolved = resolveLegacyTab(t, TABS, INTEGRATIONS_LEGACY_TAB_MAP, 'connections');
+    setTab(resolved);
+    router.replace(`/integrations?tab=${resolved}`, { scroll: false });
   }, [router]);
+
+  useEffect(() => {
+    const q = searchParams.get('tab');
+    if (q) setTabAndUrl(q);
+  }, [searchParams, setTabAndUrl]);
 
   const onEmailCampaignsChange = useCallback((active: number, total: number) => {
     setEmailCampaignsActive(active);
@@ -330,8 +342,8 @@ function IntegrationsContent() {
         onChange={(id) => { if (TABS.some((t) => t.id === id)) setTabAndUrl(id as TabId); }}
         grouped
         className="integrations-tabs"
-        focusTabIds={INTEGRATIONS_FOCUS}
-        collapseGroups={['Partner']}
+        focusTabIds={[...INTEGRATIONS_FOCUS_TABS]}
+        collapseGroups={[...INTEGRATIONS_COLLAPSE_GROUPS]}
       />
 
       {tab === 'connections' && (
@@ -436,7 +448,17 @@ function IntegrationsContent() {
         </>
       )}
 
-      {tab === 'partner-api' && (
+      {tab === 'partner' && (
+        <>
+          <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            <button type="button" className={`tab ${partnerSection === 'partner-api' ? 'active' : ''}`} onClick={() => setPartnerSection('partner-api')}>Partner API</button>
+            <button type="button" className={`tab ${partnerSection === 'webhooks' ? 'active' : ''}`} onClick={() => setPartnerSection('webhooks')}>Webhooks</button>
+            <button type="button" className={`tab ${partnerSection === 'connectors' ? 'active' : ''}`} onClick={() => setPartnerSection('connectors')}>App Connectors</button>
+          </div>
+        </>
+      )}
+
+      {tab === 'partner' && partnerSection === 'partner-api' && (
         <div className="grid grid-2">
           <DataPanel title="Partner REST API" live>
             <p className="settings-panel-desc">Connect any SaaS, website, or tool via REST. Auth with <code>X-SI-API-Key</code>.</p>
@@ -487,7 +509,7 @@ function IntegrationsContent() {
         </div>
       )}
 
-      {tab === 'webhooks' && (
+      {tab === 'partner' && partnerSection === 'webhooks' && (
         <div className="grid grid-2">
           <DataPanel title="Inbound Webhook (receive)" live>
             <p className="settings-panel-desc">External apps POST events to this URL to trigger automations.</p>
@@ -530,7 +552,7 @@ function IntegrationsContent() {
         </div>
       )}
 
-      {tab === 'connectors' && (
+      {tab === 'partner' && partnerSection === 'connectors' && (
         <DataPanel title="App Connectors" live>
           <p className="settings-panel-desc">Pre-built integration paths for popular platforms — all use Partner API + Webhooks above.</p>
           <div className="connector-grid">
@@ -539,7 +561,7 @@ function IntegrationsContent() {
                 <span className="connector-icon">{c.icon}</span>
                 <strong>{c.name}</strong>
                 <p>{c.desc}</p>
-                <button className="btn" style={{ marginTop: 8, fontSize: '0.75rem' }} onClick={() => setTabAndUrl('partner-api')}>Setup API →</button>
+                <button className="btn" style={{ marginTop: 8, fontSize: '0.75rem' }} onClick={() => { setPartnerSection('partner-api'); setTabAndUrl('partner'); }}>Setup API →</button>
               </div>
             ))}
           </div>

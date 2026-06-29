@@ -87,8 +87,8 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     outcome: 'Draft, review, and publish content that moves people to act.',
     subtitle: 'Generate → queue → publish — one pipeline, no tab hunting.',
     flow: ['Generate', 'Review Queue', 'Publish', 'Schedule'],
-    focusTabIds: ['studio', 'queue', 'standard', 'wizard'],
-    collapseGroups: ['Insights', 'Tools'],
+    focusTabIds: ['studio', 'queue', 'compose'],
+    collapseGroups: ['Advanced', 'Pipeline'],
     actions: [
       { label: 'Generate', tab: 'studio', primary: true },
       { label: 'Review Queue', tab: 'queue' },
@@ -189,7 +189,7 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     outcome: 'Clear your approval queue — publish drafts that already match your voice.',
     subtitle: 'Pending first: review, edit, approve, export.',
     flow: ['Pending', 'Edit', 'Approve', 'Published'],
-    focusTabIds: ['pending', 'published', 'all', 'insights'],
+    focusTabIds: ['pending', 'published', 'archive'],
     actions: [
       { label: 'Pending Review', tab: 'pending', primary: true },
       { label: 'Browse Posts', href: '/browse-posts' },
@@ -342,7 +342,7 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     subtitle: 'Start with Overview — drill into keys, Guardian, or billing only when needed.',
     flow: ['Overview', 'Campaign', 'Keys', 'Health'],
     focusTabIds: ['overview', 'campaigns', 'api-keys', 'guardian-api'],
-    collapseGroups: ['Strategy', 'System'],
+    collapseGroups: ['Advanced'],
     actions: [
       { label: 'Integrations', href: '/integrations', primary: true },
       { label: 'Guardian', tab: 'guardian-api' },
@@ -354,21 +354,8 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
   },
 };
 
-/** Browse Posts view tabs (local state, not URL) */
-export const BROWSE_VIEW_TABS = [
-  { id: 'discover', label: 'Discover', group: "Today's Focus", locked: true },
-  { id: 'engage', label: 'Draft & Engage', group: "Today's Focus" },
-  { id: 'monitors', label: 'Monitors', group: 'Watch' },
-  { id: 'intelligence', label: 'Intelligence', group: 'Insights' },
-] as const;
-
-/** AI Replies view tabs */
-export const HISTORY_VIEW_TABS = [
-  { id: 'pending', label: 'Pending Review', group: "Today's Focus", locked: true },
-  { id: 'published', label: 'Published', group: "Today's Focus" },
-  { id: 'all', label: 'All Replies', group: 'Browse' },
-  { id: 'insights', label: 'Insights', group: 'Insights' },
-] as const;
+/** Re-export consolidated tab catalogs — see smartTabs.ts */
+export { BROWSE_VIEW_TABS, HISTORY_VIEW_TABS } from '@/lib/smartTabs';
 
 export function getPageFocus(pathname: string): PageFocusConfig | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';

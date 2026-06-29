@@ -17,6 +17,14 @@ import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
 import { NativeBrowserPanel } from '@/components/NativeBrowserPanel';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
+import {
+  SETTINGS_COLLAPSE_GROUPS,
+  SETTINGS_FOCUS_TABS,
+  SETTINGS_LEGACY_TAB_MAP,
+  SETTINGS_TABS,
+  resolveLegacyTab,
+  type SettingsTabId,
+} from '@/lib/smartTabs';
 import { GuardianGatekeeperPanel } from '@/components/GuardianGatekeeperPanel';
 import { SovereignThreatPanel } from '@/components/SovereignThreatPanel';
 import { THEE_MICHAEL } from '@/lib/sovereignThreatCapture';
@@ -39,32 +47,24 @@ type KeySources = {
   message?: string;
 };
 
-const TABS = [
-  { id: 'overview', label: 'Overview', group: "Today's Focus", locked: true },
-  { id: 'campaigns', label: 'Campaigns', group: "Today's Focus" },
-  { id: 'api-keys', label: 'API Keys', group: "Today's Focus" },
-  { id: 'guardian-api', label: 'Guardian & API', group: "Today's Focus" },
-  { id: 'billing', label: 'Billing', group: 'Account' },
-  { id: 'playbooks', label: 'Strategy Playbooks', group: 'Strategy' },
-  { id: 'site-health', label: 'Traffic & Rankings', group: 'Strategy' },
-  { id: 'account-intelligence', label: 'Account Intelligence', group: 'Strategy' },
-  { id: 'live-probes', label: 'Live Probes', group: 'Connect' },
-  { id: 'grok', label: 'Grok', group: 'Connect' },
-  { id: 'tutorials', label: 'Tutorials', group: 'System' },
-  { id: 'health', label: 'System Health', group: 'System' },
-  { id: 'system', label: 'System', group: 'System' },
-] as const;
-
-const SETTINGS_FOCUS_TABS = ['overview', 'campaigns', 'api-keys', 'guardian-api'];
-const SETTINGS_COLLAPSE_GROUPS = ['Strategy', 'System'];
-
-type TabId = (typeof TABS)[number]['id'];
+const TABS = SETTINGS_TABS;
+type TabId = SettingsTabId;
 
 function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as TabId) || 'overview';
-  const [tab, setTab] = useState<TabId>(TABS.some((t) => t.id === initialTab) ? initialTab : 'overview');
+  const rawTab = searchParams.get('tab');
+  const initialTab = resolveLegacyTab(rawTab, TABS, SETTINGS_LEGACY_TAB_MAP, 'overview');
+  const [tab, setTab] = useState<TabId>(initialTab);
+  const [strategySection, setStrategySection] = useState<'playbooks' | 'site-health' | 'account-intelligence'>(
+    rawTab === 'site-health' ? 'site-health' : rawTab === 'account-intelligence' ? 'account-intelligence' : 'playbooks',
+  );
+  const [connectSection, setConnectSection] = useState<'live-probes' | 'grok'>(
+    rawTab === 'grok' ? 'grok' : 'live-probes',
+  );
+  const [systemSection, setSystemSection] = useState<'health' | 'tutorials' | 'status'>(
+    rawTab === 'tutorials' ? 'tutorials' : rawTab === 'health' ? 'health' : 'status',
+  );
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [keySources, setKeySources] = useState<KeySources>({});
   const [apiStatus, setApiStatus] = useState<Record<string, string>>({});
@@ -86,9 +86,28 @@ function SettingsContent() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
 
-  const setTabAndUrl = (t: TabId) => {
-    setTab(t);
-    router.replace(`/settings?tab=${t}`, { scroll: false });
+  const setTabAndUrl = (t: string) => {
+    if (t === 'playbooks' || t === 'site-health' || t === 'account-intelligence') {
+      setStrategySection(t);
+      setTab('strategy');
+      router.replace('/settings?tab=strategy', { scroll: false });
+      return;
+    }
+    if (t === 'live-probes' || t === 'grok') {
+      setConnectSection(t);
+      setTab('connect');
+      router.replace('/settings?tab=connect', { scroll: false });
+      return;
+    }
+    if (t === 'health' || t === 'tutorials') {
+      setSystemSection(t);
+      setTab('system');
+      router.replace('/settings?tab=system', { scroll: false });
+      return;
+    }
+    const resolved = resolveLegacyTab(t, TABS, SETTINGS_LEGACY_TAB_MAP, 'overview');
+    setTab(resolved);
+    router.replace(`/settings?tab=${resolved}`, { scroll: false });
   };
 
   const refresh = useCallback(async () => {
@@ -130,8 +149,10 @@ function SettingsContent() {
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
   useEffect(() => {
-    const q = searchParams.get('tab') as TabId | null;
-    if (q && TABS.some((t) => t.id === q)) setTab(q);
+    const q = searchParams.get('tab');
+    if (!q) return;
+    setTabAndUrl(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   useEffect(() => {
@@ -338,8 +359,8 @@ function SettingsContent() {
         onChange={(id) => { if (TABS.some((t) => t.id === id)) setTabAndUrl(id as TabId); }}
         grouped
         className="settings-tabs"
-        focusTabIds={SETTINGS_FOCUS_TABS}
-        collapseGroups={SETTINGS_COLLAPSE_GROUPS}
+        focusTabIds={[...SETTINGS_FOCUS_TABS]}
+        collapseGroups={[...SETTINGS_COLLAPSE_GROUPS]}
       />
 
       {tab === 'overview' && (
@@ -348,8 +369,8 @@ function SettingsContent() {
           <Link href="/content-hub" className="btn">Content Hub</Link>
           <Link href="/prompt-vault" className="btn">Prompt Vault</Link>
           <Link href="/integrations" className="btn">Integrations Hub</Link>
-          <button type="button" className="btn" onClick={() => setTabAndUrl('grok')}>Grok & Browser</button>
-          <button type="button" className="btn" onClick={() => setTabAndUrl('playbooks')}>Strategy Playbooks</button>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('connect')}>Grok & Browser</button>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('strategy')}>Strategy & Traffic</button>
           <Link href="/account-hub" className="btn">Account Hub</Link>
         </div>
         <div className="grid grid-2">
@@ -365,11 +386,9 @@ function SettingsContent() {
             <BarChart items={groupBars} maxHeight={90} />
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <Link href="/integrations" className="btn primary">Integrations Hub →</Link>
-              <button className="btn" onClick={() => setTabAndUrl('playbooks')}>Strategy Playbooks</button>
-              <button className="btn" onClick={() => setTabAndUrl('account-intelligence')}>Account Intelligence</button>
-              <button className="btn" onClick={() => setTabAndUrl('site-health')}>Traffic & Rankings</button>
+              <button className="btn" onClick={() => setTabAndUrl('strategy')}>Strategy & Traffic</button>
               <button className="btn primary" onClick={testConnections} disabled={loading}>Run Live Audit</button>
-              <button className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Probes →</button>
+              <button className="btn" onClick={() => setTabAndUrl('connect')}>Probes & Browser →</button>
             </div>
           </DataPanel>
           <DataPanel title="Credential Mode" live>
@@ -397,15 +416,64 @@ function SettingsContent() {
         </>
       )}
 
-      {tab === 'playbooks' && <SitePlaybooksPanel />}
+      {tab === 'strategy' && (
+        <>
+          <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            <button type="button" className={`tab ${strategySection === 'playbooks' ? 'active' : ''}`} onClick={() => setStrategySection('playbooks')}>Playbooks</button>
+            <button type="button" className={`tab ${strategySection === 'site-health' ? 'active' : ''}`} onClick={() => setStrategySection('site-health')}>Traffic & Rankings</button>
+            <button type="button" className={`tab ${strategySection === 'account-intelligence' ? 'active' : ''}`} onClick={() => setStrategySection('account-intelligence')}>Account Intelligence</button>
+          </div>
+          {strategySection === 'playbooks' && <SitePlaybooksPanel />}
+          {strategySection === 'site-health' && <SiteTrafficHealthPanel campaigns={campaigns} />}
+          {strategySection === 'account-intelligence' && <IntelligenceSettingsPanel />}
+        </>
+      )}
 
-      {tab === 'site-health' && <SiteTrafficHealthPanel campaigns={campaigns} />}
-
-      {tab === 'live-probes' && (
-        <SettingsLiveProbes
-          onMetrics={(m) => setApiStatus(m)}
-          onMessage={setMsg}
-        />
+      {tab === 'connect' && (
+        <>
+          <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+            <button type="button" className={`tab ${connectSection === 'live-probes' ? 'active' : ''}`} onClick={() => setConnectSection('live-probes')}>Live Probes</button>
+            <button type="button" className={`tab ${connectSection === 'grok' ? 'active' : ''}`} onClick={() => setConnectSection('grok')}>Grok & Browser</button>
+          </div>
+          {connectSection === 'live-probes' && (
+            <SettingsLiveProbes onMetrics={(m) => setApiStatus(m)} onMessage={setMsg} />
+          )}
+          {connectSection === 'grok' && (
+            <div className="settings-grok-stack">
+              <div className="settings-quick-links">
+                <Link href="/content-hub?tab=media" className="btn">Content Hub → Media</Link>
+                <Link href="/integrations" className="btn">Integrations Hub</Link>
+                <button type="button" className="btn" onClick={() => setTabAndUrl('tutorials')}>Setup Tutorial</button>
+              </div>
+              <NativeBrowserPanel />
+              <DataPanel title="Grok Engine (Browser Session)" live>
+                <p className="settings-panel-desc">
+                  Grok Text, <strong>Grok Imagine</strong>, Video, and Infographics run through a persistent Edge profile at grok.com.
+                </p>
+                <div className="grid grid-2">
+                  <input className="input" type="email" placeholder="x.ai / Grok email" value={grok.email || ''} onChange={(e) => setGrok({ ...grok, email: e.target.value })} />
+                  <input className="input" type="password" placeholder="Grok password" value={grok.password || ''} onChange={(e) => setGrok({ ...grok, password: e.target.value })} />
+                </div>
+                <div className="post-card" style={{ marginTop: 12, fontSize: '0.85rem' }}>
+                  {(grokStatus as { session?: { loggedIn?: boolean } }).session?.loggedIn
+                    ? <span className="status-ok">✓ Grok authorized</span>
+                    : <span className="status-partial">Not authorized — connect below</span>}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                  <button className="btn primary" onClick={saveGrok}>Save Credentials</button>
+                  <button className="btn" onClick={async () => {
+                    await saveGrok();
+                    setGrokStatus(await invoke<Record<string, unknown>>('grok-connect'));
+                    setMsg('Grok connect initiated');
+                  }}>Connect & Authorize</button>
+                  <button className="btn" onClick={async () => {
+                    setGrokStatus(await invoke<Record<string, unknown>>('grok-get-status'));
+                  }}>Refresh Status</button>
+                </div>
+              </DataPanel>
+            </div>
+          )}
+        </>
       )}
 
       {tab === 'api-keys' && (
@@ -439,8 +507,6 @@ function SettingsContent() {
           <button className="btn primary" style={{ marginTop: 12 }} onClick={saveKeys} disabled={loading}>Save All Keys</button>
         </>
       )}
-
-      {tab === 'account-intelligence' && <IntelligenceSettingsPanel />}
 
       {tab === 'campaigns' && (
         <DataPanel title={`Campaigns (${campaigns.length})`} live>
@@ -523,74 +589,6 @@ function SettingsContent() {
         </div>
       )}
 
-      {tab === 'grok' && (
-        <div className="settings-grok-stack">
-        <div className="settings-quick-links">
-          <Link href="/content-hub?tab=grok" className="btn">Content Hub → Grok</Link>
-          <Link href="/content-hub?tab=thumbnails" className="btn">Thumbnail Studio</Link>
-          <Link href="/integrations" className="btn">Integrations Hub</Link>
-          <button type="button" className="btn" onClick={() => setTabAndUrl('tutorials')}>Setup Tutorial (tut_grok)</button>
-        </div>
-        <NativeBrowserPanel />
-        <DataPanel title="Grok Engine (Browser Session)" live>
-          <p className="settings-panel-desc">
-            Grok Text, <strong>Grok Imagine</strong> (images), Grok Video + Extend, and Infographics run through a persistent
-            <strong> Microsoft Edge</strong> profile at grok.com — not an API key. Brain docs: <code>brain/GROK.md</code> · skill: <code>brain/skills/grok-imagine/SKILL.md</code>
-          </p>
-          <div className="grid grid-2">
-            <input className="input" type="email" placeholder="x.ai / Grok email" value={grok.email || ''} onChange={(e) => setGrok({ ...grok, email: e.target.value })} />
-            <input className="input" type="password" placeholder="Grok password" value={grok.password || ''} onChange={(e) => setGrok({ ...grok, password: e.target.value })} />
-          </div>
-          <div className="post-card" style={{ marginTop: 12, fontSize: '0.85rem' }}>
-            {(grokStatus as { session?: { loggedIn?: boolean } }).session?.loggedIn
-              ? <span className="status-ok">✓ Grok authorized — Imagine, Video, and Text ready</span>
-              : <span className="status-partial">Not authorized — connect in desktop Settings or click Connect below</span>}
-          </div>
-          <ul style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '12px 0', paddingLeft: 18 }}>
-            <li><strong>Grok Imagine</strong> — Content Hub → generates PNG to grok-assets/</li>
-            <li><strong>Grok Video</strong> — keyword prompt, ~1min wait, auto Extend per part</li>
-            <li><strong>Grok Text</strong> — new chat with campaign keyword prompts</li>
-            <li><strong>Edge profile</strong> — native-browser-profiles/edge/grok (cookies persist)</li>
-          </ul>
-          <button className="btn" style={{ marginBottom: 8 }} onClick={() => setTabAndUrl('tutorials')}>Open Setup Tutorial (tut_grok)</button>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            <button className="btn primary" onClick={saveGrok}>Save Credentials</button>
-            <button className="btn" onClick={async () => {
-              await saveGrok();
-              setGrokStatus(await invoke<Record<string, unknown>>('grok-connect'));
-              setMsg('Grok connect initiated — complete CAPTCHA in Edge if prompted');
-            }}>Connect & Authorize</button>
-            <button className="btn" onClick={async () => {
-              setGrokStatus(await invoke<Record<string, unknown>>('grok-get-status'));
-            }}>Refresh Status</button>
-          </div>
-        </DataPanel>
-        </div>
-      )}
-
-      {tab === 'tutorials' && (
-        <DataPanel title={`Setup Academy (${completedTutorials.length}/${tutorials.length} complete)`} live>
-          <RingChart percent={tutorials.length ? (completedTutorials.length / tutorials.length) * 100 : 0} label="Progress" color="#a855f7" />
-          <div className="tutorial-grid" style={{ marginTop: 16 }}>
-            {tutorials.map((tut) => (
-              <div key={tut.id} className={`integration-probe-card ${completedTutorials.includes(tut.id) ? 'probe-pass' : ''}`}>
-                <span className="badge">{tut.category || 'guide'}</span>
-                <h4 style={{ margin: '8px 0 4px', fontSize: '0.9rem' }}>{tut.title}</h4>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>{tut.duration || '5 min'}</p>
-                <button className="btn" style={{ marginTop: 8, fontSize: '0.75rem' }} onClick={async () => {
-                  await invoke('mark-tutorial-complete', tut.id);
-                  setCompletedTutorials((prev) => prev.includes(tut.id) ? prev : [...prev, tut.id]);
-                }}>
-                  {completedTutorials.includes(tut.id) ? '✓ Done' : 'Mark Complete'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </DataPanel>
-      )}
-
-      {tab === 'health' && <SettingsHealthPanel />}
-
       {tab === 'guardian-api' && (
         <>
           <p className="settings-panel-desc" style={{ marginBottom: '1rem' }}>
@@ -604,6 +602,34 @@ function SettingsContent() {
       )}
 
       {tab === 'system' && (
+        <>
+          <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            <button type="button" className={`tab ${systemSection === 'status' ? 'active' : ''}`} onClick={() => setSystemSection('status')}>Status</button>
+            <button type="button" className={`tab ${systemSection === 'health' ? 'active' : ''}`} onClick={() => setSystemSection('health')}>System Health</button>
+            <button type="button" className={`tab ${systemSection === 'tutorials' ? 'active' : ''}`} onClick={() => setSystemSection('tutorials')}>Tutorials</button>
+          </div>
+          {systemSection === 'health' && <SettingsHealthPanel />}
+          {systemSection === 'tutorials' && (
+            <DataPanel title={`Setup Academy (${completedTutorials.length}/${tutorials.length} complete)`} live>
+              <RingChart percent={tutorials.length ? (completedTutorials.length / tutorials.length) * 100 : 0} label="Progress" color="#a855f7" />
+              <div className="tutorial-grid" style={{ marginTop: 16 }}>
+                {tutorials.map((tut) => (
+                  <div key={tut.id} className={`integration-probe-card ${completedTutorials.includes(tut.id) ? 'probe-pass' : ''}`}>
+                    <span className="badge">{tut.category || 'guide'}</span>
+                    <h4 style={{ margin: '8px 0 4px', fontSize: '0.9rem' }}>{tut.title}</h4>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>{tut.duration || '5 min'}</p>
+                    <button className="btn" style={{ marginTop: 8, fontSize: '0.75rem' }} onClick={async () => {
+                      await invoke('mark-tutorial-complete', tut.id);
+                      setCompletedTutorials((prev) => prev.includes(tut.id) ? prev : [...prev, tut.id]);
+                    }}>
+                      {completedTutorials.includes(tut.id) ? '✓ Done' : 'Mark Complete'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </DataPanel>
+          )}
+          {systemSection === 'status' && (
         <div className="grid grid-2">
           <DataPanel title="Settings Status" live>
             <BarChart items={[
@@ -625,6 +651,8 @@ function SettingsContent() {
             <button className="btn" style={{ marginTop: 8 }} onClick={() => { clearSession(); router.push('/login'); }}>Sign Out</button>
           </DataPanel>
         </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
-import { HISTORY_VIEW_TABS } from '@/lib/pageFocus';
+import { HISTORY_LEGACY_TAB_MAP, HISTORY_VIEW_TABS, resolveLegacyTab } from '@/lib/smartTabs';
 import { BarChart } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { buildCsvExport, downloadCsv } from '@/lib/csvExport';
@@ -72,10 +72,11 @@ export default function HistoryPage() {
   const [viewTab, setViewTab] = useState('pending');
 
   const setViewAndFilter = useCallback((id: string) => {
-    setViewTab(id);
-    if (id === 'pending') setFilter('draft');
-    else if (id === 'published') setFilter('published');
-    else if (id === 'all') setFilter('all');
+    const resolved = resolveLegacyTab(id, HISTORY_VIEW_TABS, HISTORY_LEGACY_TAB_MAP, 'pending');
+    setViewTab(resolved);
+    if (resolved === 'pending') setFilter('draft');
+    else if (resolved === 'published') setFilter('published');
+    else setFilter('all');
   }, []);
 
   const filterPayload = useMemo(() => ({
@@ -183,8 +184,7 @@ export default function HistoryPage() {
         active={viewTab}
         onChange={setViewAndFilter}
         grouped
-        focusTabIds={['pending', 'published', 'all']}
-        collapseGroups={['Insights']}
+        focusTabIds={['pending', 'published', 'archive']}
       />
 
       <SectionLivePanel section="history" />
@@ -204,7 +204,6 @@ export default function HistoryPage() {
         <div className="card"><h3>By Platform</h3><BarChart items={platformChart.length ? platformChart : [{ label: '—', value: 0 }]} maxHeight={100} /></div>
       </div>
 
-      {viewTab !== 'insights' && (
       <>
       <div className="card">
         <div className="source-tabs" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
@@ -279,7 +278,6 @@ export default function HistoryPage() {
         {!replies.length && <p style={{ color: '#94a3b8' }}>No replies match filters — run auto-rules or draft from Browse Posts.</p>}
       </div>
       </>
-      )}
 
       {editing && (
         <div className="card">

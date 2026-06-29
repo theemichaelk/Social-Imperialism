@@ -185,7 +185,7 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
             <p className="settings-panel-desc">{partner.partnerApiKeyFull ? 'Key configured (masked)' : 'No key yet'}</p>
           )}
           <button className="btn primary" onClick={genApiKey} disabled={loading}>Generate API Key</button>
-          <Link href="/integrations?tab=partner-api" className="btn" style={{ marginLeft: 8 }}>Full Partner API →</Link>
+          <Link href="/integrations?tab=partner" className="btn" style={{ marginLeft: 8 }}>Full Partner API →</Link>
         </DataPanel>
 
         <DataPanel title="Guardian Webhooks" live>

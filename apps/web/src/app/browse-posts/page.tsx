@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
-import { BROWSE_VIEW_TABS } from '@/lib/pageFocus';
+import { BROWSE_LEGACY_TAB_MAP, BROWSE_VIEW_TABS, resolveLegacyTab } from '@/lib/smartTabs';
 import { BROWSE_PLATFORMS } from '@/lib/platforms';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
 import { useIntelligence } from '@/hooks/useIntelligence';
@@ -424,17 +424,16 @@ export default function BrowsePostsPage() {
         }
         focusStats={{ Posts: filtered.length, Monitors: monitors.length, Keywords: keywords.length }}
         onFocusAction={(a) => { if (a.label === 'Full Scan') loadFeed(true); }}
-        onFocusTab={setView}
+        onFocusTab={(id) => setView(resolveLegacyTab(id, BROWSE_VIEW_TABS, BROWSE_LEGACY_TAB_MAP, 'discover'))}
       />
 
       <ManageableTabNav
         pageId="browse-posts"
         catalog={[...BROWSE_VIEW_TABS]}
         active={view}
-        onChange={setView}
+        onChange={(id) => setView(resolveLegacyTab(id, BROWSE_VIEW_TABS, BROWSE_LEGACY_TAB_MAP, 'discover'))}
         grouped
         focusTabIds={['discover', 'engage', 'monitors']}
-        collapseGroups={['Insights']}
       />
 
       <BrowsePostsLivePanel feedCount={filtered.length} />
@@ -525,7 +524,7 @@ export default function BrowsePostsPage() {
         </div>
       )}
 
-      {(view === 'intelligence' || (view === 'discover' && accountFilter)) && isSurfaceEnabled('browse-posts') && (() => {
+      {view === 'discover' && accountFilter && isSurfaceEnabled('browse-posts') && (() => {
         const acc = intelAccounts.find((a) => a.id === accountFilter) || intelAccounts[0];
         if (!acc) return null;
         return (

@@ -14,6 +14,13 @@ import { QaSettingsPanel } from '@/components/QaSettingsPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { useSiEvents } from '@/hooks/useSiEvents';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
+import {
+  DASHBOARD_COLLAPSE_GROUPS,
+  DASHBOARD_FOCUS_TABS,
+  DASHBOARD_LEGACY_TAB_MAP,
+  DASHBOARD_TABS,
+  resolveLegacyTab,
+} from '@/lib/smartTabs';
 
 type Post = {
   platform: string;
@@ -310,15 +317,9 @@ export default function DashboardPage() {
     refresh();
   }
 
-  const DASHBOARD_TABS = [
-    { id: 'overview', label: 'Overview', group: "Today's Focus", locked: true },
-    { id: 'feed', label: 'Live Feed', group: "Today's Focus" },
-    { id: 'growth', label: 'Growth & Leads', group: "Today's Focus" },
-    { id: 'qa', label: 'Q&A Discovery', group: 'Deep Dive' },
-    { id: 'worker', label: 'Worker', group: 'Deep Dive' },
-    { id: 'analytics', label: 'Analytics', group: 'Insights' },
-  ];
-  const DASHBOARD_FOCUS = ['overview', 'feed', 'growth'];
+  const onDashboardTab = (id: string) => {
+    setTab(resolveLegacyTab(id, DASHBOARD_TABS, DASHBOARD_LEGACY_TAB_MAP, 'overview'));
+  };
   const apiEntries = Object.entries(stats.apiMetrics || setup.apiMetrics as Record<string, string> || {});
   const connectedApis = apiEntries.filter(([, v]) => v === 'Connected').length;
   const totalApis = apiEntries.length || 1;
@@ -414,12 +415,12 @@ export default function DashboardPage() {
 
       <ManageableTabNav
         pageId="dashboard"
-        catalog={DASHBOARD_TABS}
+        catalog={[...DASHBOARD_TABS]}
         active={tab}
-        onChange={setTab}
+        onChange={onDashboardTab}
         grouped
-        focusTabIds={DASHBOARD_FOCUS}
-        collapseGroups={['Insights']}
+        focusTabIds={[...DASHBOARD_FOCUS_TABS]}
+        collapseGroups={[...DASHBOARD_COLLAPSE_GROUPS]}
       />
 
       {tab === 'overview' && (
@@ -563,47 +564,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {tab === 'qa' && (
-        <div className="grid grid-2">
-          <DataPanel title="Q&A Intelligence" live>
-            <SparkRow items={[
-              { label: 'Questions', value: questions.length, status: questions.length ? 'ok' : 'warn' },
-              { label: 'Platforms', value: qaPlatforms.length },
-              { label: 'Drafts', value: stats.aiDrafts ?? 0 },
-            ]} />
-            {qaPlatforms.length > 0 && <BarChart items={qaPlatforms} maxHeight={90} />}
-            <button className="btn primary" style={{ marginTop: 12 }} onClick={loadQuestions}>Auto-Discover Questions</button>
-          </DataPanel>
-          <InvokePanel title="Discover Best Questions" channel="discover-best-questions" buttonLabel="Discover" renderResult={(d) => {
-            const q = asArray<Question>((d as { questions?: Question[] })?.questions ?? d);
-            setQuestions(q);
-            return <p>{q.length} questions found</p>;
-          }} />
-          <InvokePanel title="Unanswered Tracker" channel="get-unanswered-questions" buttonLabel="Load" />
-          <div style={{ gridColumn: '1 / -1' }}><QaSettingsPanel /></div>
-          <InvokePanel title="Social Ad Campaign Ideas" channel="get-qa-ad-suggestions" buttonLabel="Generate Ad Ideas" />
-          <InvokePanel title="Search Discovered Posts" channel="search-discovered-posts" args={[{ q: '', limit: 20 }]} buttonLabel="Search Index" />
-          <div style={{ gridColumn: '1 / -1' }}>
-            <DataPanel title={`Q&A Queue (${questions.length})`} live>
-              {questions.slice(0, 8).map((q, i) => (
-                <div key={i} className="post-card">
-                  <span className="badge">{q.platform}</span>
-                  <div>{(q.content || '').slice(0, 200)}</div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                    <button className="btn" onClick={async () => {
-                      const res = await invoke<{ formatted?: string; answer?: string }>('compose-qa-answer', { question: q });
-                      setDraft(res.formatted || res.answer || '');
-                      setActionMsg('Answer composed — see Feed tab draft panel.');
-                    }}>Compose Answer</button>
-                    {q.url && <a href={q.url} target="_blank" rel="noreferrer">Open →</a>}
-                  </div>
-                </div>
-              ))}
-            </DataPanel>
-          </div>
-        </div>
-      )}
-
       {tab === 'growth' && (
         <div className="grid grid-2">
           <DataPanel title="Growth Pipeline" live>
@@ -671,6 +631,39 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
+          <DataPanel title="Q&A Discovery" live>
+            <SparkRow items={[
+              { label: 'Questions', value: questions.length, status: questions.length ? 'ok' : 'warn' },
+              { label: 'Platforms', value: qaPlatforms.length },
+              { label: 'Drafts', value: stats.aiDrafts ?? 0 },
+            ]} />
+            {qaPlatforms.length > 0 && <BarChart items={qaPlatforms} maxHeight={90} />}
+            <button className="btn primary" style={{ marginTop: 12 }} onClick={loadQuestions}>Auto-Discover Questions</button>
+          </DataPanel>
+          <InvokePanel title="Discover Best Questions" channel="discover-best-questions" buttonLabel="Discover" renderResult={(d) => {
+            const q = asArray<Question>((d as { questions?: Question[] })?.questions ?? d);
+            setQuestions(q);
+            return <p>{q.length} questions found</p>;
+          }} />
+          <div style={{ gridColumn: '1 / -1' }}><QaSettingsPanel /></div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <DataPanel title={`Q&A Queue (${questions.length})`} live>
+              {questions.slice(0, 8).map((q, i) => (
+                <div key={i} className="post-card">
+                  <span className="badge">{q.platform}</span>
+                  <div>{(q.content || '').slice(0, 200)}</div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <button className="btn" onClick={async () => {
+                      const res = await invoke<{ formatted?: string; answer?: string }>('compose-qa-answer', { question: q });
+                      setDraft(res.formatted || res.answer || '');
+                      setActionMsg('Answer composed — see Feed tab draft panel.');
+                    }}>Compose Answer</button>
+                    {q.url && <a href={q.url} target="_blank" rel="noreferrer">Open →</a>}
+                  </div>
+                </div>
+              ))}
+            </DataPanel>
+          </div>
         </div>
       )}
 

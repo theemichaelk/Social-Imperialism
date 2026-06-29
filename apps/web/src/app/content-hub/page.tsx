@@ -16,7 +16,7 @@ import { ImperialContentStudio } from '@/components/ImperialContentStudio';
 import { SocialPostCard } from '@/components/SocialPostCard';
 import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
 import { AutoContentSettingsPanel } from '@/components/AutoContentSettingsPanel';
-import { ContentHubDashboard } from '@/components/ContentHubDashboard';
+
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { AccountSelectField } from '@/components/AccountSelectField';
 import { GrokToolbar } from '@/components/GrokToolbar';
@@ -29,40 +29,35 @@ import { RepurposeContentPanel } from '@/components/RepurposeContentPanel';
 import { ContentHubTabNav } from '@/components/ContentHubTabNav';
 import { MetricTile } from '@/components/DashboardViz';
 import { PromptVaultPicker } from '@/components/PromptVaultPicker';
+import {
+  CONTENT_HUB_TABS,
+  CONTENT_HUB_COLLAPSE_GROUPS,
+  CONTENT_HUB_FOCUS_TABS,
+  CONTENT_HUB_LEGACY_TAB_MAP,
+  resolveLegacyTab,
+  type ContentHubTabId,
+} from '@/lib/smartTabs';
 
-const TABS = [
-  { id: 'studio', label: 'Generate', group: "Today's Focus", locked: true },
-  { id: 'queue', label: 'Review Queue', group: "Today's Focus" },
-  { id: 'standard', label: 'Quick Post', group: "Today's Focus" },
-  { id: 'wizard', label: 'Publish Wizard', group: "Today's Focus" },
-  { id: 'home', label: 'Hub Overview', group: 'Overview' },
-  { id: 'media', label: 'Media / Video', group: 'Create More' },
-  { id: 'repurpose', label: 'Repurpose', group: 'Create More' },
-  { id: 'qa', label: 'Q&A Composer', group: 'Create More' },
-  { id: 'grok', label: 'Grok & Infographic', group: 'Create More' },
-  { id: 'thumbnails', label: 'Thumbnails', group: 'Create More' },
-  { id: 'comments', label: 'Comments', group: 'Create More' },
-  { id: 'analytics', label: 'Analytics', group: 'Insights' },
-  { id: 'utilities', label: 'Utilities', group: 'Insights' },
-  { id: 'rss', label: 'RSS Import', group: 'Tools' },
-  { id: 'batch', label: 'Batch Studio', group: 'Tools' },
-] as const;
-
-const FOCUS_TABS = ['studio', 'queue', 'standard', 'wizard'];
-const COLLAPSE_GROUPS = ['Insights', 'Tools', 'Create More'];
-
-type TabId = (typeof TABS)[number]['id'];
+const TABS = CONTENT_HUB_TABS;
+type TabId = ContentHubTabId;
 
 const PUBLISH_CONTEXT_TABS = new Set<TabId>([
-  'studio', 'standard', 'media', 'wizard', 'queue', 'grok', 'thumbnails',
+  'studio', 'compose', 'media', 'queue', 'automation',
 ]);
 
 function ContentHubContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as TabId) || 'studio';
+  const rawTab = searchParams.get('tab');
+  const initialTab = resolveLegacyTab(rawTab, TABS, CONTENT_HUB_LEGACY_TAB_MAP, 'studio');
   const { settings, accounts: intelAccounts, isSurfaceEnabled } = useIntelligence();
-  const [tab, setTab] = useState<TabId>(TABS.some((t) => t.id === initialTab) ? initialTab : 'studio');
+  const [tab, setTab] = useState<TabId>(initialTab);
+  const [composeMode, setComposeMode] = useState<'quick' | 'wizard'>(
+    rawTab === 'wizard' ? 'wizard' : 'quick',
+  );
+  const [toolsSection, setToolsSection] = useState<'repurpose' | 'qa' | 'comments' | 'utilities'>(
+    rawTab === 'qa' ? 'qa' : rawTab === 'comments' ? 'comments' : rawTab === 'utilities' ? 'utilities' : 'repurpose',
+  );
   const [publishAccountId, setPublishAccountId] = useState('');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('');
@@ -82,8 +77,17 @@ function ContentHubContent() {
   }, [router]);
 
   useEffect(() => {
-    const q = searchParams.get('tab') as TabId | null;
-    if (q && TABS.some((t) => t.id === q)) setTab(q);
+    const q = searchParams.get('tab');
+    if (q) {
+      const resolved = resolveLegacyTab(q, TABS, CONTENT_HUB_LEGACY_TAB_MAP, 'studio');
+      setTab(resolved);
+      if (q === 'wizard') setComposeMode('wizard');
+      if (q === 'standard') setComposeMode('quick');
+      if (q === 'qa') setToolsSection('qa');
+      if (q === 'comments') setToolsSection('comments');
+      if (q === 'utilities') setToolsSection('utilities');
+      if (q === 'repurpose') setToolsSection('repurpose');
+    }
     try {
       const raw = sessionStorage.getItem('si_omni_handoff');
       if (!raw) return;
@@ -174,7 +178,8 @@ function ContentHubContent() {
 
   function loadIntoQuickPost(text: string, msg?: string) {
     setContent(text);
-    setTabAndUrl('standard');
+    setComposeMode('quick');
+    setTabAndUrl('compose');
     if (msg) setStatus(msg);
   }
 
@@ -202,32 +207,30 @@ function ContentHubContent() {
         tabs={[...TABS]}
         active={tab}
         onChange={(id) => setTabAndUrl(id as TabId)}
-        focusTabIds={FOCUS_TABS}
-        collapseGroups={COLLAPSE_GROUPS}
+        focusTabIds={[...CONTENT_HUB_FOCUS_TABS]}
+        collapseGroups={[...CONTENT_HUB_COLLAPSE_GROUPS]}
       />
 
-      {tab !== 'home' && (
-        <div className="dash-hero ch-compact-hero">
+      <div className="dash-hero ch-compact-hero">
           <div className="dash-hero-grid">
             <MetricTile label="Accounts" value={accounts.length} sub="linked" onClick={() => window.location.assign('/account-hub')} />
             <MetricTile label="Queue" value={hubStats.queue} sub="review" accent="#f59e0b" onClick={() => setTabAndUrl('queue')} />
             <MetricTile label="Scheduled" value={hubStats.scheduled} sub="calendar" accent="#a855f7" onClick={() => window.location.assign('/calendar')} />
             <MetricTile label="Library" value={hubStats.library} sub="assets" accent="#38bdf8" onClick={() => window.location.assign('/content-library')} />
             {hasDraft && (
-              <MetricTile label="Draft" value={`${content.trim().length}ch`} sub={(mediaUrl || videoUrl) ? 'with media' : 'in progress'} accent="#a855f7" onClick={() => setTabAndUrl('standard')} />
+              <MetricTile label="Draft" value={`${content.trim().length}ch`} sub={(mediaUrl || videoUrl) ? 'with media' : 'in progress'} accent="#a855f7" onClick={() => { setComposeMode('quick'); setTabAndUrl('compose'); }} />
             )}
           </div>
         </div>
-      )}
 
-      {hasDraft && tab !== 'standard' && (
+      {hasDraft && tab !== 'compose' && (
         <div className="ch-draft-banner">
           <span>
             <strong>Draft in progress</strong>
             {' '}· {content.trim().length} chars
             {(mediaUrl || videoUrl) ? ' · media attached' : ''}
           </span>
-          <button type="button" className="btn" onClick={() => setTabAndUrl('standard')}>Edit in Quick Post</button>
+          <button type="button" className="btn" onClick={() => { setComposeMode('quick'); setTabAndUrl('compose'); }}>Edit in Compose</button>
         </div>
       )}
 
@@ -236,8 +239,6 @@ function ContentHubContent() {
           <p style={{ margin: 0, fontSize: '0.9rem' }}>{status}</p>
         </div>
       )}
-
-      {tab === 'home' && <ContentHubDashboard onStartCreate={() => setTabAndUrl('studio')} onStatsChange={(s) => setHubStats((prev) => ({ ...prev, ...s }))} />}
 
       {tab === 'studio' && <ImperialContentStudio />}
 
@@ -265,7 +266,14 @@ function ContentHubContent() {
         </div>
       )}
 
-      {tab === 'standard' && (
+      {tab === 'compose' && (
+        <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          <button type="button" className={`tab ${composeMode === 'quick' ? 'active' : ''}`} onClick={() => setComposeMode('quick')}>Quick Post</button>
+          <button type="button" className={`tab ${composeMode === 'wizard' ? 'active' : ''}`} onClick={() => setComposeMode('wizard')}>Publish Wizard</button>
+        </div>
+      )}
+
+      {tab === 'compose' && composeMode === 'quick' && (
         <div className="pw-compose-split">
           <div className="card">
             <h3>Quick Post</h3>
@@ -303,7 +311,7 @@ function ContentHubContent() {
         </div>
       )}
 
-      {tab === 'wizard' && (
+      {tab === 'compose' && composeMode === 'wizard' && (
         <div className="card">
           <h3>Publish Wizard</h3>
           <PublishWizard accounts={accounts} />
@@ -314,9 +322,13 @@ function ContentHubContent() {
         </div>
       )}
 
-      {tab === 'rss' && (
+      {tab === 'automation' && (
         <div className="grid grid-2">
           <div style={{ gridColumn: '1 / -1' }}><AutoContentSettingsPanel /></div>
+          <div className="card" style={{ gridColumn: '1 / -1' }}>
+            <h3>Batch Studio</h3>
+            <ContentStudioPanel />
+          </div>
           <div className="card">
             <h3>RSS Curation</h3>
             <input className="input" value={rssUrl} onChange={(e) => setRssUrl(e.target.value)} />
@@ -328,14 +340,6 @@ function ContentHubContent() {
           <InvokePanel title="Discover Site RSS" channel="discover-site-rss" args={[{ url: 'https://techcrunch.com' }]} buttonLabel="Discover" />
           <InvokePanel title="RSS Sources" channel="get-site-rss-sources" buttonLabel="List" />
           <InvokePanel title="Category RSS Router" channel="run-category-rss-router" buttonLabel="Run Router" />
-          <InvokePanel title="Auto Content Scheduler" channel="run-content-scheduler-now" buttonLabel="Run Now" />
-        </div>
-      )}
-
-      {tab === 'batch' && (
-        <div className="card">
-          <h3>Batch Studio (advanced)</h3>
-          <ContentStudioPanel />
         </div>
       )}
 
@@ -364,40 +368,41 @@ function ContentHubContent() {
             </div>
           </div>
           <ThumbnailStudioPanel defaultTopic={videoCaption || content} onImage={(url) => { setMediaUrl(url); setVideoUrl(url); setStatus('Thumbnail applied'); }} />
+          <div className="card" style={{ gridColumn: '1 / -1' }}>
+            <h3>Grok & Infographic</h3>
+            <GrokToolbar
+              prompt={content || grokPrompt}
+              pageId="content-hub"
+              onText={(t) => { setContent(t); setGrokPrompt(t); }}
+              onMedia={(url) => { setMediaUrl(url); setStatus('Grok media ready — open Compose to publish'); }}
+            />
+          </div>
         </div>
       )}
 
-      {tab === 'repurpose' && (
-        <RepurposeContentPanel onContent={(text) => loadIntoQuickPost(text, 'Repurposed content loaded into Quick Post')} />
+      {tab === 'tools' && (
+        <>
+          <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            {(['repurpose', 'qa', 'comments', 'utilities'] as const).map((s) => (
+              <button key={s} type="button" className={`tab ${toolsSection === s ? 'active' : ''}`} onClick={() => setToolsSection(s)}>
+                {s === 'repurpose' ? 'Repurpose' : s === 'qa' ? 'Q&A' : s === 'comments' ? 'Comments' : 'Utilities'}
+              </button>
+            ))}
+          </div>
+          {toolsSection === 'repurpose' && (
+            <RepurposeContentPanel onContent={(text) => loadIntoQuickPost(text, 'Repurposed content loaded into Compose')} />
+          )}
+          {toolsSection === 'qa' && (
+            <QaAnswerComposerPanel onReuseContent={(text) => loadIntoQuickPost(text, 'Answer loaded into Compose')} />
+          )}
+          {toolsSection === 'comments' && <ContentCommentsPanel />}
+          {toolsSection === 'utilities' && (
+            <ContentHubUtilitiesPanel text={content} onText={setContent} onMedia={setMediaUrl} />
+          )}
+        </>
       )}
 
-      {tab === 'qa' && (
-        <QaAnswerComposerPanel onReuseContent={(text) => loadIntoQuickPost(text, 'Answer loaded into Quick Post')} />
-      )}
-
-      {tab === 'grok' && (
-        <GrokToolbar
-          prompt={content || grokPrompt}
-          pageId="content-hub"
-          onText={(t) => { setContent(t); setGrokPrompt(t); }}
-          onMedia={(url) => { setMediaUrl(url); setStatus('Grok media ready — open Quick Post to publish'); }}
-        />
-      )}
-
-      {tab === 'thumbnails' && (
-        <ThumbnailStudioPanel
-          defaultTopic={content}
-          onImage={(url) => { setMediaUrl(url); setStatus('Thumbnail applied — open Quick Post or Media tab to publish'); }}
-        />
-      )}
-
-      {tab === 'comments' && <ContentCommentsPanel />}
-
-      {tab === 'analytics' && <ContentAnalyticsPanel />}
-
-      {tab === 'utilities' && (
-        <ContentHubUtilitiesPanel text={content} onText={setContent} onMedia={setMediaUrl} />
-      )}
+      {tab === 'insights' && <ContentAnalyticsPanel />}
 
       {tab === 'queue' && (
         <div className="card">

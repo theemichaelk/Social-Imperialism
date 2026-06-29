@@ -1,20 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { GrokToolbar } from '@/components/GrokToolbar';
 import Link from 'next/link';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
-
-const FILTER_TABS = [
-  { id: 'all', label: 'All', locked: true },
-  { id: 'image', label: 'Images' },
-  { id: 'format-intel', label: 'Format Intelligence' },
-  { id: 'video', label: 'Video' },
-  { id: 'copy', label: 'Copy' },
-];
+import { buildContentLibraryTabs, libraryAssetCounts } from '@/lib/smartTabs';
 
 type ImageAnalysis = {
   category?: { primary?: string; isNews?: boolean; isTrending?: boolean; hasFamousPeople?: boolean };
@@ -206,13 +199,20 @@ export default function ContentLibraryPage() {
     }
   }
 
-  const studiedAssets = assets.filter((a) => !!(a.imageAnalysis || a.formatTemplateId));
+  const filterTabs = useMemo(
+    () => buildContentLibraryTabs(libraryAssetCounts(assets)),
+    [assets],
+  );
+
+  useEffect(() => {
+    if (!filterTabs.some((t) => t.id === filter)) setFilter('all');
+  }, [filter, filterTabs]);
 
   const shown = assets.filter((a) => {
     if (filter === 'all') return true;
     if (filter === 'format-intel') return !!(a.imageAnalysis || a.formatTemplateId);
     if (filter === 'copy') return a.type === 'copy' || a.type === 'text';
-    return a.type === filter;
+    return true;
   });
 
   return (
@@ -263,18 +263,10 @@ export default function ContentLibraryPage() {
 
       <ManageableTabNav
         pageId="content-library"
-        catalog={FILTER_TABS.map((t) => ({
-          ...t,
-          label: t.id === 'all'
-            ? `All (${assets.length})`
-            : t.id === 'format-intel'
-              ? `Format Intelligence (${studiedAssets.length})`
-              : t.id === 'image'
-                ? `Images (${assets.filter((a) => a.type === 'image').length})`
-                : t.label,
-        }))}
+        catalog={filterTabs}
         active={filter}
         onChange={setFilter}
+        focusTabIds={filterTabs.map((t) => t.id)}
       />
 
       <div className="grid grid-2">
