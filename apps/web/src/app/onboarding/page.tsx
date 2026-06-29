@@ -12,7 +12,7 @@ import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
 const PLATFORMS = ALL_PLATFORMS;
 const STEPS = ['Brand Profile', 'API Connections', 'Keywords & Platforms', 'Feed Preview', 'AI Replies & Be First'];
 
-type Monitor = { term?: string; platform?: string; type?: string; target?: string; added?: string };
+type Monitor = { id?: string; term?: string; platform?: string; type?: string; target?: string; added?: string };
 
 type Keyword = { id?: string; term: string; platforms?: string[] };
 type Post = { platform: string; content: string; url?: string; matchScore?: number };
@@ -42,14 +42,16 @@ export default function OnboardingPage() {
   const [watchType, setWatchType] = useState('keyword');
   const [watchPlatform, setWatchPlatform] = useState('All');
 
-  const refreshStatus = useCallback(async () => {
+  const refreshStatus = useCallback(async (opts?: { applyStep?: boolean }) => {
     const [s, api] = await Promise.all([
       invoke<Record<string, unknown>>('get-setup-status'),
       invoke<Record<string, string>>('check-api-status').catch(() => ({})),
     ]);
     setStatus(s);
     setApiMetrics((s.apiMetrics as Record<string, string>) || api || {});
-    setStep((s.nextStep as number) || 1);
+    if (opts?.applyStep) {
+      setStep((s.nextStep as number) || 1);
+    }
     const camp = s.campaign as Record<string, string> & { globalCustomPrompt?: string } | undefined;
     if (camp) {
       setBrand({
@@ -69,7 +71,7 @@ export default function OnboardingPage() {
     setMonitors(Array.isArray(mons) ? mons : []);
   }, []);
 
-  useEffect(() => { refreshStatus().catch(console.error); }, [refreshStatus]);
+  useEffect(() => { refreshStatus({ applyStep: true }).catch(console.error); }, [refreshStatus]);
 
   const connectedCount = Object.values(apiMetrics).filter((v) => v === 'Connected').length;
   const totalApis = Object.keys(apiMetrics).length || 1;
@@ -190,11 +192,13 @@ export default function OnboardingPage() {
 
   async function addMonitor() {
     if (!watchTerm.trim()) { setMsg('Enter a keyword, @handle, or page to watch'); return; }
+    const term = watchTerm.trim();
     const entry: Monitor = {
-      term: watchTerm.trim(),
+      id: `mon_${Date.now()}`,
+      term,
       platform: watchPlatform,
       type: watchType,
-      target: watchType,
+      target: term,
       added: new Date().toISOString(),
     };
     const next = [entry, ...monitors].slice(0, 20);
@@ -346,7 +350,7 @@ export default function OnboardingPage() {
           <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
             Admins: keys load from server .env automatically. Each field below can be tested live before you continue.
           </p>
-          <SetupConnectionsPanel onSaved={refreshStatus} />
+          <SetupConnectionsPanel onSaved={() => refreshStatus()} />
           <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
             <button className="btn primary" onClick={() => setStep(3)} disabled={connectedCount < 3}>
               Continue — {connectedCount} APIs live →
@@ -450,8 +454,11 @@ export default function OnboardingPage() {
             </select>
             <button className="btn" onClick={addMonitor}>+ Watch</button>
           </div>
+          {monitors.length === 0 && (
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No monitors yet — add a keyword or account to watch for Be-First replies.</p>
+          )}
           {monitors.map((m, i) => (
-            <div key={i} className="post-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={m.id || i} className="post-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span><span className="badge">{m.type}</span> {m.term} · {m.platform}</span>
               <button className="btn" onClick={() => removeMonitor(i)}>Remove</button>
             </div>
@@ -472,7 +479,11 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {msg && <p style={{ color: '#94a3b8', marginTop: 12 }}>{msg}</p>}
+      {msg && (
+        <div className="card" style={{ marginTop: 12, borderColor: msg.includes('required') || msg.includes('failed') || msg.includes('error') ? '#f59e0b' : '#10b981' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
+        </div>
+      )}
     </div>
   );
 }

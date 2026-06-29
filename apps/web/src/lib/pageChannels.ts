@@ -36,6 +36,15 @@ export const PAGE_CHANNELS = {
     'get-live-news', 'search-stock-photo', 'generate-image', 'get-browse-posts-live',
     'get-trending-topics', 'generate-ai',
   ],
+  onboarding: [
+    'get-setup-status', 'check-api-status', 'get-settings', 'save-settings', 'set-active-campaign',
+    'get-active-campaign', 'save-brand-guidelines', 'get-global-keys', 'save-global-keys', 'get-key-sources',
+    'test-all-connections', 'run-live-connection-audit', 'generate-keywords', 'save-keywords', 'get-keywords',
+    'get-keyword-api-status', 'get-live-feed', 'trigger-full-auto-search', 'generate-global-custom-prompt',
+    'get-watched-monitors', 'save-watched-monitors', 'get-auto-rules', 'save-auto-rules',
+    'save-auto-search-settings', 'start-worker', 'set-onboarding-complete', 'get-section-live',
+    'get-linked-accounts',
+  ],
   accountCreator: [
     'get-proxy-pool', 'save-proxy', 'delete-proxy', 'test-proxy', 'get-profile-kits',
     'generate-profile-kit', 'generate-bulk-profile-kits', 'delete-profile-kit', 'export-profile-kit',

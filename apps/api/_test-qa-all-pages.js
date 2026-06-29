@@ -71,6 +71,9 @@ const PAGES = [
       { name: 'Global custom prompt', channel: 'generate-global-custom-prompt', validate: (d) => d?.prompt || d?.customPrompt },
       { name: 'Watched monitors', channel: 'get-watched-monitors', validate: (d) => Array.isArray(d) },
       { name: 'Auto rules load', channel: 'get-auto-rules', validate: (d) => typeof d === 'object' },
+      { name: 'Save keywords', channel: 'save-keywords', args: [[{ term: 'onboarding-qa-kw', platforms: ['LinkedIn'] }]], validate: (d) => d?.success !== false || Array.isArray(d) },
+      { name: 'Full auto search', channel: 'trigger-full-auto-search', validate: (d) => d?.success !== false },
+      { name: 'Section live', channel: 'get-section-live', args: ['onboarding'], validate: (d) => d?.stats },
     ],
   },
   {

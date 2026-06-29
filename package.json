@@ -27,7 +27,8 @@
     "audit:accuracy": "node apps/api/_audit-accuracy-check.js",
     "test:sovereign-scan": "node apps/api/_test-sovereign-scan.js",
     "test:dashboard": "node apps/api/_test-dashboard-features.js",
-    "test:browse-posts": "node apps/api/_test-browse-posts-features.js"
+    "test:browse-posts": "node apps/api/_test-browse-posts-features.js",
+    "test:onboarding": "node apps/api/_test-setup-wizard-features.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

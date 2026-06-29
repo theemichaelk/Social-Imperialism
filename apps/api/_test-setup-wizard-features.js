@@ -45,6 +45,26 @@ const FEATURES = [
     validate: (d) => d?.success !== false },
   { area: 'Step 4', name: 'Setup status after complete', channel: 'get-setup-status',
     validate: (d) => d.onboardingComplete === true || d.complete === true },
+  { area: 'Step 1', name: 'Save brand guidelines', channel: 'save-brand-guidelines',
+    args: [{ disallowedTopics: 'politics', sampleMessages: 'We help B2B teams grow.', affiliateLinks: 'https://wizardqa.com' }],
+    validate: (d) => d?.success !== false || typeof d === 'object' },
+  { area: 'Step 2', name: 'Global custom prompt', channel: 'generate-global-custom-prompt',
+    validate: (d) => !!(d?.prompt || d?.customPrompt) || typeof d === 'object' },
+  { area: 'Step 4', name: 'Save auto-rules', channel: 'save-auto-rules',
+    args: [{ enabled: true, oneClickAutoSearchEnabled: true, autoSearchFrequency: 'daily', beFirstMonitorFrequency: '10m' }],
+    validate: (d) => d?.success !== false || typeof d === 'object' },
+  { area: 'Step 4', name: 'Save auto-search settings', channel: 'save-auto-search-settings',
+    args: [{ dailyEnabled: true, frequency: 'daily', beFirstMonitorFrequency: '10m' }],
+    validate: (d) => d?.success !== false || typeof d === 'object' },
+  { area: 'Step 4', name: 'Save watched monitors', channel: 'save-watched-monitors',
+    args: [[{ id: 'mon_wiz_qa', label: 'Wizard QA monitor', type: 'keyword', target: 'marketing', platform: 'Reddit' }]],
+    validate: (d) => d?.success !== false },
+  { area: 'Step 4', name: 'Get auto-rules', channel: 'get-auto-rules',
+    validate: (d) => typeof d === 'object' },
+  { area: 'Live', name: 'Section live (onboarding)', channel: 'get-section-live', args: ['onboarding'],
+    validate: (d) => d?.stats && typeof d.stats === 'object' },
+  { area: 'Step 2', name: 'Global keys', channel: 'get-global-keys',
+    validate: (d) => typeof d === 'object' },
 ];
 
 async function login() {
@@ -64,7 +84,11 @@ async function invoke(token, projectId, channel, args = []) {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'x-project-id': projectId },
     body: JSON.stringify({ args }),
   });
-  const json = await res.json();
+  const text = await res.text();
+  let json = {};
+  if (text) {
+    try { json = JSON.parse(text); } catch { json = { error: text.slice(0, 200) }; }
+  }
   return { ok: res.ok, data: json.data, error: json.error };
 }
 
