@@ -92,6 +92,10 @@ const PAGES = [
       { name: 'Grok status', channel: 'grok-get-status', validate: (d) => typeof d === 'object' },
       { name: 'Studio live', channel: 'get-content-studio-live', validate: (d) => d?.stats },
       { name: 'Section live', channel: 'get-section-live', args: ['content-hub'], validate: (d) => d?.stats || d?.success !== false },
+      { name: 'Studio config', channel: 'get-content-studio-config', validate: (d) => typeof d === 'object' },
+      { name: 'Auto content settings', channel: 'get-auto-content-settings', validate: (d) => typeof d === 'object' },
+      { name: 'Thumbnail config', channel: 'get-thumbnail-studio-config', validate: (d) => typeof d === 'object' },
+      { name: 'Shorten URL', channel: 'shorten-url', args: ['https://acmegrowth.com'], validate: (d) => !!d?.shortUrl },
     ],
   },
   {

@@ -90,26 +90,27 @@ function ContentHubContent() {
       const handoff = JSON.parse(raw) as { type?: string; content?: string };
       if (handoff.type === 'content' && handoff.content) {
         setContent(handoff.content);
-        setTab('studio');
+        setTabAndUrl('studio');
         setStatus('Loaded from Imperialism Brain');
         sessionStorage.removeItem('si_omni_handoff');
       }
     } catch { /* ignore */ }
-  }, [searchParams]);
+  }, [searchParams, setTabAndUrl]);
 
   const refreshHubMeta = useCallback(async () => {
     const [a, queue, sched, lib] = await Promise.all([
       invoke<Array<{ id: string; platform: string; handle?: string }>>('get-linked-accounts'),
       invoke<unknown[]>('get-content-queue').catch(() => []),
       invoke<unknown[]>('get-scheduled-posts').catch(() => []),
-      invoke<{ count?: number }>('get-content-library').catch(() => ({ count: 0 })),
+      invoke<{ count?: number; assets?: unknown[] }>('get-content-library').catch(() => ({ count: 0, assets: [] })),
     ]);
     setAccounts(a || []);
     setPublishAccountId((prev) => prev || a?.[0]?.id || '');
+    const libraryCount = lib?.count ?? (Array.isArray(lib?.assets) ? lib.assets.length : 0);
     setHubStats({
       queue: Array.isArray(queue) ? queue.length : 0,
       scheduled: Array.isArray(sched) ? sched.length : 0,
-      library: lib?.count || 0,
+      library: libraryCount,
     });
   }, []);
 
@@ -154,6 +155,7 @@ function ContentHubContent() {
       return;
     }
     setStatus(`Published via ${acc.platform}`);
+    refreshHubMeta().catch(console.error);
   }
 
   async function schedulePost(hoursAhead = 24) {
@@ -167,6 +169,7 @@ function ContentHubContent() {
       scheduleTime: new Date(Date.now() + hoursAhead * 3600000).toISOString(),
     });
     setStatus(`Scheduled via ${acc.platform}`);
+    refreshHubMeta().catch(console.error);
   }
 
   function loadIntoQuickPost(text: string, msg?: string) {
@@ -229,7 +232,9 @@ function ContentHubContent() {
       )}
 
       {status && (
-        <p className="page-msg" style={{ marginBottom: '0.75rem' }}>{status}</p>
+        <div className="card" style={{ marginBottom: '0.75rem', borderColor: status.includes('failed') || status.includes('first') || status.includes('Link an account') ? '#f59e0b' : '#10b981' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>{status}</p>
+        </div>
       )}
 
       {tab === 'home' && <ContentHubDashboard onStartCreate={() => setTabAndUrl('studio')} onStatsChange={(s) => setHubStats((prev) => ({ ...prev, ...s }))} />}
@@ -424,6 +429,7 @@ function ContentHubContent() {
                   await invoke('remove-content-queue-item', item.id);
                   setStatus('Scheduled to calendar');
                   refreshQueue();
+                  refreshHubMeta().catch(console.error);
                 }}
               />
             ))}

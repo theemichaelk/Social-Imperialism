@@ -19,14 +19,14 @@ export function ContentHubDashboard({ onStartCreate, onStatsChange }: Props) {
   async function refresh() {
     const [accounts, lib, queue, sched, brand] = await Promise.all([
       invoke<Array<{ id: string }>>('get-linked-accounts').catch(() => []),
-      invoke<{ count?: number }>('get-content-library').catch(() => ({ count: 0 })),
+      invoke<{ count?: number; assets?: unknown[] }>('get-content-library').catch(() => ({ count: 0, assets: [] })),
       invoke<unknown[]>('get-content-queue').catch(() => []),
       invoke<unknown[]>('get-scheduled-posts').catch(() => []),
       invoke<{ brandName?: string; domain?: string }>('get-brand-guidelines').catch(() => ({ brandName: '', domain: '' })),
     ]);
     const next = {
       accounts: accounts?.length || 0,
-      library: lib?.count || 0,
+      library: lib?.count ?? (Array.isArray(lib?.assets) ? lib.assets.length : 0),
       queue: Array.isArray(queue) ? queue.length : 0,
       scheduled: Array.isArray(sched) ? sched.length : 0,
       brand: !!(brand?.brandName || brand?.domain),
