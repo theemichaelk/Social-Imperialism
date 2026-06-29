@@ -35,28 +35,47 @@ export default function ContentLibraryPage() {
   const [filter, setFilter] = useState('all');
 
   const refresh = useCallback(async () => {
-    const res = await invoke<{ assets?: Asset[] }>('get-content-library');
-    setAssets(res.assets || []);
+    try {
+      const res = await invoke<{ assets?: Asset[]; success?: boolean; error?: string }>('get-content-library');
+      if (res && typeof res === 'object' && 'success' in res && res.success === false) {
+        throw new Error(res.error || 'Failed to load library');
+      }
+      setAssets(res?.assets || []);
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
   }, []);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
   async function uploadFile(file: File) {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = await invoke<string>('upload-local-media', reader.result);
-      if (!dataUrl) { setMsg('Upload failed'); return; }
+    setLoading(true);
+    setMsg(`Uploading ${file.name}…`);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read file'));
+        reader.readAsDataURL(file);
+      });
+      const uploaded = await invoke<string>('upload-local-media', dataUrl);
+      if (!uploaded || typeof uploaded !== 'string') {
+        throw new Error('Upload failed — media could not be processed');
+      }
       await invoke('save-content-asset', {
         name: file.name,
         type: file.type.startsWith('video') ? 'video' : 'image',
-        url: dataUrl,
+        url: uploaded,
         tags: ['upload'],
         source: 'upload',
       });
       setMsg(`Uploaded ${file.name}`);
-      refresh();
-    };
-    reader.readAsDataURL(file);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function importWebsite() {
@@ -64,9 +83,9 @@ export default function ContentLibraryPage() {
     setLoading(true);
     setMsg('Importing from website…');
     try {
-      const res = await invoke<{ success?: boolean; error?: string; count?: number }>('import-website-to-library', { url: importUrl.trim() });
+      const res = await invoke<{ success?: boolean; error?: string; count?: number; assets?: Asset[] }>('import-website-to-library', { url: importUrl.trim() });
       if (!res.success) throw new Error(res.error || 'Import failed');
-      setMsg(`Imported ${res.count ?? 0} asset(s)`);
+      setMsg(`Imported ${res.assets?.length ?? res.count ?? 0} asset(s) from website`);
       refresh();
     } catch (e) {
       setMsg((e as Error).message);
@@ -92,24 +111,50 @@ export default function ContentLibraryPage() {
 
   async function importPaste() {
     if (!pasteText.trim()) return;
-    await invoke('import-text-to-library', { text: pasteText, name: 'Pasted copy', tags: ['paste'] });
-    setPasteText('');
-    setMsg('Copy saved to library');
-    refresh();
+    setLoading(true);
+    setMsg('Saving copy…');
+    try {
+      const res = await invoke<{ success?: boolean; error?: string }>('import-text-to-library', { text: pasteText, name: 'Pasted copy', tags: ['paste'] });
+      if (res && typeof res === 'object' && 'success' in res && res.success === false) {
+        throw new Error(res.error || 'Save failed');
+      }
+      setPasteText('');
+      setMsg('Copy saved to library');
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function removeAsset(id: string) {
-    await invoke('delete-content-asset', { id });
-    refresh();
+    setMsg('Removing asset…');
+    try {
+      await invoke('delete-content-asset', { id });
+      setMsg('Asset removed');
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
   }
 
-  const shown = assets.filter((a) => filter === 'all' || a.type === filter);
+  const shown = assets.filter((a) => {
+    if (filter === 'all') return true;
+    if (filter === 'copy') return a.type === 'copy' || a.type === 'text';
+    return a.type === filter;
+  });
 
   return (
     <div>
       <PageShell
         title="Content Library"
-        actions={<Link href="/content-hub?tab=studio" className="btn primary">Open Create →</Link>}
+        actions={
+          <>
+            <Link href="/content-hub?tab=studio" className="btn primary">Open Create →</Link>
+            <Link href="/design-studio" className="btn">Design Studio</Link>
+          </>
+        }
       />
 
       <SectionLivePanel section="content-library" />
@@ -138,7 +183,7 @@ export default function ContentLibraryPage() {
         <div className="card">
           <h3>Paste copy</h3>
           <textarea className="input" rows={3} value={pasteText} onChange={(e) => setPasteText(e.target.value)} placeholder="Brand copy, captions, snippets…" />
-          <button type="button" className="btn" style={{ marginTop: 8 }} onClick={importPaste}>Save to library</button>
+          <button type="button" className="btn" style={{ marginTop: 8 }} onClick={importPaste} disabled={loading}>Save to library</button>
         </div>
       </div>
 
@@ -157,7 +202,10 @@ export default function ContentLibraryPage() {
           <div key={a.id} className="card post-card">
             <div className="post-meta">{a.type} · {a.source} · {(a.tags || []).join(', ')}</div>
             <strong>{a.name}</strong>
-            {a.url && a.type !== 'copy' && (
+            {a.url && a.type === 'video' && (
+              <video src={a.url} controls style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 8, marginTop: 8 }} />
+            )}
+            {a.url && a.type !== 'copy' && a.type !== 'text' && a.type !== 'video' && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={a.url} alt="" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 8, marginTop: 8 }} />
             )}
@@ -167,7 +215,11 @@ export default function ContentLibraryPage() {
         ))}
         {!shown.length && <div className="card"><p className="settings-panel-desc">No assets yet — upload or import above.</p></div>}
       </div>
-      {msg && <p className="ics-msg">{msg}</p>}
+      {msg && (
+        <div className="card" style={{ marginTop: 12, borderColor: msg.includes('failed') || msg.includes('error') || msg.includes('No ') ? '#f59e0b' : '#10b981' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -106,6 +106,9 @@ const PAGES = [
       { name: 'Import text', channel: 'import-text-to-library', args: [{ text: 'QA library snippet for page test', name: 'QA Page Test' }], validate: (d) => d?.success !== false },
       { name: 'Brand guidelines', channel: 'get-brand-guidelines', validate: (d) => typeof d === 'object' },
       { name: 'Section live', channel: 'get-section-live', args: ['content-library'], validate: (d) => d?.stats },
+      { name: 'Save asset', channel: 'save-content-asset', args: [{ name: 'Page QA asset', type: 'copy', text: 'Page QA library text', tags: ['qa'] }], validate: (d) => d?.success !== false && d?.asset?.id },
+      { name: 'Import RSS', channel: 'import-rss-to-library', args: [{ feedUrl: 'https://feeds.feedburner.com/TechCrunch', limit: 1 }], validate: (d) => d?.success === true },
+      { name: 'Grok status', channel: 'grok-get-status', validate: (d) => typeof d === 'object' },
     ],
   },
   {

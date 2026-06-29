@@ -39,6 +39,11 @@ export const PAGE_CHANNELS = {
     'get-live-news', 'search-stock-photo', 'generate-image', 'get-browse-posts-live',
     'get-trending-topics', 'generate-ai',
   ],
+  contentLibrary: [
+    'get-content-library', 'save-content-asset', 'delete-content-asset', 'import-website-to-library',
+    'import-rss-to-library', 'import-text-to-library', 'upload-local-media', 'get-section-live',
+    'get-brand-guidelines', 'grok-get-status', 'grok-imagine', 'grok-ask-text',
+  ],
   onboarding: [
     'get-setup-status', 'check-api-status', 'get-settings', 'save-settings', 'set-active-campaign',
     'get-active-campaign', 'save-brand-guidelines', 'get-global-keys', 'save-global-keys', 'get-key-sources',
