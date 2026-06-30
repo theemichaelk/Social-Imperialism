@@ -1,6 +1,6 @@
 {
   "name": "social-imperialism",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "private": true,
   "workspaces": [
     "packages/*",
@@ -28,6 +28,7 @@
     "audit:accuracy": "node apps/api/_audit-accuracy-check.js",
     "audit:desktop": "node apps/desktop/_audit-all-pages.js",
     "audit:desktop-ipc": "node apps/desktop/_ipc-parity-report.js",
+    "audit:desktop-packaged": "node apps/desktop/scripts/verify-packaged-asar.js",
     "test:auth": "node apps/api/_test-auth-email-sequences.js",
     "test:verified-nodes": "node apps/api/_test-verified-node-engine.js",
     "test:sovereign-scan": "node apps/api/_test-sovereign-scan.js",

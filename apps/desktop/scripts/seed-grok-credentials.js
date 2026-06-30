@@ -7,7 +7,8 @@ const fs = require('fs');
 const os = require('os');
 const { LocalStorage } = require('node-localstorage');
 
-const { GROK_DEFAULTS } = require('../../../packages/core/src/grokDefaults');
+const { coreRequire } = require('../coreRequire');
+const { GROK_DEFAULTS } = coreRequire('src/grokDefaults');
 const nativeBrowser = require('../services/nativeBrowserLauncher');
 const grokBrowser = require('../services/grokBrowserAutomation');
 

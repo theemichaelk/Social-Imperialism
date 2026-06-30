@@ -6,7 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const { stripDemoSeedData, isDemoLinkedAccount } = require('../../../packages/core/src/projectDefaults');
+const { coreRequire } = require('../coreRequire');
+const { stripDemoSeedData, isDemoLinkedAccount } = coreRequire('src/projectDefaults');
 
 function storageDir() {
   if (process.env.SI_STORAGE_DIR) return process.env.SI_STORAGE_DIR;
