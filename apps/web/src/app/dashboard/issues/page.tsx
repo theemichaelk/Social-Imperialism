@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
-import { DataPanel } from '@/components/DashboardViz';
+import { MetricTile } from '@/components/DashboardViz';
 import { type IssueLedgerEntry, type PlatformIssue, severityClass } from '@/lib/issueControlPlane';
 
 export default function DashboardIssuesPage() {
@@ -60,9 +60,9 @@ export default function DashboardIssuesPage() {
       )}
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <DataPanel title="Pending Review" value={String(active.length)} hint="Active queue" />
-        <DataPanel title="Ledger Entries" value={String(ledger.length)} hint="Historical audit" />
-        <DataPanel title="Engine" value="V12" hint="Web-augmented repair" />
+        <MetricTile label="Pending Review" value={active.length} sub="Active queue" />
+        <MetricTile label="Ledger Entries" value={ledger.length} sub="Historical audit" />
+        <MetricTile label="Engine" value="V12" sub="Web-augmented repair" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
