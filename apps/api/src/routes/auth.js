@@ -123,7 +123,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       token,
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, isAdmin: isAdminEmail(user.email) },
       organization: membership.organization,
       project: { id: project.id, name: project.name },
     });
@@ -179,7 +179,7 @@ router.get('/me', requireAuth, async (req, res) => {
       projects = [active];
     }
     res.json({
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, isAdmin: isAdminEmail(user.email) },
       organization: org,
       projects,
       project: { id: active.id, name: active.name },
