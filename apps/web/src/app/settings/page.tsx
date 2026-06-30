@@ -510,7 +510,7 @@ function SettingsContent() {
           <div className="card" style={{ marginBottom: 12, borderColor: 'var(--accent)' }}>
             <p style={{ margin: 0, fontSize: '0.88rem' }}>
               Full campaign control — view running status, pause, edit, schedule posts, and delete — in the{' '}
-              <Link href="/campaign-manager">Campaign Manager</Link>.
+              <Link href="/campaign-manager">Campaign Command Center</Link>.
             </p>
           </div>
           {campaigns.map((c) => (

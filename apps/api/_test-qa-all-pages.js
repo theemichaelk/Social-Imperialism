@@ -325,6 +325,19 @@ const PAGES = [
     ],
   },
   {
+    route: '/campaign-manager',
+    name: 'Campaign Command',
+    features: [
+      { name: 'Settings status', channel: 'get-settings-status', validate: (d) => typeof d === 'object' },
+      { name: 'Active campaign', channel: 'get-active-campaign', validate: (d) => d && (d.id || d.brandName) },
+      { name: 'Campaign details', channel: 'get-campaign-details', args: ['DYNAMIC_CAMPAIGN'], validate: (d) => d?.success !== false || d?.campaign },
+      { name: 'Verified node tree', channel: 'get-verified-node-tree', validate: (d) => Array.isArray(d?.nodes) },
+      { name: 'List verified campaigns', channel: 'list-verified-campaigns', validate: (d) => Array.isArray(d?.campaigns) },
+      { name: 'Platform schema', channel: 'get-platform-discovery-schema', validate: (d) => d?.count === 15 },
+      { name: 'Section live', channel: 'get-section-live', args: ['campaignManager'], validate: (d) => d?.success !== false || d?.stats },
+    ],
+  },
+  {
     route: '/settings',
     name: 'Settings',
     features: [
@@ -407,6 +420,8 @@ async function main() {
 
   const accRes = await invoke(token, projectId, 'get-linked-accounts');
   const firstAcc = Array.isArray(accRes.data) && accRes.data[0];
+  const activeRes = await invoke(token, projectId, 'get-active-campaign');
+  const activeCampaignId = activeRes.data?.id || projectId;
 
   let savedReplyId = null;
   let savedEngagementListId = null;
@@ -422,6 +437,7 @@ async function main() {
       let args = feat.args ? [...feat.args] : [];
       args = args.map((a) => {
         if (a === 'DYNAMIC_ACC') return firstAcc?.id || 'si_li_demo';
+        if (a === 'DYNAMIC_CAMPAIGN') return activeCampaignId;
         if (typeof a === 'object' && a && !a.accountId && (feat.channel === 'publish-post' || feat.channel === 'schedule-post') && firstAcc) {
           return { ...a, accountId: firstAcc.id, platform: a.platform || firstAcc.platform, content: feat.channel === 'publish-post' ? `${a.content} · ${Date.now()}` : a.content };
         }

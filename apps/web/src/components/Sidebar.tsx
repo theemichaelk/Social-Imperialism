@@ -165,7 +165,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
               )}
               <div className={`nav-section-items ${isSecCollapsed && !collapsed ? 'is-collapsed' : ''}`}>
                   {section.items.map((item) => {
-                    const isActive = pathname === item.href;
+                    const isActive = pathname === item.href
+                      || (item.href === '/campaign-manager' && pathname === '/verified-nodes');
                     return (
                       <Link
                         key={item.id}

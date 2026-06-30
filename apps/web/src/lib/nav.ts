@@ -43,11 +43,10 @@ export const NAV_SECTIONS: NavSection[] = [
   ]},
   { id: 'accounts', label: 'Accounts', items: [
     { id: 'account-hub', href: '/account-hub', icon: '🔗', label: 'Accounts', hint: 'Connect & health' },
-    { id: 'verified-nodes', href: '/verified-nodes', icon: '✅', label: 'Verified Nodes', hint: '15-platform proof tree' },
     { id: 'account-creator', href: '/account-creator', icon: '➕', label: 'Acct Creator', hint: 'New profiles' },
   ]},
   { id: 'system', label: 'System', items: [
-    { id: 'campaign-manager', href: '/campaign-manager', icon: '📋', label: 'Campaign Manager', hint: 'View, edit & pause campaigns' },
+    { id: 'campaign-manager', href: '/campaign-manager', icon: '📋', label: 'Campaign Command', hint: 'Campaigns, schedules & verified nodes' },
     { id: 'support', href: '/support', icon: '💬', label: 'Imperialism Brain', hint: 'Live support' },
     { id: 'dns', href: '/dns', icon: '🌐', label: 'DNS', hint: 'Domain routing' },
     { id: 'integrations', href: '/integrations', icon: '🔌', label: 'Integrations', hint: 'APIs & OAuth' },

@@ -104,5 +104,8 @@ export const PAGE_CHANNELS = {
     'update-campaign', 'pause-campaign', 'resume-campaign', 'delete-campaign', 'set-active-campaign',
     'save-settings', 'get-scheduled-posts', 'schedule-post', 'update-scheduled-post',
     'delete-scheduled-post', 'publish-scheduled-post-now', 'get-worker-status', 'get-section-live',
+    'get-verified-node-tree', 'list-verified-campaigns', 'create-verified-campaign',
+    'discover-verify-platform-tree', 'run-node-verification', 'run-verification-loop-all',
+    'bind-campaign-verified-nodes', 'set-campaign-control', 'get-platform-discovery-schema',
   ],
 } as const;
