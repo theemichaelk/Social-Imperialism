@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { NavAnchor } from '@/components/NavAnchor';
 import { auth } from '@/lib/api';
-import { validatePassword, passwordsMatch } from '@/lib/authValidation';
+import { validatePassword, passwordsMatch, validationErrorMessage } from '@/lib/authValidation';
 import { Logo } from '@/components/Logo';
 
 function ResetPasswordForm() {
@@ -28,8 +28,9 @@ function ResetPasswordForm() {
     }
 
     const passwordResult = validatePassword(password);
-    if (!passwordResult.ok) {
-      setError(passwordResult.error);
+    const passwordErr = validationErrorMessage(passwordResult);
+    if (passwordErr) {
+      setError(passwordErr);
       return;
     }
     if (!passwordsMatch(password, confirm)) {
