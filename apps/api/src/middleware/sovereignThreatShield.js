@@ -5,6 +5,7 @@ const {
   scanRequestSurface,
   captureThreatEvent,
   readContainment,
+  reconcileContainment,
   PROTECTED_CHANNELS,
   SITE_DOMAIN,
 } = require('@si/core/src/sovereignThreatCapture');
@@ -94,6 +95,8 @@ async function sovereignThreatShield(req, res, next) {
     if (req.params?.channel) {
       const store = await getProjectStore(req);
       if (store) {
+        reconcileContainment(store);
+        await store.flush?.().catch(() => {});
         const containment = readContainment(store);
         if (containment.liveFrozen && PROTECTED_CHANNELS.has(req.params.channel)) {
           return res.status(423).json({

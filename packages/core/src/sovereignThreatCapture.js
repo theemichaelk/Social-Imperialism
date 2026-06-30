@@ -40,9 +40,16 @@ const TRUSTED_CREDENTIAL_CHANNELS = new Set([
   'grok-connect',
 ]);
 
+/** Read-only export of project data — not gated by live freeze (keys/release paths remain protected). */
 const PROTECTED_CHANNELS = new Set([
-  'export-data', 'save-global-keys', 'release-guardian-fix', 'approve-guardian-change',
+  'save-global-keys', 'release-guardian-fix', 'approve-guardian-change',
   'decrypt-sovereign-threat-telemetry', 'approve-sovereign-threat-release',
+]);
+
+/** Routine SaaS channels — medium/low captures must not block normal product use. */
+const SAAS_ROUTINE_CHANNELS = new Set([
+  'generate-ai', 'draft-post-reply', 'compose-qa-answer', 'grok-ask-text',
+  'publish-post', 'schedule-post', 'save-ai-reply', 'engage-post',
 ]);
 
 const SENSITIVE_FIELD_RE = /^(password|passwd|secret|token|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|.*secret|.*token|.*password|.*apikey)$/i;
@@ -348,6 +355,57 @@ function scanRequestSurface(req) {
   return filterBlockingHits(scanTextForThreats(parts), channel);
 }
 
+function isOpenThreatEvent(ev) {
+  const decision = ev.adminDecision || 'pending';
+  return decision === 'pending' && !ev.releasedAt && !ev.deniedAt && ev.status !== 'denied';
+}
+
+function shouldBlockChannelForEvent(ev) {
+  if (!ev.channel) return false;
+  if (SAAS_ROUTINE_CHANNELS.has(ev.channel) && ev.severity !== 'critical' && ev.severity !== 'high') {
+    return false;
+  }
+  return true;
+}
+
+function releaseRoutineFalsePositives(store) {
+  const events = readEvents(store);
+  let released = 0;
+  const now = new Date().toISOString();
+  for (const ev of events) {
+    if (!isOpenThreatEvent(ev)) continue;
+    if (!ev.channel || !SAAS_ROUTINE_CHANNELS.has(ev.channel)) continue;
+    if (ev.severity === 'critical' || ev.severity === 'high') continue;
+    ev.adminDecision = 'approved';
+    ev.status = 'released';
+    ev.releasedAt = now;
+    ev.releasedBy = ADMIN_IDENTITY;
+    ev.releaseNote = 'routine_channel_auto_release';
+    released += 1;
+  }
+  if (released) writeEvents(store, events);
+  return released;
+}
+
+function reconcileContainment(store) {
+  const routineReleased = releaseRoutineFalsePositives(store);
+  const events = readEvents(store);
+  const open = events.filter(isOpenThreatEvent);
+  const blockedChannels = [];
+  const frozenModules = [];
+  for (const ev of open) {
+    if (ev.channel && shouldBlockChannelForEvent(ev) && !blockedChannels.includes(ev.channel)) {
+      blockedChannels.push(ev.channel);
+    }
+    if (ev.module && !frozenModules.includes(ev.module)) frozenModules.push(ev.module);
+  }
+  const liveFrozen = open.some((e) => e.severity === 'critical' || e.severity === 'high');
+  const before = readContainment(store);
+  const after = { frozenModules, blockedChannels, liveFrozen };
+  writeContainment(store, after);
+  return { before, after, openCount: open.length, routineReleased };
+}
+
 function clearFalsePositiveContainment(store) {
   const events = readEvents(store);
   let released = 0;
@@ -366,8 +424,8 @@ function clearFalsePositiveContainment(store) {
     released += 1;
   }
   if (released) writeEvents(store, events);
-  writeContainment(store, { frozenModules: [], blockedChannels: [], liveFrozen: false });
-  return { released, containment: readContainment(store) };
+  const reconciled = reconcileContainment(store);
+  return { released: released + reconciled.routineReleased, containment: reconciled.after };
 }
 
 function captureThreatEvent(store, {
@@ -472,9 +530,12 @@ function captureThreatEvent(store, {
   });
 
   if (autoContain) {
+    reconcileContainment(store);
     const c = readContainment(store);
     if (module && !c.frozenModules.includes(module)) c.frozenModules.push(module);
-    if (channel && !c.blockedChannels.includes(channel)) c.blockedChannels.push(channel);
+    if (channel && shouldBlockChannelForEvent({ channel, severity }) && !c.blockedChannels.includes(channel)) {
+      c.blockedChannels.push(channel);
+    }
     if (severity === 'critical' || severity === 'high') c.liveFrozen = true;
     writeContainment(store, c);
   }
@@ -866,6 +927,8 @@ module.exports = {
   scanRequestSurface,
   scanTextForThreats,
   redactSensitiveFields,
+  reconcileContainment,
+  releaseRoutineFalsePositives,
   clearFalsePositiveContainment,
   theeMichaelDecideThreat,
   theeMichaelUndoAction,
@@ -874,6 +937,7 @@ module.exports = {
   readContainment,
   readActionHistory,
   PROTECTED_CHANNELS,
+  SAAS_ROUTINE_CHANNELS,
   TRUSTED_CREDENTIAL_CHANNELS,
   ADMIN_IDENTITY,
   SITE_DOMAIN,

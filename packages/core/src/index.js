@@ -166,6 +166,11 @@ async function syncProjectToStore(store, projectId) {
     }))));
   }
 
+  try {
+    const { reconcileContainment } = require('./sovereignThreatCapture');
+    reconcileContainment(store);
+  } catch { /* optional */ }
+
   await store.flush();
 }
 

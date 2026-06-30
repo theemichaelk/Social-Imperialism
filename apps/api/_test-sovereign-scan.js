@@ -137,5 +137,60 @@ test('THEE_MICHAEL approve/deny/undo workflow', () => {
   assert.strictEqual(ADMIN_IDENTITY, 'THEE_MICHAEL');
 });
 
+test('routine generate-ai medium capture does not block channel', () => {
+  const {
+    captureThreatEvent,
+    readContainment,
+  } = require('../../packages/core/src/sovereignThreatCapture');
+
+  const store = {
+    projectId: 'test',
+    _data: {},
+    getItem(k) { return this._data[k] || null; },
+    setItem(k, v) { this._data[k] = v; },
+  };
+
+  captureThreatEvent(store, {
+    source: 'api',
+    module: 'Content Hub',
+    channel: 'generate-ai',
+    severity: 'medium',
+    summary: 'Routine AI request held for review',
+    autoContain: true,
+  });
+  assert.ok(!readContainment(store).blockedChannels.includes('generate-ai'));
+});
+
+test('high severity routine channel still freezes live paths', () => {
+  const {
+    captureThreatEvent,
+    readContainment,
+  } = require('../../packages/core/src/sovereignThreatCapture');
+
+  const store = {
+    projectId: 'test2',
+    _data: {},
+    getItem(k) { return this._data[k] || null; },
+    setItem(k, v) { this._data[k] = v; },
+  };
+
+  captureThreatEvent(store, {
+    source: 'api',
+    module: 'Content Hub',
+    channel: 'generate-ai',
+    severity: 'high',
+    summary: 'High severity AI anomaly',
+    autoContain: true,
+  });
+  assert.ok(readContainment(store).blockedChannels.includes('generate-ai'));
+  assert.strictEqual(readContainment(store).liveFrozen, true);
+});
+
+test('export-data is not in PROTECTED_CHANNELS', () => {
+  const { PROTECTED_CHANNELS } = require('../../packages/core/src/sovereignThreatCapture');
+  assert.ok(!PROTECTED_CHANNELS.has('export-data'));
+  assert.ok(PROTECTED_CHANNELS.has('save-global-keys'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
