@@ -170,7 +170,7 @@ type SessionResponse = { token: string; project?: { id: string; name?: string } 
 export const auth = {
   login: (email: string, password: string) =>
     apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }) as Promise<SessionResponse>,
-  register: (data: { email: string; password: string; name?: string; orgName?: string }) =>
-    apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }) as Promise<SessionResponse>,
+  setupPassword: (email: string, password: string) =>
+    apiFetch('/api/auth/setup-password', { method: 'POST', body: JSON.stringify({ email, password }) }) as Promise<SessionResponse>,
   me: () => apiFetch('/api/auth/me') as Promise<MeResponse>,
 };

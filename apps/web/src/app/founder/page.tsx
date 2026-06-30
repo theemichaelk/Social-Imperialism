@@ -82,7 +82,7 @@ export default function FounderPage() {
           <h2>Built by Michael K. Ready for your team.</h2>
           <p>Start automating social growth with the platform he designed from the ground up.</p>
           <div className="home-hero-cta center">
-            <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">Create Account</NavAnchor>
+            <NavAnchor href="/subscribe" className="btn primary home-cta-lg home-btn-glow">Subscribe</NavAnchor>
             <NavAnchor href="/" className="btn home-cta-lg home-btn-glass">← Back to Home</NavAnchor>
           </div>
         </div>

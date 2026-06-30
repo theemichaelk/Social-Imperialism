@@ -84,6 +84,23 @@ async function main() {
     if (!existing) await upsertProjectSetting(project.id, key, value);
   }
 
+  const primaryEmail = (process.env.SEED_EMAIL || ADMIN_EMAILS[0] || '').trim().toLowerCase();
+  if (primaryEmail) {
+    const billing = {
+      plan: 'growth',
+      planName: 'Growth',
+      status: 'active',
+      billingEmail: primaryEmail,
+      pendingPasswordSetup: false,
+      updatedAt: new Date().toISOString(),
+    };
+    await prisma.orgSetting.upsert({
+      where: { organizationId_key: { organizationId: org.id, key: 'billingPlan' } },
+      update: { value: JSON.stringify(billing) },
+      create: { organizationId: org.id, key: 'billingPlan', value: JSON.stringify(billing) },
+    });
+  }
+
   const globalApiKeys = resolveKeys({});
   await prisma.orgSetting.upsert({
     where: { organizationId_key: { organizationId: org.id, key: 'globalApiKeys' } },

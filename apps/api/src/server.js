@@ -6,6 +6,7 @@ const { prisma } = require('@si/db');
 const { invoke, listChannels, syncProjectToStore, createPrismaStore, clearHandlerCache, eventBus } = require('@si/core');
 const { getCircuitStatus } = require('@si/core/src/resilience');
 const authRoutes = require('./routes/auth');
+const billingRoutes = require('./routes/billing');
 const orgRoutes = require('./routes/orgs');
 const partnerRoutes = require('./routes/partner');
 const { requireAuth } = require('./middleware/auth');
@@ -130,6 +131,7 @@ app.get('/api/oauth/callback', async (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api/orgs', requireAuth, orgRoutes);
 app.use('/api/v1', partnerRoutes);
 

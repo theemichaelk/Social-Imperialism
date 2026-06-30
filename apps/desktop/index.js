@@ -37,6 +37,33 @@ const { LocalStorage } = require('node-localstorage');
 const quoraBrowserAutomation = require('./services/quoraBrowserAutomation');
 const store = new LocalStorage(path.join(dataPath, 'storage'));
 quoraBrowserAutomation.setUserDataPath(dataPath, store);
+
+const SAAS_API_URL = (process.env.SAAS_API_URL || process.env.API_URL || 'https://api.socialimperialism.com').replace(/\/$/, '');
+const SAAS_WEB_URL = (process.env.WEB_URL || 'https://www.socialimperialism.com').replace(/\/$/, '');
+
+ipcMain.handle('get-saas-api-url', () => SAAS_API_URL);
+ipcMain.handle('get-saas-web-url', () => SAAS_WEB_URL);
+ipcMain.handle('save-saas-session', (_event, session) => {
+  if (session?.token) store.setItem('saasAuthToken', session.token);
+  if (session?.project?.id) store.setItem('saasProjectId', session.project.id);
+  if (session?.user?.email) store.setItem('saasUserEmail', session.user.email);
+  return { ok: true };
+});
+ipcMain.handle('get-saas-session', () => ({
+  token: store.getItem('saasAuthToken') || null,
+  projectId: store.getItem('saasProjectId') || null,
+  email: store.getItem('saasUserEmail') || null,
+}));
+ipcMain.handle('clear-saas-session', () => {
+  store.removeItem('saasAuthToken');
+  store.removeItem('saasProjectId');
+  store.removeItem('saasUserEmail');
+  return { ok: true };
+});
+ipcMain.handle('open-external-url', (_event, url) => {
+  if (url && typeof url === 'string') shell.openExternal(url);
+  return { ok: true };
+});
 const { registerCalendarHandlers } = require('./services/calendarIpc');
 const { registerBackgroundRunHandlers } = require('./services/backgroundRunIpc');
 const backgroundRunScheduler = require('./services/backgroundRunScheduler');

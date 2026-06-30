@@ -154,7 +154,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="home-center-cta">
-            <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">
+            <NavAnchor href="/subscribe" className="btn primary home-cta-lg home-btn-glow">
               Get Started →
             </NavAnchor>
           </div>
@@ -179,7 +179,7 @@ export default function HomePage() {
                 <ul>
                   {plan.features.map((f) => <li key={f}>{f}</li>)}
                 </ul>
-                <NavAnchor href={plan.id === 'enterprise' ? '/login' : `/settings?tab=billing&plan=${plan.id}`} className={`btn home-btn-block ${plan.highlight ? 'primary home-btn-glow' : 'home-btn-glass'}`}>
+                <NavAnchor href={plan.id === 'enterprise' ? 'mailto:sales@socialimperialism.com' : `/subscribe?plan=${plan.id}`} className={`btn home-btn-block ${plan.highlight ? 'primary home-btn-glow' : 'home-btn-glass'}`}>
                   {plan.id === 'enterprise' ? 'Contact Sales' : 'Choose Plan'}
                 </NavAnchor>
               </div>
@@ -205,7 +205,7 @@ export default function HomePage() {
           <h2>Ready to dominate your niche?</h2>
           <p>Join teams using AI-powered social automation with full API connectivity.</p>
           <div className="home-hero-cta center">
-            <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">Create Account</NavAnchor>
+            <NavAnchor href="/subscribe" className="btn primary home-cta-lg home-btn-glow">Subscribe</NavAnchor>
             <NavAnchor href="/integrations" className="btn home-cta-lg home-btn-glass">Explore Integrations</NavAnchor>
           </div>
         </div>

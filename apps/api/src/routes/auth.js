@@ -4,65 +4,53 @@ const { prisma } = require('@si/db');
 const { signToken, requireAuth } = require('../middleware/auth');
 const { ensureDefaultProject } = require('../projectEnsure');
 const { sovereignAuthFailureCapture } = require('../middleware/sovereignThreatShield');
+const {
+  userHasActiveSubscription,
+  setupSubscriberPassword,
+  isAdminEmail,
+} = require('../subscriptionAccess');
 
 const router = express.Router();
 
-router.post('/register', async (req, res) => {
+router.post('/register', (_req, res) => {
+  res.status(403).json({
+    error: 'Open registration is disabled. Subscribe first, then set up your account.',
+    subscribeUrl: '/subscribe',
+  });
+});
+
+router.post('/setup-password', async (req, res) => {
   try {
-    const { email, password, name, orgName } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return res.status(409).json({ error: 'Email already registered' });
-
-    const hash = await bcrypt.hash(password, 10);
-    const slug = (orgName || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
-
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash: hash,
-        name: name || email.split('@')[0],
-      },
-    });
-
-    const org = await prisma.organization.create({
-      data: { name: orgName || `${user.name}'s Workspace`, slug: `${slug}-${Date.now().toString(36)}`, plan: 'starter' },
-    });
-
-    await prisma.organizationMember.create({
-      data: { organizationId: org.id, userId: user.id, role: 'owner' },
-    });
-
-    const project = await prisma.project.create({
-      data: {
-        organizationId: org.id,
-        name: 'Default Campaign',
-        brandName: org.name,
-        isActive: true,
-      },
-    });
-
-    const token = signToken({ userId: user.id, orgId: org.id, email: user.email });
+    const { email, password } = req.body;
+    const { user, orgId, project } = await setupSubscriberPassword(email, password);
+    const token = signToken({ userId: user.id, orgId, email: user.email });
     res.json({
       token,
       user: { id: user.id, email: user.email, name: user.name },
-      organization: { id: org.id, name: org.name, slug: org.slug, plan: org.plan },
+      organization: { id: orgId },
       project: { id: project.id, name: project.name },
     });
   } catch (e) {
-    console.error('register:', e.message);
-    res.status(500).json({ error: e.message });
+    res.status(400).json({ error: e.message });
   }
 });
 
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+    const normalized = String(email || '').trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email: normalized } });
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       await sovereignAuthFailureCapture(req, 'brute_force');
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const access = await userHasActiveSubscription(user.id, user.email);
+    if (!access.ok && !isAdminEmail(user.email)) {
+      return res.status(403).json({
+        error: access.error || 'Subscription required',
+        subscribeUrl: '/subscribe',
+      });
     }
 
     const membership = await prisma.organizationMember.findFirst({
@@ -71,8 +59,15 @@ router.post('/login', async (req, res) => {
     });
     if (!membership) return res.status(403).json({ error: 'No organization' });
 
-    const project = await ensureDefaultProject(membership.organizationId);
+    const billing = access.billing || null;
+    if (billing?.pendingPasswordSetup) {
+      return res.status(403).json({
+        error: 'Complete account setup with your subscription email.',
+        setupUrl: `/setup-account?email=${encodeURIComponent(user.email)}`,
+      });
+    }
 
+    const project = await ensureDefaultProject(membership.organizationId);
     const token = signToken({ userId: user.id, orgId: membership.organizationId, email: user.email });
     res.json({
       token,

@@ -289,24 +289,32 @@ button.btn-login:hover {
 
   <div class="right-panel">
     <div class="login-box">
-      <div class="login-header">System Access</div>
-      <div class="login-sub">Enter credentials to initialize AI Brain</div>
+      <div class="login-header">Sign In</div>
+      <div class="login-sub">Use the email from your subscription checkout</div>
       
       <div class="input-group">
         <span class="input-icon">👤</span>
-        <input type="text" placeholder="Commander ID" value="Admin_Sigma_9" readonly>
+        <input type="email" id="emailInput" placeholder="Email" autocomplete="email" required>
       </div>
       
       <div class="input-group">
         <span class="input-icon">🔒</span>
-        <input type="password" placeholder="Passcode" value="********" readonly>
+        <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password" required>
       </div>
       
-      <button class="btn-login" id="loginBtn">Initialize Link</button>
+      <p id="loginError" style="color:#f87171;font-size:0.85rem;min-height:1.2rem;margin:0 0 0.5rem;text-align:center;display:none;"></p>
+      
+      <button class="btn-login" id="loginBtn" type="button">Sign In</button>
+      
+      <p style="text-align:center;margin-top:1.25rem;font-size:0.85rem;color:#94a3b8;">
+        <a href="#" id="subscribeLink" style="color:#38bdf8;text-decoration:none;">Subscribe to get access</a>
+        ·
+        <a href="#" id="setupLink" style="color:#a855f7;text-decoration:none;">Set up password</a>
+      </p>
       
       <div class="sys-status">
         <div class="status-dot"></div>
-        Neural Network Online & Linked
+        Subscription required for access
       </div>
     </div>
   </div>
@@ -382,22 +390,84 @@ button.btn-login:hover {
     }
   });
 
-  document.getElementById('loginBtn').addEventListener('click', () => {
+  const errEl = document.getElementById('loginError');
+  function showError(msg) {
+    errEl.style.display = msg ? 'block' : 'none';
+    errEl.textContent = msg || '';
+  }
+
+  ipcRenderer.invoke('get-saas-web-url').then((webUrl) => {
+    document.getElementById('subscribeLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      ipcRenderer.invoke('open-external-url', `${webUrl}/subscribe`);
+    });
+    document.getElementById('setupLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      ipcRenderer.invoke('open-external-url', `${webUrl}/setup-account`);
+    });
+  });
+
+  ipcRenderer.invoke('get-saas-session').then((session) => {
+    if (session?.token) {
+      ipcRenderer.invoke('get-saas-api-url').then(async (apiUrl) => {
+        try {
+          const res = await fetch(`${apiUrl}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${session.token}` },
+          });
+          if (res.ok) window.location.href = 'dashboard.html';
+        } catch (_) { /* stay on login */ }
+      });
+    }
+  });
+
+  async function doLogin() {
     const btn = document.getElementById('loginBtn');
-    btn.innerText = "Linking...";
+    const email = document.getElementById('emailInput').value.trim().toLowerCase();
+    const password = document.getElementById('passwordInput').value;
+    showError('');
+    if (!email || !password) {
+      showError('Email and password required.');
+      return;
+    }
+    btn.innerText = 'Signing in…';
     btn.disabled = true;
-    setTimeout(async () => {
-      try {
-        const status = await ipcRenderer.invoke('get-setup-status');
-        if (status && !status.complete) {
-          window.location.href = 'onboarding.html?step=' + (status.nextStep || 1);
-        } else {
-          window.location.href = 'dashboard.html';
+    try {
+      const apiUrl = await ipcRenderer.invoke('get-saas-api-url');
+      const res = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showError(data.error || 'Sign in failed');
+        if (data.setupUrl) {
+          const webUrl = await ipcRenderer.invoke('get-saas-web-url');
+          setTimeout(() => ipcRenderer.invoke('open-external-url', `${webUrl}${data.setupUrl}`), 1200);
+        } else if (data.subscribeUrl) {
+          const webUrl = await ipcRenderer.invoke('get-saas-web-url');
+          setTimeout(() => ipcRenderer.invoke('open-external-url', `${webUrl}${data.subscribeUrl}`), 1200);
         }
-      } catch (e) {
-        window.location.href = 'onboarding.html?step=1';
+        return;
       }
-    }, 800);
+      await ipcRenderer.invoke('save-saas-session', data);
+      const status = await ipcRenderer.invoke('get-setup-status');
+      if (status && !status.complete) {
+        window.location.href = 'onboarding.html?step=' + (status.nextStep || 1);
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    } catch (e) {
+      showError(e.message || 'Could not reach authentication server');
+    } finally {
+      btn.innerText = 'Sign In';
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', doLogin);
+  document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doLogin();
   });
 </script>
 </body>

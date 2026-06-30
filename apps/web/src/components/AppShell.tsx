@@ -10,7 +10,7 @@ import { SovereignThreatBanner } from './SovereignThreatBanner';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
-const PUBLIC_PATHS = new Set(['/', '/login', '/founder', '/oauth/callback', '/billing/success', '/billing/cancel']);
+const PUBLIC_PATHS = new Set(['/', '/login', '/subscribe', '/setup-account', '/founder', '/oauth/callback', '/billing/success', '/billing/cancel']);
 
 function isPublicPath(pathname: string) {
   const normalized = pathname.replace(/\/+$/, '') || '/';
