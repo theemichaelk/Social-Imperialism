@@ -28,6 +28,8 @@ function collectHandlers(dir) {
   [
     path.join(dir, 'registerParityHandlers.js'),
     path.join(root, 'packages/core/src/campaignManager.js'),
+    path.join(root, 'packages/core/src/issueControlPlane.js'),
+    path.join(root, 'packages/core/src/webAugmentedRepair.js'),
   ].forEach(scanFile);
   return handlers;
 }

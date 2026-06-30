@@ -3389,8 +3389,19 @@ ipcMain.handle('test-all-connections', async () => {
 
 const { registerGuardianGatekeeperHandlers } = coreRequire('src/guardianGatekeeper');
 const { registerSovereignThreatHandlers } = coreRequire('src/sovereignThreatCapture');
+const {
+  registerIssueControlPlaneHandlers,
+  installProcessErrorInterceptors,
+} = coreRequire('src/issueControlPlane');
 registerGuardianGatekeeperHandlers({ ipcMain, store, handlers: desktopIpcHandlers });
 registerSovereignThreatHandlers({ ipcMain, store, handlers: desktopIpcHandlers });
+registerIssueControlPlaneHandlers({
+  ipcMain,
+  store,
+  handlers: desktopIpcHandlers,
+  resolveKeys,
+});
+installProcessErrorInterceptors(store, { handlers: desktopIpcHandlers, resolveKeys });
 
 const { registerParityHandlers } = require('./registerParityHandlers');
 registerParityHandlers({

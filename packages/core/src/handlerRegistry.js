@@ -177,6 +177,9 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerSovereignThreatHandlers } = require('./sovereignThreatCapture');
   registerSovereignThreatHandlers({ ipcMain, store, handlers });
 
+  const { registerIssueControlPlaneHandlers } = require('./issueControlPlane');
+  registerIssueControlPlaneHandlers({ ipcMain, store, handlers, resolveKeys });
+
   const { registerEmailCampaignHandlers } = require(path.join(DESKTOP_SERVICES, 'emailCampaignIpc'));
   registerEmailCampaignHandlers({ ipcMain, store });
 

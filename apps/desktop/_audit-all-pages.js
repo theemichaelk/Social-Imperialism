@@ -26,6 +26,8 @@ function collectRegisteredIpc() {
     path.join(ROOT, '../../packages/core/src/coreHandlers.js'),
     path.join(ROOT, '../../packages/core/src/indexHandlers.js'),
     path.join(ROOT, '../../packages/core/src/handlerRegistry.js'),
+    path.join(ROOT, '../../packages/core/src/issueControlPlane.js'),
+    path.join(ROOT, '../../packages/core/src/webAugmentedRepair.js'),
   ];
   const re = /ipcMain\.handle\(\s*['"]([^'"]+)['"]/g;
   files.forEach((rel) => {

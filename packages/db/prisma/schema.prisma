@@ -102,6 +102,55 @@ model Project {
   metrics             Metric[]
   verifiedNodes       VerifiedPlatformNode[]
   campaigns           Campaign[]
+  platformIssues      PlatformIssue[]
+  issueLedger         PlatformIssueLedger[]
+}
+
+/// Active runtime defect / web-augmented repair ticket (THEE_MICHAEL Issue Control Plane)
+model PlatformIssue {
+  id             String    @id @default(cuid())
+  projectId      String
+  status         String    @default("pending")
+  severity       String    @default("medium")
+  issueSignature String
+  filePath       String?
+  component      String?
+  platform       String?
+  errorCode      String?
+  traceback      String    @db.Text
+  rootCause      String?   @db.Text
+  patchDiff      String?   @db.Text
+  patchCode      String?   @db.Text
+  webSources     String?   @db.Text
+  nodeId         String?
+  dependencies   String?   @db.Text
+  emailSentAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([issueSignature])
+}
+
+/// Immutable historical log after Approve/Deny/Delete/Edit actions
+model PlatformIssueLedger {
+  id                String   @id @default(cuid())
+  projectId         String
+  issueId           String?
+  action            String
+  issueSignature    String
+  traceback         String   @db.Text
+  patchCode         String?  @db.Text
+  outcome           String?  @db.Text
+  deploymentMetrics String?  @db.Text
+  actedBy           String?
+  createdAt         DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
 }
 
 /// Autonomous infrastructure node — one sub-entity (page, group, channel, board, etc.)

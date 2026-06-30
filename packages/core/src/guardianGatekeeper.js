@@ -373,6 +373,11 @@ function registerGuardianGatekeeperHandlers({ ipcMain, store, handlers = {} }) {
           recommendedAction: alert.recommendedAction,
         });
       }
+      if (handlers['queue-issue-from-guardian-alert']) {
+        try {
+          await handlers['queue-issue-from-guardian-alert'](null, alert);
+        } catch { /* additive — issue control plane */ }
+      }
     }
 
     saveGuardianConfig(store, { lastScanAt: new Date().toISOString(), lastScanStatus: newAlerts.length ? 'degraded' : 'healthy' });
