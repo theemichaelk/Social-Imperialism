@@ -27,6 +27,7 @@
     "dev:mobile": "cd apps/mobile && npm start",
     "audit:accuracy": "node apps/api/_audit-accuracy-check.js",
     "test:auth": "node apps/api/_test-auth-email-sequences.js",
+    "test:verified-nodes": "node apps/api/_test-verified-node-engine.js",
     "test:sovereign-scan": "node apps/api/_test-sovereign-scan.js",
     "test:dashboard": "node apps/api/_test-dashboard-features.js",
     "test:browse-posts": "node apps/api/_test-browse-posts-features.js",

@@ -104,6 +104,9 @@ async function registerAllHandlers(store, deps = {}) {
     openExternal: (url) => { deps.pendingOAuthUrl = url; },
   });
 
+  const { registerVerifiedNodeHandlers } = require(path.join(DESKTOP_SERVICES, 'verifiedNodeEngine/verifiedNodeIpc'));
+  registerVerifiedNodeHandlers({ ipcMain, store, resolveKeys });
+
   const { registerAccountCreatorHandlers } = require(path.join(DESKTOP_SERVICES, 'accountCreatorIpc'));
   registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress: () => {}, userDataPath });
 

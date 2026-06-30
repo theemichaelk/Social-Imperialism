@@ -94,12 +94,149 @@ model Project {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  settings       ProjectSetting[]
-  socialAccounts SocialAccount[]
-  keywords       Keyword[]
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  settings            ProjectSetting[]
+  socialAccounts      SocialAccount[]
+  keywords            Keyword[]
+  scheduledPosts      ScheduledPost[]
+  metrics             Metric[]
+  verifiedNodes       VerifiedPlatformNode[]
+  campaigns           Campaign[]
+}
+
+/// Autonomous infrastructure node — one sub-entity (page, group, channel, board, etc.)
+model VerifiedPlatformNode {
+  id                String    @id @default(cuid())
+  projectId         String
+  socialAccountId   String?
+  connectionId      String?
+  parentNodeId      String?
+  platform          String
+  nodeType          String
+  externalId        String
+  displayName       String?
+  depth             Int       @default(0)
+  entityData        String?
+  privacyState      String?
+  memberCount       Int?
+  verificationState String    @default("DISCOVERED")
+  strikeCount       Int       @default(0)
+  lastTestedAt      DateTime?
+  lastTestSuccessAt DateTime?
+  lastTierPassed    Int       @default(0)
+  lastError         String?
+  proxyProfile      String?
+  userAgentProfile  String?
+  continuousMode    Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  project       Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent        VerifiedPlatformNode?  @relation("NodeTree", fields: [parentNodeId], references: [id], onDelete: SetNull)
+  children      VerifiedPlatformNode[] @relation("NodeTree")
+  socialAccount SocialAccount?         @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  verificationRuns VerificationRun[]
+  repairAttempts   NodeRepairAttempt[]
+  campaignBindings CampaignNodeBinding[]
+  utmEvents        UtmPublishEvent[]
+
+  @@unique([projectId, platform, externalId])
+  @@index([projectId, verificationState])
+  @@index([connectionId])
+  @@index([parentNodeId])
+}
+
+model VerificationRun {
+  id           String   @id @default(cuid())
+  nodeId       String
+  tier         Int
+  tierName     String
+  status       String
+  success      Boolean  @default(false)
+  httpStatus   Int?
+  responseMeta String?
+  errorMessage String?
+  durationMs   Int?
+  livePostId   String?
+  purged       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  node VerifiedPlatformNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId, tier])
+  @@index([createdAt])
+}
+
+model NodeRepairAttempt {
+  id           String   @id @default(cuid())
+  nodeId       String
+  strike       Int
+  action       String
+  previousState String
+  newState     String
+  proxyRotated Boolean  @default(false)
+  sessionRefreshed Boolean @default(false)
+  errorLog     String?
+  webhookSent  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  node VerifiedPlatformNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId, strike])
+}
+
+model Campaign {
+  id             String   @id @default(cuid())
+  projectId      String
+  name           String
+  status         String   @default("running")
+  targetUrl      String   @default("https://socialimperialism.com")
+  timezone       String   @default("UTC")
+  frequencyCron  String?
+  burstIntervalM Int?
+  metadata       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project    Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  nodeBindings CampaignNodeBinding[]
   scheduledPosts ScheduledPost[]
-  metrics        Metric[]
+  utmEvents    UtmPublishEvent[]
+
+  @@index([projectId, status])
+}
+
+/// Campaigns may only bind nodes with valid lastTestSuccessAt
+model CampaignNodeBinding {
+  id         String   @id @default(cuid())
+  campaignId String
+  nodeId     String
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  campaign Campaign             @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  node     VerifiedPlatformNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, nodeId])
+}
+
+model UtmPublishEvent {
+  id         String   @id @default(cuid())
+  campaignId String?
+  nodeId     String
+  platform   String
+  utmSource  String
+  utmMedium  String
+  utmCampaign String
+  fullUrl    String
+  postId     String?
+  createdAt  DateTime @default(now())
+
+  campaign Campaign?            @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  node     VerifiedPlatformNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId])
+  @@index([campaignId])
 }
 
 model ProjectSetting {
@@ -126,8 +263,9 @@ model SocialAccount {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project        Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   scheduledPosts ScheduledPost[]
+  verifiedNodes  VerifiedPlatformNode[]
 }
 
 model Keyword {
@@ -146,7 +284,9 @@ model Keyword {
 model ScheduledPost {
   id              String   @id @default(cuid())
   projectId       String
+  campaignId      String?
   socialAccountId String?
+  verifiedNodeId  String?
   platform        String?
   accountId       String?
   content         String
@@ -158,7 +298,11 @@ model ScheduledPost {
   updatedAt       DateTime @updatedAt
 
   project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  campaign      Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id])
+
+  @@index([campaignId, status])
+  @@index([verifiedNodeId])
 }
 
 model Metric {
