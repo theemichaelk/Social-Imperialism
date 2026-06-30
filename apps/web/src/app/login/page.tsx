@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { NavAnchor } from '@/components/NavAnchor';
 import { auth, getToken, setSession } from '@/lib/api';
-import { validateEmail, validatePassword } from '@/lib/authValidation';
+import { validateEmail, validatePassword, validationErrorMessage } from '@/lib/authValidation';
 import { Logo } from '@/components/Logo';
 import { FooterCredit } from '@/components/FooterCredit';
 
@@ -31,19 +31,21 @@ export default function LoginPage() {
     setError('');
 
     const emailResult = validateEmail(email);
-    if (!emailResult.ok) {
-      setError(emailResult.error);
+    const emailErr = validationErrorMessage(emailResult);
+    if (emailErr) {
+      setError(emailErr);
       return;
     }
     const passwordResult = validatePassword(password);
-    if (!passwordResult.ok) {
-      setError(passwordResult.error);
+    const passwordErr = validationErrorMessage(passwordResult);
+    if (passwordErr) {
+      setError(passwordErr);
       return;
     }
 
     setLoading(true);
     try {
-      const res = await auth.login(emailResult.email, password);
+      const res = await auth.login(emailResult.ok ? emailResult.email : email.trim().toLowerCase(), password);
       setSession(res);
       window.location.replace('/dashboard');
     } catch (err) {
