@@ -1,18 +1,34 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { invoke } from '@/lib/api';
+import { checkPlatformAdmin } from '@/lib/adminAccess';
 import { PageShell } from '@/components/PageShell';
 import { MetricTile } from '@/components/DashboardViz';
 import { type IssueLedgerEntry, type PlatformIssue, severityClass } from '@/lib/issueControlPlane';
 
 export default function DashboardIssuesPage() {
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [active, setActive] = useState<PlatformIssue[]>([]);
   const [ledger, setLedger] = useState<IssueLedgerEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editPatch, setEditPatch] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    checkPlatformAdmin()
+      .then((ok) => {
+        if (!ok) {
+          router.replace('/dashboard');
+          return;
+        }
+        setAuthorized(true);
+      })
+      .catch(() => router.replace('/login'));
+  }, [router]);
 
   const selected = active.find((x) => x.id === selectedId) || null;
 
@@ -27,8 +43,9 @@ export default function DashboardIssuesPage() {
   }, [selectedId]);
 
   useEffect(() => {
+    if (authorized !== true) return;
     refresh().catch((e) => setMsg((e as Error).message));
-  }, [refresh]);
+  }, [refresh, authorized]);
 
   useEffect(() => {
     if (selected?.patchCode) setEditPatch(selected.patchCode);
@@ -45,6 +62,14 @@ export default function DashboardIssuesPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (authorized !== true) {
+    return (
+      <div className="dash-loading" style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Verifying administrator access…</p>
+      </div>
+    );
   }
 
   return (

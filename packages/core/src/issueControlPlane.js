@@ -3,7 +3,21 @@
  * Additive to Guardian Gatekeeper; sovereign base rules remain immutable.
  */
 const crypto = require('crypto');
+const path = require('path');
 const { runWebAugmentedRepair, fingerprintError, ADMIN_EMAILS } = require('./webAugmentedRepair');
+
+function assertIssueControlAdmin(store) {
+  const ctx = store?._invokeContext;
+  // Desktop/local IPC — no SaaS user context; local operator is trusted.
+  if (!ctx?.email) return { ok: true };
+  try {
+    const { isPlatformAdmin } = require(path.join(__dirname, '../../../apps/desktop/services/keys'));
+    if (isPlatformAdmin(ctx.email)) return { ok: true };
+  } catch { /* fallback below */ }
+  const email = String(ctx.email).trim().toLowerCase();
+  if (ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(email)) return { ok: true };
+  return { ok: false, error: 'Authorized administrator required (THEE_MICHAEL)' };
+}
 
 const STORAGE_ACTIVE = 'platformIssuesActive';
 const STORAGE_LEDGER = 'platformIssuesLedger';
@@ -214,12 +228,19 @@ function moveToLedger(store, issue, action, meta = {}) {
 function registerIssueControlPlaneHandlers({ ipcMain, store, handlers = {}, resolveKeys }) {
   const deps = { handlers, resolveKeys };
 
-  const bind = (channel, fn) => {
-    handlers[channel] = fn;
-    ipcMain.handle(channel, fn);
+  const bind = (channel, fn, { adminOnly = true } = {}) => {
+    const wrapped = async (...args) => {
+      if (adminOnly) {
+        const gate = assertIssueControlAdmin(store);
+        if (!gate.ok) return { success: false, error: gate.error, code: 'ADMIN_REQUIRED' };
+      }
+      return fn(...args);
+    };
+    handlers[channel] = wrapped;
+    ipcMain.handle(channel, wrapped);
   };
 
-  bind('intercept-runtime-issue', async (_e, payload) => interceptRuntimeIssue(store, payload, deps));
+  bind('intercept-runtime-issue', async (_e, payload) => interceptRuntimeIssue(store, payload, deps), { adminOnly: false });
 
   bind('run-web-augmented-repair', async (_e, payload) => {
     const keys = resolveKeys ? resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}')) : {};
@@ -371,7 +392,7 @@ function registerIssueControlPlaneHandlers({ ipcMain, store, handlers = {}, reso
       traceback: `${alert.summary}\nRecommended: ${alert.recommendedAction || ''}`,
       errorCode: 'GUARDIAN_ALERT',
     }, deps);
-  });
+  }, { adminOnly: false });
 
   console.log('[issueControlPlane] THEE_MICHAEL Web-Augmented GitOps console registered');
 }

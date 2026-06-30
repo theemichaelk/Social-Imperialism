@@ -51,6 +51,7 @@ export async function logout() {
 }
 
 type MeResponse = {
+  user?: { id: string; email?: string; name?: string; isAdmin?: boolean };
   project?: { id: string; name?: string };
   projects?: Array<{ id: string; name?: string; isActive?: boolean }>;
 };

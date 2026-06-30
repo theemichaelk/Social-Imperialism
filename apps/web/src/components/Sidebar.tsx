@@ -7,6 +7,7 @@ import { NAV_SECTIONS } from '@/lib/nav';
 import { resolveSearchRoute } from '@/lib/liveSupportAgent';
 import { Logo } from '@/components/Logo';
 import { invoke, logout } from '@/lib/api';
+import { checkPlatformAdmin } from '@/lib/adminAccess';
 
 const COLLAPSE_KEY = 'siWebNavCollapsed';
 const SECTION_COLLAPSE_KEY = 'siWebSectionCollapsed';
@@ -22,6 +23,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
   const [collapsed, setCollapsed] = useState(false);
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
   const [health, setHealth] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     try {
@@ -29,6 +31,10 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
       const raw = localStorage.getItem(SECTION_COLLAPSE_KEY);
       if (raw) setSectionCollapsed(JSON.parse(raw));
     } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    checkPlatformAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
   }, []);
 
   useEffect(() => {
@@ -83,14 +89,22 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
     persistSections({});
   }, [persistSections]);
 
+  const visibleSections = useMemo(() => {
+    if (isAdmin) return NAV_SECTIONS;
+    return NAV_SECTIONS.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.adminOnly),
+    })).filter((s) => s.items.length > 0);
+  }, [isAdmin]);
+
   const filteredSections = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return NAV_SECTIONS;
+    if (!q) return visibleSections;
     const extraMatch = (label: string) =>
       (q.includes('thee') && label.toLowerCase().includes('support'))
       || (q.includes('admin') && label.toLowerCase().includes('support'))
       || (q.includes('help') && label.toLowerCase().includes('support'));
-    return NAV_SECTIONS.map((section) => ({
+    return visibleSections.map((section) => ({
       ...section,
       items: section.items.filter((item) =>
         item.label.toLowerCase().includes(q)
@@ -98,7 +112,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
         || extraMatch(item.label),
       ),
     })).filter((s) => s.items.length > 0);
-  }, [search]);
+  }, [search, visibleSections]);
 
   useEffect(() => {
     if (!activeSection) return;
