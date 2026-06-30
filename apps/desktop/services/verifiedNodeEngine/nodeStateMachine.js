@@ -1,5 +1,5 @@
 /**
- * Verification state machine for autonomous infrastructure nodes.
+ * Verification state machine for Social Imperialism verified infrastructure nodes.
  *
  * DISCOVERED → PENDING_VERIFICATION → TIER1_PASSED → TIER2_PASSED → VERIFIED
  * Any tier fail → REPAIR_LOOP (strike 1–3) → AWAITING_ACTION (strike 3 exhausted)

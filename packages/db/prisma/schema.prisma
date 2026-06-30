@@ -153,7 +153,7 @@ model PlatformIssueLedger {
   @@index([projectId, createdAt])
 }
 
-/// Autonomous infrastructure node — one sub-entity (page, group, channel, board, etc.)
+/// Social Imperialism verified infrastructure node — one sub-entity (page, group, channel, board, etc.)
 model VerifiedPlatformNode {
   id                String    @id @default(cuid())
   projectId         String

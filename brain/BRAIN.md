@@ -6,7 +6,7 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 
 | File / folder | Purpose |
 |---------------|---------|
-| [GROWTH_ENGINE.md](./GROWTH_ENGINE.md) | **Autonomous Social Growth Brain Engine** — decision core, brain-check, validation loop, UI pass-back |
+| [GROWTH_ENGINE.md](./GROWTH_ENGINE.md) | **Social Imperialism Social Growth Brain Engine** — decision core, brain-check, validation loop, UI pass-back |
 | [OMNI_BRAIN_PLANNER.md](./OMNI_BRAIN_PLANNER.md) | **Imperialism Brain (Planner)** — cross-module blueprints, universal prompt bar |
 | [LIVE_SUPPORT_AGENT.md](./LIVE_SUPPORT_AGENT.md) | **Imperialism Brain (Live Support)** — in-product support, troubleshooting, THEE_MICHAEL approvals |
 | [GUARDIAN_GATEKEEPER.md](./GUARDIAN_GATEKEEPER.md) | **Guardian & Self-Healing Gatekeeper** — monitoring, sandbox tests, webhooks, admin gate |

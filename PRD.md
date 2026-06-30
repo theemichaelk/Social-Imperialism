@@ -65,7 +65,7 @@
 *   **[x] Key behaviors:** AI analyzes post and uses brand guidelines to generate replies.
 *   **[x] Brand Mentioning:** System prompt enforces brand inclusion naturally.
 *   **[x] Custom Prompts:** UI for granular prompt overrides needed.
-*   **[x] Autonomous vs Approval Mode:** History page Command Center built for approvals.
+*   **[x] Auto vs Approval Mode:** History page Command Center built for approvals.
 
 #### 2.5 Real-Time Monitoring & “Be First to Reply”
 *   **[x] Monitoring Targets:** Keywords and specific accounts.

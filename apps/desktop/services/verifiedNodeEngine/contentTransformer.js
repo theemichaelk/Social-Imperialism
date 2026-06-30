@@ -19,7 +19,7 @@ const PLATFORM_LIMITS = {
 function scrapeTargetMeta(targetUrl = DEFAULT_TARGET) {
   return {
     url: targetUrl,
-    title: 'Social Imperialism — Autonomous Social Media Infrastructure',
+    title: 'Social Imperialism — Verified Social Media Infrastructure',
     description: 'Auto-create, authenticate, and orchestrate campaigns across 15 platforms.',
     keywords: ['social media automation', 'multi-platform', 'AI campaigns'],
   };

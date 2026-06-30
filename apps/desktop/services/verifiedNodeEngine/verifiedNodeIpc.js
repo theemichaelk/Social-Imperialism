@@ -1,5 +1,5 @@
 /**
- * IPC handlers for Autonomous Social Media Infrastructure Engine.
+ * IPC handlers for Social Imperialism Verified Node Engine.
  */
 const { prisma } = require('@si/db');
 const { getLinkedAccounts } = require('../accountAutomation');
@@ -179,7 +179,7 @@ function registerVerifiedNodeHandlers({ ipcMain, store, resolveKeys }) {
     return { success: true, tracked, variant };
   });
 
-  console.log('[verifiedNodeEngine] Registered autonomous infrastructure handlers');
+  console.log('[verifiedNodeEngine] Registered Social Imperialism verified node handlers');
 }
 
 module.exports = { registerVerifiedNodeHandlers };

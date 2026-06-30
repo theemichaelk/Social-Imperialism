@@ -1,5 +1,5 @@
 /**
- * QA: Autonomous Infrastructure Engine — schema, 3-tier loop, auto-repair, UTM.
+ * QA: Social Imperialism Verified Node Engine — schema, 3-tier loop, auto-repair, UTM.
  * Run: node apps/api/_test-verified-node-engine.js
  */
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
