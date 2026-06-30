@@ -34,7 +34,7 @@ When reviewing **any** change — including retroactive audits of earlier assist
 |-------|----------------|---------------|
 | QA module pages | **25** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
 | QA page features | **195** OK | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
-| QA section features | **144+** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
+| QA section features | **144** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
 | `PageShell` + `PageFocusRail` | **25** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
 | `ManageableTabNav` focus mode | **7** pages | dashboard, browse-posts, history, settings, integrations, content-library, account-creator |
 | `ContentHubTabNav` focus mode | **1** page | content-hub |
