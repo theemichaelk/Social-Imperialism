@@ -18,7 +18,7 @@ const ALLOWED_CHANNELS = new Set([
 router.get('/docs', (req, res) => {
   res.json({
     name: 'Social Imperialism Partner API',
-    version: '1.0',
+    version: '1.2',
     auth: { header: 'X-SI-API-Key', format: 'si_live_<hex>' },
     endpoints: [
       { method: 'GET', path: '/api/v1/status', auth: true },

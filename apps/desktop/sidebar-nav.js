@@ -325,11 +325,18 @@ function renderAppSidebar(activeId) {
       <button type="button" class="si-sign-out-btn" id="siSignOutBtn" title="Sign out">
         <i class="fas fa-sign-out-alt"></i><span>Sign Out</span>
       </button>
-      <a href="settings.html#system-health" class="sidebar-footer-link" id="siHealthLink" data-nav-id="settings" title="System health — open Settings">
+      <a href="settings.html#system-health" class="sidebar-footer-link" id="siHealthLink" data-nav-id="settings" title="System health — open Campaign Manager">
         <i class="fas fa-circle si-health-dot" id="siHealthDot" style="font-size:0.45rem;color:#10b981;"></i>
         <span id="siHealthLabel">Checking…</span>
       </a>
+      <div class="si-version-label" id="siAppVersion"></div>
     </div>`;
+
+  try {
+    const ver = require('./package.json').version;
+    const verEl = document.getElementById('siAppVersion');
+    if (verEl) verEl.textContent = `v${ver}`;
+  } catch (e) { /* ignore */ }
 
   bindSidebarNavLinks();
   bindHashActiveSync();

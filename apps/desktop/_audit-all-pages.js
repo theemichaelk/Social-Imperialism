@@ -20,11 +20,16 @@ function collectRegisteredIpc() {
   const channels = new Set();
   const files = [
     'index.js',
+    'registerParityHandlers.js',
     ...fs.readdirSync(path.join(ROOT, 'services')).filter((f) => f.endsWith('.js')).map((f) => `services/${f}`),
+    path.join(ROOT, '../../packages/core/src/campaignManager.js'),
+    path.join(ROOT, '../../packages/core/src/coreHandlers.js'),
+    path.join(ROOT, '../../packages/core/src/indexHandlers.js'),
+    path.join(ROOT, '../../packages/core/src/handlerRegistry.js'),
   ];
   const re = /ipcMain\.handle\(\s*['"]([^'"]+)['"]/g;
   files.forEach((rel) => {
-    const fp = path.join(ROOT, rel);
+    const fp = path.isAbsolute(rel) ? rel : path.join(ROOT, rel);
     if (!fs.existsSync(fp)) return;
     const content = fs.readFileSync(fp, 'utf8');
     let m;

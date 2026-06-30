@@ -368,6 +368,18 @@ body.sidebar-collapsed .si-sidebar-section-controls {
   background: rgba(248, 113, 113, 0.12);
   color: #fca5a5;
 }
+.si-version-label {
+  font-size: 0.58rem;
+  color: #475569;
+  text-align: center;
+  margin-top: 0.35rem;
+  letter-spacing: 0.04em;
+}
+
+body.sidebar-collapsed .si-version-label {
+  display: none;
+}
+
 body.sidebar-collapsed .si-sign-out-btn span {
   display: none !important;
 }

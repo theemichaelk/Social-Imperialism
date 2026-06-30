@@ -1,6 +1,6 @@
 {
   "name": "social-imperialism",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "workspaces": [
     "packages/*",
@@ -26,6 +26,8 @@
     "dev:mobile-android": "cd apps/mobile-android && gradlew.bat :app:installDebug",
     "dev:mobile": "cd apps/mobile && npm start",
     "audit:accuracy": "node apps/api/_audit-accuracy-check.js",
+    "audit:desktop": "node apps/desktop/_audit-all-pages.js",
+    "audit:desktop-ipc": "node apps/desktop/_ipc-parity-report.js",
     "test:auth": "node apps/api/_test-auth-email-sequences.js",
     "test:verified-nodes": "node apps/api/_test-verified-node-engine.js",
     "test:sovereign-scan": "node apps/api/_test-sovereign-scan.js",
@@ -41,7 +43,11 @@
     "test:seo-tools": "node apps/api/_test-seo-tools-features.js",
     "test:scheduler": "node apps/api/_test-scheduler-features.js",
     "test:prompt-vault": "node apps/api/_test-prompt-vault-features.js",
-    "test:reddit-ai": "node apps/api/_test-reddit-ai-features.js"
+    "test:reddit-ai": "node apps/api/_test-reddit-ai-features.js",
+    "test:campaign-manager": "node apps/api/_test-campaign-manager.js",
+    "test:qa-all-pages": "node apps/api/_test-qa-all-pages.js",
+    "test:qa-all-sections": "node apps/api/_test-qa-all-sections.js",
+    "test:qa-full": "node apps/api/_test-qa-full-audit.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

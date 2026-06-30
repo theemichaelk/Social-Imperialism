@@ -83,16 +83,18 @@ function countQaPages() {
 
 // --- Checks ---
 const pageFocusRoutes = countPageFocusRoutes();
-if (pageFocusRoutes !== 24) fail(`pageFocus.ts routes: expected 24, got ${pageFocusRoutes}`);
+const EXPECTED_MODULES = 25;
+
+if (pageFocusRoutes !== EXPECTED_MODULES) fail(`pageFocus.ts routes: expected ${EXPECTED_MODULES}, got ${pageFocusRoutes}`);
 
 const pageShellPages = countPageShellPages();
-if (pageShellPages !== 24) fail(`PageShell pages: expected 24, got ${pageShellPages}`);
+if (pageShellPages !== EXPECTED_MODULES) fail(`PageShell pages: expected ${EXPECTED_MODULES}, got ${pageShellPages}`);
 
 const manageableTabs = countManageableTabNavPages();
 if (manageableTabs !== 7) fail(`ManageableTabNav pages: expected 7, got ${manageableTabs}`);
 
 const qaPages = countQaPages();
-if (qaPages !== 24) fail(`QA PAGES count: expected 24, got ${qaPages}`);
+if (qaPages !== EXPECTED_MODULES) fail(`QA PAGES count: expected ${EXPECTED_MODULES}, got ${qaPages}`);
 
 const imperialBar = path.join(ROOT, 'apps/web/src/components/ImperialismBrainPromptBar.tsx');
 const legacyBar = path.join(ROOT, 'apps/web/src/components/OmniBrainPromptBar.tsx');
@@ -126,7 +128,10 @@ if (read(indexHtml).includes('title="Sovereign Threat Capture Layer"')) {
   fail('s3-website/index.html still uses Sovereign user-facing badge title — must be THEE_MICHAEL Security Control');
 }
 if (read(indexHtml).includes('18</div><div class="lbl">App Modules')) {
-  fail('s3-website/index.html still claims 18 App Modules — should be 24');
+  fail(`s3-website/index.html still claims 18 App Modules — should be ${EXPECTED_MODULES}`);
+}
+if (!read(indexHtml).includes(`<div class="val">${EXPECTED_MODULES}</div><div class="lbl">App Modules`)) {
+  fail(`s3-website/index.html App Modules stat must be ${EXPECTED_MODULES}`);
 }
 
 const partnerRoutes = path.join(ROOT, 'apps/api/src/routes/partner.js');
@@ -191,8 +196,8 @@ else if (!read(siteBlueprint).includes('NAV_SECTIONS')) {
 
 const navTs = path.join(ROOT, 'apps/web/src/lib/nav.ts');
 const navModuleCount = (read(navTs).match(/href:\s*'\//g) || []).length;
-if (navModuleCount !== 24) {
-  fail(`nav.ts module items: expected 24, got ${navModuleCount} — update siteBlueprint + audit rule`);
+if (navModuleCount !== EXPECTED_MODULES) {
+  fail(`nav.ts module items: expected ${EXPECTED_MODULES}, got ${navModuleCount} — update siteBlueprint + audit rule`);
 }
 
 const founderTs = path.join(ROOT, 'apps/web/src/lib/founder.ts');
@@ -266,10 +271,10 @@ if (!read(qaSections).includes('get-thee-michael-action-history')) {
 console.log('══════════════════════════════════════════════════════════');
 console.log('AUDIT ACCURACY CHECK — Social Imperialism');
 console.log('══════════════════════════════════════════════════════════');
-console.log(`pageFocus routes:     ${pageFocusRoutes} (expect 24)`);
-console.log(`PageShell pages:      ${pageShellPages} (expect 24)`);
+console.log(`pageFocus routes:     ${pageFocusRoutes} (expect ${EXPECTED_MODULES})`);
+console.log(`PageShell pages:      ${pageShellPages} (expect ${EXPECTED_MODULES})`);
 console.log(`ManageableTabNav:     ${manageableTabs} (expect 7)`);
-console.log(`QA page routes:       ${qaPages} (expect 24)`);
+console.log(`QA page routes:       ${qaPages} (expect ${EXPECTED_MODULES})`);
 console.log(`ImperialismBrain bar: ${exists(imperialBar) ? 'OK' : 'MISSING'}`);
 console.log(`Sovereign landing:    ${exists(landingShield) ? 'OK' : 'MISSING'}`);
 console.log(`Audit rule doc:       ${exists(auditRule) ? 'OK' : 'MISSING'}`);

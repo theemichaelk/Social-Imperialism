@@ -284,6 +284,22 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     ],
     related: [{ label: 'Acct Creator', href: '/account-creator' }],
   },
+  '/campaign-manager': {
+    id: 'campaign-manager',
+    title: 'Campaign Command',
+    outcome: 'Manage campaigns, schedules, verified nodes, and kill-switch controls in one place.',
+    subtitle: 'Campaigns tab for brand ops — Verified Nodes tab for 15-platform proof tree.',
+    flow: ['Select Campaign', 'Edit / Pause', 'Bind Verified Nodes', 'Schedule'],
+    actions: [
+      { label: 'Verified Nodes', href: '/campaign-manager?tab=nodes', primary: true },
+      { label: 'Calendar', href: '/calendar' },
+      { label: 'Settings', href: '/settings' },
+    ],
+    related: [
+      { label: 'Accounts', href: '/account-hub' },
+      { label: 'Keywords', href: '/keywords' },
+    ],
+  },
   '/account-creator': {
     id: 'account-creator',
     title: 'Acct Creator',

@@ -3390,6 +3390,18 @@ const { registerGuardianGatekeeperHandlers } = require('../../packages/core/src/
 const { registerSovereignThreatHandlers } = require('../../packages/core/src/sovereignThreatCapture');
 registerGuardianGatekeeperHandlers({ ipcMain, store, handlers: desktopIpcHandlers });
 registerSovereignThreatHandlers({ ipcMain, store, handlers: desktopIpcHandlers });
-console.log('[desktop] Guardian Gatekeeper + Sovereign Threat Capture native IPC registered');
+
+const { registerParityHandlers } = require('./registerParityHandlers');
+registerParityHandlers({
+  ipcMain,
+  store,
+  resolveKeys,
+  integrations,
+  buildApiMetrics,
+  desktopIpcHandlers,
+});
+
+const pkg = require('./package.json');
+console.log(`[desktop] Social Imperialism v${pkg.version} — Guardian + parity IPC registered`);
 
 

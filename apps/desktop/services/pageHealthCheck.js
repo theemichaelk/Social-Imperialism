@@ -178,7 +178,7 @@ const NAV_SECTIONS = [
   },
   {
     id: 'settings',
-    label: 'Settings',
+    label: 'Campaign Manager',
     html: 'settings.html',
     requiredKeys: [],
     optionalKeys: [],

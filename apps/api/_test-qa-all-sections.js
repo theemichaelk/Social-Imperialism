@@ -253,6 +253,17 @@ const SECTIONS = [
     ],
   },
   {
+    section: 'System — Campaign Command',
+    features: [
+      { name: 'Settings status', channel: 'get-settings-status', validate: (d) => typeof d === 'object' },
+      { name: 'Campaign details', channel: 'get-campaign-details', args: ['DYNAMIC_CAMPAIGN'], validate: (d) => d?.success !== false || d?.campaign },
+      { name: 'Verified node tree', channel: 'get-verified-node-tree', validate: (d) => Array.isArray(d?.nodes) },
+      { name: 'List verified campaigns', channel: 'list-verified-campaigns', validate: (d) => Array.isArray(d?.campaigns) },
+      { name: 'Platform schema', channel: 'get-platform-discovery-schema', validate: (d) => d?.count === 15 },
+      { name: 'Section live', channel: 'get-section-live', args: ['campaignManager'], validate: (d) => d?.success !== false || d?.stats },
+    ],
+  },
+  {
     section: 'System — Settings',
     features: [
       { name: 'Global keys', channel: 'get-global-keys', validate: (d) => typeof d === 'object' },
@@ -332,6 +343,8 @@ async function main() {
   await invoke(token, projectId, 'get-linked-accounts');
   const accRes = await invoke(token, projectId, 'get-linked-accounts');
   const firstAcc = Array.isArray(accRes.data) && accRes.data[0];
+  const activeRes = await invoke(token, projectId, 'get-active-campaign');
+  const activeCampaignId = activeRes.data?.id || projectId;
 
   const allResults = [];
   let ok = 0, weak = 0, error = 0, broken = 0;
@@ -342,6 +355,7 @@ async function main() {
 
     for (const feat of section.features) {
       let args = feat.args ? [...feat.args] : [];
+      args = args.map((a) => (a === 'DYNAMIC_CAMPAIGN' ? activeCampaignId : a));
       // Dynamic account IDs + unique publish content per run
       if (firstAcc) {
         args = args.map((a) => {

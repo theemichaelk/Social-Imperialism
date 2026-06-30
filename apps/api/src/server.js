@@ -22,6 +22,7 @@ if (require('fs').existsSync(desktopEnvPath)) {
 
 const app = express();
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
+const APP_VERSION = require('../../../package.json').version;
 
 function getAllowedOrigins() {
   const defaults = ['http://localhost:3000', 'http://127.0.0.1:3000'];
@@ -43,7 +44,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '25mb' }));
 
-app.get('/', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', health: '/health', api: '/api' }));
+app.get('/', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', version: APP_VERSION, health: '/health', api: '/api' }));
 app.get('/health', async (req, res) => {
   let db = 'unknown';
   try {
@@ -55,6 +56,7 @@ app.get('/health', async (req, res) => {
   res.json({
     ok: db === 'ok',
     service: 'social-imperialism-api',
+    version: APP_VERSION,
     db,
     s3: s3.getS3Status(),
     circuits: getCircuitStatus(),

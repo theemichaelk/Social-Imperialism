@@ -32,10 +32,10 @@ When reviewing **any** change — including retroactive audits of earlier assist
 
 | Claim | Verified value | How to verify |
 |-------|----------------|---------------|
-| QA module pages | **24** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
-| QA page features | **152** OK | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
-| QA section features | **138** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
-| `PageShell` + `PageFocusRail` | **24** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
+| QA module pages | **25** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
+| QA page features | **195** OK | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
+| QA section features | **144+** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
+| `PageShell` + `PageFocusRail` | **25** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
 | `ManageableTabNav` focus mode | **7** pages | dashboard, browse-posts, history, settings, integrations, content-library, account-creator |
 | `ContentHubTabNav` focus mode | **1** page | content-hub |
 | User-facing brain name | **Imperialism Brain** | `ImperialismBrainPromptBar`, nav label, support page |
@@ -58,7 +58,7 @@ When reviewing **any** change — including retroactive audits of earlier assist
 
 | Wrong claim | Correct statement |
 |-------------|-------------------|
-| "ManageableTabNav on all 24 pages" | Only **7** tab-heavy pages; others use `PageShell` only or `ContentHubTabNav` |
+| "ManageableTabNav on all 25 pages" | Only **7** tab-heavy pages; others use `PageShell` only or `ContentHubTabNav` |
 | "Omni-Brain / Growth Agent" user-facing | User-facing name is **Imperialism Brain** |
 | "Sovereign on every HTTP route" | Shield on invoke + partner invoke + auth failures; static landing uses client script |
 | "149/149 QA" | **152/152** after THEE_MICHAEL history tests added |
@@ -67,7 +67,7 @@ When reviewing **any** change — including retroactive audits of earlier assist
 | "137/137 sections" (stale) | **138/138** — re-run production QA after any test change |
 | "SOVEREIGN THREAT CAPTURED" banner | User-facing: **THEE_MICHAEL SECURITY REVIEW REQUIRED** |
 | "Kinetic code shown in production API" | Code delivered via **email/webhook** only in production |
-| "18 app modules" on landing | **24** authenticated module routes in SaaS |
+| "18 app modules" on landing | **25** authenticated module routes in SaaS |
 | "7 Sovereign IPC channels" | **11** channels — see `THEE_MICHAEL_SECURITY.md` |
 | "Sovereign" user-facing brand | User-facing: **THEE_MICHAEL Security Control** |
 | "Deployed/fixed without QA" | Must run `audit:accuracy` + `test:sovereign-scan` + production QA |

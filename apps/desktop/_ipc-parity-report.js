@@ -6,6 +6,13 @@ const desktop = __dirname;
 
 function collectHandlers(dir) {
   const handlers = new Set();
+  function scanFile(fp) {
+    if (!fs.existsSync(fp)) return;
+    const c = fs.readFileSync(fp, 'utf8');
+    const re = /ipcMain\.handle\(\s*['"]([^'"]+)['"]/g;
+    let m;
+    while ((m = re.exec(c)) !== null) handlers.add(m[1]);
+  }
   function walk(d) {
     for (const ent of fs.readdirSync(d, { withFileTypes: true })) {
       const p = path.join(d, ent.name);
@@ -13,14 +20,15 @@ function collectHandlers(dir) {
         if (ent.name === 'node_modules') continue;
         walk(p);
       } else if (ent.name.endsWith('.js')) {
-        const c = fs.readFileSync(p, 'utf8');
-        const re = /ipcMain\.handle\(\s*['"]([^'"]+)['"]/g;
-        let m;
-        while ((m = re.exec(c)) !== null) handlers.add(m[1]);
+        scanFile(p);
       }
     }
   }
   walk(dir);
+  [
+    path.join(dir, 'registerParityHandlers.js'),
+    path.join(root, 'packages/core/src/campaignManager.js'),
+  ].forEach(scanFile);
   return handlers;
 }
 

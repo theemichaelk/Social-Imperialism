@@ -1,19 +1,19 @@
 {
   "summary": {
-    "total": 18,
-    "ok": 18,
+    "total": 23,
+    "ok": 23,
     "warn": 0,
     "broken": 0,
-    "navSections": 16,
-    "registeredIpcCount": 234,
-    "timestamp": "2026-06-20T01:46:11.199Z"
+    "navSections": 22,
+    "registeredIpcCount": 326,
+    "timestamp": "2026-06-30T08:59:51.072Z"
   },
   "pages": [
     {
       "file": "account-creator.html",
       "status": "ok",
       "hasSidebar": true,
-      "ipcCallCount": 20,
+      "ipcCallCount": 24,
       "missingIpc": [],
       "syntax": "OK",
       "issues": [],
@@ -40,6 +40,16 @@
       "hints": []
     },
     {
+      "file": "brand.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 2,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
       "file": "calendar.html",
       "status": "ok",
       "hasSidebar": true,
@@ -53,7 +63,17 @@
       "file": "content-hub.html",
       "status": "ok",
       "hasSidebar": true,
-      "ipcCallCount": 57,
+      "ipcCallCount": 58,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "content-library.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 5,
       "missingIpc": [],
       "syntax": "OK",
       "issues": [],
@@ -64,6 +84,26 @@
       "status": "ok",
       "hasSidebar": true,
       "ipcCallCount": 50,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "design-studio.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 4,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
+      "file": "dns.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 10,
       "missingIpc": [],
       "syntax": "OK",
       "issues": [],
@@ -100,6 +140,16 @@
       "hints": []
     },
     {
+      "file": "integrations.html",
+      "status": "ok",
+      "hasSidebar": true,
+      "ipcCallCount": 6,
+      "missingIpc": [],
+      "syntax": "OK",
+      "issues": [],
+      "hints": []
+    },
+    {
       "file": "keywords.html",
       "status": "ok",
       "hasSidebar": true,
@@ -113,7 +163,7 @@
       "file": "login.html",
       "status": "ok",
       "hasSidebar": false,
-      "ipcCallCount": 1,
+      "ipcCallCount": 5,
       "missingIpc": [],
       "syntax": "OK",
       "issues": [],
@@ -183,7 +233,7 @@
       "file": "settings.html",
       "status": "ok",
       "hasSidebar": true,
-      "ipcCallCount": 22,
+      "ipcCallCount": 45,
       "missingIpc": [],
       "syntax": "OK",
       "issues": [],
@@ -240,7 +290,7 @@
     },
     {
       "id": "content-hub",
-      "label": "Content Hub",
+      "label": "Create",
       "html": "content-hub.html",
       "requiredKeys": [],
       "optionalKeys": [
@@ -248,6 +298,57 @@
         "falKey",
         "unsplashAccessKey",
         "grokEmail"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "content-library",
+      "label": "Library",
+      "html": "content-library.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "design-studio",
+      "label": "Design Studio",
+      "html": "design-studio.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini",
+        "falKey"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "brand",
+      "label": "Brand",
+      "html": "brand.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "gemini"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "scheduler",
+      "label": "Scheduler",
+      "html": "calendar.html",
+      "hash": "#scheduler",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "metaAccess",
+        "linkedinAccessToken"
       ],
       "dataChecks": [
         "activeCampaign"
@@ -402,8 +503,35 @@
       ]
     },
     {
+      "id": "dns",
+      "label": "DNS",
+      "html": "dns.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "awsAccessKeyId",
+        "awsSecretAccessKey"
+      ],
+      "dataChecks": [
+        "activeCampaign"
+      ]
+    },
+    {
+      "id": "integrations",
+      "label": "Integrations",
+      "html": "integrations.html",
+      "requiredKeys": [],
+      "optionalKeys": [
+        "vboutApiKey",
+        "smtpUser",
+        "acumbamailUser"
+      ],
+      "dataChecks": [
+        "campaigns"
+      ]
+    },
+    {
       "id": "settings",
-      "label": "Settings",
+      "label": "Campaign Manager",
       "html": "settings.html",
       "requiredKeys": [],
       "optionalKeys": [],

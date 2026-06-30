@@ -15,14 +15,18 @@ async function login() {
   });
   const body = await res.json();
   if (!res.ok) throw new Error(body.error || 'login failed');
-  return body.token;
+  return { token: body.token, projectId: body.project?.id };
 }
 
-async function invoke(token, channel, args = []) {
+async function invoke(token, projectId, channel, args = []) {
   const argList = Array.isArray(args) ? args : [args];
   const res = await fetch(`${API}/api/invoke/${channel}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'x-project-id': projectId,
+    },
     body: JSON.stringify({ args: argList }),
   });
   const body = await res.json();
@@ -32,29 +36,30 @@ async function invoke(token, channel, args = []) {
 
 async function main() {
   console.log(`Testing Campaign Manager against ${API}`);
-  const token = await login();
+  const { token, projectId } = await login();
+  if (!projectId) throw new Error('login missing project id');
 
-  const status = await invoke(token, 'get-settings-status');
+  const status = await invoke(token, projectId, 'get-settings-status');
   const campaigns = status.campaigns || [];
   if (!campaigns.length) throw new Error('No campaigns to test');
   const id = status.activeCampaignId || campaigns[0].id;
 
-  const detail = await invoke(token, 'get-campaign-details', id);
+  const detail = await invoke(token, projectId, 'get-campaign-details', id);
   if (!detail.success) throw new Error('get-campaign-details failed');
   console.log(`  details: ${detail.campaign.brandName} keywords=${detail.stats.keywords} scheduled=${detail.stats.scheduledPosts}`);
 
-  const paused = await invoke(token, 'pause-campaign', id);
+  const paused = await invoke(token, projectId, 'pause-campaign', id);
   if (!paused.success) throw new Error('pause-campaign failed');
   console.log('  pause: OK');
 
-  const afterPause = await invoke(token, 'get-campaign-details', id);
+  const afterPause = await invoke(token, projectId, 'get-campaign-details', id);
   if (!afterPause.isPaused) throw new Error('expected isPaused after pause');
 
-  const resumed = await invoke(token, 'resume-campaign', id);
+  const resumed = await invoke(token, projectId, 'resume-campaign', id);
   if (!resumed.success) throw new Error('resume-campaign failed');
   console.log('  resume: OK');
 
-  const sched = await invoke(token, 'schedule-post', [{
+  const sched = await invoke(token, projectId, 'schedule-post', [{
     campaignId: id,
     content: `[CM-TEST] ${Date.now()}`,
     platform: 'Twitter',
@@ -63,11 +68,15 @@ async function main() {
   if (!sched.success) throw new Error('schedule-post failed');
   console.log('  schedule: OK');
 
-  const posts = await invoke(token, 'get-scheduled-posts', id);
+  const posts = await invoke(token, projectId, 'get-scheduled-posts', id);
   const testPost = (posts || []).find((p) => (p.content || '').includes('[CM-TEST]'));
   if (!testPost) throw new Error('scheduled post not found');
 
-  await invoke(token, 'delete-scheduled-post', testPost.id);
+  await invoke(token, projectId, 'delete-scheduled-post', testPost.id);
+
+  const tree = await invoke(token, projectId, 'get-verified-node-tree');
+  if (!Array.isArray(tree?.nodes)) throw new Error('get-verified-node-tree failed');
+  console.log('  verified nodes: OK');
   console.log('  delete scheduled post: OK');
 
   console.log('\n✓ Campaign Manager handlers OK');

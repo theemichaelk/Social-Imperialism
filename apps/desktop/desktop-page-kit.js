@@ -1,10 +1,15 @@
 /**
  * Shared bootstrap for SaaS-parity desktop pages.
  */
-function mountNeoPage({ pageId, title, subtitle, eyebrow }) {
-  if (typeof renderAppSidebar === 'function') {
-    renderAppSidebar(pageId);
-    updateSidebarActiveState(pageId);
+function mountNeoPage({ pageId, title, subtitle, eyebrow, onCampaignSwitch }) {
+  try {
+    const { mountAppSidebar } = require('./sidebar-nav');
+    mountAppSidebar(pageId, onCampaignSwitch);
+  } catch (e) {
+    if (typeof renderAppSidebar === 'function') {
+      renderAppSidebar(pageId);
+      if (typeof updateSidebarActiveState === 'function') updateSidebarActiveState(pageId);
+    }
   }
   const header = document.getElementById('neoPageHeader');
   if (header) {
