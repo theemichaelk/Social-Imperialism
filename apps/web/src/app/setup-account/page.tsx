@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { NavAnchor } from '@/components/NavAnchor';
 import { auth, getApiBase, setSession } from '@/lib/api';
-import { validateEmail, validatePassword, passwordsMatch } from '@/lib/authValidation';
+import { validateEmail, validatePassword, passwordsMatch, validationErrorMessage } from '@/lib/authValidation';
 import { Logo } from '@/components/Logo';
 
 function SetupAccountForm() {
@@ -43,13 +43,15 @@ function SetupAccountForm() {
     setError('');
 
     const emailResult = validateEmail(email);
-    if (!emailResult.ok) {
-      setError(emailResult.error);
+    const emailErr = validationErrorMessage(emailResult);
+    if (emailErr) {
+      setError(emailErr);
       return;
     }
     const passwordResult = validatePassword(password);
-    if (!passwordResult.ok) {
-      setError(passwordResult.error);
+    const passwordErr = validationErrorMessage(passwordResult);
+    if (passwordErr) {
+      setError(passwordErr);
       return;
     }
     if (!passwordsMatch(password, confirm)) {
@@ -59,7 +61,7 @@ function SetupAccountForm() {
 
     setLoading(true);
     try {
-      const res = await auth.setupPassword(emailResult.email, password);
+      const res = await auth.setupPassword(emailResult.ok ? emailResult.email : email.trim().toLowerCase(), password);
       setSession(res);
       window.location.replace('/dashboard');
     } catch (err) {
