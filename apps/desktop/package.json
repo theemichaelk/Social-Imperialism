@@ -39,7 +39,9 @@
     "appId": "com.socialimperialism.app",
     "productName": "Social Imperialism",
     "win": {
-      "target": "nsis"
-    }
+      "target": "nsis",
+      "signAndEditExecutable": false
+    },
+    "forceCodeSigning": false
   }
 }
