@@ -21,7 +21,10 @@ packages/
 cd "E:\OneDrive\Documents\Factory AI.02.20.26\Social Imperialism"
 npm install
 copy apps\api\.env.example apps\api\.env
-npm run db:push
+# Prisma requires PostgreSQL (not sqlite file: URLs). For local API dev:
+# 1. Set DATABASE_URL in apps/api/.env to postgresql://...
+# 2. Run deploy\dev-local-api.ps1 to open RDS to your IP (one-time)
+npm run db:migrate
 npm run db:seed
 npm run db:migrate-storage   # optional: import desktop localStorage → Prisma
 npm run dev

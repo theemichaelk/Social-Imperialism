@@ -14,10 +14,17 @@ const { sovereignThreatShield } = require('./middleware/sovereignThreatShield');
 const { resolveActiveProject } = require('./projectEnsure');
 const s3 = require('./s3');
 
-// Load desktop .env for API keys (local dev only — production uses App Runner env vars)
+// Load desktop .env for API keys (local dev only — production uses EB env vars)
 const desktopEnvPath = path.join(__dirname, '../../desktop/.env');
 if (require('fs').existsSync(desktopEnvPath)) {
+  const apiDatabaseUrl = process.env.DATABASE_URL;
   require('dotenv').config({ path: desktopEnvPath });
+  // Desktop .env may carry legacy sqlite DATABASE_URL — Prisma schema requires postgres
+  if (apiDatabaseUrl && /^postgres(ql)?:\/\//i.test(apiDatabaseUrl)) {
+    process.env.DATABASE_URL = apiDatabaseUrl;
+  } else if (!process.env.DATABASE_URL || /^file:/i.test(process.env.DATABASE_URL)) {
+    delete process.env.DATABASE_URL;
+  }
 }
 
 const app = express();
