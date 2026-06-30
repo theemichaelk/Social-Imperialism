@@ -40,11 +40,23 @@ if (Test-Path $rdsStatePath) {
   $rdsState = Get-Content $rdsStatePath | ConvertFrom-Json
   if ($rdsState.databaseUrl) { $rdsDbUrl = $rdsState.databaseUrl }
 }
+if (-not $rdsDbUrl) {
+  Write-Host "Fetching DATABASE_URL from existing EB environment..."
+  $rdsDbUrl = aws elasticbeanstalk describe-configuration-settings `
+    --application-name $AppName `
+    --environment-name $EnvName `
+    --region $Region `
+    --query "ConfigurationSettings[0].OptionSettings[?OptionName=='DATABASE_URL'].Value" `
+    --output text 2>$null
+  if (-not $rdsDbUrl -or $rdsDbUrl -eq "None") {
+    throw "DATABASE_URL not found. Run deploy/rds-setup.ps1 or set databaseUrl in deploy/rds-state.json."
+  }
+}
 
 $envVars = [ordered]@{
   NODE_ENV = "production"
   PORT = "8080"
-  DATABASE_URL = $(if ($rdsDbUrl) { $rdsDbUrl } else { "postgresql://si_admin:CHANGE_ME@localhost:5432/socialimperialism?schema=public" })
+  DATABASE_URL = $rdsDbUrl
   WEB_URL = $AmplifyUrl
   ALLOWED_ORIGINS = "$AmplifyUrl,https://d204r2r6gar3c8.amplifyapp.com,https://d2cu5rkstjz0rg.cloudfront.net,https://api.socialimperialism.com,https://socialimperialism.com,https://www.socialimperialism.com"
   AWS_S3_BUCKET_NAME = "social-imperialism"
@@ -65,7 +77,20 @@ function Merge-Env($path) {
 }
 Merge-Env (Join-Path $RepoRoot "apps\api\.env")
 Merge-Env (Join-Path $RepoRoot "apps\desktop\.env")
-if (-not $envVars.JWT_SECRET) { $envVars.JWT_SECRET = "si-prod-" + [guid]::NewGuid().ToString("N") }
+if (-not $envVars.JWT_SECRET) {
+  $existingJwt = aws elasticbeanstalk describe-configuration-settings `
+    --application-name $AppName `
+    --environment-name $EnvName `
+    --region $Region `
+    --query "ConfigurationSettings[0].OptionSettings[?OptionName=='JWT_SECRET'].Value" `
+    --output text 2>$null
+  if ($existingJwt -and $existingJwt -ne "None") {
+    $envVars.JWT_SECRET = $existingJwt
+  } else {
+    $envVars.JWT_SECRET = "si-prod-" + [guid]::NewGuid().ToString("N")
+    Write-Host "Generated new JWT_SECRET (set in EB console to persist across deploys)."
+  }
+}
 
 $apiEnvLines = @()
 foreach ($k in $envVars.Keys) { $apiEnvLines += "$k=$($envVars[$k])" }
@@ -98,7 +123,7 @@ aws elasticbeanstalk create-application-version `
   --source-bundle S3Bucket=$Bucket,S3Key=$s3Key `
   --region $Region | Out-Null
 
-$ebEnvOnly = @("NODE_ENV","PORT","DATABASE_URL","WEB_URL","ALLOWED_ORIGINS","AWS_S3_BUCKET_NAME","AWS_S3_UPLOAD_PREFIX","AWS_S3_REGION","DISABLE_SCHEDULER","SAAS_MODE","SEED_ON_DEPLOY")
+$ebEnvOnly = @("NODE_ENV","PORT","DATABASE_URL","WEB_URL","ALLOWED_ORIGINS","AWS_S3_BUCKET_NAME","AWS_S3_UPLOAD_PREFIX","AWS_S3_REGION","DISABLE_SCHEDULER","SAAS_MODE","SEED_ON_DEPLOY","JWT_SECRET")
 $optionSettings = @(
   @{ Namespace = "aws:autoscaling:launchconfiguration"; OptionName = "IamInstanceProfile"; Value = "SocialImperialismEbInstanceProfile" },
   @{ Namespace = "aws:elasticbeanstalk:environment"; OptionName = "ServiceRole"; Value = "aws-elasticbeanstalk-service-role" }
