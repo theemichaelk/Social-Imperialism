@@ -507,6 +507,12 @@ function SettingsContent() {
 
       {tab === 'campaigns' && (
         <DataPanel title={`Campaigns (${campaigns.length})`} live>
+          <div className="card" style={{ marginBottom: 12, borderColor: 'var(--accent)' }}>
+            <p style={{ margin: 0, fontSize: '0.88rem' }}>
+              Full campaign control — view running status, pause, edit, schedule posts, and delete — in the{' '}
+              <Link href="/campaign-manager">Campaign Manager</Link>.
+            </p>
+          </div>
           {campaigns.map((c) => (
             <div key={c.id} className={`post-card ${c.id === activeId ? 'campaign-active' : ''}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <div>

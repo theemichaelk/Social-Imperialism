@@ -17,6 +17,10 @@ const { resolveKeys, hasTwitterKeys, hasRedditKeys, hasLinkedInKeys, hasMetaKeys
 const { fetchTrendingTopics } = require('./services/feedFetcher');
 const { FREQUENCY_OPTIONS, shouldRunOnSchedule, markScheduleRun, workerSleepMs } = require('./services/scheduleIntervals');
 const { buildGlobalCustomPromptRequest } = require('./services/customPromptGenerator');
+const {
+  deleteCampaignWithCleanup,
+  registerCampaignManagerHandlers,
+} = require('../../packages/core/src/campaignManager');
 
 let mainWindow = null;
 
@@ -762,18 +766,8 @@ ipcMain.handle('get-settings-status', () => {
   };
 });
 
-ipcMain.handle('delete-campaign', (event, campaignId) => {
-  let campaigns = [];
-  try { campaigns = JSON.parse(store.getItem('campaigns') || '[]'); } catch (e) {}
-  campaigns = campaigns.filter((c) => c.id !== campaignId);
-  store.setItem('campaigns', JSON.stringify(campaigns));
-  const activeId = store.getItem('activeCampaignId');
-  if (activeId === campaignId) {
-    if (campaigns.length) store.setItem('activeCampaignId', campaigns[0].id);
-    else store.removeItem('activeCampaignId');
-  }
-  return { success: true, campaigns };
-});
+ipcMain.handle('delete-campaign', (event, campaignId) => deleteCampaignWithCleanup(store, campaignId));
+registerCampaignManagerHandlers(ipcMain, store);
 
 ipcMain.handle('save-fetch-profile', (event, profileData) => {
   const activeCampaignId = store.getItem('activeCampaignId') || 'default';

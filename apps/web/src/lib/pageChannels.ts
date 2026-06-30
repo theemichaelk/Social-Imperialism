@@ -99,4 +99,10 @@ export const PAGE_CHANNELS = {
     'push-kit-schedule-to-calendar', 'apply-kit-browser-automation', 'upload-kit-to-linked-accounts',
     'schedule-browser-batch', 'get-browser-batch-status', 'run-browser-batch-now', 'cancel-browser-batch',
   ],
+  campaignManager: [
+    'get-settings-status', 'get-active-campaign', 'get-settings', 'get-campaign-details',
+    'update-campaign', 'pause-campaign', 'resume-campaign', 'delete-campaign', 'set-active-campaign',
+    'save-settings', 'get-scheduled-posts', 'schedule-post', 'update-scheduled-post',
+    'delete-scheduled-post', 'publish-scheduled-post-now', 'get-worker-status', 'get-section-live',
+  ],
 } as const;

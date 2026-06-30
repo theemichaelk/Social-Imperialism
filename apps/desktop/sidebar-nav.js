@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { id: 'account-creator', href: 'account-creator.html', icon: 'fa-user-plus', label: 'Acct Creator' },
   { id: 'dns', href: 'dns.html', icon: 'fa-globe', label: 'DNS' },
   { id: 'integrations', href: 'integrations.html', icon: 'fa-plug', label: 'Integrations' },
-  { id: 'settings', href: 'settings.html', icon: 'fa-sliders-h', label: 'Settings' },
+  { id: 'settings', href: 'settings.html', icon: 'fa-sliders-h', label: 'Campaign Manager' },
 ];
 
 const NAV_SECTIONS = [

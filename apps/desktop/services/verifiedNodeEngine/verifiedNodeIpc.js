@@ -8,6 +8,8 @@ const {
   getVerifiedTree,
   bindCampaignNodes,
   setCampaignControl,
+  listCampaigns,
+  createCampaign,
 } = require('./verifiedNodeStore');
 const { runVerificationLoop } = require('./threeTierVerificationLoop');
 const { buildTrackedUrl } = require('./utmGenerator');
@@ -25,6 +27,8 @@ function registerVerifiedNodeHandlers({ ipcMain, store, resolveKeys }) {
     'set-campaign-control',
     'generate-utm-payload',
     'get-platform-discovery-schema',
+    'list-verified-campaigns',
+    'create-verified-campaign',
   ];
 
   channels.forEach((ch) => {
@@ -130,6 +134,22 @@ function registerVerifiedNodeHandlers({ ipcMain, store, resolveKeys }) {
     try {
       const result = await setCampaignControl(campaignId, action, payload);
       return { success: true, ...result };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('list-verified-campaigns', async (_event, opts = {}) => {
+    const pid = opts.projectId || projectId();
+    const campaigns = await listCampaigns(pid);
+    return { campaigns };
+  });
+
+  ipcMain.handle('create-verified-campaign', async (_event, opts = {}) => {
+    const pid = opts.projectId || projectId();
+    try {
+      const campaign = await createCampaign(pid, opts);
+      return { success: true, campaign };
     } catch (e) {
       return { success: false, error: e.message };
     }

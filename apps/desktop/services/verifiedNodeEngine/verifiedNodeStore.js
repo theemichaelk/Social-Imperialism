@@ -182,10 +182,54 @@ async function setCampaignControl(campaignId, action, payload = {}) {
   }
 }
 
+async function listCampaigns(projectId) {
+  const campaigns = await prisma.campaign.findMany({
+    where: { projectId },
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      nodeBindings: {
+        include: {
+          node: {
+            select: {
+              id: true,
+              platform: true,
+              displayName: true,
+              externalId: true,
+              verificationState: true,
+              lastTestSuccessAt: true,
+            },
+          },
+        },
+      },
+    },
+  });
+  return campaigns;
+}
+
+async function createCampaign(projectId, { name, targetUrl, timezone, frequencyCron, burstIntervalM }) {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) throw new Error(`Project ${projectId} not found`);
+
+  const campaign = await prisma.campaign.create({
+    data: {
+      projectId,
+      name: name || 'Untitled Campaign',
+      targetUrl: targetUrl || 'https://www.socialimperialism.com',
+      timezone: timezone || 'UTC',
+      frequencyCron: frequencyCron || null,
+      burstIntervalM: burstIntervalM || null,
+      status: 'running',
+    },
+  });
+  return campaign;
+}
+
 module.exports = {
   upsertNodesFromAccounts,
   discoverAndPopulate,
   getVerifiedTree,
   bindCampaignNodes,
   setCampaignControl,
+  listCampaigns,
+  createCampaign,
 };

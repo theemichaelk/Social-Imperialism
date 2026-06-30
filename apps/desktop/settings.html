@@ -252,6 +252,38 @@ button.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444;
       </div>
     </div>
 
+    <div id="campaignDetailView" class="hidden">
+      <button type="button" class="secondary" id="campaignDetailBack" style="text-transform:none;margin-bottom:1rem;">← All Campaigns</button>
+      <div class="header" style="border:none;padding-bottom:0;margin-bottom:1rem;">
+        <div>
+          <h1 id="campaignDetailTitle" style="font-size:1.4rem;margin:0;">Campaign</h1>
+          <p id="campaignDetailSubtitle" style="color:#94a3b8;margin:0.35rem 0 0;"></p>
+        </div>
+        <div id="campaignDetailStatusBadge"></div>
+      </div>
+      <div class="campaign-stats" id="campaignDetailStats"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin:1rem 0;" id="campaignDetailActions"></div>
+      <div id="campaignDetailData" class="rule-box" style="margin-bottom:1.5rem;"></div>
+      <h3 style="color:#38bdf8;font-size:1rem;margin:0 0 0.75rem;"><i class="fas fa-calendar-alt"></i> Scheduled Posts</h3>
+      <div id="campaignDetailSchedule"></div>
+      <div class="rule-box" style="margin-top:1rem;">
+        <h4 style="margin:0 0 0.75rem;color:#e2e8f0;">Schedule New Post</h4>
+        <textarea id="detailNewPostContent" rows="3" placeholder="Post content" style="width:100%;margin-bottom:0.75rem;"></textarea>
+        <div class="form-grid">
+          <select id="detailNewPostPlatform">
+            <option value="Twitter">Twitter</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Reddit">Reddit</option>
+            <option value="YouTube">YouTube</option>
+          </select>
+          <input type="datetime-local" id="detailNewPostTime" />
+        </div>
+        <button type="button" class="primary" id="detailSchedulePostBtn" style="margin-top:0.75rem;text-transform:none;">Schedule Post</button>
+      </div>
+    </div>
+
     
     <!-- Pricing & Billing View -->
     <div id="pricingView" class="hidden">
@@ -1726,9 +1758,197 @@ const campaignsContainer = document.getElementById('campaignsContainer');
 
 let currentCampaigns = [];
 let editingCampaignId = null;
+let managingCampaignId = null;
+
+function toLocalDatetimeInput(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function showCampaignDetail(campaignId) {
+  managingCampaignId = campaignId;
+  switchSettingsView('campaignDetailView');
+}
+
+async function loadCampaignDetail(campaignId) {
+  const titleEl = document.getElementById('campaignDetailTitle');
+  const subEl = document.getElementById('campaignDetailSubtitle');
+  const badgeEl = document.getElementById('campaignDetailStatusBadge');
+  const statsEl = document.getElementById('campaignDetailStats');
+  const actionsEl = document.getElementById('campaignDetailActions');
+  const dataEl = document.getElementById('campaignDetailData');
+  const schedEl = document.getElementById('campaignDetailSchedule');
+  if (!titleEl) return;
+
+  try {
+    const detail = await ipcRenderer.invoke('get-campaign-details', campaignId);
+    if (!detail.success) {
+      showToast(detail.error || 'Could not load campaign', 'error');
+      return;
+    }
+    const camp = detail.campaign;
+    titleEl.textContent = camp.brandName || 'Campaign';
+    subEl.textContent = `${camp.domain || 'no domain'} · ${camp.tone || 'standard'}`;
+
+    let statusLabel = camp.status || 'Draft';
+    let statusColor = '#94a3b8';
+    if (detail.isRunning) { statusLabel = 'Running'; statusColor = '#10b981'; }
+    else if (detail.isPaused || camp.status === 'Paused') { statusLabel = 'Paused'; statusColor = '#f59e0b'; }
+    else if (detail.isActive) { statusLabel = 'Active'; statusColor = '#38bdf8'; }
+    badgeEl.innerHTML = `<span class="stat-badge" style="color:${statusColor};border-color:${statusColor};font-size:0.9rem;">${escapeHtml(statusLabel)}</span>`;
+
+    const s = detail.stats || {};
+    statsEl.innerHTML = [
+      ['Keywords', s.keywords ?? 0],
+      ['Accounts', s.linkedAccounts ?? 0],
+      ['Scheduled', s.scheduledPosts ?? 0],
+      ['Due now', s.duePosts ?? 0],
+      ['AI Replies', s.aiReplies ?? 0],
+      ['Leads', s.leads ?? 0],
+    ].map(([label, val]) => `<span class="stat-badge">${label}: ${val}</span>`).join('');
+
+    actionsEl.innerHTML = '';
+    const addAction = (label, cls, handler) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = cls;
+      btn.textContent = label;
+      btn.style.textTransform = 'none';
+      btn.addEventListener('click', handler);
+      actionsEl.appendChild(btn);
+    };
+
+    if (!detail.isActive) {
+      addAction('Set Active', 'secondary', async () => {
+        await ipcRenderer.invoke('set-active-campaign', campaignId);
+        showToast('Campaign activated.', 'success');
+        loadCampaignDetail(campaignId);
+        loadCampaigns();
+      });
+    }
+    if (detail.isPaused || camp.status === 'Paused') {
+      addAction('Resume', 'primary', async () => {
+        await ipcRenderer.invoke('resume-campaign', campaignId);
+        showToast('Campaign resumed.', 'success');
+        loadCampaignDetail(campaignId);
+        loadCampaigns();
+      });
+    } else {
+      addAction('Pause', 'secondary', async () => {
+        await ipcRenderer.invoke('pause-campaign', campaignId);
+        showToast('Campaign paused.', 'success');
+        loadCampaignDetail(campaignId);
+        loadCampaigns();
+      });
+    }
+    addAction('Edit Details', 'secondary', () => showEditView(false, campaignId));
+    addAction('Auto-Rules', 'secondary', () => showEditView(true, campaignId));
+    addAction('Open Calendar', 'secondary', () => { window.location.href = 'calendar.html'; });
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'danger';
+    delBtn.textContent = 'Delete';
+    delBtn.style.textTransform = 'none';
+    delBtn.addEventListener('click', async () => {
+      if (!confirm(`Delete "${camp.brandName}" and all related data?`)) return;
+      await ipcRenderer.invoke('delete-campaign', campaignId);
+      showToast('Campaign deleted.', 'success');
+      managingCampaignId = null;
+      switchSettingsView('campaignListView');
+      loadCampaigns();
+    });
+    actionsEl.appendChild(delBtn);
+
+    dataEl.innerHTML = `
+      <div class="form-grid">
+        <div><label>Audience</label><p style="margin:0;color:#e2e8f0;">${escapeHtml(camp.audience || '—')}</p></div>
+        <div><label>UTM</label><p style="margin:0;color:#e2e8f0;">${escapeHtml(camp.utmSource || '—')} / ${escapeHtml(camp.utmMedium || '—')}</p></div>
+        <div class="full-width"><label>Description</label><p style="margin:0;color:#cbd5e1;">${escapeHtml(camp.description || '—')}</p></div>
+      </div>`;
+
+    const posts = detail.scheduledPosts || [];
+    if (!posts.length) {
+      schedEl.innerHTML = '<p style="color:#94a3b8;">No scheduled posts for this campaign.</p>';
+    } else {
+      schedEl.innerHTML = posts.map((p) => {
+        const due = new Date(p.timestamp).getTime() <= Date.now();
+        return `<div class="campaign-card" style="flex-direction:column;align-items:stretch;margin-bottom:0.75rem;">
+          <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+            <div><strong>${escapeHtml(p.platform)}</strong>${due ? ' <span style="color:#f59e0b;font-size:0.75rem;">DUE</span>' : ''}
+              <div style="color:#94a3b8;font-size:0.8rem;">${new Date(p.timestamp).toLocaleString()}</div>
+              <div style="color:#cbd5e1;font-size:0.85rem;margin-top:0.35rem;">${escapeHtml((p.content || '').slice(0, 120))}${(p.content || '').length > 120 ? '…' : ''}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.35rem;min-width:200px;">
+              <input type="datetime-local" class="detail-reschedule-input" data-post-id="${p.id}" value="${toLocalDatetimeInput(p.timestamp)}" />
+              <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+                <button type="button" class="secondary detail-reschedule-btn" data-post-id="${p.id}" style="text-transform:none;padding:0.4rem 0.6rem;font-size:0.75rem;">Reschedule</button>
+                <button type="button" class="secondary detail-publish-btn" data-post-id="${p.id}" style="text-transform:none;padding:0.4rem 0.6rem;font-size:0.75rem;">Publish now</button>
+                <button type="button" class="danger detail-delete-post-btn" data-post-id="${p.id}" style="text-transform:none;padding:0.4rem 0.6rem;font-size:0.75rem;">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      schedEl.querySelectorAll('.detail-reschedule-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.currentTarget.dataset.postId;
+          const input = schedEl.querySelector(`.detail-reschedule-input[data-post-id="${id}"]`);
+          if (!input?.value) return;
+          await ipcRenderer.invoke('update-scheduled-post', { id, updates: { scheduleTime: new Date(input.value).toISOString() } });
+          showToast('Post rescheduled.', 'success');
+          loadCampaignDetail(campaignId);
+        });
+      });
+      schedEl.querySelectorAll('.detail-publish-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const res = await ipcRenderer.invoke('publish-scheduled-post-now', e.currentTarget.dataset.postId);
+          showToast(res.success ? 'Published.' : (res.error || 'Publish failed'), res.success ? 'success' : 'error');
+          loadCampaignDetail(campaignId);
+        });
+      });
+      schedEl.querySelectorAll('.detail-delete-post-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          if (!confirm('Remove this scheduled post?')) return;
+          await ipcRenderer.invoke('delete-scheduled-post', e.currentTarget.dataset.postId);
+          showToast('Post removed.', 'success');
+          loadCampaignDetail(campaignId);
+        });
+      });
+    }
+  } catch (e) {
+    showToast('Failed to load campaign details.', 'error');
+  }
+}
+
+document.getElementById('campaignDetailBack')?.addEventListener('click', () => {
+  managingCampaignId = null;
+  switchSettingsView('campaignListView');
+  loadCampaigns();
+});
+
+document.getElementById('detailSchedulePostBtn')?.addEventListener('click', async () => {
+  if (!managingCampaignId) return;
+  const content = document.getElementById('detailNewPostContent')?.value?.trim();
+  const platform = document.getElementById('detailNewPostPlatform')?.value || 'Twitter';
+  const timeVal = document.getElementById('detailNewPostTime')?.value;
+  if (!content || !timeVal) { showToast('Content and schedule time required.', 'error'); return; }
+  await ipcRenderer.invoke('schedule-post', {
+    campaignId: managingCampaignId,
+    content,
+    platform,
+    scheduleTime: new Date(timeVal).toISOString(),
+  });
+  document.getElementById('detailNewPostContent').value = '';
+  document.getElementById('detailNewPostTime').value = '';
+  showToast('Post scheduled.', 'success');
+  loadCampaignDetail(managingCampaignId);
+});
 
 function switchSettingsView(viewId) {
-    const views = ['campaignListView', 'pricingView', 'tutorialView', 'grokView', 'playbooksView', 'trafficHealthView', 'intelligenceView', 'apiKeysView', 'systemHealthView', 'campaignEditView'];
+    const views = ['campaignListView', 'campaignDetailView', 'pricingView', 'tutorialView', 'grokView', 'playbooksView', 'trafficHealthView', 'intelligenceView', 'apiKeysView', 'systemHealthView', 'campaignEditView'];
     views.forEach(v => {
         const el = document.getElementById(v);
         if(el) el.classList.add('hidden');
@@ -1790,12 +2010,17 @@ function switchSettingsView(viewId) {
         if(viewId === 'campaignListView') newCampBtn.classList.remove('hidden');
         else newCampBtn.classList.add('hidden');
     }
+    if (viewId === 'campaignDetailView' && managingCampaignId) {
+        loadCampaignDetail(managingCampaignId);
+    }
 }
 window.switchSettingsView = switchSettingsView;
 
 
 function showEditView(showRules = false, campaignId = null) {
   if (listView) listView.classList.add('hidden');
+  const detailView = document.getElementById('campaignDetailView');
+  if (detailView) detailView.classList.add('hidden');
   if (editView) editView.classList.remove('hidden');
   const ncb2 = document.getElementById('newCampaignBtn');
   if (ncb2) ncb2.classList.add('hidden');
@@ -2152,8 +2377,11 @@ async function loadCampaigns() {
       const linkedCount = stats.linkedAccounts ?? 0;
       const kwCount = stats.keywords ?? 0;
       
-      const statusColor = camp.status === 'Running' ? '#34d399' : '#94a3b8';
-      const statusBorder = camp.status === 'Running' ? '#10b981' : '#475569';
+      const isPaused = camp.status === 'Paused';
+      const isRunning = isActive && !isPaused && (camp.status === 'Running' || camp.status === 'Active');
+      const statusColor = isRunning ? '#34d399' : isPaused ? '#fbbf24' : isActive ? '#38bdf8' : '#94a3b8';
+      const statusBorder = isRunning ? '#10b981' : isPaused ? '#f59e0b' : isActive ? '#38bdf8' : '#475569';
+      const statusLabel = isRunning ? 'Running' : isPaused ? 'Paused' : isActive ? 'Active' : (camp.status || 'Draft');
       
       div.innerHTML = `
         <div class="campaign-info">
@@ -2162,11 +2390,13 @@ async function loadCampaigns() {
           <div class="campaign-stats">
             <span class="stat-badge">${linkedCount} Linked Account${linkedCount === 1 ? '' : 's'}</span>
             <span class="stat-badge">${kwCount} Keyword${kwCount === 1 ? '' : 's'}</span>
-            <span class="stat-badge" style="color: ${statusColor}; border-color: ${statusBorder};">${escapeHtml(camp.status || 'Draft')}</span>
+            <span class="stat-badge" style="color: ${statusColor}; border-color: ${statusBorder};">${escapeHtml(statusLabel)}</span>
           </div>
         </div>
         <div style="display:flex; flex-direction:column; gap:0.5rem;">
+          <button class="primary manage-btn" data-id="${camp.id}" style="text-transform:none;">Manage</button>
           ${!isActive ? `<button class="secondary activate-btn" data-id="${camp.id}">Set Active</button>` : ''}
+          ${isPaused ? `<button class="secondary resume-btn" data-id="${camp.id}">Resume</button>` : `<button class="secondary pause-btn" data-id="${camp.id}">Pause</button>`}
           <button class="secondary edit-btn" data-id="${camp.id}">Edit Details</button>
           <button class="secondary rules-btn" data-id="${camp.id}" style="border-color: #38bdf8; color: #38bdf8;">Auto-Rules</button>
           <button class="danger delete-btn" data-id="${camp.id}" style="padding:0.4rem 0.8rem; font-size:0.75rem;">Delete</button>
@@ -2175,6 +2405,23 @@ async function loadCampaigns() {
       campaignsContainer.appendChild(div);
     });
 
+    document.querySelectorAll('.manage-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => showCampaignDetail(e.currentTarget.dataset.id));
+    });
+    document.querySelectorAll('.pause-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        await ipcRenderer.invoke('pause-campaign', e.currentTarget.dataset.id);
+        showToast('Campaign paused.', 'success');
+        loadCampaigns();
+      });
+    });
+    document.querySelectorAll('.resume-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        await ipcRenderer.invoke('resume-campaign', e.currentTarget.dataset.id);
+        showToast('Campaign resumed.', 'success');
+        loadCampaigns();
+      });
+    });
     document.querySelectorAll('.edit-btn').forEach(btn => {
       btn.addEventListener('click', (e) => showEditView(false, e.currentTarget.dataset.id));
     });

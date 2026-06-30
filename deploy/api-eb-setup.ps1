@@ -65,6 +65,7 @@ $envVars = [ordered]@{
   DISABLE_SCHEDULER = "0"
   SAAS_MODE = "1"
   SEED_ON_DEPLOY = $(if ($rdsDbUrl) { "1" } else { "0" })
+  VERIFIED_NODE_LIVE_WRITE = "1"
 }
 function Merge-Env($path) {
   if (-not (Test-Path $path)) { return }
@@ -123,7 +124,7 @@ aws elasticbeanstalk create-application-version `
   --source-bundle S3Bucket=$Bucket,S3Key=$s3Key `
   --region $Region | Out-Null
 
-$ebEnvOnly = @("NODE_ENV","PORT","DATABASE_URL","WEB_URL","ALLOWED_ORIGINS","AWS_S3_BUCKET_NAME","AWS_S3_UPLOAD_PREFIX","AWS_S3_REGION","DISABLE_SCHEDULER","SAAS_MODE","SEED_ON_DEPLOY","JWT_SECRET")
+$ebEnvOnly = @("NODE_ENV","PORT","DATABASE_URL","WEB_URL","ALLOWED_ORIGINS","AWS_S3_BUCKET_NAME","AWS_S3_UPLOAD_PREFIX","AWS_S3_REGION","DISABLE_SCHEDULER","SAAS_MODE","SEED_ON_DEPLOY","JWT_SECRET","VERIFIED_NODE_LIVE_WRITE")
 $optionSettings = @(
   @{ Namespace = "aws:autoscaling:launchconfiguration"; OptionName = "IamInstanceProfile"; Value = "SocialImperialismEbInstanceProfile" },
   @{ Namespace = "aws:elasticbeanstalk:environment"; OptionName = "ServiceRole"; Value = "aws-elasticbeanstalk-service-role" }

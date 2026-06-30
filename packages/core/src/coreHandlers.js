@@ -4,6 +4,10 @@
 const path = require('path');
 const axios = require('axios');
 const { createAiEngine } = require(path.join(__dirname, '../../../apps/desktop/saasAi'));
+const {
+  deleteCampaignWithCleanup,
+  registerCampaignManagerHandlers,
+} = require('./campaignManager');
 
 function registerCoreHandlers(deps) {
   const {
@@ -117,16 +121,9 @@ function registerCoreHandlers(deps) {
     return { success: true };
   });
 
-  ipcMain.handle('delete-campaign', (event, campaignId) => {
-    let campaigns = JSON.parse(store.getItem('campaigns') || '[]');
-    campaigns = campaigns.filter((c) => c.id !== campaignId);
-    store.setItem('campaigns', JSON.stringify(campaigns));
-    if (store.getItem('activeCampaignId') === campaignId) {
-      if (campaigns.length) store.setItem('activeCampaignId', campaigns[0].id);
-      else store.removeItem('activeCampaignId');
-    }
-    return { success: true, campaigns };
-  });
+  ipcMain.handle('delete-campaign', (event, campaignId) => deleteCampaignWithCleanup(store, campaignId));
+
+  registerCampaignManagerHandlers(ipcMain, store);
 
   ipcMain.handle('get-live-feed', async (event, filters = {}) => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));

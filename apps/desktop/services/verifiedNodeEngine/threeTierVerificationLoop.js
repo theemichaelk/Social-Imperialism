@@ -10,6 +10,7 @@ const { validateEntityData } = require('./platformDiscoverySchema');
 const { buildPlatformVariant, validateDryRunPayload } = require('./contentTransformer');
 const { STATES, stateAfterTierSuccess, nextTier } = require('./nodeStateMachine');
 const { executeRepair } = require('./autoRepairHandler');
+const { runPlatformLiveProbe } = require('./platformLiveProbes');
 
 const LIVE_WRITE_ENABLED = process.env.VERIFIED_NODE_LIVE_WRITE === '1';
 
@@ -59,7 +60,7 @@ async function runTier1(ctx, node) {
   }
 
   let httpStatus = 200;
-  let probeMeta = { method: 'entity_schema_validation', fields: entityCheck.requiredCount };
+  let probeMeta = { method: 'live_platform_probe', fields: entityCheck.requiredCount };
 
   try {
     const probe = await platformReadProbe(ctx, node, entityCheck.entityData);
@@ -93,40 +94,24 @@ async function runTier1(ctx, node) {
   };
 }
 
+function resolveAccountForNode(ctx, node) {
+  const accounts = ctx.accounts || [];
+  if (node.socialAccountId) {
+    const linked = accounts.find((a) => a.id === node.socialAccountId);
+    if (linked) return linked;
+  }
+  return accounts.find((a) => a.platform === node.platform) || null;
+}
+
 async function platformReadProbe(ctx, node, entityData) {
-  const { keys } = ctx;
-  const p = node.platform;
-
-  if (p === 'Twitter' && keys?.twBearer) {
-    const axios = require('axios');
-    const res = await axios.get('https://api.twitter.com/2/users/me', {
-      headers: { Authorization: `Bearer ${keys.twBearer}` },
-      validateStatus: () => true,
-    });
-    return {
-      ok: res.status === 200 && res.data?.data?.id,
-      httpStatus: res.status,
-      meta: { user_id: res.data?.data?.id },
-      error: res.status !== 200 ? `Twitter API ${res.status}` : null,
-    };
-  }
-
-  if (p === 'Discord' && entityData.channel_id) {
-    const sendFlag = entityData.send_messages;
-    return {
-      ok: sendFlag !== false,
-      httpStatus: 200,
-      meta: { channel_id: entityData.channel_id, send_messages: sendFlag },
-    };
-  }
-
-  if (entityData.page_id || entityData.channel_id || entityData.group_id
-    || entityData.subreddit_id || entityData.board_id || entityData.chat_id
-    || entityData.user_id || entityData.creator_id) {
-    return { ok: true, httpStatus: 200, meta: { verified_ids: true } };
-  }
-
-  return { ok: !!node.externalId, httpStatus: 200, meta: { fallback: 'external_id' } };
+  const account = resolveAccountForNode(ctx, node);
+  const probe = await runPlatformLiveProbe(node.platform, node, entityData, ctx.keys, account);
+  return {
+    ok: probe.ok,
+    httpStatus: probe.httpStatus,
+    meta: probe.meta,
+    error: probe.error,
+  };
 }
 
 /**
