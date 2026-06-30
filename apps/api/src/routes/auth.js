@@ -1,7 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { prisma } = require('@si/db');
-const { signToken, requireAuth } = require('../middleware/auth');
+const {
+  signToken,
+  requireAuth,
+  createSession,
+  revokeSession,
+} = require('../middleware/auth');
 const { ensureDefaultProject } = require('../projectEnsure');
 const { sovereignAuthFailureCapture } = require('../middleware/sovereignThreatShield');
 const {
@@ -9,6 +14,15 @@ const {
   setupSubscriberPassword,
   isAdminEmail,
 } = require('../subscriptionAccess');
+const {
+  validateLoginBody,
+  validateSetupPasswordBody,
+} = require('../lib/authValidation');
+const { enrollOnPasswordSetup } = require('../services/onboardingEmailSequences');
+const {
+  requestPasswordReset,
+  completePasswordReset,
+} = require('../services/passwordReset');
 
 const router = express.Router();
 
@@ -21,13 +35,46 @@ router.post('/register', (_req, res) => {
 
 router.post('/setup-password', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const { user, orgId, project } = await setupSubscriberPassword(email, password);
+    const validation = validateSetupPasswordBody(req.body);
+    if (!validation.ok) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const { user, orgId, project } = await setupSubscriberPassword(
+      validation.email,
+      validation.password,
+    );
+
+    const membership = await prisma.organizationMember.findFirst({
+      where: { userId: user.id, organizationId: orgId },
+      include: { organization: true },
+    });
+
+    const billingRow = await prisma.orgSetting.findUnique({
+      where: { organizationId_key: { organizationId: orgId, key: 'billingPlan' } },
+    });
+    let planName = 'Social Imperialism';
+    try {
+      const billing = billingRow?.value ? JSON.parse(billingRow.value) : {};
+      planName = billing.planName || billing.plan || planName;
+    } catch (e) {
+      /* use default plan name */
+    }
+
+    enrollOnPasswordSetup({
+      userId: user.id,
+      organizationId: orgId,
+      email: user.email,
+      planName,
+    }).catch((err) => console.warn('[auth] password nurture email:', err.message));
+
     const token = signToken({ userId: user.id, orgId, email: user.email });
+    await createSession(user.id, token);
+
     res.json({
       token,
       user: { id: user.id, email: user.email, name: user.name },
-      organization: { id: orgId },
+      organization: membership?.organization || { id: orgId },
       project: { id: project.id, name: project.name },
     });
   } catch (e) {
@@ -37,12 +84,15 @@ router.post('/setup-password', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const normalized = String(email || '').trim().toLowerCase();
-    const user = await prisma.user.findUnique({ where: { email: normalized } });
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    const validation = validateLoginBody(req.body);
+    if (!validation.ok) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: validation.email } });
+    if (!user || !(await bcrypt.compare(validation.password, user.passwordHash))) {
       await sovereignAuthFailureCapture(req, 'brute_force');
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     const access = await userHasActiveSubscription(user.id, user.email);
@@ -69,6 +119,8 @@ router.post('/login', async (req, res) => {
 
     const project = await ensureDefaultProject(membership.organizationId);
     const token = signToken({ userId: user.id, orgId: membership.organizationId, email: user.email });
+    await createSession(user.id, token);
+
     res.json({
       token,
       user: { id: user.id, email: user.email, name: user.name },
@@ -76,25 +128,65 @@ router.post('/login', async (req, res) => {
       project: { id: project.id, name: project.name },
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e.message || 'Sign in failed. Please try again.' });
+  }
+});
+
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const result = await requestPasswordReset(req.body?.email);
+    if (!result.ok) {
+      return res.status(503).json({ error: result.error });
+    }
+    res.json({ success: true, message: result.message });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Could not process request.' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body || {};
+    const result = await completePasswordReset(token, password);
+    res.json({ success: true, message: 'Password updated. You can sign in now.', email: result.email });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/logout', requireAuth, async (req, res) => {
+  try {
+    if (req.authToken) {
+      await revokeSession(req.authToken);
+    }
+    res.json({ success: true, message: 'Signed out successfully.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Sign out failed.' });
   }
 });
 
 router.get('/me', requireAuth, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
-  const org = await prisma.organization.findUnique({ where: { id: req.user.orgId } });
-  let projects = await prisma.project.findMany({ where: { organizationId: req.user.orgId } });
-  let active = projects.find((p) => p.isActive) || projects[0] || null;
-  if (!active) {
-    active = await ensureDefaultProject(req.user.orgId);
-    projects = [active];
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    if (!user) {
+      return res.status(401).json({ error: 'User not found.' });
+    }
+    const org = await prisma.organization.findUnique({ where: { id: req.user.orgId } });
+    let projects = await prisma.project.findMany({ where: { organizationId: req.user.orgId } });
+    let active = projects.find((p) => p.isActive) || projects[0] || null;
+    if (!active) {
+      active = await ensureDefaultProject(req.user.orgId);
+      projects = [active];
+    }
+    res.json({
+      user: { id: user.id, email: user.email, name: user.name },
+      organization: org,
+      projects,
+      project: { id: active.id, name: active.name },
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
-  res.json({
-    user,
-    organization: org,
-    projects,
-    project: { id: active.id, name: active.name },
-  });
 });
 
 module.exports = router;

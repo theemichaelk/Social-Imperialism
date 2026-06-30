@@ -87,6 +87,18 @@ async function tickDuePosts() {
   await runForAllProjects('process-due-scheduled-posts', []);
 }
 
+async function tickOnboardingEmails() {
+  try {
+    const { processDueJobs } = require('./services/onboardingEmailSequences');
+    const results = await processDueJobs();
+    if (results.length) {
+      console.log(`[scheduler] onboarding emails processed: ${results.length}`);
+    }
+  } catch (e) {
+    console.warn('[scheduler] onboarding emails:', e.message);
+  }
+}
+
 function startScheduler() {
   if (process.env.DISABLE_SCHEDULER === '1') return;
   timers.forEach(clearInterval);
@@ -94,11 +106,14 @@ function startScheduler() {
 
   const workerInterval = parseInt(process.env.SCHEDULER_WORKER_MS || '600000', 10);
   const postsInterval = parseInt(process.env.SCHEDULER_POSTS_MS || '120000', 10);
+  const emailInterval = parseInt(process.env.SCHEDULER_ONBOARDING_EMAIL_MS || '300000', 10);
 
   timers.push(setInterval(() => tickWorkerAndSearch().catch(console.error), workerInterval));
   timers.push(setInterval(() => tickDuePosts().catch(console.error), postsInterval));
+  timers.push(setInterval(() => tickOnboardingEmails().catch(console.error), emailInterval));
+  tickOnboardingEmails().catch(console.error);
 
-  console.log(`[scheduler] Started — worker/search every ${workerInterval / 1000}s, due posts every ${postsInterval / 1000}s`);
+  console.log(`[scheduler] Started — worker/search every ${workerInterval / 1000}s, due posts every ${postsInterval / 1000}s, nurture emails every ${emailInterval / 1000}s`);
 }
 
 function stopScheduler() {

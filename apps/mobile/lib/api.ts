@@ -100,6 +100,11 @@ export async function invoke<T = unknown>(channel: string, ...args: unknown[]): 
 export const auth = {
   login: (email: string, password: string) =>
     apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }) as Promise<{ token: string; project?: { id: string } }>,
-  register: (data: { email: string; password: string; name?: string }) =>
-    apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }) as Promise<{ token: string; project?: { id: string } }>,
+  setupPassword: (email: string, password: string) =>
+    apiFetch('/api/auth/setup-password', { method: 'POST', body: JSON.stringify({ email, password }) }) as Promise<{ token: string; project?: { id: string } }>,
+  forgotPassword: (email: string) =>
+    apiFetch('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }) as Promise<{ success: boolean; message: string }>,
+  resetPassword: (token: string, password: string) =>
+    apiFetch('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }) as Promise<{ success: boolean; message: string }>,
+  logout: () => apiFetch('/api/auth/logout', { method: 'POST' }),
 };

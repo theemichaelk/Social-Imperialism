@@ -134,6 +134,18 @@ async function provisionSubscriber({ email, planId, provider, externalId }) {
   await upsertOrgBilling(org.id, billing);
   await ensureDefaultProject(org.id);
 
+  try {
+    const { enrollOnCheckout } = require('./services/onboardingEmailSequences');
+    await enrollOnCheckout({
+      userId: user.id,
+      organizationId: org.id,
+      email: normalized,
+      planName: billing.planName || billing.plan || 'Social Imperialism',
+    });
+  } catch (enrollErr) {
+    console.warn('[subscription] onboarding email enroll:', enrollErr.message);
+  }
+
   return { user, org, billing, needsPasswordSetup: created };
 }
 
@@ -161,10 +173,12 @@ async function userHasActiveSubscription(userId, email) {
 }
 
 async function setupSubscriberPassword(email, password) {
-  const normalized = String(email || '').trim().toLowerCase();
-  if (!normalized || !password || password.length < 8) {
-    throw new Error('Valid email and password (8+ characters) required');
-  }
+  const { validateEmail, validatePassword } = require('./lib/authValidation');
+  const emailResult = validateEmail(email);
+  if (!emailResult.ok) throw new Error(emailResult.error);
+  const passwordResult = validatePassword(password);
+  if (!passwordResult.ok) throw new Error(passwordResult.error);
+  const normalized = emailResult.email;
 
   const user = await prisma.user.findUnique({ where: { email: normalized } });
   if (!user) throw new Error('No subscription found for this email. Complete checkout first.');

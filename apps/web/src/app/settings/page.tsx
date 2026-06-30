@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { invoke, clearSession } from '@/lib/api';
+import { invoke, logout } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
@@ -406,7 +406,7 @@ function SettingsContent() {
                 a.download = 'social-imperialism-export.json';
                 a.click();
               }}>Export Data Snapshot</button>
-              <button className="btn" onClick={() => { clearSession(); router.push('/login'); }}>Sign Out</button>
+              <button className="btn" onClick={() => logout()}>Sign Out</button>
             </div>
           </DataPanel>
         </div>
@@ -645,7 +645,7 @@ function SettingsContent() {
               a.download = 'social-imperialism-export.json';
               a.click();
             }}>Export Data</button>
-            <button className="btn" style={{ marginTop: 8 }} onClick={() => { clearSession(); router.push('/login'); }}>Sign Out</button>
+            <button className="btn" style={{ marginTop: 8 }} onClick={() => logout()}>Sign Out</button>
           </DataPanel>
         </div>
           )}

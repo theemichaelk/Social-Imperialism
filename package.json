@@ -26,6 +26,7 @@
     "dev:mobile-android": "cd apps/mobile-android && gradlew.bat :app:installDebug",
     "dev:mobile": "cd apps/mobile && npm start",
     "audit:accuracy": "node apps/api/_audit-accuracy-check.js",
+    "test:auth": "node apps/api/_test-auth-email-sequences.js",
     "test:sovereign-scan": "node apps/api/_test-sovereign-scan.js",
     "test:dashboard": "node apps/api/_test-dashboard-features.js",
     "test:browse-posts": "node apps/api/_test-browse-posts-features.js",

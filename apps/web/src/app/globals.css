@@ -125,6 +125,23 @@ a:hover { text-decoration: underline; }
 .sidebar-footer {
   padding: 0.65rem 0.85rem; border-top: 1px solid rgba(56, 189, 248, 0.12);
   font-size: 0.72rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.sidebar-sign-out-btn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #f87171;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.sidebar-sign-out-btn:hover {
+  background: rgba(248, 113, 113, 0.1);
+  color: #fca5a5;
 }
 .sidebar-health { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
 .sidebar-health.ok { color: var(--success); }

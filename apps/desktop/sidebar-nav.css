@@ -311,12 +311,35 @@ body.sidebar-collapsed .nav-section-toggle {
 .nav-no-results.visible { display: block; }
 
 /* ── Footer ── */
+.si-sign-out-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  color: #f87171;
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.si-sign-out-btn:hover {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+}
+body.sidebar-collapsed .si-sign-out-btn span {
+  display: none !important;
+}
+
 .si-sidebar-footer {
   flex-shrink: 0;
   padding: 0.5rem 0.55rem 0.65rem;
   border-top: 1px solid #1e293b;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
   justify-content: space-between;
   gap: 0.35rem;
 }

@@ -292,6 +292,9 @@ function renderAppSidebar(activeId) {
       <button type="button" class="si-collapse-btn" id="siSidebarCollapseBtn" title="Collapse sidebar">
         <i class="fas fa-angle-double-left"></i><span>Collapse</span>
       </button>
+      <button type="button" class="si-sign-out-btn" id="siSignOutBtn" title="Sign out">
+        <i class="fas fa-sign-out-alt"></i><span>Sign Out</span>
+      </button>
       <a href="settings.html#system-health" class="sidebar-footer-link" id="siHealthLink" data-nav-id="settings" title="System health — open Settings">
         <i class="fas fa-circle si-health-dot" id="siHealthDot" style="font-size:0.45rem;color:#10b981;"></i>
         <span id="siHealthLabel">Checking…</span>
@@ -422,6 +425,12 @@ function mountAppSidebar(activeId, onChange) {
   const boot = () => {
     document.body.classList.add('app-shell');
     if (!renderAppSidebar(resolvedActive)) return;
+    try {
+      const authSession = require('./js/auth-session');
+      authSession.initAuthSession().then(() => authSession.bindLogoutButton());
+    } catch (e) {
+      console.warn('Auth guard:', e.message);
+    }
     initSidebarCampaignSwitcher(onChange);
     initSidebarHealthBadge();
     integratePageGrokAssist(resolvedActive);

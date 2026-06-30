@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NAV_SECTIONS } from '@/lib/nav';
 import { resolveSearchRoute } from '@/lib/liveSupportAgent';
 import { Logo } from '@/components/Logo';
-import { invoke } from '@/lib/api';
+import { invoke, logout } from '@/lib/api';
 
 const COLLAPSE_KEY = 'siWebNavCollapsed';
 const SECTION_COLLAPSE_KEY = 'siWebSectionCollapsed';
@@ -158,6 +158,14 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
       </div>
 
       <div className="sidebar-footer">
+        <button
+          type="button"
+          className="sidebar-sign-out-btn"
+          onClick={() => logout()}
+          title="Sign out"
+        >
+          {collapsed ? '⎋' : 'Sign Out'}
+        </button>
         <span className={`sidebar-health ${health === 'Healthy' ? 'ok' : health === 'Offline' ? 'err' : 'warn'}`}>
           <span className="live-pulse-dot" /> {collapsed ? '' : health || 'Checking…'}
         </span>

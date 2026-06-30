@@ -310,6 +310,8 @@ button.btn-login:hover {
         <a href="#" id="subscribeLink" style="color:#38bdf8;text-decoration:none;">Subscribe to get access</a>
         ·
         <a href="#" id="setupLink" style="color:#a855f7;text-decoration:none;">Set up password</a>
+        ·
+        <a href="#" id="forgotLink" style="color:#94a3b8;text-decoration:none;">Forgot password</a>
       </p>
       
       <div class="sys-status">
@@ -323,6 +325,7 @@ button.btn-login:hover {
 
 <script>
   const { ipcRenderer } = require('electron');
+  const authSession = require('./js/auth-session');
   const ctx = document.getElementById('networkChart').getContext('2d');
   
   // Create a futuristic looking wave chart
@@ -405,6 +408,10 @@ button.btn-login:hover {
       e.preventDefault();
       ipcRenderer.invoke('open-external-url', `${webUrl}/setup-account`);
     });
+    document.getElementById('forgotLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      ipcRenderer.invoke('open-external-url', `${webUrl}/forgot-password`);
+    });
   });
 
   ipcRenderer.invoke('get-saas-session').then((session) => {
@@ -420,48 +427,54 @@ button.btn-login:hover {
     }
   });
 
+  let loginBusy = false;
+
   async function doLogin() {
+    if (loginBusy) return;
     const btn = document.getElementById('loginBtn');
-    const email = document.getElementById('emailInput').value.trim().toLowerCase();
+    const email = document.getElementById('emailInput').value;
     const password = document.getElementById('passwordInput').value;
     showError('');
-    if (!email || !password) {
-      showError('Email and password required.');
+
+    const emailCheck = authSession.validateEmail(email);
+    if (!emailCheck.ok) {
+      showError(emailCheck.message);
       return;
     }
+    const passwordCheck = authSession.validatePassword(password);
+    if (!passwordCheck.ok) {
+      showError(passwordCheck.message);
+      return;
+    }
+
+    loginBusy = true;
     btn.innerText = 'Signing in…';
     btn.disabled = true;
     try {
-      const apiUrl = await ipcRenderer.invoke('get-saas-api-url');
-      const res = await fetch(`${apiUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        showError(data.error || 'Sign in failed');
-        if (data.setupUrl) {
+      const result = await authSession.login(email, password);
+      if (!result.ok) {
+        showError(result.error || 'Sign in failed');
+        if (result.setupUrl) {
           const webUrl = await ipcRenderer.invoke('get-saas-web-url');
-          setTimeout(() => ipcRenderer.invoke('open-external-url', `${webUrl}${data.setupUrl}`), 1200);
-        } else if (data.subscribeUrl) {
+          setTimeout(() => ipcRenderer.invoke('open-external-url', `${webUrl}${result.setupUrl}`), 1200);
+        } else if (result.subscribeUrl) {
           const webUrl = await ipcRenderer.invoke('get-saas-web-url');
-          setTimeout(() => ipcRenderer.invoke('open-external-url', `${webUrl}${data.subscribeUrl}`), 1200);
+          setTimeout(() => ipcRenderer.invoke('open-external-url', `${webUrl}${result.subscribeUrl}`), 1200);
         }
         return;
       }
-      await ipcRenderer.invoke('save-saas-session', data);
       const status = await ipcRenderer.invoke('get-setup-status');
       if (status && !status.complete) {
-        window.location.href = 'onboarding.html?step=' + (status.nextStep || 1);
+        window.location.replace('onboarding.html?step=' + (status.nextStep || 1));
       } else {
-        window.location.href = 'dashboard.html';
+        window.location.replace('dashboard.html');
       }
     } catch (e) {
       showError(e.message || 'Could not reach authentication server');
     } finally {
       btn.innerText = 'Sign In';
       btn.disabled = false;
+      loginBusy = false;
     }
   }
 

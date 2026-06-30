@@ -5,7 +5,6 @@ type AuthContextType = {
   ready: boolean;
   token: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -37,20 +36,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await api.repairSession();
   };
 
-  const register = async (email: string, password: string, name?: string) => {
-    const session = await api.auth.register({ email, password, name });
-    await api.setSession(session);
-    setToken(session.token);
-    await api.repairSession();
-  };
-
   const signOut = async () => {
+    try {
+      await api.auth.logout();
+    } catch {
+      /* still clear local session */
+    }
     await api.clearSession();
     setToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ ready, token, signIn, register, signOut }}>
+    <AuthContext.Provider value={{ ready, token, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

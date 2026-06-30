@@ -5,12 +5,12 @@ import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
 import { LiveSupportPanel } from './LiveSupportPanel';
 import { ImperialismBrainPromptBar } from './ImperialismBrainPromptBar';
-import { bootstrapSession, getToken } from '@/lib/api';
+import { bootstrapSession, getToken, clearSession } from '@/lib/api';
 import { SovereignThreatBanner } from './SovereignThreatBanner';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
-const PUBLIC_PATHS = new Set(['/', '/login', '/subscribe', '/setup-account', '/founder', '/oauth/callback', '/billing/success', '/billing/cancel']);
+const PUBLIC_PATHS = new Set(['/', '/login', '/subscribe', '/setup-account', '/forgot-password', '/reset-password', '/founder', '/oauth/callback', '/billing/success', '/billing/cancel']);
 
 function isPublicPath(pathname: string) {
   const normalized = pathname.replace(/\/+$/, '') || '/';
@@ -35,11 +35,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
     if (token && !isPublic) {
-      bootstrapSession().finally(() => setChecked(true));
+      bootstrapSession()
+        .catch(() => {
+          clearSession();
+          window.location.replace('/login');
+        })
+        .finally(() => setChecked(true));
       return;
     }
     setChecked(true);
   }, [pathname, isPublic]);
+
+  useEffect(() => {
+    if (isPublic) return;
+    const onPop = () => {
+      if (!getToken()) window.location.replace('/login');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [isPublic]);
 
   if (isPublic) return <>{children}</>;
 

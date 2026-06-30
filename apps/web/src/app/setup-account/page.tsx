@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { NavAnchor } from '@/components/NavAnchor';
 import { auth, getApiBase, setSession } from '@/lib/api';
+import { validateEmail, validatePassword, passwordsMatch } from '@/lib/authValidation';
 import { Logo } from '@/components/Logo';
 
 function SetupAccountForm() {
@@ -38,20 +39,29 @@ function SetupAccountForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setError('');
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+
+    const emailResult = validateEmail(email);
+    if (!emailResult.ok) {
+      setError(emailResult.error);
       return;
     }
-    if (password !== confirm) {
+    const passwordResult = validatePassword(password);
+    if (!passwordResult.ok) {
+      setError(passwordResult.error);
+      return;
+    }
+    if (!passwordsMatch(password, confirm)) {
       setError('Passwords do not match.');
       return;
     }
+
     setLoading(true);
     try {
-      const res = await auth.setupPassword(email.trim().toLowerCase(), password);
+      const res = await auth.setupPassword(emailResult.email, password);
       setSession(res);
-      window.location.href = '/dashboard';
+      window.location.replace('/dashboard');
     } catch (err) {
       setError((err as Error).message);
     } finally {

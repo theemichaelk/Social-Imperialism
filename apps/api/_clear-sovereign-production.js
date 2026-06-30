@@ -5,8 +5,13 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const API = process.env.API_URL || 'https://api.socialimperialism.com';
-const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const EMAIL = process.env.SEED_EMAIL;
+const PASS = process.env.SEED_PASSWORD;
+
+if (!EMAIL || !PASS) {
+  console.error('Set SEED_EMAIL and SEED_PASSWORD in apps/api/.env (or env) before running.');
+  process.exit(1);
+}
 
 async function main() {
   const loginRes = await fetch(`${API}/api/auth/login`, {

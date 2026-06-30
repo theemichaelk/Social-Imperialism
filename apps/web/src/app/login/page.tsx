@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { NavAnchor } from '@/components/NavAnchor';
 import { auth, getToken, setSession } from '@/lib/api';
+import { validateEmail, validatePassword } from '@/lib/authValidation';
 import { Logo } from '@/components/Logo';
 import { FooterCredit } from '@/components/FooterCredit';
 
@@ -16,14 +17,35 @@ export default function LoginPage() {
     if (getToken()) window.location.replace('/dashboard');
   }, []);
 
+  useEffect(() => {
+    const onPop = () => {
+      if (!getToken()) window.location.replace('/login');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setError('');
+
+    const emailResult = validateEmail(email);
+    if (!emailResult.ok) {
+      setError(emailResult.error);
+      return;
+    }
+    const passwordResult = validatePassword(password);
+    if (!passwordResult.ok) {
+      setError(passwordResult.error);
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await auth.login(email.trim().toLowerCase(), password);
+      const res = await auth.login(emailResult.email, password);
       setSession(res);
-      window.location.href = '/dashboard';
+      window.location.replace('/dashboard');
     } catch (err) {
       const msg = (err as Error).message;
       setError(msg);
@@ -84,6 +106,8 @@ export default function LoginPage() {
         </p>
         <p style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.85rem' }}>
           <NavAnchor href="/setup-account" style={{ color: '#a855f7' }}>Set up password after checkout</NavAnchor>
+          {' · '}
+          <NavAnchor href="/forgot-password" style={{ color: '#94a3b8' }}>Forgot password?</NavAnchor>
         </p>
         <FooterCredit className="login-footer-credit" />
       </div>

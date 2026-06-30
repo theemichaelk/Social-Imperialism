@@ -44,7 +44,7 @@ test('connect-platform with password in args is allowed', () => {
         platform: 'LinkedIn',
         method: 'credentials',
         email: 'michaelk@tsbrenterprises.com',
-        password: 'Kingme05$85$$',
+        password: 'TestPass123!example',
       }],
     },
   });
