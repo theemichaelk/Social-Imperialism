@@ -35,6 +35,20 @@ apps/desktop/prisma/dev.db-journal
 
 # Temp / patch artifacts (regenerable)
 tmp/
+patch-*.js
+fix-*.js
+temp-*.js
+apps/desktop/patch*.js
+apps/desktop/temp*.js
+apps/desktop/fix-*.js
+
+# Agent session artifacts
+SOUL.md
+HEARTBEAT.md
+ESCALATION.md
+USER.md
+VERSION.md
+WORKFLOWS.md
 
 # Test credential artifacts (never commit)
 .test-*

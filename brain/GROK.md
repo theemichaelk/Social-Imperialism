@@ -10,9 +10,9 @@ Social Imperialism uses **native browser automation** against https://grok.com/ 
 |-------|-------|
 | Platform | `grok` |
 | URL | https://grok.com/ |
-| Email | `theesaintmichael@gmail.com` |
-| Password | `Kingme05$85$$` |
-| Auto-login | enabled |
+| Email | Set in Settings → Grok Engine (stored in `grokEngineSettings`) |
+| Password | Local storage only — never commit to git |
+| Auto-login | enabled when credentials are saved in-app |
 
 ## Browser settings (default)
 

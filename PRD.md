@@ -98,7 +98,7 @@
 
 #### 2.10 Grok Engine (Browser Session — No API)
 *   **[x] Native browser automation:** Real Chrome, Edge, Opera, Firefox with persistent cookies (`nativeBrowserLauncher.js`). Default: Microsoft Edge dedicated profile.
-*   **[x] Grok session login:** x.ai credentials stored locally; auto-fill on Connect. Account: `theesaintmichael@gmail.com` (see `brain/GROK.md`).
+*   **[x] Grok session login:** x.ai credentials stored locally; auto-fill on Connect (see `brain/GROK.md` — never commit credentials).
 *   **[x] Grok Text:** New-chat prompts with keyword-aware campaign context (`grok-ask-text`).
 *   **[x] Grok Imagine:** Text-to-image via https://grok.com/imagine in Edge (`grok-imagine`). Assets saved to `grok-assets/`.
 *   **[x] Grok Video + Extend:** Keyword-driven video with ~60s wait per part and auto-Extend (`grok-generate-video`).

@@ -21,9 +21,7 @@ Generate images through **https://grok.com/imagine** using the logged-in Edge pr
 
 ## Prerequisites
 
-1. **Grok account** (see `brain/GROK.md`):
-   - Email: `theesaintmichael@gmail.com`
-   - Password: `Kingme05$85$$`
+1. **Grok account** configured in Settings → Grok Engine (see `brain/GROK.md` — credentials live in local storage only)
 2. **Edge profile** at `%APPDATA%\Social Imperialism\native-browser-profiles\edge\grok`
 3. Session valid (`grok-get-status` → `session.loggedIn` or `settings.sessionValid`)
 

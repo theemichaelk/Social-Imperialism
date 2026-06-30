@@ -8,8 +8,7 @@
 
 ## Grok Engine (browser session — no API)
 - Platform: **grok** · URL: https://grok.com/
-- Email: `theesaintmichael@gmail.com`
-- Password: `Kingme05$85$$`
+- Credentials: stored in desktop `grokEngineSettings` (local storage) — never commit passwords to git
 - Default browser: **Microsoft Edge**, dedicated profile `edge/grok`
 - Profile path: `%APPDATA%\Social Imperialism\native-browser-profiles\edge\grok`
 - Assets: `%APPDATA%\Social Imperialism\grok-assets\`
@@ -18,4 +17,4 @@
 - Script: `apps/desktop/scripts/run-grok-imagine-edge.js`
 
 ## SaaS admin (separate from Grok)
-- Login: `theesaintmichael@gmail.com` / `Kingme05$` (API seed)
+- Seed login: set `SEED_EMAIL` and `SEED_PASSWORD` in `apps/api/.env` (see `.env.example`)

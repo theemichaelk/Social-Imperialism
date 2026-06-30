@@ -111,8 +111,8 @@ Social Imperialism does **not** use the xAI REST API for Grok. It automates a lo
 | Field | Value |
 |-------|-------|
 | Platform | grok |
-| Email | theesaintmichael@gmail.com |
-| Password | Kingme05$85$$ |
+| Email | Configure in Settings → Grok Engine |
+| Password | Local storage only — never commit to git |
 
 ### IPC channels
 | Channel | Purpose |

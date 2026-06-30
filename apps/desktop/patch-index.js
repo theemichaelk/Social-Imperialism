@@ -1,1 +1,0 @@
-const fs = require('fs'); let file = 'index.js'; let content = fs.readFileSync(file, 'utf8'); content = content.replace('ipcMain.handle(\'get-linked-accounts\'', 'ipcMain.handle(\'get-linked-accounts_TEMP\''); fs.writeFileSync(file, content);

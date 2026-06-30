@@ -28,7 +28,7 @@ npm run dev
 
 - **Web:** http://localhost:3000
 - **API:** http://localhost:4000
-- **Login:** theesaintmichael@gmail.com / Kingme05$ (after seed)
+- **Login:** use `SEED_EMAIL` / `SEED_PASSWORD` from `apps/api/.env` (after `npm run db:seed`)
 
 ## Feature Coverage
 
