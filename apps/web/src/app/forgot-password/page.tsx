@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { NavAnchor } from '@/components/NavAnchor';
 import { auth } from '@/lib/api';
-import { validateEmail } from '@/lib/authValidation';
+import { validateEmail, validationErrorMessage } from '@/lib/authValidation';
 import { Logo } from '@/components/Logo';
 
 export default function ForgotPasswordPage() {
@@ -19,14 +19,15 @@ export default function ForgotPasswordPage() {
     setMessage('');
 
     const emailResult = validateEmail(email);
-    if (!emailResult.ok) {
-      setError(emailResult.error);
+    const emailErr = validationErrorMessage(emailResult);
+    if (emailErr) {
+      setError(emailErr);
       return;
     }
 
     setLoading(true);
     try {
-      const res = await auth.forgotPassword(emailResult.email);
+      const res = await auth.forgotPassword(emailResult.ok ? emailResult.email : email.trim().toLowerCase());
       setMessage(res.message);
     } catch (err) {
       setError((err as Error).message);
