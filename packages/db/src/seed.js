@@ -19,7 +19,11 @@ const ADMIN_EMAILS = [
 ];
 
 async function main() {
-  const password = process.env.SEED_PASSWORD || 'Kingme05$';
+  const password = process.env.SEED_PASSWORD;
+  if (!password) {
+    console.error('SEED_PASSWORD is required in apps/api/.env');
+    process.exit(1);
+  }
   const hash = await bcrypt.hash(password, 10);
   const orgName = process.env.SEED_ORG_NAME || 'Social Imperialism';
   const orgSlug = process.env.SEED_ORG_SLUG || 'social-imperialism';

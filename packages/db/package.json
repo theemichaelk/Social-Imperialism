@@ -8,7 +8,8 @@
     "push": "prisma db push",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "migrate-storage": "node src/migrate-localstorage.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -9,7 +9,7 @@ const path = require('path');
 
 const API = process.env.API_URL || 'http://localhost:4000';
 const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 const DESKTOP_CHANNELS = {
   'dashboard.html': ['get-dashboard-stats','get-live-feed','get-trending-topics','get-live-news','get-setup-status','get-domain-metrics','get-project-metrics','analyze-topic','discover-best-questions','get-unanswered-questions','get-qa-settings','get-leads','scan-reddit-now','get-watched-monitors','get-worker-status','trigger-full-auto-search','get-fanpage-settings','curate-from-rss','export-data'],

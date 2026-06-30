@@ -1,6 +1,6 @@
 const API = 'https://api.socialimperialism.com';
 const EMAIL = 'theesaintmichael@gmail.com';
-const PASS = 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 async function invoke(token, channel, args = []) {
   const res = await fetch(`${API}/api/invoke/${channel}`, {

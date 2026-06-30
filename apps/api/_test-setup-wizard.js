@@ -6,7 +6,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../desktop/.en
 
 const API = process.env.API_URL || 'https://api.socialimperialism.com';
 const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 const WIZARD_FEATURES = [
   { step: 'Status', name: 'Setup status', channel: 'get-setup-status',

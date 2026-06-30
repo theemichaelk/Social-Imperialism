@@ -3,7 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../desktop/.en
 
 const API = 'https://api.socialimperialism.com';
 const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 async function main() {
   const login = await fetch(`${API}/api/auth/login`, {

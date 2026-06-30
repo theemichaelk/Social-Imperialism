@@ -1,5 +1,6 @@
 const path = require('path');
 const { createPrismaStore } = require('./prismaStore');
+const { persistEntitiesFromStore } = require('./persistEntities');
 const { registerAllHandlers } = require('./handlerRegistry');
 const eventCoordination = require('./eventCoordination');
 const { wrapInvokeError } = require('./resilience');
@@ -199,6 +200,7 @@ async function invoke({ projectId, organizationId, channel, args = [], userConte
   try {
     const result = await handler(null, ...args);
     await store.flush();
+    await persistEntitiesFromStore(store, projectId, channel);
     await afterInvoke({ entry, channel, args, result });
 
     const oauthUrl = typeof pendingOAuth === 'function' ? pendingOAuth() : null;
@@ -226,6 +228,7 @@ module.exports = {
   listChannels,
   syncProjectToStore,
   persistActiveCampaignToProject,
+  persistEntitiesFromStore,
   clearHandlerCache,
   eventBus,
 };

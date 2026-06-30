@@ -3,7 +3,7 @@
  */
 const API = process.env.API_URL || 'http://localhost:4000';
 const EMAIL = 'theesaintmichael@gmail.com';
-const PASS = 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 const CHECKS = [
   { area: '1 Project Setup', name: 'Active campaign', channel: 'get-active-campaign', validate: (d) => d?.brandName },

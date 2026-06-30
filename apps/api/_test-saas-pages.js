@@ -8,7 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '../desktop/.env') });
 
 const API = process.env.API_URL || 'http://localhost:4000';
 const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 const PAGES = [
   { name: 'Dashboard', channels: ['get-dashboard-stats', 'get-live-feed', 'get-trending-topics'] },

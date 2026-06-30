@@ -4,7 +4,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../desktop/.en
 const API = process.env.PROD_API || 'https://api.socialimperialism.com';
 const WEB = process.env.PROD_WEB || 'https://www.socialimperialism.com';
 const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 const DASHBOARD_CHANNELS = [
   ['get-dashboard-stats', []],

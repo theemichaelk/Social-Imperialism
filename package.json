@@ -19,6 +19,7 @@
     "db:push": "npm run push -w @si/db",
     "db:migrate": "npm run migrate:deploy -w @si/db",
     "db:seed": "npm run seed -w @si/db",
+    "db:migrate-storage": "node packages/db/src/migrate-localstorage.js",
     "start:api": "npm run start -w @si/api",
     "start:web": "npm run start -w @si/web",
     "dev:mobile-ios": "echo Open apps/mobile-ios in Xcode — see apps/mobile-ios/README.md",

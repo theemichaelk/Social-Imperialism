@@ -23,6 +23,7 @@ npm install
 copy apps\api\.env.example apps\api\.env
 npm run db:push
 npm run db:seed
+npm run db:migrate-storage   # optional: import desktop localStorage → Prisma
 npm run dev
 ```
 

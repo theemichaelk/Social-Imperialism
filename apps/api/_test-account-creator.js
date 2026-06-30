@@ -3,7 +3,7 @@
  */
 const API = process.env.API_URL || 'http://localhost:4000';
 const EMAIL = 'theesaintmichael@gmail.com';
-const PASS = 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 const CHANNELS = [
   { name: 'Creator status', channel: 'get-account-creator-status', validate: (d) => d && typeof d === 'object' && Array.isArray(d.platforms) },

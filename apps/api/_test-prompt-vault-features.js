@@ -9,7 +9,7 @@ const path = require('path');
 
 const API = process.env.API_URL || 'http://localhost:4000';
 const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 const QA_TITLE = `QA Vault ${Date.now()}`;
 

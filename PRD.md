@@ -130,7 +130,7 @@
 ## 5. Next Steps & Development Plan
 1. **[x] Auto-Rules Engine:** Build the scheduling and automation rules interface.
 2. **[x] Account Linking:** Build the OAuth/Token connection interface for the 10+ target platforms.
-3. **[~] Database Migration:** Prisma schema defined; runtime still uses `node-localstorage` via `entityStore.js`.
+3. **[~] Database Migration:** Prisma schema + `PrismaStore` live for SaaS API; `persistEntitiesFromStore` syncs keywords/accounts/scheduled posts; `npm run db:migrate-storage` imports desktop localStorage. Desktop Electron still uses `node-localstorage` locally.
 4. **[~] Worker Queues:** In-process `workerLoop()` runs auto-search, be-first, RSS, fanpage; Redis/Bull queue is stub only.
 
 ## 6. Blueprint Implementation Audit (June 2026)

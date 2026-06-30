@@ -6,7 +6,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../desktop/.en
 
 const API = process.env.API_URL || 'http://localhost:4000';
 const ADMIN_EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const ADMIN_PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const ADMIN_PASS = process.env.SEED_PASSWORD;
 const ADMIN_EMAIL_2 = 'michaelk@tsbrenterprises.com';
 
 async function login(email, password) {

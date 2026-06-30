@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const API = process.env.PROD_API || 'https://api.socialimperialism.com';
 const WEB = process.env.PROD_WEB || 'https://www.socialimperialism.com';
 const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
-const PASS = process.env.SEED_PASSWORD || 'Kingme05$';
+const PASS = process.env.SEED_PASSWORD;
 
 async function main() {
   console.log('API health:', await fetch(`${API}/health`).then((r) => r.json()));
