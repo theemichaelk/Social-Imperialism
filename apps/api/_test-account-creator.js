@@ -1,7 +1,7 @@
 /**
  * Account Creator — focused QA (all IPC channels).
  */
-const API = process.env.API_URL || 'http://localhost:4000';
+const API = process.env.API_URL || 'https://api.socialimperialism.com';
 const EMAIL = 'theesaintmichael@gmail.com';
 const PASS = process.env.SEED_PASSWORD;
 

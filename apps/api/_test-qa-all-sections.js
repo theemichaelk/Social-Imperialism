@@ -8,7 +8,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../desktop/.en
 const fs = require('fs');
 const path = require('path');
 
-const API = process.env.API_URL || 'http://localhost:4000';
+const API = process.env.API_URL || 'https://api.socialimperialism.com';
 const EMAIL = process.env.SEED_EMAIL || 'theesaintmichael@gmail.com';
 const PASS = process.env.SEED_PASSWORD;
 

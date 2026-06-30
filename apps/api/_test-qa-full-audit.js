@@ -18,7 +18,7 @@ const STEPS = [
 ];
 
 console.log('\n╔══════════════════════════════════════════════════════════╗');
-console.log('║  SOCIAL IMPERIALISM v1.2 — FULL RELEASE AUDIT            ║');
+console.log('║  SOCIAL IMPERIALISM v1.2.1 — FULL RELEASE AUDIT          ║');
 console.log('╚══════════════════════════════════════════════════════════╝');
 console.log(`API: ${API}\n`);
 
@@ -45,5 +45,5 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('\n✓ Full release audit passed — ready to ship v1.2.0\n');
+console.log('\n✓ Full release audit passed — ready to ship v1.2.1\n');
 process.exit(0);
