@@ -52,15 +52,36 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
     });
   }, []);
 
+  const persistSections = useCallback((next: Record<string, boolean>) => {
+    try { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }, []);
+
   const toggleSection = useCallback((id: string) => {
     setSectionCollapsed((prev) => {
       const next = { ...prev, [id]: !prev[id] };
-      try { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      persistSections(next);
       return next;
     });
-  }, []);
+  }, [persistSections]);
 
   const searchRoute = useMemo(() => resolveSearchRoute(search), [search]);
+
+  const activeSection = useMemo(
+    () => NAV_SECTIONS.find((s) => s.items.some((i) => i.href === pathname))?.id,
+    [pathname],
+  );
+
+  const collapseAllSections = useCallback(() => {
+    const next = Object.fromEntries(NAV_SECTIONS.map((s) => [s.id, true]));
+    if (activeSection) next[activeSection] = false;
+    setSectionCollapsed(next);
+    persistSections(next);
+  }, [activeSection, persistSections]);
+
+  const expandAllSections = useCallback(() => {
+    setSectionCollapsed({});
+    persistSections({});
+  }, [persistSections]);
 
   const filteredSections = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -79,7 +100,15 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
     })).filter((s) => s.items.length > 0);
   }, [search]);
 
-  const activeSection = NAV_SECTIONS.find((s) => s.items.some((i) => i.href === pathname))?.id;
+  useEffect(() => {
+    if (!activeSection) return;
+    setSectionCollapsed((prev) => {
+      if (!prev[activeSection]) return prev;
+      const next = { ...prev, [activeSection]: false };
+      persistSections(next);
+      return next;
+    });
+  }, [pathname, activeSection, persistSections]);
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-mobile-open' : ''}`}>
@@ -106,6 +135,14 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
               {searchRoute.label} →
             </Link>
           )}
+          <div className="sidebar-section-controls">
+            <button type="button" className="sidebar-section-ctrl" onClick={expandAllSections} title="Expand all sections">
+              Expand all
+            </button>
+            <button type="button" className="sidebar-section-ctrl" onClick={collapseAllSections} title="Collapse all sections">
+              Collapse all
+            </button>
+          </div>
         </div>
       )}
 
@@ -120,13 +157,13 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
                   className="nav-section-toggle"
                   onClick={() => toggleSection(section.id)}
                   aria-expanded={!isSecCollapsed}
+                  title={isSecCollapsed ? `Expand ${section.label}` : `Collapse ${section.label}`}
                 >
                   <span className="nav-section-label">{section.label}</span>
-                  <span className="nav-section-chevron">{isSecCollapsed ? '▸' : '▾'}</span>
+                  <span className={`nav-section-chevron ${isSecCollapsed ? 'is-collapsed' : ''}`} aria-hidden>▾</span>
                 </button>
               )}
-              {(!isSecCollapsed || collapsed) && (
-                <div className="nav-section-items">
+              <div className={`nav-section-items ${isSecCollapsed && !collapsed ? 'is-collapsed' : ''}`}>
                   {section.items.map((item) => {
                     const isActive = pathname === item.href;
                     return (
@@ -148,7 +185,6 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
                     );
                   })}
                 </div>
-              )}
             </div>
           );
         })}

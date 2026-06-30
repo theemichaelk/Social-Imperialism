@@ -118,7 +118,7 @@ function buildNavHtml(activeId) {
     const collapsedCls = isCollapsed ? ' collapsed' : '';
 
     return `<div class="nav-section${collapsedCls}" data-section-id="${section.id}">
-      <button type="button" class="nav-section-toggle" aria-expanded="${!isCollapsed}">
+      <button type="button" class="nav-section-toggle" aria-expanded="${!isCollapsed}" title="${isCollapsed ? 'Expand' : 'Collapse'} ${section.label}">
         <span class="nav-section-label">${section.label}</span>
         <i class="fas fa-chevron-down nav-section-chevron"></i>
       </button>
@@ -165,6 +165,32 @@ function bindSectionToggles() {
     });
     btn.dataset.bound = '1';
   });
+}
+
+function applyAllSectionCollapse(map) {
+  saveCollapsedSections(map);
+  document.querySelectorAll('.nav-section').forEach((sec) => {
+    const id = sec.dataset.sectionId;
+    const isCollapsed = map[id] === true;
+    sec.classList.toggle('collapsed', isCollapsed);
+    sec.querySelector('.nav-section-toggle')?.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+  });
+}
+
+function collapseAllSections() {
+  const active = sectionForPageId(detectActivePageId());
+  const map = Object.fromEntries(NAV_SECTIONS.map((s) => [s.id, true]));
+  if (active) map[active] = false;
+  applyAllSectionCollapse(map);
+}
+
+function expandAllSections() {
+  applyAllSectionCollapse({});
+}
+
+function bindSectionBulkControls() {
+  document.getElementById('siExpandAllSections')?.addEventListener('click', expandAllSections);
+  document.getElementById('siCollapseAllSections')?.addEventListener('click', collapseAllSections);
 }
 
 function bindNavSearch() {
@@ -278,6 +304,10 @@ function renderAppSidebar(activeId) {
         <i class="fas fa-search"></i>
         <input type="search" id="siNavSearch" placeholder="Filter menu…" autocomplete="off" aria-label="Filter navigation">
       </div>
+      <div class="si-sidebar-section-controls">
+        <button type="button" class="si-section-ctrl" id="siExpandAllSections" title="Expand all sections">Expand all</button>
+        <button type="button" class="si-section-ctrl" id="siCollapseAllSections" title="Collapse all sections">Collapse all</button>
+      </div>
       <div class="campaign-switcher-box">
         <select id="sidebarCampaignSwitcher" aria-label="Active campaign">
           <option value="">Loading campaigns…</option>
@@ -304,6 +334,7 @@ function renderAppSidebar(activeId) {
   bindSidebarNavLinks();
   bindHashActiveSync();
   bindSectionToggles();
+  bindSectionBulkControls();
   bindNavSearch();
   bindSidebarCollapse();
   return true;

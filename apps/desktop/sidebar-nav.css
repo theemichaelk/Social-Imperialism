@@ -203,6 +203,36 @@ body.sidebar-collapsed .nav-section-toggle {
   margin-bottom: 0.15rem;
 }
 
+.si-sidebar-section-controls {
+  display: flex;
+  gap: 6px;
+  margin: 0.35rem 0 0.5rem;
+  padding: 0 0.15rem;
+}
+
+.si-section-ctrl {
+  flex: 1;
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: #64748b;
+  border-radius: 6px;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.si-section-ctrl:hover {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+body.sidebar-collapsed .si-sidebar-section-controls {
+  display: none;
+}
+
 .nav-section-toggle {
   display: flex;
   align-items: center;
@@ -214,6 +244,16 @@ body.sidebar-collapsed .nav-section-toggle {
   padding: 0.4rem 0.5rem 0.3rem;
   font-family: inherit;
   text-align: left;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-section-toggle:hover {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.nav-section-toggle:hover .nav-section-label {
+  color: #38bdf8;
 }
 
 .nav-section-label {
