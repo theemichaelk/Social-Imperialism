@@ -5,7 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const nativeBrowser = require('./nativeBrowserLauncher');
-const { GROK_DEFAULTS } = require('../../../packages/core/src/grokDefaults');
+const { coreRequire } = require('../coreRequire');
+const { GROK_DEFAULTS } = coreRequire('src/grokDefaults');
 
 let puppeteer;
 try {

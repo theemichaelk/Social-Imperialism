@@ -1,10 +1,11 @@
 {
   "name": "desktop",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "electron .",
+    "prebuild": "node scripts/verify-packaged-core.js",
     "build": "electron-builder"
   },
   "keywords": [],
@@ -38,6 +39,21 @@
   "build": {
     "appId": "com.socialimperialism.app",
     "productName": "Social Imperialism",
+    "asar": true,
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!_audit-all-pages.js",
+      "!_ipc-parity-report.js",
+      "!_ipc-parity-output.json",
+      "!_ipc-parity-err.txt",
+      "!scripts/**",
+      {
+        "from": "../../packages/core",
+        "to": "packages/core",
+        "filter": ["**/*", "!**/*.md"]
+      }
+    ],
     "win": {
       "target": "nsis",
       "signAndEditExecutable": false

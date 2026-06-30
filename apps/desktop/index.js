@@ -17,10 +17,11 @@ const { resolveKeys, hasTwitterKeys, hasRedditKeys, hasLinkedInKeys, hasMetaKeys
 const { fetchTrendingTopics } = require('./services/feedFetcher');
 const { FREQUENCY_OPTIONS, shouldRunOnSchedule, markScheduleRun, workerSleepMs } = require('./services/scheduleIntervals');
 const { buildGlobalCustomPromptRequest } = require('./services/customPromptGenerator');
+const { coreRequire } = require('./coreRequire');
 const {
   deleteCampaignWithCleanup,
   registerCampaignManagerHandlers,
-} = require('../../packages/core/src/campaignManager');
+} = coreRequire('src/campaignManager');
 
 let mainWindow = null;
 
@@ -3386,8 +3387,8 @@ ipcMain.handle('test-all-connections', async () => {
   }
 });
 
-const { registerGuardianGatekeeperHandlers } = require('../../packages/core/src/guardianGatekeeper');
-const { registerSovereignThreatHandlers } = require('../../packages/core/src/sovereignThreatCapture');
+const { registerGuardianGatekeeperHandlers } = coreRequire('src/guardianGatekeeper');
+const { registerSovereignThreatHandlers } = coreRequire('src/sovereignThreatCapture');
 registerGuardianGatekeeperHandlers({ ipcMain, store, handlers: desktopIpcHandlers });
 registerSovereignThreatHandlers({ ipcMain, store, handlers: desktopIpcHandlers });
 
