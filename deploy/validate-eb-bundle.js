@@ -27,10 +27,24 @@ assert(fs.existsSync(path.join(coreRoot, 'src', 'handlerRegistry.js')), 'package
 assert(fs.existsSync(path.join(servicesRoot, 'safeCoreRequire.js')), 'apps/desktop/services/safeCoreRequire.js missing');
 assert(fs.existsSync(path.join(desktopRoot, 'coreRequire.js')), 'apps/desktop/coreRequire.js missing');
 
-const grokSrc = fs.readFileSync(path.join(servicesRoot, 'grokBrowserAutomation.js'), 'utf8');
-if (grokSrc.includes("require('../coreRequire')")) {
-  errors.push('grokBrowserAutomation.js still uses legacy require(../coreRequire) — SaaS will break');
+function walkJsFiles(dir, files = []) {
+  if (!fs.existsSync(dir)) return files;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkJsFiles(full, files);
+    else if (entry.name.endsWith('.js')) files.push(full);
+  }
+  return files;
 }
+
+for (const file of walkJsFiles(servicesRoot)) {
+  const src = fs.readFileSync(file, 'utf8');
+  if (src.includes("require('../coreRequire')") || src.includes('require("../../coreRequire")')) {
+    errors.push(`legacy coreRequire import in ${path.relative(stagingRoot, file)}`);
+  }
+}
+
+const grokSrc = fs.readFileSync(path.join(servicesRoot, 'grokBrowserAutomation.js'), 'utf8');
 if (!grokSrc.includes('safeCoreRequire')) {
   errors.push('grokBrowserAutomation.js must import ./safeCoreRequire');
 }

@@ -179,6 +179,7 @@ app.post('/api/invoke/:channel', requireAuth, sovereignThreatShield, async (req,
     res.json({ success: true, data: data ?? null, pendingOAuthUrl });
   } catch (e) {
     if (e.code === 'UNKNOWN_CHANNEL') return res.status(404).json({ error: e.message, code: e.code });
+    if (e.code === 'INVALID_PROJECT') return res.status(403).json({ error: e.message, code: e.code });
     const status = e.retryable ? 503 : 500;
     console.error(`invoke/${req.params.channel}:`, e.message);
     res.status(status).json({

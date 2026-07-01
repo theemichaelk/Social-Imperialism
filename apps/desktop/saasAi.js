@@ -7,6 +7,21 @@ const { resolveKeys } = require('./services/keys');
 
 let latestModelName = 'gemini-2.0-flash';
 
+/** SaaS margin protection — downshift premium models per THEE_MICHAEL protocol */
+const SAAS_MODEL_DOWNSCALE = {
+  'anthropic/claude-3.5-sonnet': 'anthropic/claude-3-haiku',
+  'anthropic/claude-3-opus': 'anthropic/claude-3-haiku',
+  'openai/gpt-4o': 'openai/gpt-4o-mini',
+  'openai/gpt-4': 'openai/gpt-4o-mini',
+  'openai-direct': 'openai/gpt-4o-mini',
+};
+
+function resolveSaasModel(modelId) {
+  const id = modelId || 'gemini';
+  if (id === 'gemini' || id === 'grok-browser') return id;
+  return SAAS_MODEL_DOWNSCALE[id] || id;
+}
+
 function createAiEngine(store) {
   const getGlobalKey = (key) => {
     try {
@@ -142,7 +157,75 @@ function createAiEngine(store) {
     throw new Error('Vision analysis failed');
   }
 
-  return { generateAI, generateAIVision };
+  async function generateAIWithModel(prompt, modelId = 'gemini') {
+    const resolved = resolveSaasModel(modelId);
+    if (resolved === 'grok-browser') {
+      throw new Error('Grok browser automation is only available in the desktop app.');
+    }
+
+    let brandContext = '';
+    try {
+      const activeCampaignId = store.getItem('activeCampaignId');
+      const campsData = store.getItem('campaigns');
+      if (campsData && activeCampaignId) {
+        const camps = JSON.parse(campsData);
+        const camp = camps.find((c) => c.id === activeCampaignId);
+        if (camp) {
+          brandContext = `BRAND: ${camp.brandName || ''} | ${camp.domain || ''} | Tone: ${camp.tone || 'professional'}\n`;
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    const finalPrompt = brandContext + prompt;
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const geminiKey = keys.gemini || process.env.GEMINI_API_KEY;
+    const openaiKey = keys.openai || process.env.OPENAI_API_KEY;
+    const openrouterKey = keys.openrouter || process.env.OPENROUTER_API_KEY;
+
+    if (resolved === 'openai-direct' && openaiKey) {
+      const res = await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: finalPrompt }],
+      }, { headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' }, timeout: 60000 });
+      return res.data.choices[0].message.content;
+    }
+
+    if (resolved.includes('/') && openrouterKey) {
+      const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+        model: resolved,
+        messages: [{ role: 'user', content: finalPrompt }],
+      }, {
+        headers: {
+          Authorization: `Bearer ${openrouterKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://socialimperialism.app',
+          'X-Title': 'Social Imperialism SaaS',
+        },
+        timeout: 60000,
+      });
+      return res.data.choices[0].message.content;
+    }
+
+    if (openrouterKey && resolved !== 'gemini') {
+      const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+        model: resolved || 'openai/gpt-4o-mini',
+        messages: [{ role: 'user', content: finalPrompt }],
+      }, {
+        headers: {
+          Authorization: `Bearer ${openrouterKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://socialimperialism.app',
+          'X-Title': 'Social Imperialism SaaS',
+        },
+        timeout: 60000,
+      });
+      return res.data.choices[0].message.content;
+    }
+
+    return generateAI(prompt);
+  }
+
+  return { generateAI, generateAIVision, generateAIWithModel };
 }
 
 module.exports = { createAiEngine };

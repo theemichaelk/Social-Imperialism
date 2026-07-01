@@ -86,6 +86,7 @@ async function registerAllHandlers(store, deps = {}) {
   const aiEngine = createAiEngine(store);
   const generateAI = deps.generateAI || aiEngine.generateAI;
   const generateAIVision = deps.generateAIVision || aiEngine.generateAIVision;
+  const generateAIWithModel = deps.generateAIWithModel || aiEngine.generateAIWithModel;
 
   const { registerCalendarHandlers } = require(path.join(DESKTOP_SERVICES, 'calendarIpc'));
   const calendarApi = registerCalendarHandlers({
@@ -139,7 +140,6 @@ async function registerAllHandlers(store, deps = {}) {
     getFalKey: () => getGlobalKey('falKey'),
   });
 
-  const generateAIWithModel = async (prompt, _modelId) => generateAI(prompt);
   const getScheduledPostsStoreList = () => {
     try { return JSON.parse(store.getItem('scheduled_posts') || '[]'); } catch (e) { return []; }
   };

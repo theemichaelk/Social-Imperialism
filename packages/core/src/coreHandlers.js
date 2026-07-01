@@ -65,16 +65,9 @@ function registerCoreHandlers(deps) {
   });
 
   ipcMain.handle('get-global-keys', () => {
-    let stored = {};
-    try { stored = JSON.parse(store.getItem('globalApiKeys') || '{}'); } catch (e) {}
-    const keys = resolveKeys(stored);
     const servicesPath = deps.DESKTOP_SERVICES || path.join(__dirname, '../../../apps/desktop/services');
-    const { isPlatformAdmin } = require(path.join(servicesPath, 'keys'));
-    const ctx = store._invokeContext || {};
-    if (isPlatformAdmin(ctx.email)) {
-      store.setItem('globalApiKeys', JSON.stringify(keys));
-    }
-    return keys;
+    const { resolveKeysFromStore } = require(path.join(servicesPath, 'keys'));
+    return resolveKeysFromStore(store);
   });
 
   ipcMain.handle('get-active-campaign', () => {

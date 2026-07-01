@@ -30,12 +30,18 @@ async function ensureDefaultProject(orgId) {
 }
 
 async function resolveActiveProject(orgId, projectId) {
-  if (!isLogicalCampaignId(projectId)) {
+  const explicit = projectId != null && String(projectId).trim() !== '';
+  if (explicit && !isLogicalCampaignId(projectId)) {
     const match = await prisma.project.findFirst({
       where: { id: projectId, organizationId: orgId },
     });
-    if (match) return match;
-    console.warn(`Stale project id ${projectId} for org ${orgId} — using default project`);
+    if (!match) {
+      const err = new Error('Project not found or not authorized for this organization');
+      err.code = 'INVALID_PROJECT';
+      err.status = 403;
+      throw err;
+    }
+    return match;
   }
   return ensureDefaultProject(orgId);
 }
