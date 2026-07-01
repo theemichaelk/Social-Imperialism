@@ -37,9 +37,13 @@ function walkJsFiles(dir, files = []) {
   return files;
 }
 
+const LEGACY_CORE_REQUIRE = /require\s*\(\s*['"](?:\.\.\/)+coreRequire['"]\s*\)/;
+const ALLOW_LEGACY_CORE = new Set(['safeCoreRequire.js']);
+
 for (const file of walkJsFiles(servicesRoot)) {
+  if (ALLOW_LEGACY_CORE.has(path.basename(file))) continue;
   const src = fs.readFileSync(file, 'utf8');
-  if (src.includes("require('../coreRequire')") || src.includes('require("../../coreRequire")')) {
+  if (LEGACY_CORE_REQUIRE.test(src)) {
     errors.push(`legacy coreRequire import in ${path.relative(stagingRoot, file)}`);
   }
 }
