@@ -6,27 +6,24 @@ const fs = require('fs');
 const axios = require('axios');
 const nativeBrowser = require('./nativeBrowserLauncher');
 
+const { loadCoreModule } = require('./safeCoreRequire');
+
 function loadGrokDefaults() {
   try {
-    const { coreRequire } = require('../coreRequire');
-    return coreRequire('src/grokDefaults').GROK_DEFAULTS;
+    return loadCoreModule('src/grokDefaults').GROK_DEFAULTS;
   } catch {
-    try {
-      return require(path.join(__dirname, '../../../packages/core/src/grokDefaults')).GROK_DEFAULTS;
-    } catch {
-      return {
-        platform: 'grok',
-        url: 'https://grok.com/',
-        imagineUrl: 'https://grok.com/imagine',
-        email: '',
-        password: '',
-        autoLogin: true,
-        browserId: 'edge',
-        launchMode: 'app_profile',
-        profileKey: 'grok',
-        assetsSubdir: 'grok-assets',
-      };
-    }
+    return {
+      platform: 'grok',
+      url: 'https://grok.com/',
+      imagineUrl: 'https://grok.com/imagine',
+      email: '',
+      password: '',
+      autoLogin: true,
+      browserId: 'edge',
+      launchMode: 'app_profile',
+      profileKey: 'grok',
+      assetsSubdir: 'grok-assets',
+    };
   }
 }
 

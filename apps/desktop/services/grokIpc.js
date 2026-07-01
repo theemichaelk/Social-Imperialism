@@ -1,5 +1,3 @@
-const grokBrowser = require('./grokBrowserAutomation');
-const infographicGenerator = require('./infographicGenerator');
 const { buildGrokPrompt } = require('./grokPromptBuilder');
 
 function getActiveCampaign(store) {
@@ -45,6 +43,28 @@ function prepareGrokRequest(store, payload) {
 }
 
 function registerGrokHandlers({ ipcMain, store, userDataPath }) {
+  let grokBrowser;
+  let infographicGenerator;
+  try {
+    grokBrowser = require('./grokBrowserAutomation');
+    infographicGenerator = require('./infographicGenerator');
+  } catch (e) {
+    console.warn('[grokIpc] Browser automation unavailable (SaaS-safe skip):', e.message);
+    const stub = async () => ({
+      success: false,
+      error: 'Grok browser automation is only available in the desktop app.',
+      nodriverReady: false,
+    });
+    ipcMain.handle('grok-ping', () => ({ ok: false, saasStub: true }));
+    ipcMain.handle('grok-get-status', stub);
+    ipcMain.handle('grok-connect', stub);
+    ipcMain.handle('grok-ask-text', stub);
+    ipcMain.handle('grok-imagine', stub);
+    ipcMain.handle('grok-generate-video', stub);
+    ipcMain.handle('grok-generate-infographic', stub);
+    return;
+  }
+
   grokBrowser.seedGrokDefaultsIfNeeded(store);
   const channels = [
     'grok-ping',

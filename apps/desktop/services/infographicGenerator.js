@@ -1,8 +1,11 @@
 /**
  * Infographic generator — Grok text analysis + Grok Imagine visuals.
  */
-const grokBrowser = require('./grokBrowserAutomation');
 const { buildGrokPrompt } = require('./grokPromptBuilder');
+
+function getGrokBrowser() {
+  return require('./grokBrowserAutomation');
+}
 
 function buildAnalysisPrompt(store, campaign, content, options = {}) {
   const built = buildGrokPrompt({
@@ -41,6 +44,7 @@ async function generateInfographic(store, userDataPath, payload = {}, getCampaig
     } catch (e) {}
   }
 
+  const grokBrowser = getGrokBrowser();
   const built = buildAnalysisPrompt(store, campaign, content, payload);
   const analysisResult = await grokBrowser.askGrokText(store, userDataPath, built.prompt, {
     newChat: true,

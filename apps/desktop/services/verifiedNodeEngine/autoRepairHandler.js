@@ -132,8 +132,8 @@ async function executeRepair(ctx, node, tierResult) {
   });
 
   if (node.continuousMode && strike >= 3) {
-    const { coreRequire } = require('../../coreRequire');
-    const { enqueue } = coreRequire('src/jobRunner');
+    const { loadCoreModule } = require('../safeCoreRequire');
+    const { enqueue } = loadCoreModule('src/jobRunner');
     await enqueue({
       type: 'verified_node_reverify',
       projectId: node.projectId,

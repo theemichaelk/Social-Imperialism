@@ -1,5 +1,8 @@
 const thumbnailGenerator = require('./thumbnailGenerator');
-const grokBrowserAutomation = require('./grokBrowserAutomation');
+
+function getGrokBrowserAutomation() {
+  return require('./grokBrowserAutomation');
+}
 
 function registerThumbnailHandlers({
   ipcMain,
@@ -22,7 +25,7 @@ function registerThumbnailHandlers({
     store,
     userDataPath,
     generateAIWithModel,
-    generateGrokImagine: (prompt) => grokBrowserAutomation.generateGrokImagine(store, userDataPath, prompt),
+    generateGrokImagine: (prompt) => getGrokBrowserAutomation().generateGrokImagine(store, userDataPath, prompt),
     runAdvancedWorkflow,
   };
 

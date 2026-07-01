@@ -3,14 +3,7 @@
  */
 const path = require('path');
 
-function loadCoreModule(subpath) {
-  try {
-    const { coreRequire } = require('../coreRequire');
-    return coreRequire(subpath);
-  } catch {
-    return require(path.join(__dirname, '../../../packages/core/src', subpath.replace(/^src\//, '')));
-  }
-}
+const { loadCoreModule } = require('./safeCoreRequire');
 const { applyContentHumanization, HUMANIZATION_LEVELS } = loadCoreModule('src/contentHumanization');
 const { getTemplateSpec } = loadCoreModule('src/imperialTemplateMap');
 

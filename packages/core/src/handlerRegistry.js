@@ -6,6 +6,15 @@ const path = require('path');
 const DESKTOP_ROOT = path.join(__dirname, '../../../apps/desktop');
 const DESKTOP_SERVICES = path.join(DESKTOP_ROOT, 'services');
 
+function safeRequireService(moduleName, label) {
+  try {
+    return require(path.join(DESKTOP_SERVICES, moduleName));
+  } catch (e) {
+    console.warn(`[handlerRegistry] ${label || moduleName} skipped:`, e.message);
+    return null;
+  }
+}
+
 function createMockIpc() {
   const handlers = {};
   return {
@@ -110,15 +119,19 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerAccountCreatorHandlers } = require(path.join(DESKTOP_SERVICES, 'accountCreatorIpc'));
   registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress: () => {}, userDataPath });
 
-  try {
-    const { registerGrokHandlers } = require(path.join(DESKTOP_SERVICES, 'grokIpc'));
-    registerGrokHandlers({ ipcMain, store, userDataPath });
-  } catch (e) {
-    console.warn('[handlerRegistry] Grok handlers skipped:', e.message);
+  const grokIpc = safeRequireService('grokIpc.js', 'Grok IPC');
+  if (grokIpc?.registerGrokHandlers) {
+    try {
+      grokIpc.registerGrokHandlers({ ipcMain, store, userDataPath });
+    } catch (e) {
+      console.warn('[handlerRegistry] Grok handler registration failed:', e.message);
+    }
   }
 
-  const { registerNativeBrowserHandlers } = require(path.join(DESKTOP_SERVICES, 'nativeBrowserIpc'));
-  registerNativeBrowserHandlers({ ipcMain, store, userDataPath });
+  const nativeBrowserIpc = safeRequireService('nativeBrowserIpc.js', 'Native browser IPC');
+  if (nativeBrowserIpc?.registerNativeBrowserHandlers) {
+    nativeBrowserIpc.registerNativeBrowserHandlers({ ipcMain, store, userDataPath });
+  }
 
   const { registerRssCategoryHandlers } = require(path.join(DESKTOP_SERVICES, 'rssCategoryIpc'));
   registerRssCategoryHandlers({
@@ -143,14 +156,16 @@ async function registerAllHandlers(store, deps = {}) {
     },
   });
 
-  const { registerThumbnailHandlers } = require(path.join(DESKTOP_SERVICES, 'thumbnailIpc'));
-  registerThumbnailHandlers({ ipcMain, store, resolveKeys, generateAI });
+  const thumbnailIpc = safeRequireService('thumbnailIpc.js', 'Thumbnail IPC');
+  if (thumbnailIpc?.registerThumbnailHandlers) {
+    thumbnailIpc.registerThumbnailHandlers({ ipcMain, store, resolveKeys, generateAI, userDataPath });
+  }
 
   const { registerQuantumPagesHandlers } = require(path.join(DESKTOP_SERVICES, 'quantumPagesIpc'));
   registerQuantumPagesHandlers({ ipcMain, store, generateAI });
 
-  const { registerQuoraTrafficOpsHandlers } = require(path.join(DESKTOP_SERVICES, 'quoraTrafficOpsIpc'));
-  registerQuoraTrafficOpsHandlers({
+  const quoraTrafficOpsIpc = safeRequireService('quoraTrafficOpsIpc.js', 'Quora traffic ops IPC');
+  if (quoraTrafficOpsIpc?.registerQuoraTrafficOpsHandlers) quoraTrafficOpsIpc.registerQuoraTrafficOpsHandlers({
     ipcMain, store, generateAI, resolveKeys,
     getCampaign: () => {
       try {
