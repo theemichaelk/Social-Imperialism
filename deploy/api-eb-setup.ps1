@@ -191,7 +191,11 @@ Write-Host "EB URL: $ebUrl"
 Write-Host "Public API URL (after CloudFront + DNS): $apiUrl"
 
 aws amplify update-app --app-id d204r2r6gar3c8 --environment-variables "AMPLIFY_MONOREPO_APP_ROOT=apps/web,NEXT_PUBLIC_API_URL=$apiUrl,API_URL=$apiUrl" --region $Region | Out-Null
-aws amplify start-job --app-id d204r2r6gar3c8 --branch-name main --job-type RELEASE --region $Region | Out-Null
+try {
+  aws amplify start-job --app-id d204r2r6gar3c8 --branch-name main --job-type RELEASE --region $Region | Out-Null
+} catch {
+  Write-Host "Amplify job skipped (pending job may already exist)."
+}
 
 @{
   application = $AppName
@@ -202,5 +206,10 @@ aws amplify start-job --app-id d204r2r6gar3c8 --branch-name main --job-type RELE
   versionLabel = $versionLabel
 } | ConvertTo-Json | Set-Content (Join-Path $DeployDir "eb-state.json")
 
-Write-Host "Amplify updated with API_URL=$apiUrl and redeploy triggered."
-Write-Host "Test: curl $apiUrl/health"
+Write-Host "Post-deploy smoke (coreRequire + setup wizard)..."
+Start-Sleep -Seconds 30
+$pkgVersion = (Get-Content (Join-Path $RepoRoot "package.json") | ConvertFrom-Json).version
+node (Join-Path $DeployDir "post-deploy-smoke.js") $apiUrl $pkgVersion
+if ($LASTEXITCODE -ne 0) { throw "Post-deploy smoke failed - EB may have rolled back or bundle is stale" }
+
+Write-Host "Deploy verified: $apiUrl/health reports v$pkgVersion"

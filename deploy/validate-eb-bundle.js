@@ -1,6 +1,5 @@
 /**
  * Pre-deploy validation for EB API bundle.
- * File layout is checked in staging; module probes run from repo root (node_modules).
  * Usage: node deploy/validate-eb-bundle.js <stagingRoot>
  */
 const fs = require('fs');
@@ -26,19 +25,22 @@ const coreRoot = path.join(stagingRoot, 'packages', 'core');
 
 assert(fs.existsSync(path.join(coreRoot, 'src', 'handlerRegistry.js')), 'packages/core missing from bundle');
 assert(fs.existsSync(path.join(servicesRoot, 'safeCoreRequire.js')), 'apps/desktop/services/safeCoreRequire.js missing');
-assert(fs.existsSync(path.join(coreRoot, 'src', 'grokDefaults.js')), 'packages/core/src/grokDefaults.js missing');
 assert(fs.existsSync(path.join(desktopRoot, 'coreRequire.js')), 'apps/desktop/coreRequire.js missing');
 
+const grokSrc = fs.readFileSync(path.join(servicesRoot, 'grokBrowserAutomation.js'), 'utf8');
+if (grokSrc.includes("require('../coreRequire')")) {
+  errors.push('grokBrowserAutomation.js still uses legacy require(../coreRequire) — SaaS will break');
+}
+if (!grokSrc.includes('safeCoreRequire')) {
+  errors.push('grokBrowserAutomation.js must import ./safeCoreRequire');
+}
+
 try {
-  const { loadCoreModule, collectCoreRootCandidates } = require(path.join(
-    repoRoot,
-    'apps/desktop/services/safeCoreRequire',
-  ));
-  const defaults = loadCoreModule('src/grokDefaults');
-  assert(defaults?.GROK_DEFAULTS, 'safeCoreRequire could not load grokDefaults');
-  assert(collectCoreRootCandidates().length >= 1, 'safeCoreRequire found no core roots');
+  const stagingCore = require(path.join(desktopRoot, 'coreRequire.js'));
+  const defaults = stagingCore.loadCoreModule('src/grokDefaults');
+  assert(defaults?.GROK_DEFAULTS, 'staging coreRequire.js could not load grokDefaults');
 } catch (e) {
-  errors.push(`safeCoreRequire probe failed: ${e.message}`);
+  errors.push(`staging coreRequire.js probe failed: ${e.message}`);
 }
 
 try {
