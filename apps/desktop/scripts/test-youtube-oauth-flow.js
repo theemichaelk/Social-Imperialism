@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * End-to-end YouTube OAuth loopback test (no password stored on disk).
- * Usage: set YT_TEST_EMAIL and YT_TEST_PASSWORD in env, then run with electron or puppeteer.
+ * Usage: set YT_TEST_EMAIL and YT_TEST_PASSWORD in env, then run with electron or nodriver.
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 

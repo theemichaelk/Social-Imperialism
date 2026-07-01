@@ -411,7 +411,7 @@ async function fetchGrokStatus(ipc, retries = 3) {
   if (!pingOk) {
     throw new Error('Grok engine not loaded — close ALL Social Imperialism windows, then run npm start in apps/desktop');
   }
-  return grokStatusCache || { puppeteerReady: true, settings: { sessionValid: false }, session: { loggedIn: false } };
+  return grokStatusCache || { nodriverReady: true, puppeteerReady: true, settings: { sessionValid: false }, session: { loggedIn: false } };
 }
 
 function wireBar(bar, pageId) {
@@ -432,9 +432,9 @@ function wireBar(bar, pageId) {
       if (connectBtn) connectBtn.disabled = false;
       return;
     }
-    if (!st?.puppeteerReady) {
-      statusEl.textContent = 'Need Puppeteer';
-      statusEl.title = 'Run npm install puppeteer in apps/desktop';
+    if (!st?.nodriverReady && !st?.puppeteerReady) {
+      statusEl.textContent = 'Need nodriver';
+      statusEl.title = 'Install Python 3 and nodriver: pip install -r apps/desktop/services/stealthBrowser/requirements.txt';
       statusEl.className = 'grok-integrate-status warn';
       return;
     }

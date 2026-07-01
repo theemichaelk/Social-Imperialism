@@ -94,6 +94,7 @@ function registerGrokHandlers({ ipcMain, store, userDataPath }) {
       return await grokBrowser.getStatus(store, userDataPath);
     } catch (e) {
       return {
+        nodriverReady: false,
         puppeteerReady: false,
         error: e.message,
         settings: { sessionValid: false, hasCredentials: false },

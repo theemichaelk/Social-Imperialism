@@ -54,6 +54,7 @@ type QuoraStatus = {
   hasGemini?: boolean;
   hasOpenRouter?: boolean;
   hasSerpApi?: boolean;
+  nodriverOk?: boolean;
   puppeteerOk?: boolean;
   quoraLinked?: boolean;
   quoraHandle?: string;

@@ -500,18 +500,20 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
     return { success: true, filePath, data: exportData };
   });
 
-  ipcMain.handle('get-account-creator-status', () => {
+  ipcMain.handle('get-account-creator-status', async () => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
     const campaign = getActiveCampaign(store);
-    let puppeteerReady = false;
-    try { require.resolve('puppeteer'); puppeteerReady = true; } catch (e) { /* not installed */ }
+    const nodriverBridge = require('./nodriverBridge');
+    const nodriverStatus = await nodriverBridge.getStatus();
+    const nodriverReady = !!nodriverStatus.nodriverReady;
     return {
       hasCampaign: !!campaign?.brandName,
       campaignName: campaign?.brandName || null,
       aiReady: !!(keys.gemini || keys.openrouter || keys.openai),
       imageGenReady: !!(keys.falKey || keys.advancedWorkflowKey),
       unsplashReady: !!(keys.unsplashAccessKey || keys.unsplashApplicationId),
-      puppeteerReady,
+      nodriverReady,
+      puppeteerReady: nodriverReady,
       proxyCount: proxyManager.getProxyPool(store).length,
       availableProxies: proxyManager.getAvailableProxies(store).length,
       platforms: accountCreator.SUPPORTED_PLATFORMS,

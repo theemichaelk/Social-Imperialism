@@ -1,17 +1,10 @@
 /**
  * Quora browser session automation — login, post answers, upvote, follow.
- * Uses Puppeteer with a persistent profile per connection.
+ * Uses async nodriver stealth browser with a persistent profile per connection.
  */
 const path = require('path');
 const fs = require('fs');
 const nativeBrowser = require('./nativeBrowserLauncher');
-
-let puppeteer;
-try {
-  puppeteer = require('puppeteer');
-} catch (e) {
-  puppeteer = null;
-}
 
 let quoraStore = null;
 
@@ -60,7 +53,7 @@ async function isLoggedIn(page) {
   try {
     await page.goto('https://www.quora.com/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     await delay(2000);
-    const url = page.url();
+    const url = await page.url();
     if (url.includes('/login')) return false;
     return await page.evaluate(() => {
       const hasAsk = !!document.querySelector('[href*="/answer"], [data-testid="ask_question"], .qu-bg--blue');

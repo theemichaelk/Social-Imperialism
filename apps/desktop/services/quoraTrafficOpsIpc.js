@@ -39,9 +39,9 @@ function registerQuoraTrafficOpsHandlers({
     campaignId: campaignId(),
   });
 
-  ipcMain.handle('get-quora-traffic-status', () => {
+  ipcMain.handle('get-quora-traffic-status', async () => {
     const d = deps();
-    return quoraTrafficOps.getStatus(store, d.campaignId, keys(), d.linkedAccounts, d.campaign);
+    return await quoraTrafficOps.getStatus(store, d.campaignId, keys(), d.linkedAccounts, d.campaign);
   });
 
   ipcMain.handle('get-quora-traffic-settings', () => ({

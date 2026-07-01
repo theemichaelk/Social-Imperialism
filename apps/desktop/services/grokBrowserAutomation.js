@@ -32,12 +32,7 @@ function loadGrokDefaults() {
 
 const GROK_DEFAULTS = loadGrokDefaults();
 
-let puppeteer;
-try {
-  puppeteer = require('puppeteer');
-} catch (e) {
-  puppeteer = null;
-}
+const nodriverBridge = require('./nodriverBridge');
 
 const STORAGE_KEY = 'grokEngineSettings';
 const SIGN_IN_URL = 'https://accounts.x.ai/sign-in?redirect=grok-com&return_to=%2F%3Fq%3D%26reasoningMode%3Dnone%26voice%3Dfalse';
@@ -155,7 +150,7 @@ async function clickByText(page, patterns) {
 }
 
 async function isLoggedIn(page) {
-  const url = page.url();
+  const url = await page.url();
   if (url.includes('accounts.x.ai/sign-in') || url.includes('/login')) return false;
 
   return page.evaluate(() => {
@@ -235,7 +230,8 @@ async function ensureSession(store, userDataPath) {
   const headless = settings.headlessAfterLogin;
   const { page } = await launchGrokBrowser(userDataPath, store, { headless });
 
-  if (!page.url() || page.url() === 'about:blank') {
+  const currentUrl = await page.url();
+  if (!currentUrl || currentUrl === 'about:blank') {
     await page.goto(GROK_HOME, { waitUntil: 'networkidle2', timeout: 120000 });
   }
 
@@ -522,7 +518,7 @@ async function generateGrokImagine(store, userDataPath, prompt) {
   await page.goto(GROK_IMAGINE, { waitUntil: 'networkidle2', timeout: 120000 });
   await delay(2000);
 
-  if (page.url().includes('sign-in')) {
+  if ((await page.url()).includes('sign-in')) {
     throw new Error('Grok Imagine requires login. Connect Grok in Settings first.');
   }
 
@@ -562,7 +558,7 @@ async function generateGrokVideo(store, userDataPath, prompt, {
   await page.goto(GROK_IMAGINE, { waitUntil: 'networkidle2', timeout: 120000 });
   await delay(2000);
 
-  if (page.url().includes('sign-in')) {
+  if ((await page.url()).includes('sign-in')) {
     throw new Error('Grok Imagine requires login. Connect Grok in Settings first.');
   }
 
@@ -663,7 +659,8 @@ async function getStatus(store, userDataPath) {
   const sessionValid = settings.sessionValid || sessionState.loggedIn || profileReady;
   const browserStatus = nativeBrowser.getBrowserStatus(store, userDataPath);
   return {
-    puppeteerReady: !!puppeteer,
+    nodriverReady: (await nodriverBridge.getStatus()).nodriverReady,
+    puppeteerReady: (await nodriverBridge.getStatus()).nodriverReady,
     nativeBrowser: browserStatus,
     settings: {
       enabled: settings.enabled,

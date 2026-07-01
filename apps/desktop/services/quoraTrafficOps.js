@@ -4,6 +4,24 @@
 const axios = require('axios');
 const quoraBrowser = require('./quoraBrowserAutomation');
 const quora = require('./platforms/quora');
+const nodriverBridge = require('./nodriverBridge');
+
+async function launchHeadlessStealthPage(userAgent = SEARCH_UA) {
+  const ready = await nodriverBridge.isReady();
+  if (!ready) return null;
+  try {
+    const { browser, page } = await nodriverBridge.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'],
+      defaultViewport: { width: 1280, height: 900 },
+    });
+    await page.setUserAgent(userAgent);
+    return { browser, page };
+  } catch (e) {
+    console.warn('nodriver launch:', e.message);
+    return null;
+  }
+}
 
 const STORAGE_KEY = 'quoraTrafficOps';
 const QUESTIONS_CACHE_KEY = 'quoraTrafficQuestionsCache';
@@ -222,17 +240,10 @@ async function scrapeQuestionMetrics(url, page = null) {
     }
   }
 
-  let puppeteer;
-  try { puppeteer = require('puppeteer'); } catch (e) { return null; }
-  if (!puppeteer) return null;
-  let browser;
+  const launched = await launchHeadlessStealthPage(SEARCH_UA);
+  if (!launched) return null;
+  const { browser, page: p } = launched;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    const p = await browser.newPage();
-    await p.setUserAgent(SEARCH_UA);
     const result = await scrapeQuestionMetrics(url, p);
     await browser.close();
     if (!result) return null;
@@ -256,19 +267,10 @@ async function enrichQuestionsBatch(entries, maxEnrich = DEFAULT_ENRICH_MAX) {
 
   if (!targets.length) return entries;
 
-  let puppeteer;
-  try { puppeteer = require('puppeteer'); } catch (e) { return entries; }
-  if (!puppeteer) return entries;
-
-  let browser;
+  const launched = await launchHeadlessStealthPage(SEARCH_UA);
+  if (!launched) return entries;
+  const { browser, page } = launched;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    const page = await browser.newPage();
-    await page.setUserAgent(SEARCH_UA);
-
     for (const entry of targets) {
       try {
         const data = await scrapeQuestionMetrics(entry.url, page);
@@ -375,18 +377,11 @@ function mergeSearchHits(target, hits, keyword, enrich, keys, seen) {
 }
 
 async function scrapeViaBraveBrowser(keyword, limit = 20, queryOverride = null) {
-  let puppeteer;
-  try { puppeteer = require('puppeteer'); } catch (e) { return []; }
-  if (!puppeteer) return [];
   const query = queryOverride || `site:quora.com ${keyword}`;
-  let browser;
+  const launched = await launchHeadlessStealthPage(SEARCH_UA);
+  if (!launched) return [];
+  const { browser, page } = launched;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    const page = await browser.newPage();
-    await page.setUserAgent(SEARCH_UA);
     await page.goto(`https://search.brave.com/search?q=${encodeURIComponent(query)}`, {
       waitUntil: 'domcontentloaded',
       timeout: 45000,
@@ -454,17 +449,10 @@ function parseMojeekHtml(html, limit = 20) {
 }
 
 async function scrapeViaMojeekBrowser(keyword, limit = 20) {
-  let puppeteer;
-  try { puppeteer = require('puppeteer'); } catch (e) { return []; }
-  if (!puppeteer) return [];
-  let browser;
+  const launched = await launchHeadlessStealthPage('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  if (!launched) return [];
+  const { browser, page } = launched;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     await page.goto(`https://www.mojeek.com/search?q=${encodeURIComponent(`site:quora.com ${keyword}`)}`, {
       waitUntil: 'domcontentloaded',
       timeout: 45000,
@@ -550,17 +538,10 @@ async function scrapeViaDuckDuckGo(keyword, limit = 20) {
 }
 
 async function scrapeViaQuoraBrowser(keyword, limit = 15) {
-  let puppeteer;
-  try { puppeteer = require('puppeteer'); } catch (e) { return []; }
-  if (!puppeteer) return [];
-  let browser;
+  const launched = await launchHeadlessStealthPage('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36');
+  if (!launched) return [];
+  const { browser, page } = launched;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36');
     await page.goto(`https://www.quora.com/search?q=${encodeURIComponent(keyword)}`, {
       waitUntil: 'domcontentloaded',
       timeout: 45000,
@@ -842,20 +823,21 @@ async function publishAnswer(deps, payload) {
   return result;
 }
 
-function getStatus(store, campaignId, keys, linkedAccounts, campaign = {}) {
+async function getStatus(store, campaignId, keys, linkedAccounts, campaign = {}) {
   const settings = loadSettings(store, campaignId);
   const quoraAccount = getQuoraAccount(linkedAccounts || []);
   const tokens = quoraAccount ? require('./intelligenceProfile').parseTokens(quoraAccount) : null;
   const connectionId = quoraAccount ? quoraBrowser.resolveConnectionId(quoraAccount, tokens) : null;
-  let puppeteerOk = false;
-  try { puppeteerOk = !!require('puppeteer'); } catch (e) { puppeteerOk = false; }
+  const nodriverStatus = await nodriverBridge.getStatus();
+  const nodriverOk = !!nodriverStatus.nodriverReady;
   return {
     mode: settings.mode,
     hasSerpApi: !!keys?.serpApiKey,
     hasOpenRouter: !!keys?.openrouter,
     hasGemini: !!keys?.gemini,
     hasAI: !!(keys?.openrouter || keys?.gemini),
-    puppeteerOk,
+    nodriverOk,
+    puppeteerOk: nodriverOk,
     quoraLinked: !!quoraAccount,
     quoraHandle: quoraAccount?.handle || null,
     connectionId,

@@ -1,5 +1,5 @@
 /**
- * Puppeteer browser automation — apply profile kits during signup/edit with proxy support.
+ * Stealth nodriver browser automation — apply profile kits during signup/edit with proxy support.
  */
 const path = require('path');
 const fs = require('fs');
@@ -7,13 +7,7 @@ const os = require('os');
 const proxyManager = require('./proxyManager');
 const { downloadImageToTemp } = require('./mediaHelpers');
 const nativeBrowser = require('./nativeBrowserLauncher');
-
-let puppeteer;
-try {
-  puppeteer = require('puppeteer');
-} catch (e) {
-  puppeteer = null;
-}
+const nodriverBridge = require('./nodriverBridge');
 
 const PLATFORM_FLOWS = {
   Twitter: {
@@ -85,9 +79,7 @@ async function launchBrowser(proxy, headless = false, { store, userDataPath, kit
     });
     return session.browser;
   }
-  if (!puppeteer) {
-    throw new Error('Puppeteer is not installed. Run: npm install puppeteer');
-  }
+
   const args = [
     '--no-sandbox',
     '--disable-setuid-sandbox',
@@ -98,7 +90,13 @@ async function launchBrowser(proxy, headless = false, { store, userDataPath, kit
     const proto = proxy.protocol === 'socks5' ? 'socks5' : 'http';
     args.push(`--proxy-server=${proto}://${proxy.host}:${proxy.port}`);
   }
-  return puppeteer.launch({ headless, args, defaultViewport: { width: 1280, height: 900 } });
+
+  const { browser } = await nodriverBridge.launch({
+    headless,
+    args,
+    defaultViewport: { width: 1280, height: 900 },
+  });
+  return browser;
 }
 
 async function tryFill(page, selectors, value) {
@@ -176,7 +174,7 @@ async function applyPlatformProfile(page, platform, kit, mode = 'edit') {
     platform,
     success: steps.length > 0,
     steps,
-    url: page.url(),
+    url: await page.url(),
     message: steps.length
       ? `Applied: ${steps.join(', ')}. Complete any CAPTCHA and save manually if needed.`
       : 'Opened profile page — complete signup/edit manually using kit data.',

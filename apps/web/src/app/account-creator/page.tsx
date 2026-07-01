@@ -43,7 +43,7 @@ type Kit = {
 };
 type CreatorStatus = {
   hasCampaign?: boolean; campaignName?: string | null;
-  aiReady?: boolean; imageGenReady?: boolean; unsplashReady?: boolean; puppeteerReady?: boolean;
+  aiReady?: boolean; imageGenReady?: boolean; unsplashReady?: boolean; nodriverReady?: boolean; puppeteerReady?: boolean;
   proxyCount?: number; availableProxies?: number; platforms?: string[];
 };
 type LinkedEntry = { platform: string; accounts: Array<{ id: string; handle?: string; platform?: string; type?: string }> };
@@ -78,7 +78,7 @@ const STATUS_PILLS: { key: keyof CreatorStatus | 'proxies'; label: string; check
   { key: 'aiReady', label: 'AI (bios/schedule)', check: (s) => !!s.aiReady },
   { key: 'imageGenReady', label: 'AI images (FAL)', check: (s) => !!s.imageGenReady },
   { key: 'unsplashReady', label: 'Unsplash covers', check: (s) => !!s.unsplashReady },
-  { key: 'puppeteerReady', label: 'Puppeteer browser', check: (s) => !!s.puppeteerReady },
+  { key: 'nodriverReady', label: 'Stealth browser (nodriver)', check: (s) => !!(s.nodriverReady ?? s.puppeteerReady) },
   { key: 'proxies', label: 'Proxies', check: (s) => (s.proxyCount ?? 0) > 0 },
 ];
 
@@ -188,7 +188,7 @@ export default function AccountCreatorPage() {
     (pl) => platformConnectionStatus(pl, keys, apiStatus) === 'connected',
   ).length;
   const readyEngines = [
-    status.aiReady, status.imageGenReady, status.unsplashReady, status.puppeteerReady, status.hasCampaign,
+    status.aiReady, status.imageGenReady, status.unsplashReady, status.nodriverReady ?? status.puppeteerReady, status.hasCampaign,
   ].filter(Boolean).length;
 
   const platformBars = PLATFORM_CONNECTIONS.map((pl) => {
@@ -683,7 +683,7 @@ export default function AccountCreatorPage() {
               { label: 'AI Bios', value: status.aiReady ? '✓' : '✗', status: status.aiReady ? 'ok' : 'warn' },
               { label: 'FAL Images', value: status.imageGenReady ? '✓' : '✗', status: status.imageGenReady ? 'ok' : 'warn' },
               { label: 'Unsplash', value: status.unsplashReady ? '✓' : '✗', status: status.unsplashReady ? 'ok' : 'warn' },
-              { label: 'Puppeteer', value: status.puppeteerReady ? '✓' : '✗', status: status.puppeteerReady ? 'ok' : 'off' },
+              { label: 'Nodriver', value: (status.nodriverReady ?? status.puppeteerReady) ? '✓' : '✗', status: (status.nodriverReady ?? status.puppeteerReady) ? 'ok' : 'off' },
             ]} />
             {!status.hasCampaign && (
               <p className="settings-panel-desc" style={{ marginTop: 12 }}>
@@ -1079,7 +1079,7 @@ export default function AccountCreatorPage() {
 
       {tab === 'Batch' && (
         <DataPanel title="Overnight Headless Batch" live>
-          <p className="settings-panel-desc">Queue kits for headless Puppeteer runs — edit profiles or open signup flows.</p>
+          <p className="settings-panel-desc">Queue kits for headless nodriver stealth runs — edit profiles or open signup flows.</p>
           <div className="grid grid-2">
             <div>
               <label className="ac-label">Run at (blank = tonight 2 AM)</label>

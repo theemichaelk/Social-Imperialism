@@ -1,11 +1,11 @@
 /**
- * Native browser launcher — Chrome, Edge, Opera, Firefox (not bundled Chromium).
+ * Native browser launcher — Chrome, Edge, Opera via async nodriver (stealth CDP).
  * Persistent profiles save cookies between sessions; optional attach to running browser via CDP.
  */
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 const { spawn } = require('child_process');
+const nodriverBridge = require('./nodriverBridge');
 
 const STORAGE_KEY = 'nativeBrowserSettings';
 
@@ -60,7 +60,7 @@ const BROWSER_DEFS = {
   },
   chromium: {
     id: 'chromium',
-    label: 'Bundled Chromium (Puppeteer fallback)',
+    label: 'Stealth Chromium (nodriver)',
     engine: 'bundled',
     winPaths: [],
     systemUserDataDir: null,
@@ -68,13 +68,13 @@ const BROWSER_DEFS = {
   },
 };
 
-let puppeteer;
-try { puppeteer = require('puppeteer'); } catch (e) { puppeteer = null; }
-
-let playwrightFirefox;
-try { playwrightFirefox = require('playwright').firefox; } catch (e) { playwrightFirefox = null; }
-
 const activeSessions = new Map();
+let nodriverStatusCache = { nodriverReady: false };
+
+async function refreshNodriverStatus() {
+  nodriverStatusCache = await nodriverBridge.getStatus();
+  return nodriverStatusCache;
+}
 
 function getDefaultSettings() {
   const installed = detectInstalledBrowsers();
@@ -115,21 +115,22 @@ function findExecutable(browserDef) {
 }
 
 function detectInstalledBrowsers() {
+  const nodriverReady = nodriverStatusCache.nodriverReady;
   const list = [];
   for (const def of Object.values(BROWSER_DEFS)) {
     const execPath = findExecutable(def);
-    const installed = def.engine === 'bundled' ? !!puppeteer : !!execPath;
-    let firefoxReady = def.engine === 'firefox' ? !!playwrightFirefox : true;
+    const installed = def.engine === 'bundled' ? nodriverReady : !!execPath;
+    const firefoxReady = def.engine === 'firefox' ? false : nodriverReady;
     list.push({
       id: def.id,
       label: def.label,
       engine: def.engine,
       installed,
       executablePath: execPath || null,
-      automationReady: installed && (def.engine !== 'firefox' || firefoxReady),
-      note: def.engine === 'firefox' && !playwrightFirefox
-        ? 'Install playwright: npm install playwright && npx playwright install firefox'
-        : null,
+      automationReady: installed && nodriverReady && def.engine !== 'firefox',
+      note: def.engine === 'firefox'
+        ? 'Firefox is not supported by nodriver — use Chrome or Edge for stealth automation.'
+        : (!nodriverReady ? 'Install Python 3 and nodriver: pip install -r apps/desktop/services/stealthBrowser/requirements.txt' : null),
     });
   }
   return list;
@@ -146,66 +147,18 @@ function getProfileDir(userDataPath, settings, profileKey) {
   return dir;
 }
 
-function adaptPlaywrightPage(pwPage) {
-  return {
-    url: () => pwPage.url(),
-    goto: async (url, opts = {}) => {
-      await pwPage.goto(url, {
-        waitUntil: opts.waitUntil === 'networkidle2' ? 'networkidle' : (opts.waitUntil || 'load'),
-        timeout: opts.timeout || 120000,
-      });
-    },
-    evaluate: (fn, ...args) => pwPage.evaluate(fn, ...args),
-    $: async (selector) => {
-      const loc = pwPage.locator(selector).first();
-      if ((await loc.count()) === 0) return null;
-      return {
-        click: async (opts = {}) => {
-          if (opts.clickCount === 3) {
-            await loc.click({ clickCount: 3 });
-          } else {
-            await loc.click();
-          }
-        },
-        type: async (text, opts = {}) => {
-          await loc.pressSequentially(String(text), { delay: opts.delay || 25 });
-        },
-        uploadFile: async (filePath) => {
-          await loc.setInputFiles(filePath);
-        },
-      };
-    },
-    keyboard: { press: (key) => pwPage.keyboard.press(key) },
-    setUserAgent: async (ua) => {
-      try { await pwPage.context().setExtraHTTPHeaders({ 'User-Agent': ua }); } catch (e) { /* ignore */ }
-    },
-  };
-}
-
-function wrapBrowserSession(rawBrowser, page, meta) {
+function wrapBrowserSession(browser, page, meta) {
   const closeFn = async () => {
-    try {
-      if (meta.engine === 'firefox') await rawBrowser.close();
-      else await rawBrowser.close();
-    } catch (e) { /* ignore */ }
+    try { await browser.close(); } catch (e) { /* ignore */ }
     activeSessions.delete(meta.sessionKey);
   };
 
   return {
     browser: {
-      isConnected: () => {
-        if (meta.engine === 'firefox') return !!rawBrowser;
-        return rawBrowser?.isConnected?.() ?? false;
-      },
+      isConnected: () => browser.isConnected(),
       close: closeFn,
       pages: async () => [page],
-      newPage: async () => {
-        if (meta.engine === 'firefox') {
-          const p = await rawBrowser.newPage();
-          return adaptPlaywrightPage(p);
-        }
-        return rawBrowser.newPage();
-      },
+      newPage: async () => browser.newPage(),
     },
     page,
     engine: meta.engine,
@@ -216,12 +169,8 @@ function wrapBrowserSession(rawBrowser, page, meta) {
 }
 
 async function connectViaCDP(debugPort = 9222) {
-  if (!puppeteer) throw new Error('Puppeteer is required for CDP attach mode.');
-  const browserURL = `http://127.0.0.1:${debugPort}`;
-  const raw = await puppeteer.connect({ browserURL, defaultViewport: null });
-  const pages = await raw.pages();
-  const page = pages.find((p) => p.url() && p.url() !== 'about:blank') || pages[0] || await raw.newPage();
-  return wrapBrowserSession(raw, page, {
+  const { browser, page } = await nodriverBridge.connect({ debugPort });
+  return wrapBrowserSession(browser, page, {
     engine: 'attach',
     browserId: 'attach',
     profileDir: null,
@@ -229,28 +178,8 @@ async function connectViaCDP(debugPort = 9222) {
   });
 }
 
-async function launchFirefoxBrowser({ execPath, profileDir, headless }) {
-  if (!playwrightFirefox) {
-    throw new Error('Firefox automation requires Playwright. Run: npm install playwright && npx playwright install firefox');
-  }
-  const context = await playwrightFirefox.launchPersistentContext(profileDir, {
-    headless,
-    executablePath: execPath || undefined,
-    viewport: { width: 1400, height: 900 },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0',
-  });
-  const pwPage = context.pages()[0] || await context.newPage();
-  return wrapBrowserSession(context, adaptPlaywrightPage(pwPage), {
-    engine: 'firefox',
-    browserId: 'firefox',
-    profileDir,
-    sessionKey: `firefox:${profileDir}`,
-  });
-}
-
 async function launchChromiumBrowser({ settings, execPath, profileDir, headless, profileKey }) {
-  if (!puppeteer) throw new Error('Puppeteer is not installed. Run: npm install puppeteer');
-
+  const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
   const args = [
     '--no-first-run',
     '--no-default-browser-check',
@@ -258,28 +187,22 @@ async function launchChromiumBrowser({ settings, execPath, profileDir, headless,
     '--window-size=1400,900',
   ];
 
-  let userDataDir = profileDir;
+  let profileDirectory = null;
   if (settings.launchMode === 'system_profile' && settings.profileDirectory) {
-    args.push(`--profile-directory=${settings.profileDirectory}`);
+    profileDirectory = settings.profileDirectory;
   }
 
-  const launchOpts = {
+  const { browser, page } = await nodriverBridge.launch({
     headless,
-    userDataDir,
+    userDataDir: profileDir,
+    executablePath: execPath || undefined,
     args,
+    userAgent: ua,
+    profileDirectory,
     defaultViewport: { width: 1400, height: 900 },
-  };
+  });
 
-  if (execPath) launchOpts.executablePath = execPath;
-
-  const raw = await puppeteer.launch(launchOpts);
-  const pages = await raw.pages();
-  const page = pages[0] || await raw.newPage();
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  );
-
-  return wrapBrowserSession(raw, page, {
+  return wrapBrowserSession(browser, page, {
     engine: execPath ? 'native-chromium' : 'bundled',
     browserId: settings.browserId,
     profileDir,
@@ -294,6 +217,8 @@ async function launchNativeBrowser({
   headless = false,
   reuseActive = true,
 } = {}) {
+  await refreshNodriverStatus();
+
   const settings = getBrowserSettings(store);
   const sessionKey = settings.launchMode === 'attach'
     ? `attach:${settings.debugPort || 9222}`
@@ -310,19 +235,17 @@ async function launchNativeBrowser({
     session = await connectViaCDP(settings.debugPort || 9222);
   } else {
     const def = BROWSER_DEFS[settings.browserId] || BROWSER_DEFS.chrome;
+    if (def.engine === 'firefox') {
+      throw new Error('Firefox automation is not supported with nodriver. Choose Chrome or Edge in Settings → Native Browser.');
+    }
     const execPath = def.engine === 'bundled' ? null : findExecutable(def);
     if (def.engine !== 'bundled' && !execPath) {
       throw new Error(`${def.label} not found. Install it or choose another browser in Settings → Native Browser.`);
     }
     const profileDir = getProfileDir(userDataPath, settings, profileKey);
-
-    if (def.engine === 'firefox') {
-      session = await launchFirefoxBrowser({ execPath, profileDir, headless });
-    } else {
-      session = await launchChromiumBrowser({
-        settings, execPath, profileDir, headless, profileKey,
-      });
-    }
+    session = await launchChromiumBrowser({
+      settings, execPath, profileDir, headless, profileKey,
+    });
   }
 
   activeSessions.set(sessionKey, session);
@@ -335,11 +258,11 @@ async function openUrlInNativeBrowser(store, userDataPath, url, { profileKey = '
     try {
       const page = await session.browser.newPage();
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 120000 });
-      return { success: true, url: page.url(), browserId: session.browserId };
+      return { success: true, url: await page.url(), browserId: session.browserId };
     } catch (e) { /* fall through */ }
   }
   await session.page.goto(url, { waitUntil: 'networkidle2', timeout: 120000 });
-  return { success: true, url: session.page.url(), browserId: session.browserId };
+  return { success: true, url: await session.page.url(), browserId: session.browserId };
 }
 
 function getAttachInstructions(browserId) {
@@ -387,7 +310,8 @@ async function closeBrowserSession(profileKey = null) {
   activeSessions.clear();
 }
 
-function getBrowserStatus(store, userDataPath) {
+async function getBrowserStatus(store, userDataPath) {
+  const status = await refreshNodriverStatus();
   const settings = getBrowserSettings(store);
   const browsers = detectInstalledBrowsers();
   const selected = browsers.find((b) => b.id === settings.browserId);
@@ -412,8 +336,10 @@ function getBrowserStatus(store, userDataPath) {
     }
   }
   return {
-    puppeteerReady: !!puppeteer,
-    playwrightFirefoxReady: !!playwrightFirefox,
+    nodriverReady: status.nodriverReady,
+    puppeteerReady: status.nodriverReady,
+    playwrightFirefoxReady: false,
+    nodriver: status,
     settings,
     browsers,
     selectedBrowser: selected || null,

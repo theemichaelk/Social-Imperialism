@@ -7,7 +7,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 
 const path = require('path');
 const fs = require('fs');
-const puppeteer = require('puppeteer');
+const nodriverBridge = require('../services/nodriverBridge');
 const { LocalStorage } = require('node-localstorage');
 const integrations = require('../services');
 const { connectPlatform } = require('../services/connectionService');
@@ -17,13 +17,12 @@ const youtube = require('../services/platforms/youtube');
 const email = process.env.YT_TEST_EMAIL || 'theesaintmichael@gmail.com';
 const password = process.env.YT_TEST_PASSWORD;
 
-async function puppeteerGoogleLogin(authUrl) {
-  const browser = await puppeteer.launch({
+async function nodriverGoogleLogin(authUrl) {
+  const { browser, page } = await nodriverBridge.launch({
     headless: false,
     args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
     defaultViewport: { width: 520, height: 800 },
   });
-  const page = await browser.newPage();
   await page.setUserAgent(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   );
@@ -55,7 +54,6 @@ async function puppeteerGoogleLogin(authUrl) {
       await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 }).catch(() => {});
     }
 
-    // Account picker (many YouTube brand accounts) — click primary Google account row
     await new Promise((r) => setTimeout(r, 1500));
     await page.evaluate((em) => {
       const candidates = [...document.querySelectorAll('div, li, [role="link"], [data-identifier]')];
@@ -67,9 +65,9 @@ async function puppeteerGoogleLogin(authUrl) {
     }, email);
     await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {});
 
-    // OAuth consent — Allow / Continue
     for (let i = 0; i < 5; i++) {
-      if (page.url().includes('/oauth/callback')) break;
+      const currentUrl = await page.url();
+      if (currentUrl.includes('/oauth/callback')) break;
       const clicked = await page.evaluate(() => {
         const buttons = [...document.querySelectorAll('button, input[type="submit"], [role="button"]')];
         const allow = buttons.find((b) => /allow|continue|confirm|accept/i.test(b.textContent || b.value || ''));
@@ -83,7 +81,7 @@ async function puppeteerGoogleLogin(authUrl) {
     const callbackUrl = await page.waitForFunction(
       () => window.location.href.includes('/oauth/callback'),
       { timeout: 120000 },
-    ).then(() => page.url()).catch(async () => {
+    ).then(async () => page.url()).catch(async () => {
       const t = await page.evaluate(() => document.body?.innerText || '');
       return { error: t.slice(0, 800) };
     });
@@ -99,7 +97,7 @@ async function puppeteerGoogleLogin(authUrl) {
     return { callbackUrl };
   } catch (e) {
     const shot = await page.evaluate(() => document.body?.innerText || '').catch(() => '');
-    console.log('Puppeteer login error:', e.message);
+    console.log('Nodriver login error:', e.message);
     if (shot) console.log('Page text:', shot.slice(0, 600));
     await browser.close();
     return { blocked: true, text: shot || e.message };
@@ -112,7 +110,13 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('=== Live YouTube login test ===');
+  const ready = await nodriverBridge.isReady();
+  if (!ready) {
+    console.error('nodriver is not ready. Install Python 3 and: pip install -r apps/desktop/services/stealthBrowser/requirements.txt');
+    process.exit(1);
+  }
+
+  console.log('=== Live YouTube login test (nodriver) ===');
   console.log('Email:', email);
 
   await oauth.ensureOAuthLoopbackServer();
@@ -124,7 +128,7 @@ async function main() {
 
   const callbackPromise = oauth.waitForOAuthCallback(state);
 
-  const loginPromise = puppeteerGoogleLogin(authUrl);
+  const loginPromise = nodriverGoogleLogin(authUrl);
   let code;
   try {
     const result = await Promise.race([
