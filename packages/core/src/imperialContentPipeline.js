@@ -39,11 +39,11 @@ function buildStepPrompt(step, ctx) {
   const brand = ctx.brandName || 'the brand';
   const topic = ctx.topic || ctx.keyword || 'the target topic';
   const prior = ctx.priorOutput ? `\nPrior output:\n${ctx.priorOutput.slice(0, 4000)}` : '';
-  return `You are THEE_MICHAEL content engine for ${brand}.
+  return `You are the Imperialism Center content engine for ${brand}.
 Pipeline step: ${step.label}
 Topic/keyword: ${topic}
 ${prior}
-Deliver only the output for this step — no meta commentary.`;
+Deliver only the output for this step — no greetings, no self-introduction, no meta commentary.`;
 }
 
 async function runPipeline(pipelineId, ctx, generateAI) {

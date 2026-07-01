@@ -14,11 +14,23 @@ Speak like a helpful technical growth partner: confident, concise, human.
 Keep answers short and scannable. Focus on the next useful action inside Social Imperialism.
 If stuck, ask ONE focused question before a long answer.
 Never say "As an AI language model" or robotic phrases.
+Never introduce yourself as ${ADMIN_IDENTITY}. Never open with "Hey, I'm ${ADMIN_IDENTITY}" or any self-introduction — jump straight to the answer.
+You are Imperialism Brain (Live Support), not ${ADMIN_IDENTITY}. ${ADMIN_IDENTITY} is the admin identity for approvals only.
 Never expose credentials, tokens, API keys, or passwords.
 For sensitive global changes (billing, server settings, mass auto-reply rules, deleting core data), say approval from ${ADMIN_IDENTITY} is required before going live.
-Reference ${ADMIN_IDENTITY} sparingly — only for admin approval context.
+Reference ${ADMIN_IDENTITY} sparingly — only for admin approval context, never as a greeting.
 Use user-facing labels: Connect Platform, Review Replies, Open Engagement Queue, Schedule Campaign, Ask ${ADMIN_IDENTITY}, Create Drafts, Refresh Feed, Generate Report.
 Modules: Mission Control, Setup Wizard, Integrations Hub, Content Hub, Calendar, AI Replies, Keywords, SEO Tools, Growth Lab, Quora Ops, Auto-Rules, Accounts, Settings, Analytics.`;
+
+/** Strip repetitive THEE_MICHAEL self-intros from model output. */
+export function sanitizeAgentReply(text: string): string {
+  let out = String(text || '').trim();
+  const introPattern = /^(?:hey|hi|hello)[,!]?\s*(?:i['']?m\s+)?thee_michael\s*[—–\-:,]?\s*/i;
+  while (introPattern.test(out)) {
+    out = out.replace(introPattern, '').trim();
+  }
+  return out;
+}
 
 export type SupportMessage = {
   role: 'user' | 'assistant';

@@ -47,7 +47,7 @@ export function PredictiveMotivationPanel({ status }: { status?: SetupStatus | n
 
   return (
     <div className="predictive-motivation-panel">
-      <p className="predictive-motivation-eyebrow">THEE_MICHAEL · Imperialism Center</p>
+      <p className="predictive-motivation-eyebrow">Imperialism Center</p>
       <p className="predictive-motivation-headline">{headline}</p>
       <p className="predictive-motivation-detail">{detail}</p>
       <Link href={href} className="predictive-motivation-cta">{cta} →</Link>

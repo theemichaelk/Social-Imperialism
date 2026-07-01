@@ -13,6 +13,7 @@ import {
   getPendingApprovals,
   requiresAdminApproval,
   resolveSearchRoute,
+  sanitizeAgentReply,
   type SupportMessage,
 } from '@/lib/liveSupportAgent';
 
@@ -63,7 +64,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
 
       const prompt = buildSupportPrompt(messages, trimmed, { pathname });
       const reply = await invoke<string>('generate-ai', prompt);
-      let content = String(reply || '').trim() || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
+      let content = sanitizeAgentReply(String(reply || '').trim()) || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
 
       if (route) {
         content += `\n\n**${route.label}** → [${route.href}](${route.href})`;
