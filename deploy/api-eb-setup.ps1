@@ -42,7 +42,7 @@ if (-not (Test-Path (Join-Path $Staging "apps\desktop\services\safeCoreRequire.j
 
 Write-Host "Validating EB bundle (handler registry + coreRequire chain)..."
 node (Join-Path $DeployDir "validate-eb-bundle.js") $Staging
-if ($LASTEXITCODE -ne 0) { throw "EB bundle validation failed — fix before upload" }
+if ($LASTEXITCODE -ne 0) { throw "EB bundle validation failed - fix before upload" }
 
 # Secrets go in bundled .env files (EB option_settings has a 4096-char CloudFormation limit)
 $rdsStatePath = Join-Path $DeployDir "rds-state.json"
