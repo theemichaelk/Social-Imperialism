@@ -145,6 +145,7 @@ app.use('/api/leads', leadsRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/admin', requireAuth, require('./routes/admin'));
 app.use('/api/orgs', requireAuth, orgRoutes);
 app.use('/api/v1', partnerRoutes);
 

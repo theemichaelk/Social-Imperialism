@@ -351,6 +351,37 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     ],
     related: [{ label: 'Setup Wizard', href: '/onboarding' }],
   },
+  '/dashboard/users': {
+    id: 'dashboard-users',
+    title: 'My Account',
+    outcome: 'See your profile, organization, campaigns, and public sitemap/feed links.',
+    subtitle: 'Tenant-scoped details — only your org and projects appear here.',
+    flow: ['Profile', 'Campaigns', 'Sitemap', 'Feed'],
+    actions: [
+      { label: 'Settings', href: '/settings', primary: true },
+      { label: 'Account Hub', href: '/account-hub' },
+    ],
+    related: [
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'sitemap.html', href: '/sitemap.html' },
+      { label: 'feed.xml', href: '/feed.xml' },
+    ],
+  },
+  '/dashboard/admin': {
+    id: 'dashboard-admin',
+    title: 'Admin Directory',
+    outcome: 'Platform administrators see every user, organization, and campaign.',
+    subtitle: 'Omni-access directory — filter, refresh, and audit tenant health.',
+    flow: ['Summary', 'Users', 'Organizations', 'Feeds'],
+    actions: [
+      { label: 'My Account', href: '/dashboard/users', primary: true },
+      { label: 'Issue Control', href: '/dashboard/issues' },
+    ],
+    related: [
+      { label: 'sitemap.html', href: '/sitemap.html' },
+      { label: 'feed.xml', href: '/feed.xml' },
+    ],
+  },
   '/dashboard/issues': {
     id: 'dashboard-issues',
     title: 'Issue Control Plane',

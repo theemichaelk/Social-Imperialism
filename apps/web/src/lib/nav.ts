@@ -48,6 +48,8 @@ export const NAV_SECTIONS: NavSection[] = [
     { id: 'account-creator', href: '/account-creator', icon: '➕', label: 'Acct Creator', hint: 'New profiles' },
   ]},
   { id: 'system', label: 'System', items: [
+    { id: 'dashboard-users', href: '/dashboard/users', icon: '👤', label: 'My Account', hint: 'Profile & site feeds' },
+    { id: 'dashboard-admin', href: '/dashboard/admin', icon: '🛡️', label: 'Admin', hint: 'All users & orgs', adminOnly: true },
     { id: 'dashboard-issues', href: '/dashboard/issues', icon: '🛠️', label: 'Issue Control', hint: 'THEE_MICHAEL GitOps repairs', adminOnly: true },
     { id: 'campaign-manager', href: '/campaign-manager', icon: '📋', label: 'Campaign Command', hint: 'Campaigns, schedules & verified nodes' },
     { id: 'support', href: '/support', icon: '💬', label: 'Imperialism Brain', hint: 'Live support' },

@@ -340,6 +340,25 @@ const PAGES = [
     ],
   },
   {
+    route: '/dashboard/users',
+    name: 'My Account',
+    features: [
+      { name: 'Billing plan', channel: 'get-billing-plan', validate: (d) => typeof d === 'object' },
+      { name: 'Settings status', channel: 'get-settings-status', validate: (d) => typeof d === 'object' },
+      { name: 'Active campaign', channel: 'get-active-campaign', validate: (d) => d && (d.id || d.brandName) },
+      { name: 'Linked accounts', channel: 'get-linked-accounts', validate: (d) => Array.isArray(d) },
+    ],
+  },
+  {
+    route: '/dashboard/admin',
+    name: 'Admin Directory',
+    features: [
+      { name: 'Admin directory', type: 'http', path: '/api/admin/directory', validate: (d) => Array.isArray(d?.users) && d?.summary?.userCount >= 0 },
+      { name: 'Page health', channel: 'get-page-health', validate: (d) => typeof d === 'object' },
+      { name: 'Settings status', channel: 'get-settings-status', validate: (d) => typeof d === 'object' },
+    ],
+  },
+  {
     route: '/dashboard/issues',
     name: 'Issue Control Plane',
     features: [
@@ -383,6 +402,25 @@ async function login() {
 
 const SLOW = new Set(['analyze-topic', 'draft-post-reply', 'generate-image', 'run-content-studio', 'generate-quora-answer', 'run-seo-tool', 'discover-best-questions', 'generate-global-custom-prompt', 'run-guardian-scan', 'test-all-connections']);
 const TIMEOUT = 90000;
+
+async function httpGet(token, path) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60000);
+  try {
+    const res = await fetch(`${API}${path}`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    });
+    const text = await res.text();
+    let json = {};
+    try { json = text ? JSON.parse(text) : {}; } catch { return { ok: false, status: res.status, data: null, error: text?.slice(0, 120) }; }
+    return { ok: res.ok, status: res.status, data: json, error: json.error };
+  } catch (e) {
+    return { ok: false, status: 0, data: null, error: e.name === 'AbortError' ? 'Timeout 60000ms' : e.message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function invoke(token, projectId, channel, args = []) {
   const ms = SLOW.has(channel) ? TIMEOUT : 60000;
@@ -475,10 +513,13 @@ async function main() {
         args = [savedEngagementListId];
       }
 
-      const r = await invoke(token, projectId, feat.channel, args);
+      const r = feat.type === 'http'
+        ? await httpGet(token, feat.path)
+        : await invoke(token, projectId, feat.channel, args);
       const { status, reason } = classify(r, feat.validate);
       const icon = status === 'OK' ? '✓' : status === 'WEAK' ? '~' : status === 'ERROR' ? '✗' : '⊘';
-      console.log(`  ${icon} ${feat.name} [${feat.channel}]${reason ? ` — ${reason}` : ''}`);
+      const label = feat.type === 'http' ? feat.path : feat.channel;
+      console.log(`  ${icon} ${feat.name} [${label}]${reason ? ` — ${reason}` : ''}`);
 
       if (status === 'OK') ok++;
       else if (status === 'WEAK') weak++;

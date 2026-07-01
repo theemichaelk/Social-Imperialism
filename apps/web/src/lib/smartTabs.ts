@@ -97,13 +97,15 @@ export const DASHBOARD_TABS = [
   { id: 'overview', label: 'Overview', group: "Today's Focus", locked: true },
   { id: 'feed', label: 'Live Feed', group: "Today's Focus" },
   { id: 'growth', label: 'Growth & Q&A', group: "Today's Focus" },
+  { id: 'users', label: 'My Account', group: 'Account' },
+  { id: 'admin', label: 'Admin', group: 'Account' },
   { id: 'worker', label: 'Worker', group: 'Advanced' },
   { id: 'analytics', label: 'Analytics', group: 'Advanced' },
 ] as const;
 
 export const DASHBOARD_LEGACY_TAB_MAP: Record<string, string> = { qa: 'growth' };
 export const DASHBOARD_FOCUS_TABS = ['overview', 'feed', 'growth'];
-export const DASHBOARD_COLLAPSE_GROUPS = ['Advanced'];
+export const DASHBOARD_COLLAPSE_GROUPS = ['Advanced', 'Account'];
 
 /** Browse Posts — drop redundant Intelligence tab (lives in Discover) */
 export const BROWSE_VIEW_TABS = [

@@ -1,6 +1,9 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { invoke } from '@/lib/api';
+import { checkPlatformAdmin } from '@/lib/adminAccess';
+import { UserAccountPanel } from '@/components/UserAccountPanel';
+import { AdminDirectoryPanel } from '@/components/AdminDirectoryPanel';
 import { PageShell } from '@/components/PageShell';
 import { InvokePanel } from '@/components/InvokePanel';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
@@ -123,6 +126,16 @@ export default function DashboardPage() {
   const [feedTime, setFeedTime] = useState('all');
   const [feedMinEngage, setFeedMinEngage] = useState('0');
   const [loadError, setLoadError] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    checkPlatformAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
+  }, []);
+
+  const dashboardTabs = useMemo(
+    () => DASHBOARD_TABS.filter((t) => t.id !== 'admin' || isAdmin),
+    [isAdmin],
+  );
 
   const loadFeed = useCallback(async (opts?: { refresh?: boolean; quick?: boolean }) => {
     setFeedLoading(true);
@@ -398,7 +411,7 @@ export default function DashboardPage() {
 
       <ManageableTabNav
         pageId="dashboard"
-        catalog={[...DASHBOARD_TABS]}
+        catalog={[...dashboardTabs]}
         active={tab}
         onChange={onDashboardTab}
         grouped
@@ -728,6 +741,14 @@ export default function DashboardPage() {
           }} />
           <InvokePanel title="Serp Research" channel="serp-search" args={['social media automation']} buttonLabel="Search" />
         </div>
+      )}
+
+      {tab === 'users' && (
+        <UserAccountPanel compact />
+      )}
+
+      {tab === 'admin' && isAdmin && (
+        <AdminDirectoryPanel />
       )}
 
       <PostExplorerModal
