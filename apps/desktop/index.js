@@ -3376,17 +3376,6 @@ ipcMain.handle('get-available-accounts', async (event, credentials) => {
   return integrations.discoverAccounts(credentials, keys, (url) => shell.openExternal(url));
 });
 
-ipcMain.handle('test-all-connections', async () => {
-  const { execSync } = require('child_process');
-  const script = path.join(__dirname, 'scripts', 'test-connections.js');
-  try {
-    const out = execSync(`node "${script}"`, { encoding: 'utf8', timeout: 120000 });
-    return { success: true, output: out };
-  } catch (e) {
-    return { success: false, output: e.stdout || '', error: e.stderr || e.message };
-  }
-});
-
 const { registerGuardianGatekeeperHandlers } = coreRequire('src/guardianGatekeeper');
 const { registerSovereignThreatHandlers } = coreRequire('src/sovereignThreatCapture');
 const {

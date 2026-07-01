@@ -88,7 +88,13 @@ async function launchBrowser(proxy, headless = false, { store, userDataPath, kit
   ];
   if (proxy?.host && proxy?.port) {
     const proto = proxy.protocol === 'socks5' ? 'socks5' : 'http';
-    args.push(`--proxy-server=${proto}://${proxy.host}:${proxy.port}`);
+    if (proxy.username) {
+      const user = encodeURIComponent(proxy.username);
+      const pass = encodeURIComponent(proxy.password || '');
+      args.push(`--proxy-server=${proto}://${user}:${pass}@${proxy.host}:${proxy.port}`);
+    } else {
+      args.push(`--proxy-server=${proto}://${proxy.host}:${proxy.port}`);
+    }
   }
 
   const { browser } = await nodriverBridge.launch({

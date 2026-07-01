@@ -657,10 +657,13 @@ async function getStatus(store, userDataPath) {
   }
   const hasCredentials = !!(settings.email || settings.password);
   const sessionValid = settings.sessionValid || sessionState.loggedIn || profileReady;
-  const browserStatus = nativeBrowser.getBrowserStatus(store, userDataPath);
+  const [nodriverStatus, browserStatus] = await Promise.all([
+    nodriverBridge.getStatus(),
+    nativeBrowser.getBrowserStatus(store, userDataPath),
+  ]);
   return {
-    nodriverReady: (await nodriverBridge.getStatus()).nodriverReady,
-    puppeteerReady: (await nodriverBridge.getStatus()).nodriverReady,
+    nodriverReady: nodriverStatus.nodriverReady,
+    puppeteerReady: nodriverStatus.nodriverReady,
     nativeBrowser: browserStatus,
     settings: {
       enabled: settings.enabled,

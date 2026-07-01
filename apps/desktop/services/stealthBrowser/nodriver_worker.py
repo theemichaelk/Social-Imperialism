@@ -42,6 +42,26 @@ def _find_browser_executable(explicit: Optional[str] = None) -> Optional[str]:
     return None
 
 
+async def _resolve_tab_url(tab: Tab) -> str:
+    """Refresh nodriver tab state and return the current document URL."""
+    try:
+        await tab
+    except Exception:
+        pass
+    url = getattr(tab, "url", None) or ""
+    if url and url not in ("about:blank", ""):
+        return url
+    try:
+        href = await tab.evaluate(
+            "window.location.href",
+            await_promise=False,
+            return_by_value=True,
+        )
+        return str(href or url or "")
+    except Exception:
+        return url or ""
+
+
 class BrowserSession:
     def __init__(self, session_id: str, browser: Browser, tab: Tab):
         self.session_id = session_id
@@ -222,14 +242,15 @@ class Worker:
         elif wait_until == "domcontentloaded":
             await asyncio.sleep(0.5)
 
-        deadline = asyncio.get_event_loop().time() + (timeout_ms / 1000.0)
-        while asyncio.get_event_loop().time() < deadline:
-            current = getattr(tab, "url", None) or ""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + (timeout_ms / 1000.0)
+        while loop.time() < deadline:
+            current = await _resolve_tab_url(tab)
             if current and current != "about:blank":
                 break
             await asyncio.sleep(0.1)
 
-        return {"url": getattr(tab, "url", "") or ""}
+        return {"url": await _resolve_tab_url(tab)}
 
     async def evaluate(self, params: Dict[str, Any]) -> Dict[str, Any]:
         session = self._session(params["sessionId"])
@@ -337,7 +358,7 @@ class Worker:
 
     async def get_url(self, params: Dict[str, Any]) -> Dict[str, Any]:
         session = self._session(params["sessionId"])
-        return {"url": getattr(session.tab, "url", "") or ""}
+        return {"url": await _resolve_tab_url(session.tab)}
 
     async def get_content(self, params: Dict[str, Any]) -> Dict[str, Any]:
         session = self._session(params["sessionId"])
@@ -351,19 +372,9 @@ class Worker:
         return {"ok": True}
 
     async def authenticate(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        session = self._session(params["sessionId"])
-        username = params.get("username") or ""
-        password = params.get("password") or ""
-        await session.tab.send(uc.cdp.fetch.enable(handle_auth_requests=True))
-        await session.tab.send(uc.cdp.fetch.continue_with_auth(
-            request_id=params.get("requestId", ""),
-            auth_challenge_response=uc.cdp.fetch.AuthChallengeResponse(
-                response="ProvideCredentials",
-                username=username,
-                password=password,
-            ),
-        ))
-        return {"ok": True}
+        """No-op — proxy credentials must be embedded in --proxy-server at launch."""
+        self._session(params["sessionId"])
+        return {"ok": True, "note": "Proxy auth is applied via proxy-server URL at browser launch."}
 
     async def new_page(self, params: Dict[str, Any]) -> Dict[str, Any]:
         session = self._session(params["sessionId"])
@@ -379,21 +390,23 @@ class Worker:
     async def wait_for_navigation(self, params: Dict[str, Any]) -> Dict[str, Any]:
         session = self._session(params["sessionId"])
         timeout_ms = int(params.get("timeout") or 30000)
-        start_url = getattr(session.tab, "url", "") or ""
-        deadline = asyncio.get_event_loop().time() + (timeout_ms / 1000.0)
-        while asyncio.get_event_loop().time() < deadline:
-            current = getattr(session.tab, "url", "") or ""
+        start_url = await _resolve_tab_url(session.tab)
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + (timeout_ms / 1000.0)
+        while loop.time() < deadline:
+            current = await _resolve_tab_url(session.tab)
             if current != start_url:
                 return {"url": current}
             await asyncio.sleep(0.2)
-        return {"url": getattr(session.tab, "url", "") or ""}
+        return {"url": await _resolve_tab_url(session.tab)}
 
     async def wait_for_function(self, params: Dict[str, Any]) -> Dict[str, Any]:
         session = self._session(params["sessionId"])
         script = params["script"]
         timeout_ms = int(params.get("timeout") or 120000)
-        deadline = asyncio.get_event_loop().time() + (timeout_ms / 1000.0)
-        while asyncio.get_event_loop().time() < deadline:
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + (timeout_ms / 1000.0)
+        while loop.time() < deadline:
             value = await session.tab.evaluate(script, await_promise=True, return_by_value=True)
             if value:
                 return {"value": True}

@@ -83,7 +83,7 @@ function countQaPages() {
 
 // --- Checks ---
 const pageFocusRoutes = countPageFocusRoutes();
-const EXPECTED_MODULES = 25;
+const EXPECTED_MODULES = 26;
 
 if (pageFocusRoutes !== EXPECTED_MODULES) fail(`pageFocus.ts routes: expected ${EXPECTED_MODULES}, got ${pageFocusRoutes}`);
 

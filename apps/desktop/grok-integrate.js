@@ -411,7 +411,7 @@ async function fetchGrokStatus(ipc, retries = 3) {
   if (!pingOk) {
     throw new Error('Grok engine not loaded — close ALL Social Imperialism windows, then run npm start in apps/desktop');
   }
-  return grokStatusCache || { nodriverReady: true, puppeteerReady: true, settings: { sessionValid: false }, session: { loggedIn: false } };
+  return grokStatusCache || { nodriverReady: false, puppeteerReady: false, settings: { sessionValid: false }, session: { loggedIn: false } };
 }
 
 function wireBar(bar, pageId) {

@@ -15,7 +15,10 @@ function registerNativeBrowserHandlers({ ipcMain, store, userDataPath }) {
     try { ipcMain.removeHandler(ch); } catch (e) { /* not registered */ }
   });
 
-  ipcMain.handle('get-native-browsers', () => nativeBrowser.detectInstalledBrowsers());
+  ipcMain.handle('get-native-browsers', async () => {
+    await nativeBrowser.getBrowserStatus(store, userDataPath);
+    return nativeBrowser.detectInstalledBrowsers();
+  });
 
   ipcMain.handle('get-browser-settings', () => nativeBrowser.getBrowserSettings(store));
 
@@ -24,7 +27,7 @@ function registerNativeBrowserHandlers({ ipcMain, store, userDataPath }) {
     return { success: true, settings: saved };
   });
 
-  ipcMain.handle('get-native-browser-status', () => nativeBrowser.getBrowserStatus(store, userDataPath));
+  ipcMain.handle('get-native-browser-status', async () => nativeBrowser.getBrowserStatus(store, userDataPath));
 
   ipcMain.handle('native-browser-open-url', async (event, payload) => {
     try {

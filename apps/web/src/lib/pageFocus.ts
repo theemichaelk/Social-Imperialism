@@ -351,6 +351,18 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     ],
     related: [{ label: 'Setup Wizard', href: '/onboarding' }],
   },
+  '/dashboard/issues': {
+    id: 'dashboard-issues',
+    title: 'Issue Control Plane',
+    outcome: 'Review, approve, and ship runtime repair tickets with THEE_MICHAEL GitOps controls.',
+    subtitle: 'Web-augmented repairs — active issues, ledger history, and patch approval.',
+    flow: ['Scan', 'Review', 'Edit Patch', 'Approve'],
+    actions: [
+      { label: 'Dashboard', href: '/dashboard', primary: true },
+      { label: 'Settings', href: '/settings' },
+    ],
+    related: [{ label: 'Guardian', href: '/settings?tab=guardian-api' }],
+  },
   '/settings': {
     id: 'settings',
     title: 'Settings',

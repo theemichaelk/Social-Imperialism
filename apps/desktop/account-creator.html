@@ -219,7 +219,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         <h2>Kit Actions</h2>
         <div id="kitActionsHint" class="empty" style="padding:1rem;">Select a kit to review and export.</div>
         <div class="actions" id="kitActions" style="display:none;">
-          <button class="secondary" id="browserApplyBtn" style="border-color:#a78bfa;color:#c4b5fd;"><i class="fas fa-robot"></i> Apply via Browser (Puppeteer)</button>
+          <button class="secondary" id="browserApplyBtn" style="border-color:#a78bfa;color:#c4b5fd;"><i class="fas fa-robot"></i> Apply via Browser (nodriver)</button>
           <button class="secondary" id="apiUploadBtn" style="border-color:#10b981;color:#34d399;"><i class="fas fa-cloud-upload-alt"></i> Upload to Linked Accounts</button>
           <button class="secondary" id="pushCalendarBtn"><i class="fas fa-calendar-plus"></i> Push Schedule to Calendar</button>
           <button class="secondary" id="exportKitBtn"><i class="fas fa-download"></i> Export JSON Kit</button>
@@ -339,7 +339,7 @@ async function loadStatus() {
     ['AI (bios/schedule)', status.aiReady],
     ['AI images (FAL)', status.imageGenReady],
     ['Unsplash covers', status.unsplashReady],
-    ['Puppeteer browser', status.puppeteerReady],
+    ['Stealth browser (nodriver)', status.nodriverReady ?? status.puppeteerReady],
     [`Proxies (${status.proxyCount})`, status.proxyCount > 0],
   ];
   document.getElementById('statusBar').innerHTML = items.map(([label, ok]) =>
@@ -751,7 +751,7 @@ document.getElementById('browserApplyBtn').addEventListener('click', async () =>
     keepBrowserOpen: true,
   });
   btn.disabled = false;
-  btn.innerHTML = '<i class="fas fa-robot"></i> Apply via Browser (Puppeteer)';
+  btn.innerHTML = '<i class="fas fa-robot"></i> Apply via Browser (nodriver)';
   if (!res.success) return alert('Browser automation failed: ' + res.error);
   document.getElementById('automationResults').innerHTML = (res.results || []).map((r) =>
     `<div>${escapeHtml(r.platform)}: ${escapeHtml(r.message || (r.steps || []).join(', '))}</div>`

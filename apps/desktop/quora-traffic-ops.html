@@ -276,7 +276,7 @@ textarea { min-height: 80px; resize: vertical; }
     <!-- PUBLISH -->
     <div class="panel" id="panel-publish">
       <h2><span style="color:#38bdf8;">03</span> Publish &amp; track</h2>
-      <p class="lead">Review drafts, publish with one click via your linked Quora session (Puppeteer). No tab switching.</p>
+      <p class="lead">Review drafts, publish with one click via your linked Quora session (nodriver stealth). No tab switching.</p>
       <div class="layout-2col">
         <div>
           <h4 style="margin:0 0 0.75rem;font-size:0.9rem;">Drafts <span id="draftCount" style="color:#38bdf8;"></span></h4>
@@ -337,7 +337,7 @@ function renderStatus() {
   const chips = [
     { ok: status.hasSerpApi, label: status.hasSerpApi ? 'SerpAPI connected' : 'Free search active (Mojeek/Brave)', warn: !status.hasSerpApi },
     { ok: status.hasAI, label: aiLabel },
-    { ok: status.puppeteerOk, label: status.puppeteerOk ? 'Browser automation ready' : 'Puppeteer not installed', warn: !status.puppeteerOk },
+    { ok: status.nodriverOk ?? status.puppeteerOk, label: (status.nodriverOk ?? status.puppeteerOk) ? 'Stealth browser ready' : 'nodriver not installed (Python 3)', warn: !(status.nodriverOk ?? status.puppeteerOk) },
     { ok: status.quoraLinked, label: status.quoraLinked ? `Quora linked${status.quoraHandle ? ` (${status.quoraHandle})` : ''}` : 'Link Quora in Account Hub', link: !status.quoraLinked },
     { ok: status.sessionValid, label: status.sessionValid ? 'Quora session active' : (status.quoraLinked ? 'Re-link Quora to refresh session' : 'Quora session not saved'), warn: status.quoraLinked && !status.sessionValid },
     { ok: true, label: `${status.draftCount || 0} drafts · ${status.publishedCount || 0} published` },

@@ -338,6 +338,14 @@ const PAGES = [
     ],
   },
   {
+    route: '/dashboard/issues',
+    name: 'Issue Control Plane',
+    features: [
+      { name: 'Active issues', channel: 'get-active-issues', validate: (d) => Array.isArray(d?.issues) },
+      { name: 'Issues ledger', channel: 'get-issues-ledger', validate: (d) => Array.isArray(d?.ledger) },
+    ],
+  },
+  {
     route: '/settings',
     name: 'Settings',
     features: [

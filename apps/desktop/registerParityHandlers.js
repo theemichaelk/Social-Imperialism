@@ -25,6 +25,10 @@ function registerParityHandlers(deps) {
   if (!desktopIpcHandlers['run-live-connection-audit']) {
     ipcMain.handle('run-live-connection-audit', liveAuditFn);
   }
+  if (!desktopIpcHandlers['test-all-connections']) {
+    desktopIpcHandlers['test-all-connections'] = liveAuditFn;
+    ipcMain.handle('test-all-connections', liveAuditFn);
+  }
 
   const defaultIntelligenceSettings = () => ({
     enabled: true,
