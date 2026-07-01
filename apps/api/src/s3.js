@@ -51,6 +51,13 @@ function safeFilename(name) {
 }
 
 async function uploadBuffer({ buffer, contentType, filename, folder }) {
+  try {
+    const r2 = require('./r2');
+    if (r2.getR2Config()) {
+      return r2.uploadBuffer({ buffer, contentType, filename, folder });
+    }
+  } catch (e) { /* fall through to S3 */ }
+
   const config = getS3Config();
   if (!config) throw new Error('S3 not configured — set AWS_S3_* in apps/api/.env');
 

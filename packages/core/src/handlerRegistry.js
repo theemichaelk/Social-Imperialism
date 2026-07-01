@@ -205,6 +205,9 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerDnsHandlers } = require(path.join(DESKTOP_SERVICES, 'dnsIpc'));
   registerDnsHandlers({ ipcMain, store });
 
+  const { registerImperialPipelineHandlers } = require('./imperialContentPipeline');
+  registerImperialPipelineHandlers({ ipcMain, generateAI });
+
   // Core index.js handlers
   const { registerCoreHandlers } = require('./coreHandlers');
   registerCoreHandlers({

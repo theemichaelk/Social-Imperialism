@@ -12,6 +12,7 @@ import { PostExplorerModal } from '@/components/PostExplorerModal';
 import { FetchProfileFilters } from '@/lib/fetchProfiles';
 import { QaSettingsPanel } from '@/components/QaSettingsPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { PredictiveMotivationPanel } from '@/components/PredictiveMotivationPanel';
 import { useSiEvents } from '@/hooks/useSiEvents';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
 import {
@@ -363,6 +364,7 @@ export default function DashboardPage() {
         onFocusTab={setTab}
       />
 
+      <PredictiveMotivationPanel status={setup as Record<string, unknown>} />
       <SectionLivePanel section="dashboard" className="dash-section-live" />
 
       {loadError && (

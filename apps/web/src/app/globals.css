@@ -2823,3 +2823,89 @@ textarea.input { min-height: 100px; resize: vertical; }
   color: #fca5a5;
 }
 .sovereign-threat-panel { margin-bottom: 1.5rem; }
+
+/* Lead capture modal — 5s public landing trigger */
+.lead-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(2, 4, 8, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.lead-modal-card {
+  position: relative;
+  max-width: 420px;
+  width: 100%;
+  background: linear-gradient(145deg, #0c1222 0%, #111827 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+.lead-modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.85rem;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.lead-modal-eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #38bdf8;
+  margin: 0 0 0.5rem;
+}
+.lead-modal-title { margin: 0 0 0.5rem; font-size: 1.25rem; color: #f8fafc; }
+.lead-modal-sub { margin: 0 0 1.25rem; color: #94a3b8; font-size: 0.9rem; line-height: 1.5; }
+.lead-modal-form { display: flex; flex-direction: column; gap: 0.65rem; }
+.lead-modal-input {
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.8);
+  color: #f1f5f9;
+}
+.lead-modal-cta {
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #0284c7;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lead-modal-cta:disabled { opacity: 0.7; }
+.lead-modal-error { color: #f87171; font-size: 0.85rem; margin: 0; }
+.lead-modal-done h3 { color: #22c55e; margin: 0 0 0.5rem; }
+.lead-modal-done p { color: #cbd5e1; margin: 0; }
+
+.predictive-motivation-panel {
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(2, 132, 199, 0.08));
+}
+.predictive-motivation-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #38bdf8;
+}
+.predictive-motivation-headline { margin: 0 0 0.35rem; font-weight: 600; color: #f8fafc; }
+.predictive-motivation-detail { margin: 0 0 0.65rem; font-size: 0.88rem; color: #94a3b8; }
+.predictive-motivation-cta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #38bdf8;
+  text-decoration: none;
+}

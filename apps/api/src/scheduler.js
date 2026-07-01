@@ -99,6 +99,16 @@ async function tickOnboardingEmails() {
   }
 }
 
+async function tickDripRules() {
+  try {
+    const { processColdContactRules } = require('./services/leadCaptureService');
+    const cold = await processColdContactRules();
+    if (cold.rerouted) console.log(`[scheduler] drip: ${cold.rerouted} cold contacts → win-back`);
+  } catch (e) {
+    console.warn('[scheduler] drip rules:', e.message);
+  }
+}
+
 function startScheduler() {
   if (process.env.DISABLE_SCHEDULER === '1') return;
   timers.forEach(clearInterval);
@@ -111,9 +121,11 @@ function startScheduler() {
   timers.push(setInterval(() => tickWorkerAndSearch().catch(console.error), workerInterval));
   timers.push(setInterval(() => tickDuePosts().catch(console.error), postsInterval));
   timers.push(setInterval(() => tickOnboardingEmails().catch(console.error), emailInterval));
+  const dripInterval = parseInt(process.env.SCHEDULER_DRIP_RULES_MS || '86400000', 10);
+  timers.push(setInterval(() => tickDripRules().catch(console.error), dripInterval));
   tickOnboardingEmails().catch(console.error);
 
-  console.log(`[scheduler] Started — worker/search every ${workerInterval / 1000}s, due posts every ${postsInterval / 1000}s, nurture emails every ${emailInterval / 1000}s`);
+  console.log(`[scheduler] Started — worker/search every ${workerInterval / 1000}s, due posts every ${postsInterval / 1000}s, nurture emails every ${emailInterval / 1000}s, drip rules every ${dripInterval / 1000}s`);
 }
 
 function stopScheduler() {

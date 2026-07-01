@@ -66,6 +66,7 @@ app.get('/health', async (req, res) => {
     version: APP_VERSION,
     db,
     s3: s3.getS3Status(),
+    r2: (() => { try { return require('./r2').getR2Status(); } catch (e) { return { configured: false }; } })(),
     circuits: getCircuitStatus(),
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
@@ -138,6 +139,9 @@ app.get('/api/oauth/callback', async (req, res) => {
     res.status(500).type('text/plain').send('OAuth callback failed');
   }
 });
+
+const leadsRoutes = require('./routes/leads');
+app.use('/api/leads', leadsRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/billing', billingRoutes);

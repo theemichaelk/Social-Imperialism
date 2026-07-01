@@ -7,6 +7,7 @@ import { LiveSupportPanel } from './LiveSupportPanel';
 import { ImperialismBrainPromptBar } from './ImperialismBrainPromptBar';
 import { bootstrapSession, getToken, clearSession } from '@/lib/api';
 import { SovereignThreatBanner } from './SovereignThreatBanner';
+import { LeadCaptureModal } from './LeadCaptureModal';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
@@ -55,7 +56,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('popstate', onPop);
   }, [isPublic]);
 
-  if (isPublic) return <>{children}</>;
+  if (isPublic) {
+    return (
+      <>
+        {children}
+        <LeadCaptureModal />
+      </>
+    );
+  }
 
   if (!checked) {
     return (
