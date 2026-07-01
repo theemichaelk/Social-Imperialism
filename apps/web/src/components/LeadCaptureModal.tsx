@@ -67,7 +67,7 @@ export function LeadCaptureModal() {
           </div>
         ) : (
           <>
-            <p className="lead-modal-eyebrow">Imperiliasm Center</p>
+            <p className="lead-modal-eyebrow">Imperialism Center</p>
             <h3 className="lead-modal-title">Automate 14+ platforms in one command center</h3>
             <p className="lead-modal-sub">
               Join Social Imperialism — get <strong>{DISCOUNT}</strong> off your first month.

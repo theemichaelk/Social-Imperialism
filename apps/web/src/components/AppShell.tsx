@@ -56,11 +56,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('popstate', onPop);
   }, [isPublic]);
 
+  const showLeadModal = pathname === '/' || pathname === '/founder';
   if (isPublic) {
     return (
       <>
         {children}
-        <LeadCaptureModal />
+        {showLeadModal && <LeadCaptureModal />}
       </>
     );
   }

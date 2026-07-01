@@ -4,12 +4,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { DataPanel, SparkRow } from '@/components/DashboardViz';
 
+type StorageProviderStatus = {
+  configured?: boolean;
+  bucket?: string;
+  region?: string;
+  accountId?: string;
+  provider?: string;
+};
+
 type S3Status = {
   configured?: boolean;
   bucket?: string;
   region?: string;
   ok?: boolean;
   error?: string;
+  r2?: StorageProviderStatus;
+  storageProvider?: 'r2' | 's3' | 'none';
 };
 
 type S3Upload = { key?: string; url?: string; uploadedAt?: string };
@@ -31,17 +41,29 @@ export function S3StatusPanel() {
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
   return (
-    <DataPanel title="AWS S3 Storage" live>
-      <p className="settings-panel-desc">Media uploads and deployment artifacts — same health block as desktop Integrations.</p>
+    <DataPanel title="Cloud Storage (R2 / S3)" live>
+      <p className="settings-panel-desc">Media uploads — Cloudflare R2 preferred when configured; AWS S3 fallback.</p>
       <SparkRow items={[
-        { label: 'Configured', value: status.configured ? 'Yes' : 'No', status: status.configured ? 'ok' : 'warn' },
-        { label: 'Bucket', value: status.bucket || '—' },
-        { label: 'Region', value: status.region || '—' },
+        { label: 'Active provider', value: status.storageProvider === 'r2' ? 'Cloudflare R2' : status.storageProvider === 's3' ? 'AWS S3' : 'None', status: status.storageProvider && status.storageProvider !== 'none' ? 'ok' : 'warn' },
+        { label: 'R2 configured', value: status.r2?.configured ? 'Yes' : 'No', status: status.r2?.configured ? 'ok' : 'warn' },
+        { label: 'S3 configured', value: status.configured ? 'Yes' : 'No', status: status.configured ? 'ok' : 'warn' },
       ]} />
+      {status.r2?.configured && (
+        <SparkRow items={[
+          { label: 'R2 bucket', value: status.r2.bucket || '—' },
+          { label: 'R2 account', value: status.r2.accountId ? `${status.r2.accountId.slice(0, 8)}…` : '—' },
+        ]} />
+      )}
+      {status.configured && (
+        <SparkRow items={[
+          { label: 'S3 bucket', value: status.bucket || '—' },
+          { label: 'S3 region', value: status.region || '—' },
+        ]} />
+      )}
       <div className="post-card" style={{ marginTop: 12, fontSize: '0.85rem' }}>
-        {status.ok
-          ? <span className="status-ok">S3 connection healthy</span>
-          : <span className="status-partial">{status.error || 'S3 not configured — set AWS keys in Settings'}</span>}
+        {status.storageProvider && status.storageProvider !== 'none'
+          ? <span className="status-ok">{status.storageProvider === 'r2' ? 'R2' : 'S3'} storage active</span>
+          : <span className="status-partial">{status.error || 'No storage configured — set CLOUDFLARE_R2_* or AWS_S3_* in API env'}</span>}
       </div>
       <button type="button" className="btn" style={{ marginTop: 12 }} onClick={async () => {
         await refresh();

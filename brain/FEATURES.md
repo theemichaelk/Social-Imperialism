@@ -52,7 +52,7 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 | Panel | Desktop | Web |
 |-------|---------|-----|
 | Email auto-reply campaigns | `integrations.html` (toggle + test send) | Integrations → Email Campaigns |
-| S3 storage health | `integrations.html` AWS card | `S3StatusPanel` on Connections tab |
+| S3 / R2 storage health | `integrations.html` AWS card | `S3StatusPanel` on Connections tab (R2 + S3) |
 | Partner API / Webhooks | Desktop basic | Web full hub (unchanged) |
 
 ## Scheduler parity
@@ -68,7 +68,7 @@ Public marketing pages (`/`, `/founder`, footer, nav) self-update from `apps/web
 
 | Surface | Coverage |
 |---------|----------|
-| `PageShell` + `PageFocusRail` | 24 authenticated module routes in `pageFocus.ts` |
+| `PageShell` + `PageFocusRail` | **26** authenticated module routes in `pageFocus.ts` |
 | `ManageableTabNav` focus mode | **7** tab-heavy pages: Dashboard, Browse Posts, History, Settings, Integrations, Content Library, Account Creator |
 | `ContentHubTabNav` focus mode | Content Hub (dedicated tab catalog) |
 | Sidebar hints | All nav items in `nav.ts` |
@@ -95,6 +95,21 @@ Public marketing pages (`/`, `/founder`, footer, nav) self-update from `apps/web
 | Prompt Vault seed | `pv_seed_sovereign_threat` | `feature: sovereign` |
 
 Persistent requirement for all past, current, and future modules — every action pending until THEE_MICHAEL Accept or Deny.
+
+## THEE_MICHAEL v3.0-Aethelgard (July 2026)
+
+**Brain:** [features/AETHELGARD_PROTOCOL.md](./features/AETHELGARD_PROTOCOL.md)
+
+| Capability | API / Core | Web |
+|------------|------------|-----|
+| Imperial pipeline A (content) | `run-imperial-pipeline` (18 steps) | `ImperialContentStudio.tsx` |
+| Imperial pipeline B (strategy) | same (8 steps) | Pipeline selector in Content Hub |
+| R2 edge storage | `apps/api/src/r2.js` | `S3StatusPanel` shows R2 status |
+| Lead capture modal | `POST /api/leads/capture` | `LeadCaptureModal` on `/` + `/founder` |
+| Welcome email drip | `leadCaptureService` + scheduler | — |
+| Predictive motivation | — | `PredictiveMotivationPanel` on dashboard |
+
+**IPC handlers:** **371** (verify via `node apps/desktop/_ipc-parity-report.js`)
 
 ## Settings & integrations (existing)
 

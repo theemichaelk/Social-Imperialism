@@ -12,6 +12,7 @@ export const PAGE_CHANNELS = {
     'serp-search', 'generate-image', 'schedule-post', 'publish-post', 'get-section-live',
   ],
   contentHub: [
+    'get-imperial-pipeline-config', 'run-imperial-pipeline',
     'publish-post', 'schedule-post', 'generate-ai', 'generate-image', 'search-stock-photo',
     'curate-from-rss', 'run-content-studio', 'generate-content-batch', 'get-content-studio-config',
     'generate-viral-thumbnail', 'generate-viral-thumbnail-batch', 'get-thumbnail-studio-config',
@@ -28,9 +29,7 @@ export const PAGE_CHANNELS = {
     'get-dns-sites', 'get-dns-records', 'save-dns-record', 'apply-dns-records', 'sync-dns-sites',
     'generate-from-library-assets', 'schedule-content-batch', 'get-section-live',
     'get-format-templates', 'recreate-from-format-template',
-    'remove-content-queue-item', 'seed-brand-from-website', 'get-active-campaign', 'get-keywords',
-    'grok-build-prompt-preview', 'discover-site-rss', 'run-category-rss-router', 'run-content-scheduler-now',
-    'get-ai-replies', 'update-ai-reply', 'delete-ai-reply', 'deepl-translate', 'play-tts', 'generate-carousel-fal',
+    'get-active-campaign', 'get-keywords', 'grok-build-prompt-preview',
   ],
   browsePosts: [
     'get-live-feed', 'get-keywords', 'get-linked-accounts', 'get-dashboard-stats',

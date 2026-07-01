@@ -54,6 +54,14 @@ export function ImperialContentStudio() {
   const [useLibrary, setUseLibrary] = useState(true);
   const [publishAccountId, setPublishAccountId] = useState('');
   const [defaultMediaUrl, setDefaultMediaUrl] = useState('');
+  const [imperialTopic, setImperialTopic] = useState('');
+  const [imperialPipeline, setImperialPipeline] = useState<'content' | 'strategy'>('content');
+  const [imperialConfig, setImperialConfig] = useState<{
+    pipelineA?: { label: string; steps: Array<{ id: string; label: string }> };
+    pipelineB?: { label: string; steps: Array<{ id: string; label: string }> };
+  } | null>(null);
+  const [imperialResult, setImperialResult] = useState<{ stepCount?: number; assembled?: string; error?: string } | null>(null);
+  const [imperialLoading, setImperialLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     const [camp, accs, cfg, kws, lib] = await Promise.all([
@@ -78,7 +86,38 @@ export function ImperialContentStudio() {
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
+  useEffect(() => {
+    invoke<typeof imperialConfig>('get-imperial-pipeline-config')
+      .then((cfg) => setImperialConfig(cfg || null))
+      .catch(() => setImperialConfig(null));
+  }, []);
+
   const approved = useMemo(() => posts.filter((p) => p.status === 'approved'), [posts]);
+
+  async function runImperialPipeline() {
+    const topic = imperialTopic.trim() || keywords.split(/[,\n]+/).map((s) => s.trim()).filter(Boolean)[0];
+    if (!topic) { setMsg('Enter a topic or keyword for the imperial pipeline'); return; }
+    setImperialLoading(true);
+    setImperialResult(null);
+    setMsg(`Running ${imperialPipeline === 'strategy' ? 'Strategy (8-step)' : 'Content (18-step)'} pipeline…`);
+    try {
+      const res = await invoke<{ success?: boolean; stepCount?: number; assembled?: string; error?: string }>('run-imperial-pipeline', {
+        pipeline: imperialPipeline,
+        topic,
+        brandName: campaign.brandName || 'Your Brand',
+        keyword: topic,
+      });
+      if (res.error || res.success === false) throw new Error(res.error || 'Pipeline failed');
+      setImperialResult({ stepCount: res.stepCount, assembled: res.assembled });
+      setMsg(`Pipeline complete — ${res.stepCount} steps`);
+    } catch (e) {
+      const err = (e as Error).message;
+      setImperialResult({ error: err });
+      setMsg(err);
+    } finally {
+      setImperialLoading(false);
+    }
+  }
   async function generateBatch() {
     if (!keywords.trim()) { setMsg('Add keywords or save your brand profile first'); return; }
     if (!selectedTemplates.length) { setMsg('Select at least one template style'); return; }
@@ -198,6 +237,43 @@ export function ImperialContentStudio() {
   return (
     <div className="imperial-content-studio">
       <ContentStudioLivePanel />
+
+      <div className="card ics-panel" style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: '0 0 6px' }}>Imperialism Center Pipelines</h3>
+        <p className="settings-panel-desc" style={{ margin: '0 0 12px' }}>
+          THEE_MICHAEL v3.0-Aethelgard — long-form content (18 steps) or strategy briefs (8 steps).
+        </p>
+        <div className="grid grid-2" style={{ gap: 12 }}>
+          <div>
+            <label className="ac-label">Pipeline</label>
+            <select className="input" value={imperialPipeline} onChange={(e) => setImperialPipeline(e.target.value as 'content' | 'strategy')}>
+              <option value="content">{imperialConfig?.pipelineA?.label || 'Content Engine (18-Step)'}</option>
+              <option value="strategy">{imperialConfig?.pipelineB?.label || 'Strategy Engine (8-Step)'}</option>
+            </select>
+          </div>
+          <div>
+            <label className="ac-label">Topic / keyword</label>
+            <input
+              className="input"
+              value={imperialTopic}
+              onChange={(e) => setImperialTopic(e.target.value)}
+              placeholder={keywords.split(',')[0]?.trim() || 'e.g. social growth automation'}
+            />
+          </div>
+        </div>
+        <button type="button" className="btn primary" style={{ marginTop: 12 }} onClick={runImperialPipeline} disabled={imperialLoading}>
+          {imperialLoading ? 'Running pipeline…' : 'Run Imperial Pipeline'}
+        </button>
+        {imperialResult?.assembled && (
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>Pipeline output ({imperialResult.stepCount} steps)</summary>
+            <pre style={{ marginTop: 8, padding: 12, background: '#0f172a', borderRadius: 8, fontSize: '0.78rem', whiteSpace: 'pre-wrap', maxHeight: 320, overflow: 'auto' }}>
+              {imperialResult.assembled.slice(0, 8000)}
+            </pre>
+          </details>
+        )}
+        {imperialResult?.error && <p className="settings-panel-desc" style={{ marginTop: 8, color: '#f87171' }}>{imperialResult.error}</p>}
+      </div>
 
       <div className="ics-hero">
         <div>

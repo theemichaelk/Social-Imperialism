@@ -6,6 +6,7 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '../..');
+const VERSION = require(path.join(ROOT, 'package.json')).version;
 const API = process.env.API_URL || 'https://api.socialimperialism.com';
 
 const STEPS = [
@@ -18,7 +19,7 @@ const STEPS = [
 ];
 
 console.log('\n╔══════════════════════════════════════════════════════════╗');
-console.log('║  SOCIAL IMPERIALISM v1.2.1 — FULL RELEASE AUDIT          ║');
+console.log(`║  SOCIAL IMPERIALISM v${VERSION} — FULL RELEASE AUDIT          ║`);
 console.log('╚══════════════════════════════════════════════════════════╝');
 console.log(`API: ${API}\n`);
 
@@ -45,5 +46,5 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('\n✓ Full release audit passed — ready to ship v1.2.1\n');
+console.log(`\n✓ Full release audit passed — ready to ship v${VERSION}\n`);
 process.exit(0);

@@ -1,6 +1,6 @@
 {
   "name": "@si/worker",
-  "version": "1.0.0",
+  "version": "1.2.14",
   "private": true,
   "scripts": {
     "dev": "node --watch src/worker.js",

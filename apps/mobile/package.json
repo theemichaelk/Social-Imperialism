@@ -1,7 +1,7 @@
 {
   "name": "@si/mobile-preview",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "1.2.14",
   "dependencies": {
     "@expo/vector-icons": "~14.0.4",
     "expo": "~52.0.46",

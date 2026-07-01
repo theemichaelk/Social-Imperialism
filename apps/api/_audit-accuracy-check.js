@@ -151,6 +151,7 @@ const featureIndexes = [
   'PROMPT_VAULT.md',
   'GROK_ENGINE.md',
   'SITE_BLUEPRINT.md',
+  'AETHELGARD_PROTOCOL.md',
 ];
 for (const f of featureIndexes) {
   const p = path.join(ROOT, 'brain/features', f);
@@ -267,26 +268,71 @@ if (!read(qaSections).includes('get-thee-michael-action-history')) {
   fail('_test-qa-all-sections.js missing THEE_MICHAEL action history QA test');
 }
 
-// --- Report ---
-console.log('══════════════════════════════════════════════════════════');
-console.log('AUDIT ACCURACY CHECK — Social Imperialism');
-console.log('══════════════════════════════════════════════════════════');
-console.log(`pageFocus routes:     ${pageFocusRoutes} (expect ${EXPECTED_MODULES})`);
-console.log(`PageShell pages:      ${pageShellPages} (expect ${EXPECTED_MODULES})`);
-console.log(`ManageableTabNav:     ${manageableTabs} (expect 7)`);
-console.log(`QA page routes:       ${qaPages} (expect ${EXPECTED_MODULES})`);
-console.log(`ImperialismBrain bar: ${exists(imperialBar) ? 'OK' : 'MISSING'}`);
-console.log(`Sovereign landing:    ${exists(landingShield) ? 'OK' : 'MISSING'}`);
-console.log(`Audit rule doc:       ${exists(auditRule) ? 'OK' : 'MISSING'}`);
-console.log(`Security IPC handlers: ${ipcHandlerCount} (expect 11)`);
-console.log(`THEE_MICHAEL panel:   ${read(sovereignPanel).includes('THEE_MICHAEL_BANNER') ? 'OK' : 'MISSING'}`);
-console.log('──────────────────────────────────────────────────────────');
-
-if (FAILURES.length) {
-  console.log(`FAILED: ${FAILURES.length} issue(s)`);
-  FAILURES.forEach((f, i) => console.log(`  ${i + 1}. ${f}`));
-  process.exit(1);
+const pageChannels = path.join(ROOT, 'apps/web/src/lib/pageChannels.ts');
+if (!exists(pageChannels)) fail('Missing apps/web/src/lib/pageChannels.ts');
+else {
+  const pc = read(pageChannels);
+  if (!pc.includes('get-imperial-pipeline-config')) fail('pageChannels.ts missing get-imperial-pipeline-config');
+  if (!pc.includes('run-imperial-pipeline')) fail('pageChannels.ts missing run-imperial-pipeline');
 }
 
-console.log('PASSED: All audit accuracy checks OK');
-process.exit(0);
+const imperialStudio = path.join(ROOT, 'apps/web/src/components/ImperialContentStudio.tsx');
+if (!exists(imperialStudio)) fail('Missing ImperialContentStudio.tsx');
+else if (!read(imperialStudio).includes('run-imperial-pipeline')) {
+  fail('ImperialContentStudio.tsx must wire run-imperial-pipeline UI');
+}
+
+const leadRateLimit = path.join(ROOT, 'apps/api/src/middleware/leadRateLimit.js');
+if (!exists(leadRateLimit)) fail('Missing apps/api/src/middleware/leadRateLimit.js');
+
+const aethelgardBrain = path.join(ROOT, 'brain/features/AETHELGARD_PROTOCOL.md');
+if (!exists(aethelgardBrain)) fail('Missing brain/features/AETHELGARD_PROTOCOL.md');
+
+const EXPECTED_HANDLERS = 371;
+
+// --- Report (async handler count) ---
+(async () => {
+  let handlerCount = 0;
+  try {
+    const { registerAllHandlers } = require(path.join(ROOT, 'packages/core/src/handlerRegistry'));
+    const store = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+    const { handlers } = await registerAllHandlers(store);
+    handlerCount = Object.keys(handlers).length;
+    if (handlerCount !== EXPECTED_HANDLERS) {
+      fail(`IPC handlers: expected ${EXPECTED_HANDLERS}, got ${handlerCount}`);
+    }
+    if (!handlers['get-imperial-pipeline-config']) fail('handler registry missing get-imperial-pipeline-config');
+    if (!handlers['run-imperial-pipeline']) fail('handler registry missing run-imperial-pipeline');
+  } catch (e) {
+    fail(`handler registry load failed: ${e.message}`);
+  }
+
+  console.log('══════════════════════════════════════════════════════════');
+  console.log('AUDIT ACCURACY CHECK — Social Imperialism');
+  console.log('══════════════════════════════════════════════════════════');
+  console.log(`pageFocus routes:     ${pageFocusRoutes} (expect ${EXPECTED_MODULES})`);
+  console.log(`PageShell pages:      ${pageShellPages} (expect ${EXPECTED_MODULES})`);
+  console.log(`ManageableTabNav:     ${manageableTabs} (expect 7)`);
+  console.log(`QA page routes:       ${qaPages} (expect ${EXPECTED_MODULES})`);
+  console.log(`IPC handlers:         ${handlerCount} (expect ${EXPECTED_HANDLERS})`);
+  console.log(`ImperialismBrain bar: ${exists(imperialBar) ? 'OK' : 'MISSING'}`);
+  console.log(`Imperial pipeline UI: ${exists(imperialStudio) && read(imperialStudio).includes('run-imperial-pipeline') ? 'OK' : 'MISSING'}`);
+  console.log(`Sovereign landing:    ${exists(landingShield) ? 'OK' : 'MISSING'}`);
+  console.log(`Audit rule doc:       ${exists(auditRule) ? 'OK' : 'MISSING'}`);
+  console.log(`Aethelgard brain:     ${exists(aethelgardBrain) ? 'OK' : 'MISSING'}`);
+  console.log(`Security IPC handlers: ${ipcHandlerCount} (expect 11)`);
+  console.log(`THEE_MICHAEL panel:   ${read(sovereignPanel).includes('THEE_MICHAEL_BANNER') ? 'OK' : 'MISSING'}`);
+  console.log('──────────────────────────────────────────────────────────');
+
+  if (FAILURES.length) {
+    console.log(`FAILED: ${FAILURES.length} issue(s)`);
+    FAILURES.forEach((f, i) => console.log(`  ${i + 1}. ${f}`));
+    process.exit(1);
+  }
+
+  console.log('PASSED: All audit accuracy checks OK');
+  process.exit(0);
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

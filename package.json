@@ -1,6 +1,6 @@
 {
   "name": "social-imperialism",
-  "version": "1.2.13",
+  "version": "1.2.14",
   "private": true,
   "workspaces": [
     "packages/*",
@@ -48,7 +48,8 @@
     "test:campaign-manager": "node apps/api/_test-campaign-manager.js",
     "test:qa-all-pages": "node apps/api/_test-qa-all-pages.js",
     "test:qa-all-sections": "node apps/api/_test-qa-all-sections.js",
-    "test:qa-full": "node apps/api/_test-qa-full-audit.js"
+    "test:qa-full": "node apps/api/_test-qa-full-audit.js",
+    "test:lead-capture": "node apps/api/_test-lead-capture.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

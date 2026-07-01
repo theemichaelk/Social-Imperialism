@@ -1,9 +1,10 @@
 {
   "name": "@si/db",
-  "version": "1.0.0",
+  "version": "1.2.14",
   "private": true,
   "main": "src/index.js",
   "scripts": {
+    "build": "prisma generate",
     "generate": "prisma generate",
     "push": "prisma db push",
     "migrate": "prisma migrate dev",

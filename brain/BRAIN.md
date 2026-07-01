@@ -19,6 +19,7 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 | [features/PAGE_FOCUS_UX.md](./features/PAGE_FOCUS_UX.md) | Feature index — focus rails + tab UX |
 | [features/PROMPT_VAULT.md](./features/PROMPT_VAULT.md) | Feature index — prompt templates |
 | [features/GROK_ENGINE.md](./features/GROK_ENGINE.md) | Feature index — Grok browser automation |
+| [features/AETHELGARD_PROTOCOL.md](./features/AETHELGARD_PROTOCOL.md) | THEE_MICHAEL v3.0-Aethelgard — pipelines, R2, lead capture |
 | [AGENTS.md](./AGENTS.md) | Agent registry — IDs, surfaces, routing keywords |
 | [PROMPT_VAULT.md](./PROMPT_VAULT.md) | Prompt Vault — create, search, load, export, delete templates per campaign |
 | [FEATURES.md](./FEATURES.md) | Master feature catalog (desktop + web parity) |

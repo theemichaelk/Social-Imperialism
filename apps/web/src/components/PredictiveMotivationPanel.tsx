@@ -28,9 +28,9 @@ export function PredictiveMotivationPanel({ status }: { status?: SetupStatus | n
   if (status.complete) {
     const lift = 12 + Math.min(linked * 3, 18);
     headline = `Your validation campaign is outperforming baseline by ~${lift}%.`;
-    detail = 'Cohorts at scale gain extra conversion lift by enabling the Imperial content pipeline in Content Hub.';
+    detail = 'Run the 18-step Imperial content pipeline in Content Hub to generate production-ready assets.';
     href = '/content-hub';
-    cta = 'Open Imperiliasm Center';
+    cta = 'Open Imperialism Center';
   } else if (!hasKw && apis >= 3) {
     headline = 'API connections are live — keywords unlock feed discovery.';
     detail = 'Accounts with tracked keywords see 18% more matched posts in the first week.';
@@ -47,7 +47,7 @@ export function PredictiveMotivationPanel({ status }: { status?: SetupStatus | n
 
   return (
     <div className="predictive-motivation-panel">
-      <p className="predictive-motivation-eyebrow">THEE_MICHAEL · Imperiliasm Center</p>
+      <p className="predictive-motivation-eyebrow">THEE_MICHAEL · Imperialism Center</p>
       <p className="predictive-motivation-headline">{headline}</p>
       <p className="predictive-motivation-detail">{detail}</p>
       <Link href={href} className="predictive-motivation-cta">{cta} →</Link>

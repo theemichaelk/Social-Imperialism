@@ -32,10 +32,12 @@ When reviewing **any** change — including retroactive audits of earlier assist
 
 | Claim | Verified value | How to verify |
 |-------|----------------|---------------|
-| QA module pages | **25** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
-| QA page features | **195** OK | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
-| QA section features | **144** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
-| `PageShell` + `PageFocusRail` | **25** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
+| QA module pages | **26** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
+| QA page features | **195+** OK | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
+| QA section features | **144+** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
+| `PageShell` + `PageFocusRail` | **26** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
+| SaaS IPC handlers | **371** | `node apps/desktop/_ipc-parity-report.js` → `saasHandlers` |
+| Imperial pipeline A / B | **18** / **8** steps | `get-imperial-pipeline-config` |
 | `ManageableTabNav` focus mode | **7** pages | dashboard, browse-posts, history, settings, integrations, content-library, account-creator |
 | `ContentHubTabNav` focus mode | **1** page | content-hub |
 | User-facing brain name | **Imperialism Brain** | `ImperialismBrainPromptBar`, nav label, support page |
@@ -67,7 +69,9 @@ When reviewing **any** change — including retroactive audits of earlier assist
 | "137/137 sections" (stale) | **138/138** — re-run production QA after any test change |
 | "SOVEREIGN THREAT CAPTURED" banner | User-facing: **THEE_MICHAEL SECURITY REVIEW REQUIRED** |
 | "Kinetic code shown in production API" | Code delivered via **email/webhook** only in production |
-| "18 app modules" on landing | **25** authenticated module routes in SaaS |
+| "18 app modules" on landing | **26** authenticated module routes in SaaS |
+| "25 module routes" (stale) | **26** — re-count `pageFocus.ts` |
+| "350 IPC handlers" (stale) | **371** — re-run IPC parity report |
 | "7 Sovereign IPC channels" | **11** channels — see `THEE_MICHAEL_SECURITY.md` |
 | "Sovereign" user-facing brand | User-facing: **THEE_MICHAEL Security Control** |
 | "Deployed/fixed without QA" | Must run `audit:accuracy` + `test:sovereign-scan` + production QA |
@@ -94,6 +98,7 @@ All feature updates must also comply with [SOVEREIGN_THREAT_CAPTURE.md](../SOVER
 | [GROK_ENGINE.md](./GROK_ENGINE.md) | Grok browser automation |
 | [SITE_BLUEPRINT.md](./SITE_BLUEPRINT.md) | Public pages self-update from nav + brain |
 | [THEE_MICHAEL_SECURITY.md](./THEE_MICHAEL_SECURITY.md) | THEE_MICHAEL Security Control — Accept/Deny/Undo |
+| [AETHELGARD_PROTOCOL.md](./AETHELGARD_PROTOCOL.md) | THEE_MICHAEL v3.0-Aethelgard — pipelines, R2, lead capture |
 
 ---
 

@@ -117,8 +117,10 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerVerifiedNodeHandlers } = require(path.join(DESKTOP_SERVICES, 'verifiedNodeEngine/verifiedNodeIpc'));
   registerVerifiedNodeHandlers({ ipcMain, store, resolveKeys });
 
-  const { registerAccountCreatorHandlers } = require(path.join(DESKTOP_SERVICES, 'accountCreatorIpc'));
-  registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress: () => {}, userDataPath });
+  const accountCreatorIpc = safeRequireService('accountCreatorIpc.js', 'Account creator IPC');
+  if (accountCreatorIpc?.registerAccountCreatorHandlers) {
+    accountCreatorIpc.registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress: () => {}, userDataPath });
+  }
 
   const grokIpc = safeRequireService('grokIpc.js', 'Grok IPC');
   if (grokIpc?.registerGrokHandlers) {
@@ -161,8 +163,10 @@ async function registerAllHandlers(store, deps = {}) {
     thumbnailIpc.registerThumbnailHandlers({ ipcMain, store, resolveKeys, generateAI, userDataPath });
   }
 
-  const { registerQuantumPagesHandlers } = require(path.join(DESKTOP_SERVICES, 'quantumPagesIpc'));
-  registerQuantumPagesHandlers({ ipcMain, store, generateAI });
+  const quantumPagesIpc = safeRequireService('quantumPagesIpc.js', 'Quantum pages IPC');
+  if (quantumPagesIpc?.registerQuantumPagesHandlers) {
+    quantumPagesIpc.registerQuantumPagesHandlers({ ipcMain, store, generateAI });
+  }
 
   const quoraTrafficOpsIpc = safeRequireService('quoraTrafficOpsIpc.js', 'Quora traffic ops IPC');
   if (quoraTrafficOpsIpc?.registerQuoraTrafficOpsHandlers) quoraTrafficOpsIpc.registerQuoraTrafficOpsHandlers({
@@ -199,11 +203,15 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerIssueControlPlaneHandlers } = require('./issueControlPlane');
   registerIssueControlPlaneHandlers({ ipcMain, store, handlers, resolveKeys });
 
-  const { registerEmailCampaignHandlers } = require(path.join(DESKTOP_SERVICES, 'emailCampaignIpc'));
-  registerEmailCampaignHandlers({ ipcMain, store });
+  const emailCampaignIpc = safeRequireService('emailCampaignIpc.js', 'Email campaign IPC');
+  if (emailCampaignIpc?.registerEmailCampaignHandlers) {
+    emailCampaignIpc.registerEmailCampaignHandlers({ ipcMain, store });
+  }
 
-  const { registerDnsHandlers } = require(path.join(DESKTOP_SERVICES, 'dnsIpc'));
-  registerDnsHandlers({ ipcMain, store });
+  const dnsIpc = safeRequireService('dnsIpc.js', 'DNS IPC');
+  if (dnsIpc?.registerDnsHandlers) {
+    dnsIpc.registerDnsHandlers({ ipcMain, store });
+  }
 
   const { registerImperialPipelineHandlers } = require('./imperialContentPipeline');
   registerImperialPipelineHandlers({ ipcMain, generateAI });

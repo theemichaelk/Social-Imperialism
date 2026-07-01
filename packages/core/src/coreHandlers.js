@@ -56,7 +56,18 @@ function registerCoreHandlers(deps) {
 
   const s3Upload = require(path.join(desktopServicesPath, 's3Upload'));
 
-  ipcMain.handle('get-s3-status', () => s3Upload.getS3Status());
+  ipcMain.handle('get-s3-status', () => {
+    const s3 = s3Upload.getS3Status();
+    let r2 = { configured: false, provider: 'r2' };
+    try {
+      r2 = require(path.join(__dirname, '../../../apps/api/src/r2')).getR2Status();
+    } catch (e) { /* R2 module optional in desktop-only contexts */ }
+    return {
+      ...s3,
+      r2,
+      storageProvider: r2.configured ? 'r2' : (s3.configured ? 's3' : 'none'),
+    };
+  });
   ipcMain.handle('list-s3-uploads', async (event, payload = {}) => s3Upload.listUploads(payload));
   ipcMain.handle('upload-to-s3', async (event, payload = {}) => {
     const { dataUrl, filename, folder } = payload || {};

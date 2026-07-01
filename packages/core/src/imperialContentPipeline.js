@@ -1,5 +1,5 @@
 /**
- * Imperiliasm Center — Pipeline A (18-step content) & Pipeline B (8-step strategy).
+ * Imperialism Center — Pipeline A (18-step content) & Pipeline B (8-step strategy).
  * THEE_MICHAEL v3.0-Aethelgard fabrication matrix.
  */
 

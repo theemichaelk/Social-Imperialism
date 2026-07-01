@@ -101,7 +101,9 @@ async function tickOnboardingEmails() {
 
 async function tickDripRules() {
   try {
-    const { processColdContactRules } = require('./services/leadCaptureService');
+    const { processColdContactRules, processLeadWelcomeEmails } = require('./services/leadCaptureService');
+    const welcome = await processLeadWelcomeEmails();
+    if (welcome.sent) console.log(`[scheduler] lead welcome emails sent: ${welcome.sent}`);
     const cold = await processColdContactRules();
     if (cold.rerouted) console.log(`[scheduler] drip: ${cold.rerouted} cold contacts → win-back`);
   } catch (e) {
