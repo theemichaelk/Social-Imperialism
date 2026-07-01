@@ -5,8 +5,32 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const nativeBrowser = require('./nativeBrowserLauncher');
-const { coreRequire } = require('../coreRequire');
-const { GROK_DEFAULTS } = coreRequire('src/grokDefaults');
+
+function loadGrokDefaults() {
+  try {
+    const { coreRequire } = require('../coreRequire');
+    return coreRequire('src/grokDefaults').GROK_DEFAULTS;
+  } catch {
+    try {
+      return require(path.join(__dirname, '../../../packages/core/src/grokDefaults')).GROK_DEFAULTS;
+    } catch {
+      return {
+        platform: 'grok',
+        url: 'https://grok.com/',
+        imagineUrl: 'https://grok.com/imagine',
+        email: '',
+        password: '',
+        autoLogin: true,
+        browserId: 'edge',
+        launchMode: 'app_profile',
+        profileKey: 'grok',
+        assetsSubdir: 'grok-assets',
+      };
+    }
+  }
+}
+
+const GROK_DEFAULTS = loadGrokDefaults();
 
 let puppeteer;
 try {

@@ -10,6 +10,7 @@ import { useIntelligence } from '@/hooks/useIntelligence';
 import { normalizeProfile } from '@/lib/intelligenceProfile';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { ALL_PLATFORMS } from '@/lib/platforms';
+import { connectHintFor } from '@/lib/connectHints';
 
 const PLATFORMS = [...ALL_PLATFORMS];
 
@@ -100,14 +101,20 @@ export default function AccountHubPage() {
   }
 
   async function refresh() {
-    const [a, s] = await Promise.all([
-      invoke<Account[]>('get-linked-accounts'),
-      invoke<HubStatus>('get-account-hub-status'),
-    ]);
-    setAccounts(a);
-    setHubStatus(s);
-    if (!selected && a.length) setSelected(a[0]);
-    else if (selected) setSelected(a.find((x) => x.id === selected.id) || a[0] || null);
+    try {
+      const [a, s] = await Promise.all([
+        invoke<Account[]>('get-linked-accounts'),
+        invoke<HubStatus>('get-account-hub-status'),
+      ]);
+      const list = Array.isArray(a) ? a : [];
+      setAccounts(list);
+      setHubStatus(s || {});
+      if (!selected && list.length) setSelected(list[0]);
+      else if (selected) setSelected(list.find((x) => x.id === selected.id) || list[0] || null);
+    } catch (e) {
+      setMsg((e as Error).message || 'Failed to load linked accounts');
+      setAccounts([]);
+    }
   }
 
   async function loadTargets(accountId: string) {
@@ -401,7 +408,7 @@ export default function AccountHubPage() {
                   key={p}
                   className="btn"
                   style={{ opacity: linked ? 1 : 0.7, fontSize: '0.8rem' }}
-                  onClick={() => { setConnectPlatform(p); connect('oauth'); }}
+                  onClick={() => setConnectPlatform(p)}
                 >
                   {linked ? '✓ ' : ''}{p}
                 </button>
@@ -411,9 +418,12 @@ export default function AccountHubPage() {
           <select className="input" value={connectPlatform} onChange={(e) => setConnectPlatform(e.target.value)} style={{ marginBottom: 8 }}>
             {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
-          <input className="input" placeholder="Email (optional)" value={creds.email} onChange={(e) => setCreds({ ...creds, email: e.target.value })} style={{ marginBottom: 8 }} />
-          <input className="input" placeholder="Username (optional)" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} style={{ marginBottom: 8 }} />
-          <input className="input" type="password" placeholder="Password (credentials flow)" value={creds.password} onChange={(e) => setCreds({ ...creds, password: e.target.value })} style={{ marginBottom: 8 }} />
+          <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: 10, lineHeight: 1.45 }}>
+            {connectHintFor(connectPlatform)}
+          </p>
+          <input className="input" placeholder={connectPlatform === 'YouTube' ? 'Google email' : 'Email (optional)'} value={creds.email} onChange={(e) => setCreds({ ...creds, email: e.target.value })} style={{ marginBottom: 8 }} />
+          <input className="input" placeholder="Username / @handle (optional)" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} style={{ marginBottom: 8 }} />
+          <input className="input" type="password" placeholder={connectPlatform === 'YouTube' ? 'Google password (Email & Password tab)' : 'Password or API token'} value={creds.password} onChange={(e) => setCreds({ ...creds, password: e.target.value })} style={{ marginBottom: 8 }} />
 
           <div className="card" style={{ marginBottom: 12, padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.45)' }}>
             <h4 style={{ margin: '0 0 8px', fontSize: '0.9rem' }}>Connection route (Proxy / IP)</h4>
@@ -447,7 +457,7 @@ export default function AccountHubPage() {
               {connecting ? 'Connecting…' : 'OAuth Connect'}
             </button>
             <button className="btn" onClick={() => connect('credentials')} disabled={connecting}>
-              {connecting ? 'Connecting…' : 'Credentials'}
+              {connecting ? 'Connecting…' : 'Email & Password'}
             </button>
           </div>
           {msg && <p style={{ marginTop: 8, color: '#94a3b8', fontSize: '0.85rem' }}>{msg}</p>}

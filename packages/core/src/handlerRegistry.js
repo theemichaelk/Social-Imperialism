@@ -110,8 +110,12 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerAccountCreatorHandlers } = require(path.join(DESKTOP_SERVICES, 'accountCreatorIpc'));
   registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarApi, onBatchProgress: () => {}, userDataPath });
 
-  const { registerGrokHandlers } = require(path.join(DESKTOP_SERVICES, 'grokIpc'));
-  registerGrokHandlers({ ipcMain, store, userDataPath });
+  try {
+    const { registerGrokHandlers } = require(path.join(DESKTOP_SERVICES, 'grokIpc'));
+    registerGrokHandlers({ ipcMain, store, userDataPath });
+  } catch (e) {
+    console.warn('[handlerRegistry] Grok handlers skipped:', e.message);
+  }
 
   const { registerNativeBrowserHandlers } = require(path.join(DESKTOP_SERVICES, 'nativeBrowserIpc'));
   registerNativeBrowserHandlers({ ipcMain, store, userDataPath });

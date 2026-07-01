@@ -1,9 +1,18 @@
 /**
  * Content Studio — multi-format generation + long-range scheduling.
  */
-const { coreRequire } = require('../coreRequire');
-const { applyContentHumanization, HUMANIZATION_LEVELS } = coreRequire('src/contentHumanization');
-const { getTemplateSpec } = coreRequire('src/imperialTemplateMap');
+const path = require('path');
+
+function loadCoreModule(subpath) {
+  try {
+    const { coreRequire } = require('../coreRequire');
+    return coreRequire(subpath);
+  } catch {
+    return require(path.join(__dirname, '../../../packages/core/src', subpath.replace(/^src\//, '')));
+  }
+}
+const { applyContentHumanization, HUMANIZATION_LEVELS } = loadCoreModule('src/contentHumanization');
+const { getTemplateSpec } = loadCoreModule('src/imperialTemplateMap');
 
 const MAX_CAMPAIGN_DAYS = 180;
 const MAX_SCHEDULED_POSTS = 200;

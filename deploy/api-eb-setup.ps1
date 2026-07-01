@@ -30,8 +30,12 @@ foreach ($item in $items) {
 # @si/core requires apps/desktop services + saasAi at runtime
 New-Item -ItemType Directory -Path (Join-Path $Staging "apps\desktop") -Force | Out-Null
 Copy-Item (Join-Path $RepoRoot "apps\desktop\package.json") (Join-Path $Staging "apps\desktop\") -Force
+Copy-Item (Join-Path $RepoRoot "apps\desktop\coreRequire.js") (Join-Path $Staging "apps\desktop\") -Force
 Copy-Item (Join-Path $RepoRoot "apps\desktop\services") (Join-Path $Staging "apps\desktop\services") -Recurse -Force
 Copy-Item (Join-Path $RepoRoot "apps\desktop\saasAi.js") (Join-Path $Staging "apps\desktop\") -Force -ErrorAction SilentlyContinue
+if (-not (Test-Path (Join-Path $Staging "apps\desktop\coreRequire.js"))) {
+  throw "EB bundle missing apps/desktop/coreRequire.js — SaaS handler registry will fail at runtime"
+}
 
 # Secrets go in bundled .env files (EB option_settings has a 4096-char CloudFormation limit)
 $rdsStatePath = Join-Path $DeployDir "rds-state.json"
