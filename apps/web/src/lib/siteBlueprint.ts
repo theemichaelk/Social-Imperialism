@@ -77,17 +77,15 @@ export function getPublicNavActions(loggedIn = false): PublicNavAction[] {
   }
   return [
     { id: 'sign-in', label: 'Sign In', href: '/login', variant: 'glass' },
-    { id: 'open-dashboard', label: 'Open Dashboard', href: '/dashboard', variant: 'primary' },
+    { id: 'subscribe', label: 'Get Started', href: '/subscribe', variant: 'primary' },
   ];
 }
 
 /** Default footer links — Sign In, Dashboard, Integrations, Settings, Founder */
 export const FOOTER_LINKS = [
+  { href: '/subscribe', label: 'Get Started' },
   { href: '/login', label: 'Sign In' },
-  { href: '/dashboard', label: 'Dashboard' },
   { href: '/download', label: 'Download Desktop' },
-  { href: '/integrations', label: 'Integrations' },
-  { href: '/settings', label: 'Settings' },
   { href: '/founder', label: 'Founder' },
 ] as const;
 

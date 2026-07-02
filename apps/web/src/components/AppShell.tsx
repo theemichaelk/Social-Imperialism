@@ -5,7 +5,7 @@ import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
 import { LiveSupportPanel } from './LiveSupportPanel';
 import { ImperialismBrainPromptBar } from './ImperialismBrainPromptBar';
-import { bootstrapSession, getToken, clearSession } from '@/lib/api';
+import { bootstrapSession, enforceAccessGate, getToken, clearSession } from '@/lib/api';
 import { SovereignThreatBanner } from './SovereignThreatBanner';
 import { LeadCaptureModal } from './LeadCaptureModal';
 
@@ -41,6 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     if (token && !isPublic) {
       bootstrapSession()
+        .then(() => enforceAccessGate())
         .catch(() => {
           clearSession();
           window.location.replace('/login');

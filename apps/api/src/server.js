@@ -10,6 +10,7 @@ const billingRoutes = require('./routes/billing');
 const orgRoutes = require('./routes/orgs');
 const partnerRoutes = require('./routes/partner');
 const { requireAuth } = require('./middleware/auth');
+const { requireActiveSubscription, requireActiveSubscriptionForInvoke } = require('./middleware/subscription');
 const { sovereignThreatShield } = require('./middleware/sovereignThreatShield');
 const { resolveActiveProject } = require('./projectEnsure');
 const s3 = require('./s3');
@@ -149,7 +150,7 @@ app.use('/api/admin', requireAuth, require('./routes/admin'));
 app.use('/api/orgs', requireAuth, orgRoutes);
 app.use('/api/v1', partnerRoutes);
 
-app.get('/api/channels', requireAuth, async (req, res) => {
+app.get('/api/channels', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
     const project = await getActiveProject(req.user.orgId, req.query.projectId);
     const channels = listChannels(project.id, req.user.orgId);
@@ -159,7 +160,7 @@ app.get('/api/channels', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/invoke/:channel', requireAuth, sovereignThreatShield, async (req, res) => {
+app.post('/api/invoke/:channel', requireAuth, requireActiveSubscriptionForInvoke, sovereignThreatShield, async (req, res) => {
   try {
     const project = await getActiveProject(req.user.orgId, req.body?.projectId || req.headers['x-project-id']);
     const args = Array.isArray(req.body?.args) ? req.body.args : (req.body?.arg != null ? [req.body.arg] : []);
@@ -206,7 +207,7 @@ eventBus.on('*', (event) => {
   }
 });
 
-app.get('/api/events/stream', requireAuth, async (req, res) => {
+app.get('/api/events/stream', requireAuth, requireActiveSubscription, async (req, res) => {
   const project = await getActiveProject(req.user.orgId, req.headers['x-project-id']);
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');

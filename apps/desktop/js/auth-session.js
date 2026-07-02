@@ -102,7 +102,11 @@ async function verifySessionToken(token) {
       { headers: { Authorization: `Bearer ${token}` } },
       AUTH_TIMEOUT_MS,
     );
-    return response.ok;
+    if (!response.ok) return false;
+    const data = await response.json().catch(() => ({}));
+    if (data.user?.isAdmin) return true;
+    if (data.needsPasswordSetup) return false;
+    return data.hasActiveSubscription !== false;
   } catch (e) {
     return false;
   }

@@ -55,8 +55,8 @@ export function HomeShowcaseSlider({ loggedIn }: Props) {
             <div className="home-showcase-card-body">
               <h3 key={slide.id}>{slide.title}</h3>
               <p>{slide.caption}</p>
-              <NavAnchor href="/dashboard" className="btn primary home-cta-sm">
-                Open Module →
+              <NavAnchor href={loggedIn ? (slide.href || '/dashboard') : '/subscribe'} className="btn primary home-cta-sm">
+                {loggedIn ? 'Open Module →' : 'Get Started →'}
               </NavAnchor>
             </div>
           </div>

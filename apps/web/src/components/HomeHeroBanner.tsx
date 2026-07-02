@@ -74,7 +74,11 @@ export function HomeHeroBanner({ loggedIn, apiLabel }: Props) {
             <h1 className="home-banner-title">{slide.title}</h1>
             <p className="home-banner-sub">{slide.subtitle}</p>
             <div className="home-hero-cta">
-              <NavAnchor href="/login" className="btn primary home-cta-lg home-btn-glow">Open Dashboard</NavAnchor>
+              {loggedIn ? (
+                <NavAnchor href="/dashboard" className="btn primary home-cta-lg home-btn-glow">Open Dashboard</NavAnchor>
+              ) : (
+                <NavAnchor href="/subscribe" className="btn primary home-cta-lg home-btn-glow">Get Started</NavAnchor>
+              )}
               <NavAnchor href="/download" className="btn home-cta-lg home-btn-glass">Download Desktop</NavAnchor>
               <a href="#showcase" className="btn home-cta-lg home-btn-glass">Watch Demo</a>
             </div>

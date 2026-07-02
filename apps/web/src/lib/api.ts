@@ -50,10 +50,28 @@ export async function logout() {
   }
 }
 
-type MeResponse = {
+export type ApiError = Error & {
+  retryable?: boolean;
+  code?: string;
+  subscribeUrl?: string;
+  setupUrl?: string;
+};
+
+export type MeResponse = {
   user?: { id: string; email?: string; name?: string; isAdmin?: boolean };
   project?: { id: string; name?: string };
   projects?: Array<{ id: string; name?: string; isActive?: boolean }>;
+  hasActiveSubscription?: boolean;
+  needsPasswordSetup?: boolean;
+  subscribeUrl?: string;
+  setupUrl?: string;
+  billing?: {
+    plan?: string;
+    planName?: string;
+    status?: string;
+    priceLabel?: string;
+    billingEmail?: string;
+  };
 };
 
 let bootstrapPromise: Promise<void> | null = null;
@@ -84,6 +102,21 @@ export async function bootstrapSession(): Promise<void> {
   if (!getToken()) return;
   if (!bootstrapPromise) bootstrapPromise = repairSession();
   await bootstrapPromise;
+}
+
+/** Enforce subscription + password setup after session bootstrap (non-admin). */
+export async function enforceAccessGate(): Promise<void> {
+  const token = getToken();
+  if (!token || typeof window === 'undefined') return;
+  const me = await auth.me() as MeResponse;
+  if (me.user?.isAdmin) return;
+  if (me.needsPasswordSetup && me.setupUrl) {
+    window.location.replace(me.setupUrl);
+    return;
+  }
+  if (me.hasActiveSubscription === false) {
+    window.location.replace(me.subscribeUrl || '/subscribe');
+  }
 }
 
 function isStaleProjectError(msg: string) {
@@ -139,11 +172,19 @@ export async function apiFetch(path: string, options: RequestInit = {}, retrySta
       await sleep(400 * (attempt + 1));
       return apiFetch(path, options, { allowSessionRetry, attempt: attempt + 1 });
     }
-    const err = new Error(msg) as Error & { retryable?: boolean; code?: string };
+    const err = new Error(msg) as ApiError;
     err.retryable = !!json.retryable;
     err.code = json.code as string | undefined;
+    if (typeof json.subscribeUrl === 'string') err.subscribeUrl = json.subscribeUrl;
+    if (typeof json.setupUrl === 'string') err.setupUrl = json.setupUrl;
     if (isSovereignError(err.code)) {
       reportSovereignClientAnomaly(path, err.code!, msg);
+    }
+    if (typeof window !== 'undefined' && err.code === 'SUBSCRIPTION_REQUIRED' && err.subscribeUrl) {
+      window.location.replace(err.subscribeUrl);
+    }
+    if (typeof window !== 'undefined' && err.code === 'PASSWORD_SETUP_REQUIRED' && err.setupUrl) {
+      window.location.replace(err.setupUrl);
     }
     throw err;
   }

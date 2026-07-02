@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { NavAnchor } from '@/components/NavAnchor';
-import { auth, getToken, setSession } from '@/lib/api';
+import { auth, getToken, setSession, type ApiError } from '@/lib/api';
 import { validateEmail, validatePassword, validationErrorMessage } from '@/lib/authValidation';
 import { Logo } from '@/components/Logo';
 import { FooterCredit } from '@/components/FooterCredit';
@@ -49,8 +49,16 @@ export default function LoginPage() {
       setSession(res);
       window.location.replace('/dashboard');
     } catch (err) {
-      const msg = (err as Error).message;
-      setError(msg);
+      const e = err as ApiError;
+      if (e.setupUrl) {
+        window.location.href = e.setupUrl;
+        return;
+      }
+      if (e.subscribeUrl) {
+        window.location.href = e.subscribeUrl;
+        return;
+      }
+      setError(e.message);
     } finally {
       setLoading(false);
     }

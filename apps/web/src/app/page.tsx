@@ -121,8 +121,8 @@ export default function HomePage() {
             <ul className="home-checklist">
               {intelligenceBullets.map((t) => <li key={t}>{t}</li>)}
             </ul>
-            <NavAnchor href="/dashboard" className="btn primary home-cta-lg home-btn-glow">
-              Open Mission Control
+            <NavAnchor href={loggedIn ? '/dashboard' : '/subscribe'} className="btn primary home-cta-lg home-btn-glow">
+              {loggedIn ? 'Open Mission Control' : 'Get Started'}
             </NavAnchor>
           </div>
           <div className="home-stats-panel home-glass-panel">

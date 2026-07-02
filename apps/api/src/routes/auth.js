@@ -13,6 +13,7 @@ const {
   userHasActiveSubscription,
   setupSubscriberPassword,
   isAdminEmail,
+  getOrgBilling,
 } = require('../subscriptionAccess');
 const {
   validateLoginBody,
@@ -212,8 +213,17 @@ router.get('/me', requireAuth, async (req, res) => {
         orderBy: { createdAt: 'asc' },
       })
       : projects;
+
+    const admin = isAdminEmail(user.email);
+    const access = admin
+      ? { ok: true, billing: await getOrgBilling(req.user.orgId) }
+      : await userHasActiveSubscription(user.id, user.email);
+    const billing = access.billing || null;
+    const hasActiveSubscription = admin || !!access.ok;
+    const needsPasswordSetup = !admin && !!billing?.pendingPasswordSetup;
+
     res.json({
-      user: { id: user.id, email: user.email, name: user.name, isAdmin: isAdminEmail(user.email) },
+      user: { id: user.id, email: user.email, name: user.name, isAdmin: admin },
       organization: org,
       organizations: memberships.map((m) => ({
         id: m.organization.id,
@@ -226,6 +236,19 @@ router.get('/me', requireAuth, async (req, res) => {
       projects,
       allProjects,
       project: { id: active.id, name: active.name },
+      hasActiveSubscription,
+      needsPasswordSetup,
+      subscribeUrl: hasActiveSubscription ? undefined : '/subscribe',
+      setupUrl: needsPasswordSetup
+        ? `/setup-account?email=${encodeURIComponent(user.email)}`
+        : undefined,
+      billing: billing ? {
+        plan: billing.plan,
+        planName: billing.planName,
+        status: billing.status,
+        priceLabel: billing.priceLabel,
+        billingEmail: billing.billingEmail,
+      } : null,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });

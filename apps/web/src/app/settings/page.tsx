@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { NavAnchor } from '@/components/NavAnchor';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { invoke, logout } from '@/lib/api';
+import { auth, invoke, logout } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
@@ -84,6 +85,7 @@ function SettingsContent() {
   const [billingEmail, setBillingEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const setTabAndUrl = (t: string) => {
     if (t === 'playbooks' || t === 'site-health' || t === 'account-intelligence') {
@@ -110,7 +112,8 @@ function SettingsContent() {
   };
 
   const refresh = useCallback(async () => {
-    const [k, ks, a, c, b, g, p, t, ss, active, gs] = await Promise.all([
+    const [me, k, ks, a, c, b, g, p, t, ss, active, gs] = await Promise.all([
+      auth.me().catch(() => ({})),
       invoke<Record<string, string>>('get-global-keys'),
       invoke<KeySources>('get-key-sources'),
       invoke<Record<string, string>>('check-api-status'),
@@ -123,6 +126,7 @@ function SettingsContent() {
       invoke<Campaign | null>('get-active-campaign'),
       invoke<Record<string, unknown>>('grok-get-status').catch(() => ({})),
     ]);
+    setIsAdmin(!!(me as { user?: { isAdmin?: boolean } })?.user?.isAdmin);
     setKeys(k || {});
     setKeySources(ks || {});
     setApiStatus(a || {});
@@ -549,6 +553,15 @@ function SettingsContent() {
 
       {tab === 'billing' && (
         <div className="grid grid-2">
+          <DataPanel title="Subscription" live>
+            <p className="settings-panel-desc">
+              Manage your plan and billing email. Access to app features requires an active subscription.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+              <NavAnchor href="/subscribe" className="btn primary">Change plan / Renew</NavAnchor>
+              <NavAnchor href="/dashboard/users" className="btn">My Account</NavAnchor>
+            </div>
+          </DataPanel>
           <DataPanel title={`Current Plan — ${billing.planName || 'Starter'}`} live>
             <MetricTile label="Price" value={billing.priceLabel || '$49/mo'} accent="#a855f7" />
             <pre style={{ fontSize: '0.75rem', overflow: 'auto', marginTop: 12 }}>{JSON.stringify(billing.limits || {}, null, 2)}</pre>
@@ -568,9 +581,11 @@ function SettingsContent() {
                   <button className="btn primary" onClick={() => checkoutPlan(plan.id)} disabled={billing.plan === plan.id || loading}>
                     {billing.plan === plan.id ? 'Current' : 'Subscribe'}
                   </button>
-                  <button className="btn" onClick={() => selectPlan(plan.id)} disabled={billing.plan === plan.id}>
-                    Select (no payment)
-                  </button>
+                  {isAdmin && (
+                    <button className="btn" onClick={() => selectPlan(plan.id)} disabled={billing.plan === plan.id}>
+                      Admin: set plan
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

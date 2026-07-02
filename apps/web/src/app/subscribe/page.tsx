@@ -81,6 +81,8 @@ function SubscribeForm() {
         Already subscribed? <NavAnchor href="/login" style={{ color: '#38bdf8' }}>Sign in</NavAnchor>
         {' · '}
         <NavAnchor href="/setup-account" style={{ color: '#a855f7' }}>Set up password</NavAnchor>
+        {' · '}
+        <NavAnchor href="/forgot-password" style={{ color: '#94a3b8' }}>Forgot password?</NavAnchor>
       </p>
       <FooterCredit className="login-footer-credit" />
     </div>

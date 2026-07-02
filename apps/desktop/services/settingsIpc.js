@@ -89,10 +89,24 @@ function buildBillingResponse(state) {
   };
 }
 
+function isPlatformAdmin(email) {
+  const raw = process.env.ADMIN_EMAILS || process.env.SEED_EMAIL || '';
+  const list = raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+  return list.includes(String(email || '').trim().toLowerCase());
+}
+
 function registerSettingsHandlers({ ipcMain, store }) {
   ipcMain.handle('get-billing-plan', () => buildBillingResponse(loadBillingState(store)));
 
   ipcMain.handle('save-billing-plan', (event, input) => {
+    const ctx = store._invokeContext || {};
+    if (!isPlatformAdmin(ctx.email)) {
+      return {
+        success: false,
+        error: 'Plan changes require payment. Use Subscribe to checkout, or contact admin.',
+        subscribeUrl: '/subscribe',
+      };
+    }
     const planId = typeof input === 'string' ? input : (input?.plan || 'starter');
     const catalog = PLAN_CATALOG[planId] || PLAN_CATALOG.starter;
     const existing = loadBillingState(store);
