@@ -264,6 +264,9 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerDesignStudioHandlers } = require(path.join(DESKTOP_SERVICES, 'designStudioIpc'));
   registerDesignStudioHandlers({ ipcMain, store, generateAI, generateImage: generateImageForStudio });
 
+  const { registerDesignCompositorHandlers } = require('./designCompositor');
+  registerDesignCompositorHandlers({ ipcMain, store, generateAI });
+
   const { registerImageFormatIntelligenceHandlers } = require(path.join(DESKTOP_SERVICES, 'imageFormatIntelligenceIpc'));
   registerImageFormatIntelligenceHandlers({
     ipcMain, store, generateAIVision, generateAI, generateImage: generateImageForStudio,

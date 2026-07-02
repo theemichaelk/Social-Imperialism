@@ -36,7 +36,7 @@ When reviewing **any** change — including retroactive audits of earlier assist
 | QA page features | **195+** OK | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
 | QA section features | **144+** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
 | `PageShell` + `PageFocusRail` | **26** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
-| SaaS IPC handlers | **371** | `node apps/desktop/_ipc-parity-report.js` → `saasHandlers` |
+| SaaS IPC handlers | **379** | `node apps/desktop/_ipc-parity-report.js` → `saasHandlers` |
 | Imperial pipeline A / B | **18** / **8** steps | `get-imperial-pipeline-config` |
 | `ManageableTabNav` focus mode | **7** pages | dashboard, browse-posts, history, settings, integrations, content-library, account-creator |
 | `ContentHubTabNav` focus mode | **1** page | content-hub |
@@ -99,6 +99,7 @@ All feature updates must also comply with [SOVEREIGN_THREAT_CAPTURE.md](../SOVER
 | [SITE_BLUEPRINT.md](./SITE_BLUEPRINT.md) | Public pages self-update from nav + brain |
 | [THEE_MICHAEL_SECURITY.md](./THEE_MICHAEL_SECURITY.md) | THEE_MICHAEL Security Control — Accept/Deny/Undo |
 | [AETHELGARD_PROTOCOL.md](./AETHELGARD_PROTOCOL.md) | THEE_MICHAEL v3.0-Aethelgard — pipelines, R2, lead capture |
+| [DESIGN_STUDIO.md](./DESIGN_STUDIO.md) | Design Studio — Imperialism Design Compositor |
 
 ---
 

@@ -31,6 +31,23 @@ const FEATURES = [
     validate: (d) => typeof d === 'object' },
   { area: 'Grok', name: 'Grok status', channel: 'grok-get-status',
     validate: (d) => typeof d === 'object' },
+  { area: 'Compositor', name: 'Compositor config', channel: 'get-design-compositor-config',
+    validate: (d) => d?.success === true && Array.isArray(d?.aspects) && d.aspects.length >= 3 },
+  { area: 'Compositor', name: 'Compose social layout', channel: 'compose-social-layout',
+    args: [{ aspect: '9:16', headline: 'QA Rev', body: 'Portrait test', blurBackground: true }],
+    validate: (d) => d?.success === true && d?.aspect === '9:16' },
+  { area: 'Compositor', name: 'Scan design PII', channel: 'scan-design-pii',
+    args: [{ headline: 'Contact us', body: 'Safe marketing copy only' }],
+    validate: (d) => d?.success === true && d?.safe === true },
+  { area: 'Compositor', name: 'Atelier layout', channel: 'generate-atelier-layout',
+    args: [{ prompt: 'Bold promo for QA brand summer sale' }],
+    validate: (d) => d?.success === true && Array.isArray(d?.slots) },
+  { area: 'Compositor', name: 'Export subtitles VTT', channel: 'export-design-subtitles',
+    args: [{ words: [{ word_text: 'Hello', startTimeMs: 0, endTimeMs: 500 }, { word_text: 'world', startTimeMs: 500, endTimeMs: 1000 }], format: 'vtt' }],
+    validate: (d) => d?.success === true && String(d?.content).includes('WEBVTT') },
+  { area: 'Compositor', name: 'Save design project', channel: 'save-design-project',
+    args: [{ name: 'QA Compositor Project', aspect: '1:1', fields: { headline: 'QA' } }],
+    validate: (d) => d?.success === true && d?.project?.id },
 ];
 
 async function login() {

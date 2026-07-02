@@ -76,7 +76,7 @@ try {
     for (const ch of required) {
       if (!handlers[ch]) errors.push(`handler missing after registry: ${ch}`);
     }
-    assert(Object.keys(handlers).length >= 371, `expected 371+ handlers, got ${Object.keys(handlers).length}`);
+    assert(Object.keys(handlers).length >= 379, `expected 379+ handlers, got ${Object.keys(handlers).length}`);
     if (!handlers['get-imperial-pipeline-config']) errors.push('handler missing: get-imperial-pipeline-config');
     if (!handlers['run-imperial-pipeline']) errors.push('handler missing: run-imperial-pipeline');
   } catch (e) {

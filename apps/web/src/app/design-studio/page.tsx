@@ -8,6 +8,7 @@ import { SocialPostCard } from '@/components/SocialPostCard';
 import { enrichGeneratedItem } from '@/lib/imperialContentTemplates';
 import Link from 'next/link';
 import { GrokToolbar } from '@/components/GrokToolbar';
+import { DesignStudioCompositor } from '@/components/DesignStudioCompositor';
 
 type DesignTemplate = {
   id: string;
@@ -173,6 +174,15 @@ export default function DesignStudioPage() {
 
       <SectionLivePanel section="design-studio" />
       <GrokToolbar pageId="design-studio" compact onMedia={(url) => setFields((f) => ({ ...f, image: url }))} />
+
+      <DesignStudioCompositor
+        headline={fields.headline || fields.quote || ''}
+        body={fields.body || fields.bullet1 || ''}
+        imageUrl={fields.image || assets.find((a) => selectedAssets.includes(a.id))?.url || ''}
+        templateId={selectedTpl}
+        onApplyLayout={(patch) => setFields((f) => ({ ...f, ...patch }))}
+        onMsg={setMsg}
+      />
 
       {!templates.length && (
         <div className="card" style={{ marginBottom: '1rem' }}>

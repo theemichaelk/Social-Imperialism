@@ -152,6 +152,7 @@ const featureIndexes = [
   'GROK_ENGINE.md',
   'SITE_BLUEPRINT.md',
   'AETHELGARD_PROTOCOL.md',
+  'DESIGN_STUDIO.md',
 ];
 for (const f of featureIndexes) {
   const p = path.join(ROOT, 'brain/features', f);
@@ -288,7 +289,16 @@ if (!exists(leadRateLimit)) fail('Missing apps/api/src/middleware/leadRateLimit.
 const aethelgardBrain = path.join(ROOT, 'brain/features/AETHELGARD_PROTOCOL.md');
 if (!exists(aethelgardBrain)) fail('Missing brain/features/AETHELGARD_PROTOCOL.md');
 
-const EXPECTED_HANDLERS = 371;
+const compositorPanel = path.join(ROOT, 'apps/web/src/components/DesignStudioCompositor.tsx');
+if (!exists(compositorPanel)) fail('Missing DesignStudioCompositor.tsx');
+else if (!read(compositorPanel).includes('compose-social-layout')) {
+  fail('DesignStudioCompositor.tsx must wire compose-social-layout');
+}
+
+const designCompositorCore = path.join(ROOT, 'packages/core/src/designCompositor.js');
+if (!exists(designCompositorCore)) fail('Missing packages/core/src/designCompositor.js');
+
+const EXPECTED_HANDLERS = 379;
 
 // --- Report (async handler count) ---
 (async () => {
@@ -303,6 +313,8 @@ const EXPECTED_HANDLERS = 371;
     }
     if (!handlers['get-imperial-pipeline-config']) fail('handler registry missing get-imperial-pipeline-config');
     if (!handlers['run-imperial-pipeline']) fail('handler registry missing run-imperial-pipeline');
+    if (!handlers['get-design-compositor-config']) fail('handler registry missing get-design-compositor-config');
+    if (!handlers['compose-social-layout']) fail('handler registry missing compose-social-layout');
   } catch (e) {
     fail(`handler registry load failed: ${e.message}`);
   }

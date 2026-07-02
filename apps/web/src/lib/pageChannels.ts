@@ -51,6 +51,9 @@ export const PAGE_CHANNELS = {
     'get-brand-guidelines', 'grok-get-status', 'grok-imagine', 'grok-ask-text',
     'get-format-templates', 'recreate-from-format-template', 'analyze-library-image',
     'save-format-template-from-asset', 'generate-image',
+    'get-design-compositor-config', 'compose-social-layout', 'scan-design-pii',
+    'apply-design-filters', 'generate-atelier-layout', 'export-design-subtitles',
+    'get-design-projects', 'save-design-project',
   ],
   brand: [
     'get-brand-guidelines', 'save-brand-guidelines', 'seed-brand-from-website', 'get-active-campaign',

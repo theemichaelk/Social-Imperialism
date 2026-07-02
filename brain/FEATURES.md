@@ -111,6 +111,20 @@ Persistent requirement for all past, current, and future modules — every actio
 
 **IPC handlers:** **371** (verify via `node apps/desktop/_ipc-parity-report.js`)
 
+## Design Studio — Imperialism Design Compositor (July 2026)
+
+**Brain:** [features/DESIGN_STUDIO.md](./features/DESIGN_STUDIO.md) · **Route:** `/design-studio`
+
+| Capability | IPC | Web |
+|------------|-----|-----|
+| Programmatic layouts | `render-design-post` | Template + fields panel |
+| CSS compositor (Rev) | `compose-social-layout` | Aspect 9:16 / 16:9 / 1:1 |
+| PII scan | `scan-design-pii` | Security tab |
+| Atelier text-to-layout | `generate-atelier-layout` | Atelier tab |
+| Subtitle export | `export-design-subtitles` | VTT / SRT captions tab |
+| Format recreation | `recreate-from-format-template` | Saved formats panel |
+| Grok visuals | `grok-imagine` | Grok toolbar |
+
 ## Settings & integrations (existing)
 
 - Live connection probes (13+ real API tests including Grok session)

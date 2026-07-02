@@ -123,6 +123,10 @@ const PAGES = [
       { name: 'Generate from library', channel: 'generate-from-library-assets', args: [{ assetIds: [], keywords: ['brand'], templateId: 'promo-bold' }], validate: (d) => d?.success === true && d?.items?.length > 0 },
       { name: 'Section live', channel: 'get-section-live', args: ['design-studio'], validate: (d) => d?.success !== false },
       { name: 'Grok status', channel: 'grok-get-status', validate: (d) => typeof d === 'object' },
+      { name: 'Compositor config', channel: 'get-design-compositor-config', validate: (d) => d?.aspects?.length >= 3 },
+      { name: 'Compose layout 9:16', channel: 'compose-social-layout', args: [{ aspect: '9:16', headline: 'QA', body: 'Rev test' }], validate: (d) => d?.success === true && d?.aspect === '9:16' },
+      { name: 'PII scan safe', channel: 'scan-design-pii', args: [{ headline: 'Growth tips', body: 'No secrets here' }], validate: (d) => d?.safe === true },
+      { name: 'Atelier layout', channel: 'generate-atelier-layout', args: [{ prompt: 'LinkedIn thought leadership card' }], validate: (d) => d?.success === true },
     ],
   },
   {
