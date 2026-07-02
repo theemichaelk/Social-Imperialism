@@ -8,6 +8,7 @@ import { GrokToolbar } from '@/components/GrokToolbar';
 import Link from 'next/link';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
 import { buildContentLibraryTabs, libraryAssetCounts } from '@/lib/smartTabs';
+import { stripHtmlForDisplay } from '@/lib/textUtils';
 
 type ImageAnalysis = {
   category?: { primary?: string; isNews?: boolean; isTrending?: boolean; hasFamousPeople?: boolean };
@@ -208,12 +209,14 @@ export default function ContentLibraryPage() {
     if (!filterTabs.some((t) => t.id === filter)) setFilter('all');
   }, [filter, filterTabs]);
 
-  const shown = assets.filter((a) => {
+  const filtered = assets.filter((a) => {
     if (filter === 'all') return true;
     if (filter === 'format-intel') return !!(a.imageAnalysis || a.formatTemplateId);
     if (filter === 'copy') return a.type === 'copy' || a.type === 'text';
     return true;
   });
+  const LIBRARY_PAGE_SIZE = 24;
+  const shown = filtered.slice(0, LIBRARY_PAGE_SIZE);
 
   return (
     <div>
@@ -273,7 +276,7 @@ export default function ContentLibraryPage() {
         {shown.map((a) => (
           <div key={a.id} className="card post-card">
             <div className="post-meta">{a.type} · {a.source} · {(a.tags || []).join(', ')}</div>
-            <strong>{a.name}</strong>
+            <strong>{stripHtmlForDisplay(a.name)}</strong>
             {a.url && a.type === 'video' && (
               <video src={a.url} controls style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 8, marginTop: 8 }} />
             )}
@@ -281,7 +284,11 @@ export default function ContentLibraryPage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={a.url} alt="" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 8, marginTop: 8 }} />
             )}
-            {a.text && <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 8 }}>{a.text.slice(0, 280)}{a.text.length > 280 ? '…' : ''}</p>}
+            {a.text && (
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 8 }}>
+                {stripHtmlForDisplay(a.text, 280)}
+              </p>
+            )}
             {a.imageAnalysis && (
               <div style={{ marginTop: 8, fontSize: '0.8rem', color: '#94a3b8' }}>
                 <div><strong>Category:</strong> {a.imageAnalysis.category?.primary || '—'}
@@ -325,6 +332,11 @@ export default function ContentLibraryPage() {
             </div>
           </div>
         ))}
+        {filtered.length > LIBRARY_PAGE_SIZE && (
+          <p className="settings-panel-desc" style={{ gridColumn: '1 / -1' }}>
+            Showing {LIBRARY_PAGE_SIZE} of {filtered.length} assets — remove duplicates or filter by type.
+          </p>
+        )}
         {!shown.length && (
           <div className="card">
             <p className="settings-panel-desc">

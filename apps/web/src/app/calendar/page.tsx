@@ -6,7 +6,7 @@ import { PageShell } from '@/components/PageShell';
 import { InvokePanel } from '@/components/InvokePanel';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
 import { useIntelligence } from '@/hooks/useIntelligence';
-import { normalizeProfile } from '@/lib/intelligenceProfile';
+import { displayBestTime, normalizeProfile } from '@/lib/intelligenceProfile';
 import { CalendarGrid } from '@/components/CalendarGrid';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { AccountSelectField } from '@/components/AccountSelectField';
@@ -231,13 +231,14 @@ export default function CalendarPage() {
           </div>
           {isSurfaceEnabled('calendar') && accounts.map((acc) => {
             const profile = normalizeProfile(acc.profile);
-            if (!profile?.bestTime) return null;
+            const bestTime = displayBestTime(profile);
+            if (!bestTime) return null;
             return (
               <div key={acc.id} style={{ marginBottom: 12, padding: 10, borderRadius: 8, border: '1px solid var(--border)', background: 'rgba(15,23,42,0.45)' }}>
                 <p style={{ margin: '0 0 6px', fontSize: '0.8rem', color: '#94a3b8' }}>
                   <strong>{acc.platform}</strong> intelligence window
                 </p>
-                <p style={{ margin: 0, fontSize: '0.9rem' }}>{profile.bestTime}</p>
+                <p style={{ margin: 0, fontSize: '0.9rem' }}>{bestTime}</p>
               </div>
             );
           })}
@@ -305,6 +306,14 @@ export default function CalendarPage() {
               {new Date(p.timestamp).toLocaleString()}
             </div>
             <div>{p.content}</div>
+            {p.status === 'failed' && (
+              <p style={{ margin: '8px 0 0', fontSize: '0.8rem', color: '#f59e0b' }}>
+                {(p as { error?: string }).error || 'Publish failed — re-link the account or refresh the access token.'}
+                {/linkedin/i.test(p.platform || '') && (
+                  <> <Link href="/account-hub">Re-link LinkedIn →</Link></>
+                )}
+              </p>
+            )}
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button type="button" className="btn primary" onClick={() => publishNow(p.id)}>Publish Now</button>
               <button type="button" className="btn" onClick={() => removeScheduled(p.id)}>Delete</button>

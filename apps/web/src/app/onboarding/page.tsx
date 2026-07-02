@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke, getProjectId } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
-import { LivePulse, RingChart, BarChart, DataPanel } from '@/components/DashboardViz';
+import { LivePulse, RingChart, BarChart, DataPanel, chartShortLabel } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
 import { useRouter } from 'next/navigation';
@@ -272,7 +272,8 @@ export default function OnboardingPage() {
     .filter(([, st]) => st === 'Connected')
     .slice(0, 8)
     .map(([label], i) => ({
-      label: label.slice(0, 6),
+      label: chartShortLabel(label, 10),
+      title: label,
       value: 1,
       color: ['#22c55e', '#38bdf8', '#a855f7', '#f59e0b', '#f472b6', '#22d3ee', '#94a3b8', '#6366f1'][i % 8],
     }));

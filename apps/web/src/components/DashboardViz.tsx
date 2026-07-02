@@ -14,6 +14,13 @@ export function chartShortLabel(name: string, max = 8): string {
     'AI Workflows': 'Workflow',
     'Content Studio': 'Content',
     'OpenRouter': 'OpenRtr',
+    'Gemini AI': 'Gemini',
+    'LinkedIn': 'LinkedIn',
+    'YouTube': 'YouTube',
+    'Twitch': 'Twitch',
+    'Unsplash': 'Unsplash',
+    'Stock Media': 'Stock',
+    'Reddit Feed': 'Reddit',
   };
   if (aliases[name]) return aliases[name];
   if (name.length <= max) return name;

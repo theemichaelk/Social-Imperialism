@@ -241,7 +241,7 @@ export function ImperialContentStudio() {
       <div className="card ics-panel" style={{ marginBottom: 16 }}>
         <h3 style={{ margin: '0 0 6px' }}>Imperialism Center Pipelines</h3>
         <p className="settings-panel-desc" style={{ margin: '0 0 12px' }}>
-          Aethelgard pipelines — long-form content (18 steps) or strategy briefs (8 steps).
+          Imperialism Center pipelines — long-form content (18 steps) or strategy briefs (8 steps).
         </p>
         <div className="grid grid-2" style={{ gap: 12 }}>
           <div>

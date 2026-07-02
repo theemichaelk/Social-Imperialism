@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  displayBestTime,
   formatProfileValue,
   IntelligenceProfile,
   workspaceTitle,
@@ -23,6 +24,7 @@ export function IntelligenceProfilePanel({
   showHeader = true,
 }: Props) {
   const groups = profile.suggestedGroups?.length ? profile.suggestedGroups.join(', ') : '—';
+  const bestTime = displayBestTime(profile);
 
   if (compact) {
     return (
@@ -32,7 +34,7 @@ export function IntelligenceProfilePanel({
           <div className="ip-stat"><span className="ip-val">{formatProfileValue(profile.likes)}</span><span className="ip-lbl">Engage</span></div>
           <div className="ip-stat"><span className="ip-val ip-val-sm">{formatProfileValue(profile.growthVelocity)}</span><span className="ip-lbl">Growth</span></div>
         </div>
-        {profile.bestTime && <p className="ip-compact-line"><strong>Best:</strong> {profile.bestTime}</p>}
+        {bestTime && <p className="ip-compact-line"><strong>Best:</strong> {bestTime}</p>}
       </div>
     );
   }
@@ -60,7 +62,7 @@ export function IntelligenceProfilePanel({
         </div>
       </div>
       <div className="ip-extra">
-        <div><strong>Best time:</strong> {profile.bestTime || '—'}</div>
+        <div><strong>Best time:</strong> {bestTime || '—'}</div>
         <div><strong>Trending niche:</strong> {profile.topTrendingNiche || '—'}</div>
         <div><strong>Suggested communities:</strong> {groups}</div>
       </div>

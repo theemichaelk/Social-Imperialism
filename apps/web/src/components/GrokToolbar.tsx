@@ -26,6 +26,8 @@ type Props = {
   pageId?: string;
   compact?: boolean;
   title?: string;
+  /** Show Python/nodriver setup hints (off on library/brand unless Grok is in use). */
+  showInfraHints?: boolean;
 };
 
 export function GrokToolbar({
@@ -35,6 +37,7 @@ export function GrokToolbar({
   pageId = 'content-hub',
   compact,
   title = 'Grok Engine',
+  showInfraHints = false,
 }: Props) {
   const [localPrompt, setLocalPrompt] = useState(prompt);
   const [status, setStatus] = useState('');
@@ -84,7 +87,10 @@ export function GrokToolbar({
 
   const loggedIn = !!(grokStatus as { session?: { loggedIn?: boolean } }).session?.loggedIn
     || !!(grokStatus as { settings?: { sessionValid?: boolean } }).settings?.sessionValid;
-  const connectionHint = String((grokStatus as { connectionHint?: string }).connectionHint || '');
+  const rawHint = String((grokStatus as { connectionHint?: string }).connectionHint || '');
+  const connectionHint = (!showInfraHints && compact && /nodriver|python/i.test(rawHint))
+    ? 'Grok browser tools — configure in Settings → Grok when needed.'
+    : rawHint;
   const canAutomate = (grokStatus as { canAutomate?: boolean }).canAutomate !== false;
   const nodriverReady = !!(grokStatus as { nodriverReady?: boolean }).nodriverReady;
   const selectedBrowser = (grokStatus as { nativeBrowser?: { selectedBrowser?: { label?: string; installed?: boolean } } })
@@ -106,7 +112,7 @@ export function GrokToolbar({
           : <span className="status-partial">
               {connectionHint || 'Not connected — save credentials and Connect in Settings → Grok'}
             </span>}
-        {!nodriverReady && (
+        {showInfraHints && !nodriverReady && (
           <p style={{ margin: '8px 0 0', color: '#f59e0b', fontSize: '0.8rem' }}>
             nodriver/Python not ready — see Settings → Native Browser for setup.
           </p>

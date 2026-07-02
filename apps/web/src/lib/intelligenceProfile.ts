@@ -64,6 +64,19 @@ export function formatProfileValue(v: string | number | undefined): string {
   return String(v);
 }
 
+export function isAuthTokenMessage(text?: string | null): boolean {
+  if (!text) return false;
+  return /token expired|re-link|invalid.*token/i.test(text);
+}
+
+/** Best-time window only when account auth is healthy — never surface token errors here. */
+export function displayBestTime(profile: IntelligenceProfile | null | undefined): string | null {
+  if (!profile || profile.needsRelink || profile.authStatus) return null;
+  const bt = profile.bestTime;
+  if (!bt || bt === '—' || isAuthTokenMessage(bt)) return null;
+  return bt;
+}
+
 export type IntelligenceRecommendation = {
   id: string;
   kind: 'schedule' | 'niche' | 'community' | 'growth' | 'audience' | 'auth';

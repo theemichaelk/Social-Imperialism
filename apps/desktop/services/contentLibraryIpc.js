@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { decodeHtmlEntities, stripHtmlForDisplay } = require('../../../packages/core/src/textUtils');
 
 function libraryKey(store) {
   const activeId = store.getItem('activeCampaignId') || 'default';
@@ -169,25 +170,38 @@ function registerContentLibraryHandlers({ ipcMain, store, generateAI }) {
       const xml = String(res.data || '');
       const items = [];
       const itemBlocks = xml.match(/<item[\s\S]*?<\/item>/gi) || xml.match(/<entry[\s\S]*?<\/entry>/gi) || [];
-      for (const block of itemBlocks.slice(0, limit)) {
-        const title = (block.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i) || [])[1]?.trim() || '';
-        const link = (block.match(/<link[^>]*>([^<]+)<\/link>/i) || block.match(/<link[^>]+href=["']([^"']+)["']/i) || [])[1]?.trim() || '';
-        const desc = (block.match(/<description[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i) || [])[1]?.trim() || '';
-        if (title) {
-          items.push(newAsset({
-            name: title.slice(0, 80),
-            type: 'copy',
-            text: [title, desc.replace(/<[^>]+>/g, '').trim(), link].filter(Boolean).join('\n\n'),
-            tags: ['rss', 'import'],
-            source: 'rss',
-            url: link || '',
-          }));
-        }
-      }
-      if (!items.length) return { success: false, error: 'No RSS items found' };
       const lib = getLibrary(store);
+      const existingKeys = new Set(
+        lib.map((a) => `${stripHtmlForDisplay(a.name, 120)}|${stripHtmlForDisplay(a.text, 160)}`),
+      );
+      let skipped = 0;
+      for (const block of itemBlocks.slice(0, limit * 3)) {
+        if (items.length >= limit) break;
+        const rawTitle = (block.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i) || [])[1]?.trim() || '';
+        const link = (block.match(/<link[^>]*>([^<]+)<\/link>/i) || block.match(/<link[^>]+href=["']([^"']+)["']/i) || [])[1]?.trim() || '';
+        const rawDesc = (block.match(/<description[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i) || [])[1]?.trim() || '';
+        const title = stripHtmlForDisplay(decodeHtmlEntities(rawTitle), 80);
+        const desc = stripHtmlForDisplay(decodeHtmlEntities(rawDesc), 500);
+        if (!title) continue;
+        const body = [title, desc, link].filter(Boolean).join('\n\n');
+        const dedupeKey = `${title}|${body.slice(0, 160)}`;
+        if (existingKeys.has(dedupeKey)) {
+          skipped += 1;
+          continue;
+        }
+        existingKeys.add(dedupeKey);
+        items.push(newAsset({
+          name: title,
+          type: 'copy',
+          text: body,
+          tags: ['rss', 'import'],
+          source: 'rss',
+          url: link || '',
+        }));
+      }
+      if (!items.length) return { success: false, error: skipped ? 'RSS items already in library' : 'No RSS items found' };
       saveLibrary(store, [...items, ...lib].slice(0, 500));
-      return { success: true, assets: items, count: getLibrary(store).length };
+      return { success: true, assets: items, count: getLibrary(store).length, skippedDuplicates: skipped };
     } catch (e) {
       return { success: false, error: e.message || 'RSS import failed' };
     }
