@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { decodeHtmlEntities } from '@/lib/textUtils';
 import { useSiEvents } from '@/hooks/useSiEvents';
-import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 
 type LiveData = {
   section?: string;
@@ -201,7 +201,8 @@ function countBars(obj: Record<string, number> | undefined, colors?: string[]) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
     .map(([label, value], i) => ({
-      label: label.slice(0, 8),
+      label: chartShortLabel(label, 8),
+      title: `${label}: ${value}`,
       value,
       color: colors?.[i % colors.length] || ['#38bdf8', '#a855f7', '#22c55e', '#f59e0b'][i % 4],
     }));

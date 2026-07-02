@@ -32,7 +32,7 @@ export const SITE_FOOTER = {
 
 /** Verified marketing constants — align with brain/FEATURES.md */
 export const BLUEPRINT_METRICS = {
-  ipcChannels: '379',
+  ipcChannels: '380',
   platformLabel: '14+',
   aiModels: '100+',
   apiIntegrations: '50+',

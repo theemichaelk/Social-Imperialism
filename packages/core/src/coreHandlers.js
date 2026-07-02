@@ -404,7 +404,8 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   ipcMain.handle('get-dashboard-stats', async () => {
     const activeId = store.getItem('activeCampaignId') || 'default';
     const keywords = JSON.parse(store.getItem('keywords') || '[]').filter((k) => k.campaignId === activeId);
-    const replies = JSON.parse(store.getItem('aiRepliesHistory') || '[]');
+    const replyHub = aiReplyStore.queryHub(store, { status: 'all' });
+    const campaignDrafts = replyHub.campaignStats?.byStatus?.draft ?? 0;
     const published = JSON.parse(store.getItem('postHistory') || '[]');
     let totalEngagement = 0;
     published.forEach((post) => {
@@ -424,7 +425,7 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     const workerTasks = JSON.parse(store.getItem('workerTasks') || '[]');
     return {
       totalPosts: published.length,
-      aiDrafts: replies.filter((r) => r.status === 'draft').length,
+      aiDrafts: campaignDrafts,
       totalEngagement,
       activeKeywords: keywords.length,
       leadsGenerated: leads.length,

@@ -20,13 +20,15 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
   const [edit, setEdit] = useState<Partial<VaultPrompt>>({ feature: defaultFeature });
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
+  const [hideQa, setHideQa] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
-      const res = await invoke<{ prompts?: VaultPrompt[]; total?: number; success?: boolean; error?: string }>('get-prompt-vault', {
+      const res = await invoke<{ prompts?: VaultPrompt[]; total?: number; showing?: number; success?: boolean; error?: string }>('get-prompt-vault', {
         query,
         keyword: query,
         feature: filterFeature === 'all' ? undefined : filterFeature,
+        hideQa,
       });
       if (res && typeof res === 'object' && 'success' in res && res.success === false) {
         throw new Error(res.error || 'Failed to load vault');
@@ -36,7 +38,7 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
     } catch (e) {
       setMsg((e as Error).message);
     }
-  }, [query, filterFeature]);
+  }, [query, filterFeature, hideQa]);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
@@ -154,6 +156,20 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
     window.location.assign('/content-hub?tab=studio');
   }
 
+  async function removeDuplicates() {
+    if (!window.confirm('Remove duplicate templates and QA test prompts from this vault?')) return;
+    setMsg('Cleaning vault…');
+    try {
+      const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('dedupe-prompt-vault', { removeQa: true });
+      if (!res.success) throw new Error(res.error || 'Cleanup failed');
+      setMsg(`Removed ${res.removed || 0} duplicate/QA templates`);
+      newPrompt();
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  }
+
   async function exportVault() {
     const res = await invoke<{ prompts?: VaultPrompt[]; exportedAt?: string; brandName?: string }>(
       'export-prompt-vault',
@@ -174,6 +190,7 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
           { label: 'Total', value: total },
           { label: 'Showing', value: prompts.length },
           { label: 'Feature', value: filterFeature === 'all' ? 'All' : featureLabel(filterFeature) },
+          ...(hideQa && !query.trim() ? [{ label: 'QA hidden', value: 'Yes' }] : []),
         ]} />
       </div>
 
@@ -195,6 +212,11 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
         <button type="button" className="btn primary" onClick={createFromKeyword}>Create (keyword)</button>
         <button type="button" className="btn" onClick={newPrompt}>New blank</button>
         <button type="button" className="btn" onClick={exportVault}>Export JSON</button>
+        <button type="button" className="btn" onClick={removeDuplicates}>Remove duplicates</button>
+        <label style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input type="checkbox" checked={hideQa} onChange={(e) => setHideQa(e.target.checked)} />
+          Hide QA test prompts
+        </label>
       </div>
 
       {msg && (

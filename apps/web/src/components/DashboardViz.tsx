@@ -21,6 +21,11 @@ export function chartShortLabel(name: string, max = 8): string {
     'Unsplash': 'Unsplash',
     'Stock Media': 'Stock',
     'Reddit Feed': 'Reddit',
+    Keywords: 'Keywords',
+    keyword: 'Keywords',
+    Twitter: 'X',
+    Twitte: 'X',
+    Keywor: 'Keywords',
   };
   if (aliases[name]) return aliases[name];
   if (name.length <= max) return name;

@@ -4,7 +4,8 @@ import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
 import { HISTORY_LEGACY_TAB_MAP, HISTORY_VIEW_TABS, resolveLegacyTab } from '@/lib/smartTabs';
-import { BarChart } from '@/components/DashboardViz';
+import { BarChart, chartShortLabel } from '@/components/DashboardViz';
+import { sanitizeDiscoverySnippet, stripHtmlForDisplay } from '@/lib/textUtils';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { buildCsvExport, downloadCsv } from '@/lib/csvExport';
 
@@ -153,12 +154,21 @@ export default function HistoryPage() {
   ];
 
   const sourceChart = Object.entries(stats.bySource || {})
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
-    .map(([k, v]) => ({ label: (SOURCE_LABELS[k] || k).slice(0, 6), value: v as number }));
+    .map(([k, v]) => {
+      const full = SOURCE_LABELS[k] || k;
+      return { label: chartShortLabel(full, 8), title: `${full}: ${v}`, value: v as number };
+    });
 
   const platformChart = Object.entries(stats.byPlatform || {})
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
-    .map(([k, v]) => ({ label: k.slice(0, 6), value: v as number }));
+    .map(([k, v]) => ({
+      label: chartShortLabel(k, 8),
+      title: `${k}: ${v}`,
+      value: v as number,
+    }));
 
   return (
     <div>
@@ -264,9 +274,13 @@ export default function HistoryPage() {
                 {r.intent && <span className="badge">{r.intent}</span>}
                 {r.matchedKeyword && <span className="badge">#{r.matchedKeyword}</span>}
               </div>
-              {r.originalPost && <div className="post-meta" style={{ marginBottom: 6 }}>Re: {(r.originalPost || '').slice(0, 120)}</div>}
+              {r.originalPost && (
+                <div className="post-meta" style={{ marginBottom: 6 }}>
+                  Re: {sanitizeDiscoverySnippet(r.originalPost, 120)}
+                </div>
+              )}
             </div>
-            <div>{(r.replyContent || r.content || '').slice(0, 400)}</div>
+            <div>{stripHtmlForDisplay(r.replyContent || r.content || '', 400)}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {r.status !== 'published' && <button className="btn primary" onClick={() => publish(r.id)}>Publish</button>}
               <button className="btn" onClick={() => setEditing(r)}>Edit</button>

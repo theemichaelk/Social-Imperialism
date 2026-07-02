@@ -126,6 +126,40 @@ function searchItems(items, query) {
   });
 }
 
+function isQaTestPrompt(item) {
+  const title = String(item.title || '').trim().toLowerCase();
+  const tags = (item.tags || []).map((t) => String(t).toLowerCase());
+  return title === 'qa page prompt' || tags.includes('qa');
+}
+
+function promptFingerprint(item) {
+  const title = String(item.title || '').trim().toLowerCase();
+  const body = String(item.body || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const feature = String(item.feature || 'general').toLowerCase();
+  return `${feature}::${title}::${body}`;
+}
+
+function dedupeVaultItems(items) {
+  const seen = new Set();
+  const kept = [];
+  let removed = 0;
+  items.forEach((item) => {
+    const fp = promptFingerprint(item);
+    if (seen.has(fp)) {
+      removed += 1;
+      return;
+    }
+    seen.add(fp);
+    kept.push(item);
+  });
+  return { items: kept, removed };
+}
+
+function findDuplicateIndex(items, item) {
+  const fp = promptFingerprint(item);
+  return items.findIndex((i) => promptFingerprint(i) === fp);
+}
+
 function ensureSeeded(store) {
   let items = readVault(store);
   if (items.length) return items;
@@ -163,13 +197,18 @@ function normalizeItem(payload, existing) {
 function registerPromptVaultHandlers(ipcMain, { store, generateAI }) {
   ipcMain.handle('get-prompt-vault', (event, payload = {}) => {
     const items = ensureSeeded(store);
-    const filtered = searchItems(
-      payload.feature ? items.filter((i) => i.feature === payload.feature || i.feature === 'general') : items,
-      payload.query || payload.keyword,
-    );
+    let scoped = payload.feature
+      ? items.filter((i) => i.feature === payload.feature || i.feature === 'general')
+      : items;
+    if (payload.hideQa !== false && !payload.query && !payload.keyword) {
+      scoped = scoped.filter((i) => !isQaTestPrompt(i));
+    }
+    const filtered = searchItems(scoped, payload.query || payload.keyword);
     return {
       prompts: filtered,
       total: items.length,
+      showing: filtered.length,
+      qaHidden: payload.hideQa !== false && !payload.query && !payload.keyword,
       campaignId: getCampaignContext(store).campaignId,
     };
   });
@@ -189,10 +228,12 @@ function registerPromptVaultHandlers(ipcMain, { store, generateAI }) {
     const idx = items.findIndex((i) => i.id === payload.id);
     const item = normalizeItem(payload, idx >= 0 ? items[idx] : null);
     if (!item.body) return { success: false, error: 'Prompt body is required' };
+    const dupIdx = findDuplicateIndex(items, item);
     if (idx >= 0) items[idx] = item;
+    else if (dupIdx >= 0) items[dupIdx] = { ...items[dupIdx], ...item, id: items[dupIdx].id, createdAt: items[dupIdx].createdAt };
     else items.unshift(item);
     writeVault(store, items);
-    return { success: true, prompt: item, prompts: items };
+    return { success: true, prompt: item, prompts: items, deduped: dupIdx >= 0 && idx < 0 };
   });
 
   ipcMain.handle('create-prompt-vault-from-keyword', async (event, payload = {}) => {
@@ -216,6 +257,10 @@ Return JSON only: { "title": "short name", "body": "full prompt with {{keyword}}
         body: parsed.body || `Write on-brand content about {{keyword}} for {{brandName}} in a {{tone}} voice.`,
       });
       const items = readVault(store);
+      const dupIdx = findDuplicateIndex(items, item);
+      if (dupIdx >= 0) {
+        return { success: true, prompt: items[dupIdx], existing: true };
+      }
       items.unshift(item);
       writeVault(store, items);
       return { success: true, prompt: item };
@@ -227,10 +272,27 @@ Return JSON only: { "title": "short name", "body": "full prompt with {{keyword}}
         feature,
       });
       const items = readVault(store);
+      const dupIdx = findDuplicateIndex(items, item);
+      if (dupIdx >= 0) {
+        return { success: true, prompt: items[dupIdx], existing: true, fallback: true, error: e.message };
+      }
       items.unshift(item);
       writeVault(store, items);
       return { success: true, prompt: item, fallback: true, error: e.message };
     }
+  });
+
+  ipcMain.handle('dedupe-prompt-vault', (event, payload = {}) => {
+    const items = readVault(store);
+    const { items: deduped, removed } = dedupeVaultItems(items);
+    if (payload.removeQa) {
+      const withoutQa = deduped.filter((i) => !isQaTestPrompt(i));
+      const qaRemoved = deduped.length - withoutQa.length;
+      writeVault(store, withoutQa);
+      return { success: true, removed: removed + qaRemoved, count: withoutQa.length, prompts: withoutQa };
+    }
+    writeVault(store, deduped);
+    return { success: true, removed, count: deduped.length, prompts: deduped };
   });
 
   ipcMain.handle('load-prompt-vault-item', (event, payload = {}) => {
@@ -284,4 +346,7 @@ module.exports = {
   searchItems,
   applyContext,
   getCampaignContext,
+  dedupeVaultItems,
+  isQaTestPrompt,
+  promptFingerprint,
 };

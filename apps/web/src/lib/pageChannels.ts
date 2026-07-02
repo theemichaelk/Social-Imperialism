@@ -79,7 +79,7 @@ export const PAGE_CHANNELS = {
     'process-due-scheduled-posts', 'get-calendar-status', 'get-section-live',
   ],
   promptVault: [
-    'get-prompt-vault', 'search-prompt-vault', 'save-prompt-vault-item', 'delete-prompt-vault-item',
+    'get-prompt-vault', 'search-prompt-vault', 'save-prompt-vault-item', 'delete-prompt-vault-item', 'dedupe-prompt-vault',
     'create-prompt-vault-from-keyword', 'load-prompt-vault-item', 'export-prompt-vault', 'get-section-live',
   ],
   redditAi: [

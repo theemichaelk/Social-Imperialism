@@ -182,7 +182,12 @@ Keep it under 300 characters, human, and compliant with LinkedIn norms. Return o
                 <strong>{l.name}</strong>
                 <span className="badge">{l.type || 'Custom'}</span>
               </div>
-              <div className="post-meta">{l.profileUrls?.length || l.supporterCount || 0} profiles</div>
+              <div className="post-meta">
+                {l.profileUrls?.length || l.supporterCount || 0} profiles
+                {!(l.profileUrls?.length || l.supporterCount) && (
+                  <span style={{ color: '#f59e0b', marginLeft: 6 }}>— add LinkedIn URLs</span>
+                )}
+              </div>
               {l.id !== 'top_commenters' && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
                   <label style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -253,7 +258,12 @@ Keep it under 300 characters, human, and compliant with LinkedIn norms. Return o
             )}
           </div>
         ))}
-        {!feed.length && !loading && !feedError && <p style={{ color: '#94a3b8' }}>Select a list to load posts.</p>}
+        {!selectedId && !loading && <p style={{ color: '#94a3b8' }}>Select a list to load posts.</p>}
+        {selectedId && !feed.length && !loading && !feedError && (
+          <p style={{ color: '#94a3b8' }}>
+            No posts yet — add LinkedIn profile URLs to this list, then refresh the feed.
+          </p>
+        )}
         {status && <p style={{ marginTop: 8, color: '#94a3b8' }}>{status}</p>}
       </div>
     </div>

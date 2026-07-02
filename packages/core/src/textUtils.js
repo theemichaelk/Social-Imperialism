@@ -22,4 +22,18 @@ function stripHtmlForDisplay(text, maxLen) {
   return plain;
 }
 
-module.exports = { decodeHtmlEntities, stripHtmlForDisplay };
+function sanitizeDiscoverySnippet(text, maxLen = 120) {
+  let plain = stripHtmlForDisplay(text);
+  plain = plain
+    .replace(/^(?:Re:\s*)?(?:Reddit|Twitter|News|LinkedIn)\s+[\w.-]+\s*›\s*/i, '')
+    .replace(/^(?:Re:\s*)?reddit\.com\s*›\s*/i, '')
+    .replace(/\s+on\s+Reddit:?\s*/gi, ' · ')
+    .replace(/\s+r\/\w+\s+on\s+Reddit/gi, '')
+    .replace(/^Re:\s*/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  if (maxLen && plain.length > maxLen) return `${plain.slice(0, maxLen)}…`;
+  return plain;
+}
+
+module.exports = { decodeHtmlEntities, stripHtmlForDisplay, sanitizeDiscoverySnippet };

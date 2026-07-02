@@ -1,5 +1,7 @@
+const path = require('path');
 const { withTimeout } = require('./asyncUtils');
 const { decodeHtmlEntities } = require('../../../packages/core/src/textUtils');
+const aiReplyStore = require(path.join(__dirname, 'aiReplyStore'));
 
 function readJson(store, key, fallback) {
   try {
@@ -32,6 +34,9 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
   const scheduled = readJson(store, 'scheduled_posts', []).filter((p) => !p.campaignId || p.campaignId === activeId);
   const postHistory = readJson(store, 'postHistory', []);
   const replies = readJson(store, 'aiRepliesHistory', []);
+  const campaignReplies = replies.filter((r) => !r.campaignId || r.campaignId === activeId);
+  const replyHub = aiReplyStore.queryHub(store, { status: 'all' });
+  const campaignReplyStats = replyHub.campaignStats;
   const engagementQueue = readJson(store, 'engagementQueue', []);
   const monitors = readJson(store, 'watchedMonitors', []);
   const library = readJson(store, `contentLibrary_${activeId}`, []);
@@ -55,7 +60,7 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
       keywords: keywords.length,
       scheduled: scheduled.length,
       published: postHistory.length,
-      drafts: replies.filter((r) => r.status === 'draft').length,
+      drafts: campaignReplyStats.byStatus?.draft ?? 0,
       library: library.length,
       monitors: monitors.length,
       queue: engagementQueue.length,
@@ -123,17 +128,25 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
     case 'history':
       return {
         ...base,
-        replyStats: {
-          draft: replies.filter((r) => r.status === 'draft').length,
-          published: replies.filter((r) => r.status === 'published' || r.status === 'Published').length,
-          total: replies.length,
+        stats: {
+          ...base.stats,
+          drafts: campaignReplyStats.byStatus?.draft ?? 0,
+          published: campaignReplyStats.byStatus?.published ?? 0,
         },
-        byPlatform: replies.reduce((acc, r) => {
-          const p = r.platform || 'Other';
-          acc[p] = (acc[p] || 0) + 1;
-          return acc;
-        }, {}),
+        replyStats: {
+          draft: campaignReplyStats.byStatus?.draft ?? 0,
+          published: campaignReplyStats.byStatus?.published ?? 0,
+          total: campaignReplyStats.total ?? campaignReplies.length,
+        },
+        byPlatform: campaignReplyStats.byPlatform || {},
       };
+    case 'prompt-vault': {
+      const vault = readJson(store, `promptVault_${activeId}`, []);
+      return {
+        ...base,
+        stats: { ...base.stats, templates: vault.length },
+      };
+    }
     case 'keywords':
       return {
         ...base,

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
+import { sanitizeDiscoverySnippet, stripHtmlForDisplay } from '@/lib/textUtils';
 import { DataPanel } from '@/components/DashboardViz';
 
 
@@ -86,7 +87,7 @@ export function ContentCommentsPanel() {
                 <span className="post-meta">{r.timestamp ? new Date(r.timestamp).toLocaleString() : ''}</span>
               </div>
               {r.originalPost && (
-                <p style={{ color: '#94a3b8', marginBottom: 8 }}><strong>Original:</strong> {r.originalPost.slice(0, 200)}</p>
+                <p style={{ color: '#94a3b8', marginBottom: 8 }}><strong>Original:</strong> {sanitizeDiscoverySnippet(r.originalPost, 200)}</p>
               )}
               <textarea
                 className="input"
