@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
+import { decodeHtmlEntities } from '@/lib/textUtils';
 import { useSiEvents } from '@/hooks/useSiEvents';
 import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 
@@ -341,7 +342,7 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
         }>
           {(data.trending || []).slice(0, 5).map((t, i) => (
             <div key={`${t.topic}-${i}`} className="spark-chip spark-ok" style={{ marginBottom: 4, justifyContent: 'space-between' }}>
-              <span className="spark-chip-label">{t.topic}</span>
+              <span className="spark-chip-label">{decodeHtmlEntities(t.topic)}</span>
               <span className="spark-chip-val" style={{ fontSize: '0.72rem' }}>{t.momentum}</span>
             </div>
           ))}

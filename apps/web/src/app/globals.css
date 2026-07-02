@@ -964,6 +964,7 @@ textarea.input { min-height: 100px; resize: vertical; }
 .ip-rec-community { border-left: 3px solid #22c55e; }
 .ip-rec-growth { border-left: 3px solid #f59e0b; }
 .ip-rec-audience { border-left: 3px solid #6366f1; }
+.ip-rec-auth { border-left: 3px solid #ef4444; }
 .ip-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--muted); margin-bottom: 8px; cursor: pointer; }
 .ip-toggle input { width: auto; margin: 0; }
 .ip-toggle-grid { display: grid; gap: 6px; margin: 12px 0; }
@@ -2821,6 +2822,23 @@ textarea.input { min-height: 100px; resize: vertical; }
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #fca5a5;
+}
+.sovereign-banner-compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  padding: 0.55rem 0.85rem;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, rgba(30, 25, 15, 0.85), rgba(15, 23, 42, 0.92));
+}
+.sovereign-banner-compact p {
+  flex: 1 1 12rem;
+  color: #cbd5e1;
+}
+.sovereign-banner-compact .btn {
+  margin-top: 0 !important;
+  flex-shrink: 0;
 }
 .sovereign-threat-panel { margin-bottom: 1.5rem; }
 

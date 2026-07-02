@@ -19,22 +19,26 @@ export function SovereignThreatBanner() {
   }, []);
 
   const pending = status?.pendingReviewCount ?? 0;
-  if (!status?.liveFrozen && pending === 0 && !(status?.openThreatCount && status.openThreatCount > 0)) {
+  const frozen = !!status?.liveFrozen;
+  const openCount = status?.openThreatCount ?? 0;
+  if (!frozen && pending === 0 && openCount === 0) {
     return null;
   }
 
+  const compact = pending > 0 && !frozen && openCount === 0;
+
   return (
-    <div className="sovereign-banner-card card" role="alert">
-      <p className="sovereign-banner-text">{THEE_MICHAEL_BANNER}</p>
-      <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+    <div className={`sovereign-banner-card card ${compact ? 'sovereign-banner-compact' : ''}`} role="alert">
+      {!compact && <p className="sovereign-banner-text">{THEE_MICHAEL_BANNER}</p>}
+      <p style={{ margin: compact ? 0 : '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
         {pending > 0
-          ? `${pending} action(s) awaiting ${THEE_MICHAEL} Accept or Deny before they are final.`
-          : status?.liveFrozen
+          ? `${pending} routine action(s) logged — review in Security Control when convenient.`
+          : frozen
             ? 'Live paths frozen — review and decide in Security Control.'
-            : `${status?.openThreatCount} contained threat(s) under review.`}
+            : `${openCount} contained threat(s) under review.`}
       </p>
-      <Link href="/settings?tab=guardian-api" className="btn btn-sm" style={{ marginTop: '0.5rem' }}>
-        Open {THEE_MICHAEL} Security Control
+      <Link href="/settings?tab=guardian-api" className="btn btn-sm" style={{ marginTop: compact ? 0 : '0.5rem' }}>
+        {compact ? `Review (${pending})` : `Open ${THEE_MICHAEL} Security Control`}
       </Link>
     </div>
   );

@@ -50,6 +50,18 @@ const PROTECTED_CHANNELS = new Set([
 const SAAS_ROUTINE_CHANNELS = new Set([
   'generate-ai', 'draft-post-reply', 'compose-qa-answer', 'grok-ask-text',
   'publish-post', 'schedule-post', 'save-ai-reply', 'engage-post',
+  // Mission Control read paths — auto-release pending review noise
+  'get-dashboard-stats', 'get-live-feed', 'get-trending-topics', 'get-live-news',
+  'get-setup-status', 'get-section-live', 'get-worker-status', 'get-worker-tasks',
+  'get-engagement-queue', 'get-leads', 'get-linked-accounts', 'get-active-campaign',
+  'get-domain-metrics', 'get-project-metrics', 'get-fanpage-settings', 'get-watched-monitors',
+  'get-auto-search-settings', 'check-api-status', 'get-brand-guidelines',
+  'get-sovereign-threat-status', 'get-thee-michael-action-history',
+  'analyze-topic', 'discover-best-questions', 'get-unanswered-questions',
+  'get-post-history', 'get-all-post-history', 'get-keywords', 'get-content-library',
+  'get-design-templates', 'get-format-templates', 'get-design-compositor-config',
+  'get-intelligence-settings', 'refresh-account-profile', 'test-all-connections',
+  'run-live-connection-audit', 'get-content-studio-config', 'get-imperial-pipeline-config',
 ]);
 
 const SENSITIVE_FIELD_RE = /^(password|passwd|secret|token|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|.*secret|.*token|.*password|.*apikey)$/i;
@@ -371,6 +383,7 @@ function shouldBlockChannelForEvent(ev) {
 function releaseRoutineFalsePositives(store) {
   const events = readEvents(store);
   let released = 0;
+  const releasedIds = [];
   const now = new Date().toISOString();
   for (const ev of events) {
     if (!isOpenThreatEvent(ev)) continue;
@@ -382,8 +395,27 @@ function releaseRoutineFalsePositives(store) {
     ev.releasedBy = ADMIN_IDENTITY;
     ev.releaseNote = 'routine_channel_auto_release';
     released += 1;
+    if (ev.eventId) releasedIds.push(ev.eventId);
   }
-  if (released) writeEvents(store, events);
+  if (released) {
+    writeEvents(store, events);
+    const history = readActionHistory(store);
+    let historyUpdated = false;
+    for (const action of history) {
+      if (action.status !== 'pending') continue;
+      const matchEvent = action.eventId && releasedIds.includes(action.eventId);
+      const matchChannel = action.channel && SAAS_ROUTINE_CHANNELS.has(action.channel)
+        && action.severity !== 'critical' && action.severity !== 'high';
+      if (!matchEvent && !matchChannel) continue;
+      action.status = 'final';
+      action.decision = 'approve';
+      action.decidedAt = now;
+      action.decidedBy = ADMIN_IDENTITY;
+      action.summary = `Auto-released (routine): ${action.summary}`;
+      historyUpdated = true;
+    }
+    if (historyUpdated) writeActionHistory(store, history);
+  }
   return released;
 }
 
@@ -741,6 +773,7 @@ function assertKineticSession(store, sessionToken) {
 
 function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
   ipcMain.handle('get-sovereign-threat-status', () => {
+    reconcileContainment(store);
     const containment = readContainment(store);
     const events = readEvents(store);
     const pending = events.filter((e) => (e.adminDecision || 'pending') === 'pending' && !e.releasedAt && !e.deniedAt);

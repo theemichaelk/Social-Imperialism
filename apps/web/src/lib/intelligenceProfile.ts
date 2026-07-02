@@ -2,6 +2,8 @@ export type IntelligenceProfile = {
   followers?: string | number;
   likes?: string | number;
   bestTime?: string;
+  authStatus?: string;
+  needsRelink?: boolean;
   topTrendingNiche?: string;
   growthVelocity?: string;
   suggestedGroups?: string[];
@@ -64,10 +66,11 @@ export function formatProfileValue(v: string | number | undefined): string {
 
 export type IntelligenceRecommendation = {
   id: string;
-  kind: 'schedule' | 'niche' | 'community' | 'growth' | 'audience';
+  kind: 'schedule' | 'niche' | 'community' | 'growth' | 'audience' | 'auth';
   label: string;
   detail: string;
   action?: string;
+  href?: string;
 };
 
 export function buildRecommendations(
@@ -80,7 +83,23 @@ export function buildRecommendations(
   const platform = account?.platform || 'Account';
   const handle = account?.handle || account?.type || '';
 
-  if (settings?.autoSuggestScheduling !== false && profile.bestTime && profile.bestTime !== '—') {
+  const tokenHint = profile.authStatus
+    || (profile.bestTime?.includes('Token expired') || profile.bestTime?.includes('re-link')
+      ? profile.bestTime
+      : null);
+  if (profile.needsRelink || tokenHint) {
+    out.push({
+      id: 'relink',
+      kind: 'auth',
+      label: `${platform} connection`,
+      detail: tokenHint || `${platform} needs a fresh OAuth link.`,
+      action: 'Re-link account',
+      href: '/account-hub',
+    });
+  }
+
+  if (settings?.autoSuggestScheduling !== false && profile.bestTime && profile.bestTime !== '—'
+    && !profile.bestTime.includes('Token expired') && !profile.bestTime.includes('re-link')) {
     out.push({
       id: 'best-time',
       kind: 'schedule',

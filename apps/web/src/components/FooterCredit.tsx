@@ -6,7 +6,8 @@ export function FooterCredit({ className = 'home-footer-copy' }: { className?: s
       Powered By{' '}
       <a href={SITE_FOOTER.creditUrl} target="_blank" rel="noopener noreferrer">
         {SITE_FOOTER.creditOrg}
-      </a>{' '}
+      </a>
+      {' · '}
       {SITE_FOOTER.creditPerson}
     </p>
   );

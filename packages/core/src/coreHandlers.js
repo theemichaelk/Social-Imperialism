@@ -3,6 +3,7 @@
  */
 const path = require('path');
 const axios = require('axios');
+const { decodeHtmlEntities } = require('./textUtils');
 const { createAiEngine } = require(path.join(__dirname, '../../../apps/desktop/saasAi'));
 const {
   deleteCampaignWithCleanup,
@@ -451,8 +452,8 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     let match;
     while ((match = itemRegex.exec(res.data)) && items.length < limit) {
       const itemXml = match[1];
-      const title = ((itemXml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '')
-        .replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+      const title = decodeHtmlEntities(((itemXml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '')
+        .replace(/<!\[CDATA\[|\]\]>/g, '').trim());
       const link = ((itemXml.match(/<link[^>]*>([\s\S]*?)<\/link>/i) || [])[1] || '').trim();
       if (title) items.push({ title, url: link, source: 'TechCrunch RSS' });
     }
@@ -470,7 +471,7 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
       });
       if (res.data?.articles?.length) {
         return res.data.articles.slice(0, 4).map((a) => ({
-          title: a.title, url: a.url, source: a.source?.name || 'NewsAPI',
+          title: decodeHtmlEntities(a.title), url: a.url, source: a.source?.name || 'NewsAPI',
         }));
       }
     } catch (e) {

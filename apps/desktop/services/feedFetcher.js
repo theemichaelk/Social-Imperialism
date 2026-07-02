@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { decodeHtmlEntities } = require('../../../packages/core/src/textUtils');
 const twitter = require('./platforms/twitter');
 const reddit = require('./platforms/reddit');
 const quora = require('./platforms/quora');
@@ -264,7 +265,7 @@ async function fetchTopHeadlinesAsPosts(keys, limit = 8, category = 'technology'
       createdAt: Date.now() - i * 60000,
       matchScore: 45,
       matchedKeyword: category,
-      content: a.title || 'Trending headline',
+      content: decodeHtmlEntities(a.title) || 'Trending headline',
       externalId: `news_${category}_${Buffer.from(a.url || a.title || String(i)).toString('base64').slice(0, 16)}`,
       url: a.url,
       stats: { likes: 0, comments: 0, views: 0 },
@@ -297,7 +298,7 @@ async function fetchNewsAsPosts(keys, keyword = 'technology', limit = 8) {
       createdAt: a.publishedAt ? new Date(a.publishedAt).getTime() : Date.now() - i * 60000,
       matchScore: 50,
       matchedKeyword: keyword,
-      content: a.title + (a.description ? `\n\n${a.description.substring(0, 200)}` : ''),
+      content: decodeHtmlEntities(a.title) + (a.description ? `\n\n${decodeHtmlEntities(a.description).substring(0, 200)}` : ''),
       externalId: `news_${Buffer.from(a.url || a.title || String(i)).toString('base64').slice(0, 16)}`,
       url: a.url,
       stats: { likes: 0, comments: 0, views: 0 },
@@ -316,7 +317,7 @@ async function fetchNewsAsPosts(keys, keyword = 'technology', limit = 8) {
         createdAt: Date.now() - i * 60000,
         matchScore: 45,
         matchedKeyword: keyword,
-        content: a.title || 'Trending headline',
+        content: decodeHtmlEntities(a.title) || 'Trending headline',
         externalId: `news_${Buffer.from(a.url || a.title || String(i)).toString('base64').slice(0, 16)}`,
         url: a.url,
         stats: { likes: 0, comments: 0, views: 0 },
@@ -337,8 +338,8 @@ async function fetchRssTrending(limit = 6) {
     let match;
     while ((match = itemRegex.exec(res.data)) && items.length < limit) {
       const itemXml = match[1];
-      const title = ((itemXml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '')
-        .replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+      const title = decodeHtmlEntities(((itemXml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '')
+        .replace(/<!\[CDATA\[|\]\]>/g, '').trim());
       const link = ((itemXml.match(/<link[^>]*>([\s\S]*?)<\/link>/i) || [])[1] || '').trim();
       if (title) {
         items.push({
@@ -366,7 +367,7 @@ async function fetchNewsHeadlineTrends(keys, limit = 6) {
       timeout: 15000,
     });
     return (res.data?.articles || []).slice(0, limit).map((a) => ({
-      topic: (a.title || 'Trending headline').substring(0, 100),
+      topic: decodeHtmlEntities(a.title || 'Trending headline').substring(0, 100),
       searchVolume: 'Headline',
       momentum: 'News',
       url: a.url,

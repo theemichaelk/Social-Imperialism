@@ -1,4 +1,5 @@
 const { withTimeout } = require('./asyncUtils');
+const { decodeHtmlEntities } = require('../../../packages/core/src/textUtils');
 
 function readJson(store, key, fallback) {
   try {
@@ -250,7 +251,7 @@ function registerSectionLiveHandlers({ ipcMain, store, resolveKeys, buildApiMetr
       success: true,
       ...metrics,
       trending: (trending || []).slice(0, 6).map((t) => ({
-        topic: t.topic || t.title || t.name,
+        topic: decodeHtmlEntities(t.topic || t.title || t.name || ''),
         momentum: t.momentum || 'rising',
       })),
     };

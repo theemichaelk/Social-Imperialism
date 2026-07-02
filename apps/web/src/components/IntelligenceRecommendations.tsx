@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   buildRecommendations,
   IntelligenceProfile,
@@ -38,19 +39,38 @@ export function IntelligenceRecommendations({
         {account && <span className="ip-recs-account">{account.platform} · {account.handle || account.username}</span>}
       </div>
       <div className="ip-recs-list">
-        {recs.map((rec) => (
-          <button
-            key={rec.id}
-            type="button"
-            className={`ip-rec-card ip-rec-${rec.kind}`}
-            onClick={() => onSelect?.(rec)}
-            title={rec.action}
-          >
-            <span className="ip-rec-label">{rec.label}</span>
-            <span className="ip-rec-detail">{rec.detail}</span>
-            {rec.action && <span className="ip-rec-action">{rec.action}</span>}
-          </button>
-        ))}
+        {recs.map((rec) => {
+          const inner = (
+            <>
+              <span className="ip-rec-label">{rec.label}</span>
+              <span className="ip-rec-detail">{rec.detail}</span>
+              {rec.action && <span className="ip-rec-action">{rec.action}</span>}
+            </>
+          );
+          if (rec.href) {
+            return (
+              <Link
+                key={rec.id}
+                href={rec.href}
+                className={`ip-rec-card ip-rec-${rec.kind}`}
+                title={rec.action}
+              >
+                {inner}
+              </Link>
+            );
+          }
+          return (
+            <button
+              key={rec.id}
+              type="button"
+              className={`ip-rec-card ip-rec-${rec.kind}`}
+              onClick={() => onSelect?.(rec)}
+              title={rec.action}
+            >
+              {inner}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

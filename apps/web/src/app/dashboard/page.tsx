@@ -25,6 +25,7 @@ import {
   DASHBOARD_TABS,
   resolveLegacyTab,
 } from '@/lib/smartTabs';
+import { decodeHtmlEntities } from '@/lib/textUtils';
 
 type Post = {
   platform: string;
@@ -73,7 +74,12 @@ function asArray<T>(data: unknown): T[] {
 }
 
 function asNews(data: unknown): NewsItem[] {
-  if (Array.isArray(data)) return data;
+  if (Array.isArray(data)) {
+    return data.map((n) => {
+      const item = n as NewsItem;
+      return { ...item, title: decodeHtmlEntities(item.title) };
+    });
+  }
   if (data && typeof data === 'object' && 'error' in (data as object)) return [];
   return [];
 }
@@ -81,7 +87,7 @@ function asNews(data: unknown): NewsItem[] {
 function asTrending(data: unknown): TrendItem[] {
   return asArray<TrendItem>(data).map((t) => ({
     ...t,
-    topic: t.topic || t.title || 'Trending',
+    topic: decodeHtmlEntities(t.topic || t.title || 'Trending'),
   }));
 }
 

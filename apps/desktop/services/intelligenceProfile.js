@@ -100,14 +100,18 @@ async function buildIntelligenceProfile(account, keys) {
     return clean;
   }
 
-  const tokenHint = accessToken
-    ? 'Token expired or invalid — re-link this account via OAuth or paste a fresh access token.'
-    : 'Add API keys in Settings or connect with a valid access token.';
+  const platform = account.platform || 'Account';
+  const needsRelink = !!accessToken;
+  const authStatus = needsRelink
+    ? `${platform} token expired or invalid — re-link via Account Hub.`
+    : `Connect ${platform} in Account Hub or add API keys in Settings.`;
 
   return {
     followers: '—',
     likes: '—',
-    bestTime: tokenHint,
+    bestTime: '—',
+    authStatus,
+    needsRelink,
     topTrendingNiche: '—',
     growthVelocity: '—',
     suggestedGroups: [],
