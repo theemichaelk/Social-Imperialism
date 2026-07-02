@@ -122,6 +122,7 @@ export const PAGE_CHANNELS = {
   campaignManager: [
     'get-settings-status', 'get-active-campaign', 'get-settings', 'get-campaign-details',
     'update-campaign', 'pause-campaign', 'resume-campaign', 'delete-campaign', 'set-active-campaign',
+    'clear-qa-campaigns', 'clear-failed-scheduled-posts',
     'save-settings', 'get-scheduled-posts', 'schedule-post', 'update-scheduled-post',
     'delete-scheduled-post', 'publish-scheduled-post-now', 'get-worker-status', 'get-section-live',
     'get-verified-node-tree', 'list-verified-campaigns', 'create-verified-campaign',

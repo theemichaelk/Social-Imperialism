@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
-import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { apiStatusToBars, BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { probesFromAudit } from '@/lib/integrationProbes';
 import { INTEGRATION_GROUPS, LIVE_INTEGRATION_TESTS } from '@/lib/integrationCatalog';
 import { PARTNER_CONNECTORS } from '@/lib/partnerConnectors';
 import { OAUTH_PLATFORM_SETUP, OAUTH_PRIMARY_REDIRECT } from '@/lib/oauthConfig';
@@ -137,6 +138,35 @@ function IntegrationsContent() {
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!results.every((r) => r.status === 'idle')) return;
+      try {
+        type AuditRes = {
+          probes?: Array<{ id: string; label: string; status: string; ms?: number; summary?: string }>;
+          summary?: { pass?: number; warn?: number; fail?: number };
+          apiMetrics?: Record<string, string>;
+        };
+        let res: AuditRes;
+        try {
+          res = await invoke<AuditRes>('run-live-connection-audit');
+        } catch {
+          res = await invoke<AuditRes>('test-all-connections');
+        }
+        if (cancelled) return;
+        if (res.probes?.length) {
+          setResults(probesFromAudit(res));
+          if (res.apiMetrics) setApiStatus(res.apiMetrics);
+          const s = res.summary;
+          if (s) setMsg(`Auto audit: ${s.pass ?? 0} pass · ${s.warn ?? 0} warn · ${s.fail ?? 0} fail`);
+        }
+      } catch { /* user can run Test Connections manually */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const setTabAndUrl = useCallback((t: string) => {
     if (t === 'partner-api' || t === 'webhooks' || t === 'connectors') {
       setPartnerSection(t);
@@ -258,12 +288,7 @@ function IntegrationsContent() {
     setMsg('Outbound webhook added');
   }
 
-  const apiBars = Object.entries(apiStatus).slice(0, 14).map(([name, st]) => ({
-    label: chartShortLabel(name),
-    title: `${name}: ${st}`,
-    value: st === 'Connected' ? 5 : st === 'Configured' ? 2 : 1,
-    color: st === 'Connected' ? '#22c55e' : st === 'Configured' ? '#38bdf8' : '#64748b',
-  }));
+  const apiBars = apiStatusToBars(apiStatus, 14);
 
   const apiBase = partner.apiBase || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 

@@ -58,6 +58,7 @@ export const PUBLIC_NAV_ANCHORS = [
 ] as const;
 
 export const PUBLIC_NAV_ROUTES = [
+  { id: 'download', label: 'Download', href: '/download' },
   { id: 'founder', label: 'Founder', href: '/founder' },
 ] as const;
 
@@ -84,6 +85,7 @@ export function getPublicNavActions(loggedIn = false): PublicNavAction[] {
 export const FOOTER_LINKS = [
   { href: '/login', label: 'Sign In' },
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/download', label: 'Download Desktop' },
   { href: '/integrations', label: 'Integrations' },
   { href: '/settings', label: 'Settings' },
   { href: '/founder', label: 'Founder' },

@@ -5,6 +5,7 @@ import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { DataPanel, MetricTile } from '@/components/DashboardViz';
 import { GrokToolbar } from '@/components/GrokToolbar';
+import { isPlaceholderDnsValue, isQaDnsSite } from '@/lib/qaFilters';
 
 type DnsSite = {
   id: string;
@@ -49,8 +50,12 @@ export default function DnsPage() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState('');
+  const [hideQaSites, setHideQaSites] = useState(true);
 
-  const selected = sites.find((s) => s.id === selectedId);
+  const qaSiteCount = sites.filter((s) => isQaDnsSite(s)).length;
+  const visibleSites = hideQaSites ? sites.filter((s) => !isQaDnsSite(s)) : sites;
+  const selected = visibleSites.find((s) => s.id === selectedId) || sites.find((s) => s.id === selectedId);
+  const placeholderRecords = records.filter((r) => isPlaceholderDnsValue(r.value));
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -219,7 +224,7 @@ export default function DnsPage() {
       )}
 
       <div className="grid grid-4" style={{ marginBottom: 16 }}>
-        <MetricTile label="Sites" value={sites.length} sub={isAdmin ? 'admin access' : 'your sites'} />
+        <MetricTile label="Sites" value={visibleSites.length} sub={isAdmin ? `${qaSiteCount ? `${qaSiteCount} QA hidden · ` : ''}admin` : 'your sites'} />
         <MetricTile label="Records" value={records.length} sub={selected?.domain || '—'} />
         <MetricTile label="Route53" value={config.route53Configured ? 'Ready' : 'Off'} sub={config.defaultHostedZone || 'auto-detect'} />
         <MetricTile label="Role" value={isAdmin ? 'Admin' : 'Client'} sub="DNS access" />
@@ -227,11 +232,15 @@ export default function DnsPage() {
 
       <div className="grid grid-2">
         <DataPanel title="Sites" live>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <button className="btn btn-sm" onClick={syncSites} disabled={busy === 'sync'}>Sync from campaigns</button>
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.82rem' }}>
+              <input type="checkbox" checked={hideQaSites} onChange={(e) => setHideQaSites(e.target.checked)} />
+              Hide .test / QA sites
+            </label>
           </div>
           <div className="site-picker-grid">
-            {sites.map((s) => (
+            {visibleSites.map((s) => (
               <button
                 key={s.id}
                 type="button"
@@ -242,7 +251,7 @@ export default function DnsPage() {
                 <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.8 }}>{scopeLabel(s)}</span>
               </button>
             ))}
-            {!sites.length && !loading && (
+            {!visibleSites.length && !loading && (
               <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No sites yet — add one or sync from campaigns.</p>
             )}
           </div>
@@ -258,9 +267,17 @@ export default function DnsPage() {
         <DataPanel title={selected ? `DNS Records — ${selected.domain}` : 'DNS Records'} live>
           {selected ? (
             <>
+              {placeholderRecords.length > 0 && (
+                <div className="card" style={{ marginBottom: 12, borderColor: '#f59e0b' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>
+                    <strong>{placeholderRecords.length} draft record(s)</strong> still use placeholder values (e.g. YOUR_SERVER_IP).
+                    Replace with your server IP or CNAME target before applying to Route53.
+                  </p>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
                 {config.route53Configured && (
-                  <button className="btn btn-sm" onClick={applyToRoute53} disabled={busy === 'apply' || !records.length}>
+                  <button className="btn btn-sm" onClick={applyToRoute53} disabled={busy === 'apply' || !records.length || placeholderRecords.length > 0}>
                     Apply to Route53
                   </button>
                 )}
@@ -286,7 +303,9 @@ export default function DnsPage() {
                         <td style={{ padding: '6px 8px' }}>{r.name}</td>
                         <td style={{ padding: '6px 8px', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.value}>{r.value}</td>
                         <td style={{ padding: '6px 8px' }}>{r.ttl}</td>
-                        <td style={{ padding: '6px 8px' }}>{r.status || 'draft'}</td>
+                        <td style={{ padding: '6px 8px', color: isPlaceholderDnsValue(r.value) ? '#f59e0b' : undefined }}>
+                          {isPlaceholderDnsValue(r.value) ? 'placeholder' : (r.status || 'draft')}
+                        </td>
                         <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
                           <button className="btn btn-sm" style={{ marginRight: 4 }} onClick={() => startEdit(r)}>Edit</button>
                           <button className="btn btn-sm" style={{ marginRight: 4 }} onClick={() => verifyRecord(r.id)} disabled={busy === `verify-${r.id}`}>Verify</button>

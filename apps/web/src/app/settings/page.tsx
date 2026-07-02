@@ -11,7 +11,7 @@ import { SitePlaybooksPanel } from '@/components/SitePlaybooksPanel';
 import { SiteTrafficHealthPanel } from '@/components/SiteTrafficHealthPanel';
 import { SettingsHealthPanel } from '@/components/SettingsHealthPanel';
 import { IntelligenceSettingsPanel } from '@/components/IntelligenceSettingsPanel';
-import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { apiStatusToBars, BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { INTEGRATION_GROUPS } from '@/lib/integrationCatalog';
 import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
 import { NativeBrowserPanel } from '@/components/NativeBrowserPanel';
@@ -300,12 +300,7 @@ function SettingsContent() {
     setGrokStatus(await invoke<Record<string, unknown>>('grok-get-status').catch(() => ({})));
   }
 
-  const apiBars = Object.entries(apiStatus).map(([name, st]) => ({
-    label: chartShortLabel(name),
-    title: `${name}: ${st}`,
-    value: st === 'Connected' ? 4 : st === 'Configured' ? 2 : 1,
-    color: st === 'Connected' ? '#22c55e' : st === 'Configured' ? '#38bdf8' : '#64748b',
-  }));
+  const apiBars = apiStatusToBars(apiStatus, 12);
 
   const groupBars = INTEGRATION_GROUPS.map((g) => ({
     label: chartShortLabel(g.title, 10),
@@ -398,6 +393,7 @@ function SettingsContent() {
           </DataPanel>
           <DataPanel title="Quick Actions" live>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Link href="/download" className="btn primary">Download Desktop App</Link>
               <button className="btn" onClick={async () => {
                 const data = await invoke('export-data');
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });

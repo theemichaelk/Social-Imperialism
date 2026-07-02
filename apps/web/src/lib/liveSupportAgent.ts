@@ -100,6 +100,10 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Setup Wizard', href: '/onboarding' },
   },
   {
+    patterns: [/desktop\s+app/i, /download\s+app/i, /install\s+desktop/i, /electron/i, /windows\s+installer/i],
+    route: { label: 'Download Desktop App', href: '/download' },
+  },
+  {
     patterns: [/\bhelp\b/i, /\bsupport\b/i, /\bstuck\b/i, /troubleshoot/i],
     route: { label: 'Live Support', href: '/support' },
   },
@@ -116,6 +120,7 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
 export const QUICK_PROMPTS = [
   'Connect a platform',
   'Posts not scheduling',
+  'Download desktop app',
   'Fix AI reply tone',
   'Ask THEE_MICHAEL',
 ];

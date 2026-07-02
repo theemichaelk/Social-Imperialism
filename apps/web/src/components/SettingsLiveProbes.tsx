@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { LIVE_INTEGRATION_TESTS } from '@/lib/integrationCatalog';
 import { BarChart, DataPanel, LivePulse, MetricTile, SparkRow } from '@/components/DashboardViz';
@@ -89,6 +89,12 @@ export function SettingsLiveProbes({
   }, [onMessage, onMetrics, runTest]);
 
   const issues = results.filter((r) => r.status === 'fail' || r.status === 'warn');
+
+  useEffect(() => {
+    if (!results.every((r) => r.status === 'idle')) return;
+    runAll().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="settings-live-probes">

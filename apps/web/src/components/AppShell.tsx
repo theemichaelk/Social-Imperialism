@@ -13,7 +13,7 @@ const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
 const PUBLIC_PATHS = new Set([
   '/', '/login', '/subscribe', '/setup-account', '/forgot-password', '/reset-password',
-  '/founder', '/oauth/callback', '/billing/success', '/billing/cancel',
+  '/founder', '/download', '/oauth/callback', '/billing/success', '/billing/cancel',
   '/sitemap.html', '/feed.xml',
 ]);
 

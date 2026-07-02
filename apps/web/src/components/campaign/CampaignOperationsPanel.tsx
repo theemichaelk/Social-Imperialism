@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
-import { DataPanel, LivePulse, MetricTile, SparkRow } from '@/components/DashboardViz';
+import { DataPanel, focusBrandLabel, LivePulse, MetricTile, SparkRow } from '@/components/DashboardViz';
+import { isQaCampaign, isQaScheduledPost } from '@/lib/qaFilters';
 
 type Campaign = {
   id: string;
@@ -88,6 +89,7 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [newPost, setNewPost] = useState({ content: '', platform: 'Twitter', scheduleTime: '' });
   const [reschedule, setReschedule] = useState<Record<string, string>>({});
+  const [hideQa, setHideQa] = useState(true);
 
   const loadList = useCallback(async () => {
     const [status, active] = await Promise.all([
@@ -131,13 +133,19 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
     if (selectedId) loadDetails(selectedId).catch(console.error);
   }, [selectedId, loadDetails]);
 
+  const visibleSummaries = hideQa ? summaries.filter((s) => !isQaCampaign(s)) : summaries;
+  const qaCampaignCount = summaries.filter((s) => isQaCampaign(s)).length;
+  const activeBrand = summaries.find((s) => s.id === activeId)?.brandName || '—';
+  const failedPosts = (details?.scheduledPosts || []).filter((p) => p.status === 'failed');
+  const failedPlatforms = [...new Set(failedPosts.map((p) => p.platform).filter(Boolean))];
+
   useEffect(() => {
     onStatsChange?.({
-      campaigns: summaries.length,
-      active: summaries.find((s) => s.id === activeId)?.brandName?.slice(0, 12) || '—',
-      running: details?.isRunning ? 'Yes' : 'No',
+      campaigns: visibleSummaries.length,
+      active: focusBrandLabel(activeBrand, 22),
+      running: details?.isRunning ? 'Yes' : details?.workerRunning ? 'Worker' : 'No',
     });
-  }, [summaries, activeId, details, onStatsChange]);
+  }, [visibleSummaries.length, activeBrand, details, onStatsChange]);
 
   async function activate(id: string) {
     await invoke('set-active-campaign', id);
@@ -214,6 +222,28 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
     await loadDetails(selectedId);
   }
 
+  async function clearQaCampaigns() {
+    if (!window.confirm(`Remove ${qaCampaignCount} QA/test campaign(s)? Production campaigns are kept.`)) return;
+    const res = await invoke<{ success?: boolean; removed?: number; campaigns?: CampaignSummary[]; error?: string }>('clear-qa-campaigns');
+    if (!res.success) { setMsg(res.error || 'Clear failed'); return; }
+    setSummaries(res.campaigns || []);
+    const next = res.campaigns?.[0]?.id || '';
+    setSelectedId(next);
+    setActiveId(next);
+    setMsg(`Removed ${res.removed ?? 0} QA campaign(s)`);
+    if (next) await loadDetails(next);
+    else setDetails(null);
+  }
+
+  async function clearFailedPosts() {
+    if (!selectedId || !failedPosts.length) return;
+    if (!window.confirm(`Remove ${failedPosts.length} failed scheduled post(s)?`)) return;
+    const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('clear-failed-scheduled-posts', selectedId);
+    if (!res.success) { setMsg(res.error || 'Clear failed'); return; }
+    setMsg(`Cleared ${res.removed ?? 0} failed post(s)`);
+    await loadDetails(selectedId);
+  }
+
   async function scheduleNewPost() {
     if (!newPost.content.trim()) { setMsg('Post content is required'); return; }
     if (!newPost.scheduleTime) { setMsg('Pick a schedule time'); return; }
@@ -246,11 +276,20 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
       )}
 
       <div className="grid grid-2" style={{ alignItems: 'start', gap: 16 }}>
-        <DataPanel title={`All Campaigns (${summaries.length})`} live>
-          {summaries.length === 0 && (
+        <DataPanel title={`All Campaigns (${visibleSummaries.length})`} live>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.82rem' }}>
+              <input type="checkbox" checked={hideQa} onChange={(e) => setHideQa(e.target.checked)} />
+              Hide QA campaigns
+            </label>
+            {qaCampaignCount > 0 && (
+              <button type="button" className="btn btn-sm" onClick={clearQaCampaigns}>Clear {qaCampaignCount} QA</button>
+            )}
+          </div>
+          {visibleSummaries.length === 0 && (
             <p className="settings-panel-desc">No campaigns yet. <Link href="/onboarding">Run Setup Wizard</Link> or create one in Settings.</p>
           )}
-          {summaries.map((s) => {
+          {visibleSummaries.map((s) => {
             const isSel = s.id === selectedId;
             const isAct = s.id === activeId;
             const st = s.status === 'Paused' ? 'Paused' : isAct ? 'Active' : (s.status || 'Draft');
@@ -356,18 +395,40 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
             )}
 
             <DataPanel title={`Scheduled Posts (${details.scheduledPosts?.length ?? 0})`} live>
+              {failedPosts.length > 0 && (
+                <div className="card" style={{ marginBottom: 12, borderColor: '#ef4444' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.88rem' }}>
+                    <strong>{failedPosts.length} failed</strong>
+                    {failedPlatforms.length > 0 && ` — likely ${failedPlatforms.join(', ')} token or permission issue.`}
+                    {' '}Reconnect in Account Hub, then retry or clear.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Link href={`/account-hub${failedPlatforms[0] ? `?relink=${encodeURIComponent(failedPlatforms[0])}` : ''}`} className="btn primary">Reconnect accounts</Link>
+                    <button type="button" className="btn" onClick={clearFailedPosts}>Clear failed</button>
+                  </div>
+                </div>
+              )}
               {(details.scheduledPosts?.length ?? 0) === 0 ? (
                 <p className="settings-panel-desc">No posts scheduled for this campaign yet.</p>
               ) : (
                 details.scheduledPosts!.map((p) => {
                   const due = new Date(p.timestamp).getTime() <= Date.now();
+                  const failed = p.status === 'failed';
+                  const qaPost = isQaScheduledPost(p);
                   return (
-                    <div key={p.id} className="post-card" style={{ marginBottom: 8 }}>
+                    <div key={p.id} className="post-card" style={{ marginBottom: 8, borderColor: failed ? 'rgba(239,68,68,0.45)' : undefined }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: 200 }}>
                           <strong>{p.platform}</strong>
-                          {due && <span className="badge" style={{ marginLeft: 8, color: '#f59e0b' }}>Due</span>}
+                          {failed && <span className="badge" style={{ marginLeft: 8, color: '#ef4444' }}>Failed</span>}
+                          {due && !failed && <span className="badge" style={{ marginLeft: 8, color: '#f59e0b' }}>Due</span>}
+                          {qaPost && <span className="badge" style={{ marginLeft: 8 }}>QA</span>}
                           <div className="post-meta">{new Date(p.timestamp).toLocaleString()} · {p.status || 'scheduled'}</div>
+                          {failed && (
+                            <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#f87171' }}>
+                              Publish failed — refresh {p.platform} OAuth in Account Hub (w_member_social for LinkedIn).
+                            </p>
+                          )}
                           <p style={{ margin: '6px 0 0', fontSize: '0.85rem' }}>{p.content.slice(0, 160)}{p.content.length > 160 ? '…' : ''}</p>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 180 }}>
@@ -409,10 +470,19 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
 
       <div className="dash-hero" style={{ marginTop: 16 }}>
         <div className="dash-hero-grid">
-          <MetricTile label="Total Campaigns" value={summaries.length} />
-          <MetricTile label="Active Campaign" value={summaries.find((s) => s.id === activeId)?.brandName?.slice(0, 16) || '—'} accent="#38bdf8" />
-          <MetricTile label="Worker" value={details?.isRunning ? 'Running' : details?.isPaused ? 'Paused' : 'Idle'} accent={details?.isRunning ? '#10b981' : '#64748b'} />
-          <MetricTile label="Scheduled" value={details?.stats?.scheduledPosts ?? 0} sub={`${details?.stats?.duePosts ?? 0} due`} />
+          <MetricTile label="Total Campaigns" value={visibleSummaries.length} />
+          <MetricTile
+            label="Active Campaign"
+            value={focusBrandLabel(activeBrand, 20)}
+            title={activeBrand}
+            accent="#38bdf8"
+          />
+          <MetricTile
+            label="Worker"
+            value={details?.isRunning ? 'Running' : details?.isPaused ? 'Paused' : details?.workerRunning ? 'Idle' : 'No Worker'}
+            accent={details?.isRunning ? '#10b981' : '#64748b'}
+          />
+          <MetricTile label="Scheduled" value={details?.stats?.scheduledPosts ?? 0} sub={`${details?.stats?.duePosts ?? 0} due${failedPosts.length ? ` · ${failedPosts.length} failed` : ''}`} />
         </div>
       </div>
     </div>

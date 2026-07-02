@@ -7,7 +7,7 @@ export function chartShortLabel(name: string, max = 8): string {
   const aliases: Record<string, string> = {
     'Twitter / X': 'X / Twitter',
     'Meta / Facebook': 'Meta',
-    'Reddit OAuth': 'Reddit',
+    'Reddit OAuth': 'Rd OAuth',
     'NewsAPI': 'News',
     'SerpAPI': 'Serp',
     'DomDetailer': 'DomDet',
@@ -20,7 +20,7 @@ export function chartShortLabel(name: string, max = 8): string {
     'Twitch': 'Twitch',
     'Unsplash': 'Unsplash',
     'Stock Media': 'Stock',
-    'Reddit Feed': 'Reddit',
+    'Reddit Feed': 'Rd Feed',
     Keywords: 'Keywords',
     keyword: 'Keywords',
     Twitter: 'X',
@@ -34,6 +34,50 @@ export function chartShortLabel(name: string, max = 8): string {
   return name.slice(0, max);
 }
 
+/** Readable brand label for focus rails and metric tiles — avoids mid-word truncation. */
+export function focusBrandLabel(name: string, max = 24): string {
+  const n = (name || '—').trim();
+  if (!n || n === '—') return '—';
+  const stripped = n.replace(/^the\s+/i, '');
+  const base = stripped.length <= max ? stripped : stripped;
+  if (base.length <= max) return base;
+  return `${base.slice(0, max - 1)}…`;
+}
+
+function apiStatusScore(st: string): number {
+  if (st === 'Connected' || st === 'Live (public API)') return 4;
+  if (st === 'Configured') return 2;
+  return 1;
+}
+
+function apiStatusColor(st: string): string {
+  if (st === 'Connected' || st === 'Live (public API)') return '#22c55e';
+  if (st === 'Configured') return '#38bdf8';
+  return '#64748b';
+}
+
+/** Merge api status entries that share the same chart label (e.g. Reddit OAuth + Reddit Feed). */
+export function apiStatusToBars(apiStatus: Record<string, string>, limit = 14): BarItem[] {
+  const merged = new Map<string, BarItem>();
+  for (const [name, st] of Object.entries(apiStatus)) {
+    const label = chartShortLabel(name);
+    const item: BarItem = {
+      label,
+      title: `${name}: ${st}`,
+      value: apiStatusScore(st),
+      color: apiStatusColor(st),
+    };
+    const prev = merged.get(label);
+    if (!prev || item.value > prev.value) {
+      merged.set(label, {
+        ...item,
+        title: prev && prev.value !== item.value ? `${prev.title}; ${item.title}` : item.title,
+      });
+    }
+  }
+  return [...merged.values()].slice(0, limit);
+}
+
 export function LivePulse({ label = 'LIVE' }: { label?: string }) {
   return (
     <span className="live-pulse">
@@ -43,11 +87,12 @@ export function LivePulse({ label = 'LIVE' }: { label?: string }) {
   );
 }
 
-export function MetricTile({ label, value, sub, accent, onClick }: { label: string; value: string | number; sub?: string; accent?: string; onClick?: () => void }) {
+export function MetricTile({ label, value, sub, accent, title, onClick }: { label: string; value: string | number; sub?: string; accent?: string; title?: string; onClick?: () => void }) {
   return (
     <div
       className={`metric-tile${onClick ? ' clickable' : ''}`}
       style={accent ? { borderColor: accent } : undefined}
+      title={title}
       onClick={onClick}
       onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
       role={onClick ? 'button' : undefined}

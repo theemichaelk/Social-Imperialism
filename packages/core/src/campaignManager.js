@@ -168,6 +168,56 @@ function resumeCampaign(store, campaignId) {
   return { success: true, campaign: campaigns[idx], campaigns, workerStarted };
 }
 
+function isQaCampaign(c) {
+  const name = String(c?.brandName || '').trim();
+  const domain = String(c?.domain || '').trim().toLowerCase();
+  const id = String(c?.id || '');
+  if (/wizard\s*qa|qa\s*brand|^qa\b/i.test(name)) return true;
+  if (/\.test$|wizardqa\.com/i.test(domain)) return true;
+  if (/^wiz_qa|^camp_qa|^mon_wiz/i.test(id)) return true;
+  return false;
+}
+
+function clearQaCampaigns(store) {
+  const campaigns = getCampaigns(store);
+  const qa = campaigns.filter(isQaCampaign);
+  if (!qa.length) return { success: true, removed: 0, campaigns };
+
+  let next = campaigns.filter((c) => !isQaCampaign(c));
+  saveCampaigns(store, next);
+
+  const activeId = store.getItem('activeCampaignId');
+  if (qa.some((c) => c.id === activeId)) {
+    if (next.length) store.setItem('activeCampaignId', next[0].id);
+    else store.removeItem('activeCampaignId');
+    store.setItem('workerRunningFlag', 'false');
+  }
+
+  for (const c of qa) {
+    const posts = getScheduledPosts(store).filter((p) => p.campaignId !== c.id);
+    saveScheduledPosts(store, posts);
+    const keywords = parseJson(store.getItem('keywords'), []).filter((k) => k.campaignId !== c.id);
+    store.setItem('keywords', JSON.stringify(keywords));
+    for (const key of [`linkedAccounts_${c.id}`, `brandGuidelines_${c.id}`, `fetchProfiles_${c.id}`]) {
+      try { store.removeItem(key); } catch { /* ignore */ }
+    }
+  }
+
+  return { success: true, removed: qa.length, campaigns: next };
+}
+
+function clearFailedScheduledPosts(store, campaignId) {
+  const all = getScheduledPosts(store);
+  const before = all.length;
+  const next = all.filter((p) => {
+    if (p.status !== 'failed') return true;
+    if (campaignId && p.campaignId !== campaignId) return true;
+    return false;
+  });
+  saveScheduledPosts(store, next);
+  return { success: true, removed: before - next.length, remaining: next.length };
+}
+
 function deleteCampaignWithCleanup(store, campaignId) {
   let campaigns = getCampaigns(store);
   const target = campaigns.find((c) => c.id === campaignId);
@@ -219,6 +269,8 @@ function registerCampaignManagerHandlers(ipcMain, store) {
     if (!campaignId) return { success: false, error: 'campaignId required' };
     return resumeCampaign(store, campaignId);
   });
+  ipcMain.handle('clear-qa-campaigns', () => clearQaCampaigns(store));
+  ipcMain.handle('clear-failed-scheduled-posts', (event, campaignId) => clearFailedScheduledPosts(store, campaignId));
 }
 
 module.exports = {
@@ -227,5 +279,8 @@ module.exports = {
   pauseCampaign,
   resumeCampaign,
   deleteCampaignWithCleanup,
+  clearQaCampaigns,
+  clearFailedScheduledPosts,
+  isQaCampaign,
   registerCampaignManagerHandlers,
 };

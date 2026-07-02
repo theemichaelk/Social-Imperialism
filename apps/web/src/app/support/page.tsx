@@ -13,6 +13,7 @@ const HELP_TOPICS = [
   { title: 'AI replies', desc: 'Draft, approve, regenerate, brand voice', href: '/history', icon: '💬' },
   { title: 'Discovery', desc: 'Keywords, browse posts, engagement queue', href: '/browse-posts', icon: '🧭' },
   { title: 'Setup Wizard', desc: 'Brand, tone, keywords, go-live checklist', href: '/onboarding', icon: '🚀' },
+  { title: 'Desktop app', desc: 'Download Windows installer & install steps', href: '/download', icon: '💻' },
   { title: 'Ask THEE_MICHAEL', desc: 'Admin approval for sensitive changes', href: '/support', icon: '🛡️' },
 ];
 

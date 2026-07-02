@@ -94,7 +94,7 @@ export function PageFocusRail({
           {stats && Object.keys(stats).length > 0 && (
             <div className="pfr-stats">
               {Object.entries(stats).map(([k, v]) => (
-                <span key={k} className="pfr-stat">
+                <span key={k} className="pfr-stat" title={typeof v === 'string' && v.length > 14 ? String(v) : undefined}>
                   <strong>{v}</strong> {k}
                 </span>
               ))}
