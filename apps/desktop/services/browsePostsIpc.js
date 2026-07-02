@@ -1,4 +1,6 @@
 const { withTimeout } = require('./asyncUtils');
+const { summarizeEngageability } = require('../../../packages/core/src/postEngageability');
+const { decodeHtmlEntities } = require('../../../packages/core/src/textUtils');
 
 function registerBrowsePostsHandlers({ ipcMain, store, resolveKeys, buildApiMetrics, fetchTrendingTopics }) {
   const channels = ['get-browse-posts-live'];
@@ -37,17 +39,7 @@ function registerBrowsePostsHandlers({ ipcMain, store, resolveKeys, buildApiMetr
       );
     } catch (e) { /* optional */ }
 
-    const platformCounts = {};
-    let engageable = 0;
-    let viewOnly = 0;
-    feedSample.forEach((p) => {
-      const plat = p.platform || 'Other';
-      platformCounts[plat] = (platformCounts[plat] || 0) + 1;
-      const id = p.externalId || '';
-      const canEngage = id && !p.isWebDiscovery && !/^twitter_|^quora_|^reddit_/i.test(id);
-      if (canEngage) engageable += 1;
-      else viewOnly += 1;
-    });
+    const { engageable, viewOnly, platformCounts } = summarizeEngageability(feedSample);
 
     let trending = [];
     if (fetchTrendingTopics) {
@@ -90,7 +82,7 @@ function registerBrowsePostsHandlers({ ipcMain, store, resolveKeys, buildApiMetr
       platformCounts,
       queueByAction,
       trending: (trending || []).slice(0, 8).map((t) => ({
-        topic: t.topic || t.title || t.name,
+        topic: decodeHtmlEntities(t.topic || t.title || t.name || ''),
         momentum: t.momentum || t.volume || 'rising',
         platform: t.platform || 'Social',
       })),

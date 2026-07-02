@@ -12,10 +12,16 @@ import {
 export function SovereignThreatBanner() {
   const [status, setStatus] = useState<SovereignStatus | null>(null);
 
-  useEffect(() => {
+  const loadStatus = () => {
     invoke<SovereignStatus>('get-sovereign-threat-status')
       .then(setStatus)
       .catch(() => setStatus(null));
+  };
+
+  useEffect(() => {
+    loadStatus();
+    const id = setInterval(loadStatus, 120000);
+    return () => clearInterval(id);
   }, []);
 
   const pending = status?.pendingReviewCount ?? 0;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { summarizeEngageability, type EngageablePost } from '@/lib/postEngageability';
 
 type LiveData = {
   updatedAt?: string;
@@ -23,7 +24,13 @@ type LiveData = {
   monitors?: Array<{ id: string; label: string; platform?: string }>;
 };
 
-export function BrowsePostsLivePanel({ feedCount }: { feedCount?: number }) {
+export function BrowsePostsLivePanel({
+  feedCount,
+  feedPosts,
+}: {
+  feedCount?: number;
+  feedPosts?: EngageablePost[];
+}) {
   const [data, setData] = useState<LiveData>({});
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +52,11 @@ export function BrowsePostsLivePanel({ feedCount }: { feedCount?: number }) {
   }, [refresh]);
 
   const stats = data.stats || {};
-  const platformBars = Object.entries(data.platformCounts || {})
+  const feedSummary = feedPosts?.length ? summarizeEngageability(feedPosts) : null;
+  const engageable = feedSummary?.engageable ?? stats.engageable ?? 0;
+  const viewOnly = feedSummary?.viewOnly ?? stats.viewOnly ?? 0;
+  const platformSource = feedSummary?.platformCounts ?? data.platformCounts ?? {};
+  const platformBars = Object.entries(platformSource)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
     .map(([label, value], i) => ({
@@ -60,15 +71,15 @@ export function BrowsePostsLivePanel({ feedCount }: { feedCount?: number }) {
     color: ['#6366f1', '#22c55e', '#f59e0b'][i % 3],
   }));
 
-  const engageTotal = (stats.engageable || 0) + (stats.viewOnly || 0);
-  const engagePct = engageTotal ? Math.round(((stats.engageable || 0) / engageTotal) * 100) : 0;
+  const engageTotal = engageable + viewOnly;
+  const engagePct = engageTotal ? Math.round((engageable / engageTotal) * 100) : 0;
 
   return (
     <div className="ics-live-grid browse-live-grid">
       <div className="dash-hero" style={{ gridColumn: '1 / -1' }}>
         <div className="dash-hero-grid">
           <MetricTile label="In feed" value={feedCount ?? stats.feedPosts ?? 0} sub="filtered" />
-          <MetricTile label="API engageable" value={stats.engageable ?? 0} sub="live actions" accent="#22c55e" />
+          <MetricTile label="API engageable" value={engageable} sub="live actions" accent="#22c55e" />
           <MetricTile label="Keywords" value={stats.keywords ?? 0} sub="tracked" accent="#38bdf8" />
           <MetricTile label="Queue" value={stats.queuePending ?? 0} sub="pending" accent="#f59e0b" />
           <MetricTile label="Monitors" value={stats.monitors ?? 0} sub="watching" accent="#a855f7" />
@@ -93,10 +104,10 @@ export function BrowsePostsLivePanel({ feedCount }: { feedCount?: number }) {
           <RingChart percent={engagePct} label="API ready" color="#22c55e" />
           <div>
             <p className="settings-panel-desc" style={{ margin: '0 0 4px' }}>
-              <strong style={{ color: '#22c55e' }}>{stats.engageable ?? 0}</strong> posts support Like / Reply / Share via API
+              <strong style={{ color: '#22c55e' }}>{engageable}</strong> posts support Like / Reply / Share via API
             </p>
             <p className="settings-panel-desc" style={{ margin: 0 }}>
-              <strong style={{ color: '#94a3b8' }}>{stats.viewOnly ?? 0}</strong> view-only — open link on platform
+              <strong style={{ color: '#94a3b8' }}>{viewOnly}</strong> view-only — open link on platform
             </p>
           </div>
         </div>

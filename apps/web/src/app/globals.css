@@ -448,7 +448,15 @@ textarea.input { min-height: 100px; resize: vertical; }
   border-color: rgba(56, 189, 248, 0.3);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
-.post-meta { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
 .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; background: rgba(168, 85, 247, 0.2); color: #c4b5fd; }
 
 .login-page {

@@ -12,6 +12,8 @@ import { PostExplorerModal } from '@/components/PostExplorerModal';
 import { BrowsePostsLivePanel } from '@/components/BrowsePostsLivePanel';
 import { AccountSelectField } from '@/components/AccountSelectField';
 import { FetchProfileFilters, LANGUAGE_OPTIONS, LOCATION_OPTIONS } from '@/lib/fetchProfiles';
+import { decodeHtmlEntities } from '@/lib/textUtils';
+import { isEngageablePost } from '@/lib/postEngageability';
 
 type Post = {
   platform: string;
@@ -40,16 +42,6 @@ const PAGE_SIZE = 8;
 
 function asArray<T>(data: unknown): T[] {
   return Array.isArray(data) ? data : [];
-}
-
-function isEngageablePost(post: Post): boolean {
-  if (post.isWebDiscovery || post.isHubPost) return false;
-  const id = post.externalId || '';
-  if (!id) return false;
-  if (/^(reddit|quora|twitter)_/i.test(id)) return false;
-  if (/^t3_[a-z0-9]+$/i.test(id)) return true;
-  if (/^[a-z0-9]{5,10}$/i.test(id)) return true;
-  return !id.includes('_');
 }
 
 function platformMatch(postPlatform: string, filter: string): boolean {
@@ -224,7 +216,7 @@ export default function BrowsePostsPage() {
     const accList = asArray<LinkedAccount>(a);
     setAccounts(accList);
     setPublishAccountId((prev) => prev || accList[0]?.id || '');
-    setNews(asArray<NewsItem>(n));
+    setNews(asArray<NewsItem>(n).map((item) => ({ ...item, title: decodeHtmlEntities(item.title) })));
     setMonitors(asArray(m));
     setStats({
       posts: s?.totalPosts ?? 0,
@@ -436,7 +428,7 @@ export default function BrowsePostsPage() {
         focusTabIds={['discover', 'engage', 'monitors']}
       />
 
-      <BrowsePostsLivePanel feedCount={filtered.length} />
+      <BrowsePostsLivePanel feedCount={filtered.length} feedPosts={filtered} />
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
