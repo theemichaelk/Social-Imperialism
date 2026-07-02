@@ -4,11 +4,12 @@
  */
 
 import { OVERLORD_SYSTEM_APPEND } from '@/lib/theeMichaelOverlord';
+import { THEE_MICHAEL_SEO_EXPERT_APPEND, SEO_QUICK_PROMPTS } from '@/lib/theeMichaelSeoExpert';
 
 export const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
 export const INIT_MESSAGE =
-  'Hey — welcome to Social Imperialism. I can help you discover opportunities, create content, draft replies, schedule campaigns, connect platforms, troubleshoot issues, and track growth. What are you trying to improve first?';
+  'Hey — welcome to Social Imperialism. I can help you discover opportunities, create content, draft replies, schedule campaigns, connect platforms, troubleshoot issues, track growth, and run live AEO/GEO/local/national SEO intelligence. What are you trying to improve first?';
 
 export const LIVE_SUPPORT_SYSTEM_PROMPT = `You are Imperialism Brain, the official live support agent for Social Imperialism (socialimperialism.com).
 Help users set up, troubleshoot, optimize, and launch social media growth workflows.
@@ -23,6 +24,7 @@ For sensitive global changes (billing, server settings, mass auto-reply rules, d
 Reference ${ADMIN_IDENTITY} sparingly — only for admin approval context, never as a greeting.
 Use user-facing labels: Connect Platform, Review Replies, Open Engagement Queue, Schedule Campaign, Ask ${ADMIN_IDENTITY}, Create Drafts, Refresh Feed, Generate Report.
 Modules: Mission Control, Setup Wizard, Integrations Hub, Content Hub, Calendar, AI Replies, Keywords, SEO Tools, Growth Lab, Quora Ops, Auto-Rules, Accounts, Settings, Analytics.
+SEO intelligence: You have live AEO, GEO, local, and national SEO frameworks plus multi-engine SERP pulse (Google, Bing, Yahoo, DuckDuckGo, Brave, Edge). When LIVE SEO INTELLIGENCE is appended below, prioritize it over stale priors.
 
 Live navigation: When the user asks you to open, show, take them to, or find something in the left sidebar or a tab, you CAN and SHOULD trigger a live browser redirect. End your reply with exactly one directive on its own line: [[NAV:/path?tab=optional|Human Label]] (example: [[NAV:/integrations?tab=connections|Integrations]]). Use real paths from the product: /dashboard, /integrations, /settings?tab=billing, /history?tab=pending, /campaign-manager, /support, etc. Say "Taking you there now" briefly — do not only paste a link when navigation was requested.`;
 
@@ -96,6 +98,22 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Refresh Feed', href: '/dashboard' },
   },
   {
+    patterns: [/\bae[no]\b/i, /answer\s+engine/i, /featured\s+snippet/i, /\bpaa\b/i, /people\s+also\s+ask/i],
+    route: { label: 'SEO Tools · AEO', href: '/seo-tools' },
+  },
+  {
+    patterns: [/\bgeo\b/i, /generative\s+engine/i, /ai\s+overview/i, /llm\s+visibility/i],
+    route: { label: 'SEO Tools · GEO', href: '/seo-tools' },
+  },
+  {
+    patterns: [/local\s+seo/i, /near\s+me/i, /google\s+business/i, /\bgmb\b/i, /map\s+pack/i],
+    route: { label: 'Keywords · Local', href: '/keywords' },
+  },
+  {
+    patterns: [/\bkgr\b/i, /keyword\s+research/i, /serp\s+research/i, /national\s+seo/i],
+    route: { label: 'SEO Tools', href: '/seo-tools' },
+  },
+  {
     patterns: [/keyword/i, /seo/i, /discover/i, /browse\s+post/i],
     route: { label: 'Open Discovery', href: '/browse-posts' },
   },
@@ -127,6 +145,7 @@ export const QUICK_PROMPTS = [
   'Connect a platform',
   'Posts not scheduling',
   'Ask THEE_MICHAEL',
+  ...SEO_QUICK_PROMPTS.slice(0, 2),
 ];
 
 export function resolveSearchRoute(query: string): SearchRoute | null {
@@ -147,6 +166,7 @@ export function inferModule(text: string): string {
   if (/integrat|oauth|connect|token/.test(t)) return 'Integrations Hub';
   if (/schedul|calendar|post/.test(t)) return 'Content Calendar';
   if (/reply|engagement/.test(t)) return 'AI Replies';
+  if (/aeo|geo|local\s+seo|national\s+seo|kgr|serp|paa|snippet/.test(t)) return 'SEO Tools / Intelligence';
   if (/keyword|seo|discover/.test(t)) return 'Keywords / Discovery';
   if (/rule|automation|worker/.test(t)) return 'Auto-Rules';
   if (/billing|subscription|plan/.test(t)) return 'Settings / Billing';
@@ -186,13 +206,18 @@ export function getPendingApprovals(): ApprovalTicket[] {
   }
 }
 
-export function buildSupportPrompt(messages: SupportMessage[], userMessage: string, context?: { pathname?: string }): string {
+export function buildSupportPrompt(
+  messages: SupportMessage[],
+  userMessage: string,
+  context?: { pathname?: string; seoIntel?: string },
+): string {
   const history = messages
     .slice(-8)
     .map((m) => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`)
     .join('\n');
   const ctx = context?.pathname ? `\nCurrent page: ${context.pathname}` : '';
-  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${OVERLORD_SYSTEM_APPEND}${ctx}
+  const seoBlock = context?.seoIntel ? `\n${context.seoIntel}` : '';
+  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${THEE_MICHAEL_SEO_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${seoBlock}
 
 Conversation:
 ${history}

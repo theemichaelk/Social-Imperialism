@@ -40,7 +40,9 @@ const GUIDE_VIEWS = [
   { id: 'keywords', section: 'Discovery & Replies', label: 'Keywords', href: '/keywords', navId: 'keywords', sectionId: 'discovery',
     aliases: ['keywords', 'keyword monitor', 'topics', 'monitor topics'] },
   { id: 'seo-tools', section: 'Discovery & Replies', label: 'SEO Tools', href: '/seo-tools', navId: 'seo-tools', sectionId: 'discovery',
-    aliases: ['seo tools', 'kgr', 'keyword research', 'serp research'] },
+    aliases: ['seo tools', 'kgr', 'keyword research', 'serp research', 'aeo', 'answer engine', 'geo', 'generative engine', 'ai overview', 'paa', 'people also ask', 'featured snippet', 'national seo', 'serp api', 'bing scrape', 'google scrape'] },
+  { id: 'seo-local', section: 'Discovery & Replies', label: 'Keywords · Local', href: '/keywords', navId: 'keywords', sectionId: 'discovery',
+    aliases: ['local seo', 'near me', 'google business', 'gmb', 'map pack', 'city ranking', 'service area pages'] },
 
   // Growth Labs
   { id: 'reddit-ai', section: 'Growth Labs', label: 'Growth Lab', href: '/reddit-ai', navId: 'reddit-ai', sectionId: 'labs',
@@ -179,6 +181,47 @@ function planGuideActions(query, context = {}) {
       reply: isExternal
         ? `Opening ${url} in a new tab.`
         : `Navigating within ${PRODUCT}.`,
+    };
+  }
+
+  // AEO / GEO / Local / National SEO intelligence routes
+  if (/\bae[no]\b|answer\s+engine|featured\s+snippet|\bpaa\b|people\s+also\s+ask/i.test(q)) {
+    const view = resolveViewById('seo-tools');
+    const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });
+    actions.unshift({ type: 'message', text: 'AEO intelligence → SEO Tools (PAA, KGR, snippets)…' });
+    return {
+      actions,
+      reply: 'Opening **SEO Tools** for **AEO** — run **People Also Ask** and **KGR**, then draft answer-first posts in **Create**. Live SERP requires SerpAPI under **Integrations → Connections**.',
+    };
+  }
+
+  if (/\bgeo\b|generative\s+engine|ai\s+overview|llm\s+visibility|perplexity|chatgpt\s+citat/i.test(q)) {
+    const view = resolveViewById('seo-tools');
+    const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });
+    actions.unshift({ type: 'message', text: 'GEO intelligence → SERP citation research…' });
+    return {
+      actions,
+      reply: 'Opening **SEO Tools** for **GEO** — scrape who gets cited, then publish original data in **Create** and seed **Quora Ops** for corroboration.',
+    };
+  }
+
+  if (/local\s+seo|near\s+me|google\s+business|\bgmb\b|map\s+pack|city\s+rank/i.test(q)) {
+    const view = resolveViewById('seo-local') || resolveViewById('keywords');
+    const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });
+    actions.unshift({ type: 'message', text: 'Local SEO sprint → Keywords + DNS…' });
+    return {
+      actions,
+      reply: 'Routing **Local SEO** — add city+service terms in **Keywords**, verify **DNS** records, schedule proof posts on **Calendar**.',
+    };
+  }
+
+  if (/national\s+seo|head\s+term|topical\s+map|domain\s+authority|competitive\s+keyword/i.test(q)) {
+    const view = resolveViewById('seo-tools');
+    const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });
+    actions.unshift({ type: 'message', text: 'National SEO → KGR + clustering…' });
+    return {
+      actions,
+      reply: 'Opening **SEO Tools** for **National SEO** — run **KGR**, **Grouping Tool**, then align **Brand** voice for entity consistency.',
     };
   }
 

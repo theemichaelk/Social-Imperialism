@@ -35,6 +35,8 @@ import {
 } from '@/lib/theeMichaelOverlord';
 import { executeGuideActions, planGuideActions } from '@/lib/guide_executor';
 import { isNavigationRequest } from '@/lib/liveSupportActions';
+import { isSeoRelatedQuery } from '@/lib/theeMichaelSeoExpert';
+import { buildSeoAugmentedContext, fetchSeoBrief } from '@/lib/seoIntelligence';
 import { listEnclaveEntries } from '@/lib/overlordEnclave';
 import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
 
@@ -189,8 +191,16 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         return;
       }
 
-      const tAi = pushTrace('Evaluating request with live context');
-      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname });
+      let seoIntel = '';
+      if (isSeoRelatedQuery(trimmed)) {
+        const tSeo = pushTrace('SEO Intelligence · live SERP pulse');
+        const brief = await fetchSeoBrief(trimmed, pathname);
+        seoIntel = buildSeoAugmentedContext(brief);
+        completeTrace(tSeo);
+      }
+
+      const tAi = pushTrace(seoIntel ? 'Authority SEO brief + AI synthesis' : 'Evaluating request with live context');
+      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname, seoIntel });
       const reply = await invoke<string>('generate-ai', prompt);
       let raw = sanitizeAgentReply(String(reply || '').trim()) || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
       completeTrace(tAi);
