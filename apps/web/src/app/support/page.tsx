@@ -3,7 +3,7 @@
 import { LiveSupportPanel } from '@/components/LiveSupportPanel';
 import { PageShell } from '@/components/PageShell';
 import { NAV_SECTIONS } from '@/lib/nav';
-import { resolveSearchRoute } from '@/lib/liveSupportAgent';
+import { executeLiveSupportAction, resolveNavigationIntent } from '@/lib/liveSupportActions';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -19,7 +19,7 @@ const HELP_TOPICS = [
 
 export default function SupportPage() {
   const [search, setSearch] = useState('');
-  const route = useMemo(() => resolveSearchRoute(search), [search]);
+  const navAction = useMemo(() => resolveNavigationIntent(search, { preferExecute: true }), [search]);
 
   const moduleResults = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -45,10 +45,14 @@ export default function SupportPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            {route && (
-              <Link href={route.href} className="support-route-pill">
-                {route.label} →
-              </Link>
+            {navAction && (
+              <button
+                type="button"
+                className="support-route-pill"
+                onClick={() => executeLiveSupportAction(navAction)}
+              >
+                {navAction.label} → take me there
+              </button>
             )}
             {moduleResults.length > 0 && (
               <ul className="support-module-list">

@@ -15,6 +15,8 @@
 | Sidebar | `nav.ts` → `/support` | Imperialism Brain |
 | Planner lib (internal) | `apps/web/src/lib/omniBrainPlanner.ts` | — |
 | Support lib | `apps/web/src/lib/liveSupportAgent.ts` | — |
+| Live navigation | `apps/web/src/lib/liveSupportActions.ts` | Auto-redirect from any console |
+| Navigator host | `apps/web/src/components/BrainNavigatorHost.tsx` | Toast + sidebar highlight |
 
 ## Internal agent ids (stable, not user-facing)
 

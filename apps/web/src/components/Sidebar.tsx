@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NAV_SECTIONS } from '@/lib/nav';
-import { resolveSearchRoute } from '@/lib/liveSupportAgent';
+import { executeLiveSupportAction, resolveNavigationIntent } from '@/lib/liveSupportActions';
 import { Logo } from '@/components/Logo';
 import { invoke, logout } from '@/lib/api';
 import { checkPlatformAdmin } from '@/lib/adminAccess';
@@ -70,7 +70,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
     });
   }, [persistSections]);
 
-  const searchRoute = useMemo(() => resolveSearchRoute(search), [search]);
+  const searchNav = useMemo(() => resolveNavigationIntent(search, { pathname, preferExecute: true }), [search, pathname]);
 
   const activeSection = useMemo(
     () => NAV_SECTIONS.find((s) => s.items.some((i) => i.href === pathname))?.id,
@@ -144,10 +144,14 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
             onChange={(e) => setSearch(e.target.value)}
             className="sidebar-search-input"
           />
-          {searchRoute && (
-            <Link href={searchRoute.href} className="sidebar-search-route" onClick={onMobileClose}>
-              {searchRoute.label} →
-            </Link>
+          {searchNav && (
+            <button
+              type="button"
+              className="sidebar-search-route"
+              onClick={() => { executeLiveSupportAction(searchNav); onMobileClose?.(); }}
+            >
+              {searchNav.label} → take me there
+            </button>
           )}
           <div className="sidebar-section-controls">
             <button type="button" className="sidebar-section-ctrl" onClick={expandAllSections} title="Expand all sections">
@@ -164,7 +168,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
         {filteredSections.map((section) => {
           const isSecCollapsed = sectionCollapsed[section.id] && section.id !== activeSection && !search;
           return (
-            <div key={section.id} className={`nav-section ${isSecCollapsed ? 'nav-section-collapsed' : ''}`}>
+            <div key={section.id} data-nav-section={section.id} className={`nav-section ${isSecCollapsed ? 'nav-section-collapsed' : ''}`}>
               {!collapsed && (
                 <button
                   type="button"
@@ -185,6 +189,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
                       <Link
                         key={item.id}
                         href={item.href}
+                        data-nav-id={item.id}
                         className={`nav-link ${isActive ? 'active' : ''}`}
                         title={collapsed ? `${item.label}${item.hint ? ` — ${item.hint}` : ''}` : item.hint}
                         onClick={() => onMobileClose?.()}

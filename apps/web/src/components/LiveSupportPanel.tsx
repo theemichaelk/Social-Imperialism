@@ -16,6 +16,13 @@ import {
   sanitizeAgentReply,
   type SupportMessage,
 } from '@/lib/liveSupportAgent';
+import {
+  executeLiveSupportAction,
+  parseAgentNavigateDirective,
+  resolveNavigationIntent,
+  searchRouteToAction,
+  stripNavigateDirectives,
+} from '@/lib/liveSupportActions';
 
 const PANEL_KEY = 'si_support_panel_open';
 
@@ -45,6 +52,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
+    const navAction = resolveNavigationIntent(trimmed, { pathname, preferExecute: true });
     const route = resolveSearchRoute(trimmed);
     const userMsg: SupportMessage = { role: 'user', content: trimmed, ts: new Date().toISOString() };
     setMessages((prev) => [...prev, userMsg]);
@@ -62,12 +70,36 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         return;
       }
 
+      if (navAction?.autoExecute) {
+        executeLiveSupportAction(navAction);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `${navAction.message || `Taking you to ${navAction.label}…`}\n\nYou should see **${navAction.label}** in the left sidebar. Tell me if the screen looks wrong and I will audit it.`,
+            ts: new Date().toISOString(),
+          },
+        ]);
+        return;
+      }
+
       const prompt = buildSupportPrompt(messages, trimmed, { pathname });
       const reply = await invoke<string>('generate-ai', prompt);
-      let content = sanitizeAgentReply(String(reply || '').trim()) || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
+      let raw = sanitizeAgentReply(String(reply || '').trim()) || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
 
-      if (route) {
-        content += `\n\n**${route.label}** → [${route.href}](${route.href})`;
+      const directive = parseAgentNavigateDirective(raw);
+      if (directive) {
+        executeLiveSupportAction(directive);
+        raw = stripNavigateDirectives(raw);
+      } else if (route) {
+        executeLiveSupportAction(searchRouteToAction(route, true));
+      }
+
+      let content = raw;
+      if (directive) {
+        content += `\n\n**${directive.label}** — navigating now.`;
+      } else if (route && !navAction) {
+        content += `\n\n**${route.label}** — opening now.`;
       }
 
       setMessages((prev) => [
@@ -75,11 +107,17 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         { role: 'assistant', content, ts: new Date().toISOString() },
       ]);
     } catch (e) {
+      if (navAction || route) {
+        const fallback = navAction || (route ? searchRouteToAction(route, true) : null);
+        if (fallback) executeLiveSupportAction(fallback);
+      }
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: `Connection hiccup — ${(e as Error).message}. Check Integrations Hub or try again in a moment.`,
+          content: navAction || route
+            ? `AI hiccup — still taking you to ${(navAction || route)!.label}. ${(e as Error).message}`
+            : `Connection hiccup — ${(e as Error).message}. Check Integrations Hub or try again in a moment.`,
           ts: new Date().toISOString(),
         },
       ]);

@@ -143,7 +143,7 @@ export default function AccountHubPage() {
       window.history.replaceState({}, '', '/account-hub');
     }
     const relink = params.get('relink');
-    if (relink && PLATFORMS.includes(relink)) {
+    if (relink && (PLATFORMS as readonly string[]).includes(relink)) {
       setConnectPlatform(relink);
       setMsg(`Re-link ${relink} — use OAuth Connect or paste a fresh access token.`);
       window.history.replaceState({}, '', '/account-hub');

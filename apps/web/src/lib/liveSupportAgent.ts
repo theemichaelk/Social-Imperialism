@@ -20,7 +20,9 @@ Never expose credentials, tokens, API keys, or passwords.
 For sensitive global changes (billing, server settings, mass auto-reply rules, deleting core data), say approval from ${ADMIN_IDENTITY} is required before going live.
 Reference ${ADMIN_IDENTITY} sparingly — only for admin approval context, never as a greeting.
 Use user-facing labels: Connect Platform, Review Replies, Open Engagement Queue, Schedule Campaign, Ask ${ADMIN_IDENTITY}, Create Drafts, Refresh Feed, Generate Report.
-Modules: Mission Control, Setup Wizard, Integrations Hub, Content Hub, Calendar, AI Replies, Keywords, SEO Tools, Growth Lab, Quora Ops, Auto-Rules, Accounts, Settings, Analytics.`;
+Modules: Mission Control, Setup Wizard, Integrations Hub, Content Hub, Calendar, AI Replies, Keywords, SEO Tools, Growth Lab, Quora Ops, Auto-Rules, Accounts, Settings, Analytics.
+
+Live navigation: When the user asks you to open, show, take them to, or find something in the left sidebar or a tab, you CAN and SHOULD trigger a live browser redirect. End your reply with exactly one directive on its own line: [[NAV:/path?tab=optional|Human Label]] (example: [[NAV:/integrations?tab=connections|Integrations]]). Use real paths from the product: /dashboard, /integrations, /settings?tab=billing, /history?tab=pending, /campaign-manager, /support, etc. Say "Taking you there now" briefly — do not only paste a link when navigation was requested.`;
 
 /** Strip repetitive THEE_MICHAEL self-intros from model output. */
 export function sanitizeAgentReply(text: string): string {
@@ -118,10 +120,10 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
 ];
 
 export const QUICK_PROMPTS = [
+  'Take me to Integrations',
+  'Open billing settings',
   'Connect a platform',
   'Posts not scheduling',
-  'Download desktop app',
-  'Fix AI reply tone',
   'Ask THEE_MICHAEL',
 ];
 

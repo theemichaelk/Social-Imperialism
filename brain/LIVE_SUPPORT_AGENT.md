@@ -120,6 +120,19 @@ Hide technical diagnostics unless the user asks for more detail.
 
 When an admin approval is pending, show a calm status label: **Waiting on THEE_MICHAEL approval.**
 
+### Live Browser Navigation (mandatory when asked)
+
+When the user asks to open, show, take them to, or find a module/tab (e.g. "I don't see this in the tab on the left"), **execute a live redirect** — do not only paste a link.
+
+| Layer | Path |
+|-------|------|
+| Intent resolver | `apps/web/src/lib/liveSupportActions.ts` |
+| Agent directives | `[[NAV:/path?tab=x\|Label]]` in model output |
+| Global router host | `apps/web/src/components/BrainNavigatorHost.tsx` |
+| Consoles | `LiveSupportPanel.tsx`, `ImperialismBrainPromptBar.tsx`, sidebar search, `/support` search |
+
+THEE_MICHAEL / admin may also trigger audit routes (`/dashboard/issues`), health refresh, and live probes without approval. Sensitive billing/mass-automation changes still require approval.
+
 ### Initialization Trigger
 
 Welcome the user warmly:

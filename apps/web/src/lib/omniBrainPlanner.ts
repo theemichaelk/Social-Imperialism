@@ -326,9 +326,9 @@ export function handleSensitiveRequest(request: string) {
 }
 
 export const OMNI_PLACEHOLDERS = [
+  'Take me to Integrations…',
+  'Open billing in Settings…',
   'Create a LinkedIn post about AI automation…',
   'Find people talking about social media growth…',
-  'Schedule posts for LinkedIn and Reddit…',
-  'Draft replies for my keyword monitor…',
-  'Connect my Instagram account…',
+  'I can\'t find Campaign Command in the sidebar…',
 ];

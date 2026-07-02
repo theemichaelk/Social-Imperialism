@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
 import { LiveSupportPanel } from './LiveSupportPanel';
 import { ImperialismBrainPromptBar } from './ImperialismBrainPromptBar';
+import { BrainNavigatorHost } from './BrainNavigatorHost';
 import { bootstrapSession, enforceAccessGate, getToken, clearSession } from '@/lib/api';
 import { SovereignThreatBanner } from './SovereignThreatBanner';
 import { LeadCaptureModal } from './LeadCaptureModal';
@@ -122,6 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
         <FooterCredit className="app-footer-credit" />
         <LiveSupportPanel />
+        <BrainNavigatorHost />
         <div className="build-stamp" title={`Deployed build ${BUILD_STAMP}`}>v{BUILD_STAMP.slice(0, 7)}</div>
       </main>
     </div>

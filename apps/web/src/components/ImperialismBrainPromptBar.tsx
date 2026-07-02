@@ -6,6 +6,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { approvalAcknowledgement, requiresAdminApproval } from '@/lib/liveSupportAgent';
 import {
+  executeLiveSupportAction,
+  isNavigationRequest,
+  resolveNavigationIntent,
+} from '@/lib/liveSupportActions';
+import {
   OMNI_BRAIN_ADMIN,
   OMNI_PLACEHOLDERS,
   buildContentPrompt,
@@ -44,6 +49,15 @@ export function ImperialismBrainPromptBar() {
     setLoading(true);
     setMsg('');
     setExpanded(true);
+
+    const navAction = resolveNavigationIntent(trimmed, { pathname, preferExecute: isNavigationRequest(trimmed) });
+    if (navAction?.autoExecute) {
+      executeLiveSupportAction(navAction);
+      setBlueprint(null);
+      setMsg(navAction.message || `Navigated to ${navAction.label}`);
+      setLoading(false);
+      return;
+    }
 
     try {
       if (requiresAdminApproval(trimmed)) {
