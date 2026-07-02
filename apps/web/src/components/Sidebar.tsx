@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NAV_SECTIONS } from '@/lib/nav';
 import { executeLiveSupportAction, resolveNavigationIntent } from '@/lib/liveSupportActions';
+import { SI_GUIDE_EXPAND_SIDEBAR } from '@/lib/guide_executor';
 import { Logo } from '@/components/Logo';
 import { invoke, logout } from '@/lib/api';
 import { checkPlatformAdmin } from '@/lib/adminAccess';
@@ -123,6 +124,25 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
       return next;
     });
   }, [pathname, activeSection, persistSections]);
+
+  useEffect(() => {
+    const onExpandSidebar = (ev: Event) => {
+      const { sectionId, expandAll } = (ev as CustomEvent<{ sectionId?: string; expandAll?: boolean }>).detail || {};
+      if (expandAll) {
+        expandAllSections();
+        return;
+      }
+      if (sectionId) {
+        setSectionCollapsed((prev) => {
+          const next = { ...prev, [sectionId]: false };
+          persistSections(next);
+          return next;
+        });
+      }
+    };
+    window.addEventListener(SI_GUIDE_EXPAND_SIDEBAR, onExpandSidebar);
+    return () => window.removeEventListener(SI_GUIDE_EXPAND_SIDEBAR, onExpandSidebar);
+  }, [expandAllSections, persistSections]);
 
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-mobile-open' : ''}`}>

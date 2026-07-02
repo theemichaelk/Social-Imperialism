@@ -7,6 +7,7 @@ import { LiveSupportPanel } from './LiveSupportPanel';
 import { ImperialismBrainPromptBar } from './ImperialismBrainPromptBar';
 import { BrainNavigatorHost } from './BrainNavigatorHost';
 import { OverlordProtocolHost } from './OverlordProtocolHost';
+import { GuideExecutorHost } from './GuideExecutorHost';
 import { bootstrapSession, enforceAccessGate, getToken, clearSession } from '@/lib/api';
 import { SovereignThreatBanner } from './SovereignThreatBanner';
 import { LeadCaptureModal } from './LeadCaptureModal';
@@ -126,6 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <LiveSupportPanel />
         <BrainNavigatorHost />
         <OverlordProtocolHost />
+        <GuideExecutorHost />
         <div className="build-stamp" title={`Deployed build ${BUILD_STAMP}`}>v{BUILD_STAMP.slice(0, 7)}</div>
       </main>
     </div>

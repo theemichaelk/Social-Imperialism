@@ -46,7 +46,25 @@ THEE_MICHAEL operates with **active spatial awareness**, **predictive user model
 - `si-overlord-confirm` — risk confirmation modal
 - `si-overlord-flash` — spatial attention flash
 
-## Roadmap (post v1.2.30)
+## Live Guide Action Control (v1.2.31)
+
+Structured actions — not just chat replies.
+
+| Layer | Path |
+|-------|------|
+| Action planner | `apps/api/src/guide/guide_actions.js` |
+| Guide APIs | `apps/api/src/routes/guide.js` |
+| Client executor | `apps/web/src/lib/guide_executor.ts` |
+| Poll host (4s) | `apps/web/src/components/GuideExecutorHost.tsx` |
+| Admin push UI | `apps/web/src/components/LiveGuideRedirectPanel.tsx` → `/dashboard/admin` |
+
+**APIs:** `POST /api/guide/actions/plan` · `GET /api/guide/remote/poll` · `POST /api/guide/remote/push` (admin)
+
+**Action types:** `navigate`, `open_url`, `disable_simple_mode`, `expand_advanced_rail`, `restore_hidden_tabs`, `select_tab`, `highlight`, `expand_sidebar_section`, `flash_screen`, `message`, `wait`
+
+**View map (examples):** Skills → Prompt Vault · Mine → My Account · Studio → Create · Connect Apps → Integrations · Explore → Browse Posts · SEO Tools → Google Trends research
+
+## Roadmap (post v1.2.31)
 
 - Video/screencast frame analysis (Protocol Alpha full)
 - Per-tenant Success Velocity benchmarking against network top 1%

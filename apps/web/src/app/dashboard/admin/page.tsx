@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { AdminDirectoryPanel } from '@/components/AdminDirectoryPanel';
+import { LiveGuideRedirectPanel } from '@/components/LiveGuideRedirectPanel';
 import { checkPlatformAdmin } from '@/lib/adminAccess';
 
 export default function DashboardAdminPage() {
@@ -39,6 +40,7 @@ export default function DashboardAdminPage() {
         eyebrow="Dashboard / Admin"
       />
       <SectionLivePanel section="dashboard-admin" />
+      <LiveGuideRedirectPanel />
       <AdminDirectoryPanel />
     </>
   );

@@ -33,6 +33,8 @@ import {
   runIngestPipeline,
   redactSecrets,
 } from '@/lib/theeMichaelOverlord';
+import { executeGuideActions, planGuideActions } from '@/lib/guide_executor';
+import { isNavigationRequest } from '@/lib/liveSupportActions';
 import { listEnclaveEntries } from '@/lib/overlordEnclave';
 import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
 
@@ -145,6 +147,31 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         });
         setLoading(false);
         return;
+      }
+
+      const wantsLiveGuide = isNavigationRequest(trimmed)
+        || /don'?t\s+see|can'?t\s+find|skills|connect\s+apps|open\s+https?:\/\//i.test(trimmed);
+
+      if (wantsLiveGuide) {
+        try {
+          const planned = await planGuideActions(trimmed, pathname);
+          if (planned.actions.length) {
+            const t = pushTrace('THEE_MICHAEL live action plan');
+            await executeGuideActions(planned.actions);
+            completeTrace(t);
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: planned.reply || 'Live actions executed.',
+                ts: new Date().toISOString(),
+              },
+            ]);
+            return;
+          }
+        } catch {
+          /* fall through to legacy nav */
+        }
       }
 
       if (navAction?.autoExecute) {

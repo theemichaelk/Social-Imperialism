@@ -1,9 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { groupVisibleTabs } from '@/lib/manageableTabs';
+import { groupVisibleTabs, loadTabLayout, saveTabLayout } from '@/lib/manageableTabs';
 import { useManageableTabs } from '@/hooks/useManageableTabs';
 import type { TabCatalogItem } from '@/lib/manageableTabs';
+import {
+  SI_GUIDE_EXPAND_GROUPS,
+  SI_GUIDE_RESTORE_TABS,
+  SI_GUIDE_SELECT_TAB,
+  applyGuideTabRestore,
+} from '@/lib/guide_executor';
 
 type Props = {
   pageId: string;
@@ -53,6 +59,38 @@ export function ManageableTabNav({
   }, [active, onChange, resolveActive, visibleTabs]);
 
   useEffect(() => {
+    const onSelect = (ev: Event) => {
+      const { pageId: evtPageId, tabId } = (ev as CustomEvent<{ pageId: string; tabId: string }>).detail || {};
+      if (evtPageId !== pageId || !tabId) return;
+      onChange(tabId);
+    };
+    const onRestore = (ev: Event) => {
+      const { pageId: evtPageId, tabIds } = (ev as CustomEvent<{ pageId: string; tabIds?: string[] }>).detail || {};
+      if (evtPageId !== pageId) return;
+      const next = applyGuideTabRestore(pageId, catalog, tabIds);
+      saveTabLayout(pageId, next);
+      const target = tabIds?.[0] || catalog.find((t) => !next.hidden.includes(t.id))?.id;
+      if (target) onChange(target);
+      window.location.reload();
+    };
+    const onExpand = (ev: Event) => {
+      const { pageId: evtPageId, expandAll } = (ev as CustomEvent<{ pageId?: string; expandAll?: boolean }>).detail || {};
+      if (!expandAll && evtPageId !== pageId) return;
+      const layout = loadTabLayout(pageId, catalog, focus);
+      saveTabLayout(pageId, { ...layout, collapsedGroups: [], navCollapsed: false });
+      window.location.reload();
+    };
+    window.addEventListener(SI_GUIDE_SELECT_TAB, onSelect);
+    window.addEventListener(SI_GUIDE_RESTORE_TABS, onRestore);
+    window.addEventListener(SI_GUIDE_EXPAND_GROUPS, onExpand);
+    return () => {
+      window.removeEventListener(SI_GUIDE_SELECT_TAB, onSelect);
+      window.removeEventListener(SI_GUIDE_RESTORE_TABS, onRestore);
+      window.removeEventListener(SI_GUIDE_EXPAND_GROUPS, onExpand);
+    };
+  }, [pageId, catalog, focus, onChange]);
+
+  useEffect(() => {
     if (!addOpen) return;
     const onDoc = (e: MouseEvent) => {
       if (addRef.current && !addRef.current.contains(e.target as Node)) setAddOpen(false);
@@ -97,6 +135,7 @@ export function ManageableTabNav({
         <button
           type="button"
           className="mtab-chip-label"
+          data-guide-tab={tab.id}
           onClick={() => onSelect(tab)}
           title={tab.custom ? 'Shortcut tab' : tab.label}
         >

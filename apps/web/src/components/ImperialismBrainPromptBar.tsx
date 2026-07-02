@@ -10,6 +10,7 @@ import {
   isNavigationRequest,
   resolveNavigationIntent,
 } from '@/lib/liveSupportActions';
+import { executeGuideActions, planGuideActions } from '@/lib/guide_executor';
 import {
   OMNI_BRAIN_ADMIN,
   OMNI_PLACEHOLDERS,
@@ -49,6 +50,24 @@ export function ImperialismBrainPromptBar() {
     setLoading(true);
     setMsg('');
     setExpanded(true);
+
+    const wantsLiveGuide = isNavigationRequest(trimmed)
+      || /don'?t\s+see|can'?t\s+find|skills|connect\s+apps|open\s+https?:\/\//i.test(trimmed);
+
+    if (wantsLiveGuide) {
+      try {
+        const planned = await planGuideActions(trimmed, pathname);
+        if (planned.actions.length) {
+          await executeGuideActions(planned.actions);
+          setBlueprint(null);
+          setMsg(planned.reply || 'Live actions executed.');
+          setLoading(false);
+          return;
+        }
+      } catch {
+        /* fall through */
+      }
+    }
 
     const navAction = resolveNavigationIntent(trimmed, { pathname, preferExecute: isNavigationRequest(trimmed) });
     if (navAction?.autoExecute) {
