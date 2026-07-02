@@ -1,12 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { invoke } from '@/lib/api';
 import { checkPlatformAdmin } from '@/lib/adminAccess';
 import { PageShell } from '@/components/PageShell';
-import { MetricTile } from '@/components/DashboardViz';
-import { type IssueLedgerEntry, type PlatformIssue, severityClass } from '@/lib/issueControlPlane';
+import { DataPanel, LivePulse, MetricTile, SparkRow } from '@/components/DashboardViz';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
+import { type IssueLedgerEntry, type PlatformIssue } from '@/lib/issueControlPlane';
+
+function severityColor(sev: string) {
+  if (sev === 'critical' || sev === 'high') return '#f87171';
+  if (sev === 'medium') return '#fbbf24';
+  return '#34d399';
+}
 
 export default function DashboardIssuesPage() {
   const router = useRouter();
@@ -64,6 +72,21 @@ export default function DashboardIssuesPage() {
     }
   }
 
+  async function runGuardianScan() {
+    setLoading(true);
+    setMsg('Running Guardian scan…');
+    try {
+      const res = await invoke<{ success?: boolean; alertCount?: number; error?: string }>('run-guardian-scan');
+      if (res.success === false) throw new Error(res.error || 'Guardian scan failed');
+      setMsg(`Guardian scan complete — ${res.alertCount ?? 0} alert(s)`);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (authorized !== true) {
     return (
       <div className="dash-loading" style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -73,66 +96,88 @@ export default function DashboardIssuesPage() {
   }
 
   return (
-    <PageShell
-      title="Issue Control Plane"
-      subtitle="THEE_MICHAEL Web-Augmented GitOps — Approve, deny, edit, or delete runtime repair tickets"
-      eyebrow="Dashboard / Issues"
-    >
+    <div>
+      <PageShell
+        title="Issue Control Plane"
+        subtitle="THEE_MICHAEL Web-Augmented GitOps — Approve, deny, edit, or delete runtime repair tickets"
+        eyebrow="Dashboard / Issues"
+        actions={
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="btn primary" onClick={runGuardianScan} disabled={loading}>Run Guardian Scan</button>
+            <button type="button" className="btn" onClick={() => refresh()} disabled={loading}>Refresh</button>
+            <Link href="/settings?tab=guardian-api" className="btn">Guardian Settings</Link>
+          </div>
+        }
+      />
+
+      <SectionLivePanel section="dashboard-issues" />
+
       {msg && (
-        <div className="mb-4 rounded-lg border border-cyan-500/30 bg-cyan-950/40 px-4 py-2 text-sm text-cyan-100">
-          {msg}
+        <div className="card" style={{ marginBottom: '1rem', borderColor: '#38bdf8' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
         </div>
       )}
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <MetricTile label="Pending Review" value={active.length} sub="Active queue" />
-        <MetricTile label="Ledger Entries" value={ledger.length} sub="Historical audit" />
-        <MetricTile label="Engine" value="V12" sub="Web-augmented repair" />
+      <div className="grid grid-3" style={{ marginBottom: '1rem' }}>
+        <MetricTile label="Pending Review" value={active.length} sub="Active queue" accent="#f59e0b" />
+        <MetricTile label="Ledger Entries" value={ledger.length} sub="Historical audit" accent="#38bdf8" />
+        <MetricTile label="Engine" value="V12" sub="Web-augmented repair" accent="#22c55e" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl border border-white/10 bg-black/40 p-4">
-          <h2 className="mb-3 text-lg font-semibold text-white">Active Issues Queue</h2>
-          <div className="max-h-[420px] space-y-2 overflow-y-auto">
+      <div className="grid grid-2">
+        <DataPanel title="Active Issues Queue" live>
+          <SparkRow items={[
+            { label: 'Queue', value: active.length, status: active.length ? 'warn' : 'ok' },
+            { label: 'Ledger', value: ledger.length },
+            { label: 'Worker', value: loading ? 'BUSY' : 'idle', status: loading ? 'warn' : 'off' },
+          ]} />
+          <div style={{ maxHeight: 420, overflowY: 'auto', marginTop: 12 }}>
             {active.length === 0 && (
-              <p className="text-sm text-zinc-400">No pending issues — Guardian scan and runtime interceptors are monitoring.</p>
+              <p className="settings-panel-desc">
+                No pending issues — Guardian scan and runtime interceptors are monitoring.
+                Use <strong>Run Guardian Scan</strong> to enqueue diagnostics from the latest health pass.
+              </p>
             )}
             {active.map((issue) => (
               <button
                 key={issue.id}
                 type="button"
+                className="post-card"
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  marginBottom: 8,
+                  border: selectedId === issue.id ? '1px solid #38bdf8' : undefined,
+                  cursor: 'pointer',
+                }}
                 onClick={() => setSelectedId(issue.id)}
-                className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                  selectedId === issue.id ? 'border-cyan-400/60 bg-cyan-950/30' : 'border-white/10 hover:border-white/20'
-                }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-zinc-400">{issue.issueSignature}</span>
-                  <span className={`text-xs font-medium ${severityClass(issue.severity)}`}>{issue.severity}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: '#94a3b8' }}>{issue.issueSignature}</span>
+                  <span className="badge" style={{ color: severityColor(issue.severity) }}>{issue.severity}</span>
                 </div>
-                <p className="mt-1 text-sm text-white">{issue.rootCause || issue.errorCode}</p>
-                <p className="text-xs text-zinc-500">{issue.filePath} · {issue.platform || 'multi'}</p>
+                <p style={{ margin: '6px 0 0', fontSize: '0.9rem' }}>{issue.rootCause || issue.errorCode}</p>
+                <p className="settings-panel-desc" style={{ margin: '4px 0 0' }}>{issue.filePath} · {issue.platform || 'multi'}</p>
               </button>
             ))}
           </div>
-        </section>
+        </DataPanel>
 
-        <section className="rounded-xl border border-white/10 bg-black/40 p-4">
-          <h2 className="mb-3 text-lg font-semibold text-white">Patch Workspace</h2>
+        <DataPanel title="Patch Workspace" live>
           {!selected ? (
-            <p className="text-sm text-zinc-400">Select an issue to review the web-augmented patch.</p>
+            <p className="settings-panel-desc">Select an issue to review the web-augmented patch.</p>
           ) : (
             <>
-              <div className="mb-3 space-y-1 text-sm text-zinc-300">
-                <p><strong>Component:</strong> {selected.component || '—'}</p>
-                <p><strong>Root cause:</strong> {selected.rootCause}</p>
+              <div className="settings-panel-desc" style={{ marginBottom: 12 }}>
+                <p style={{ margin: '0 0 6px' }}><strong>Component:</strong> {selected.component || '—'}</p>
+                <p style={{ margin: 0 }}><strong>Root cause:</strong> {selected.rootCause}</p>
                 {selected.webSources?.length ? (
-                  <div>
+                  <div style={{ marginTop: 8 }}>
                     <strong>Web sources:</strong>
-                    <ul className="mt-1 list-disc pl-5 text-xs text-cyan-300">
+                    <ul style={{ margin: '6px 0 0', paddingLeft: '1.1rem', fontSize: '0.82rem' }}>
                       {selected.webSources.slice(0, 3).map((s, i) => (
                         <li key={i}>
-                          <a href={s.url} target="_blank" rel="noreferrer" className="underline">{s.title}</a>
+                          <a href={s.url} target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>{s.title}</a>
                         </li>
                       ))}
                     </ul>
@@ -140,100 +185,75 @@ export default function DashboardIssuesPage() {
                 ) : null}
               </div>
               <textarea
-                className="h-48 w-full rounded-lg border border-white/10 bg-black/60 p-3 font-mono text-xs text-emerald-100"
+                className="input"
+                style={{ minHeight: 180, fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}
                 value={editPatch}
                 onChange={(e) => setEditPatch(e.target.value)}
               />
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={loading}
-                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
-                  onClick={() => act(
-                    () => invoke('approve-issue-patch', { issueId: selected.id, actedBy: 'THEE_MICHAEL' }),
-                    'Patch approved — sandbox validation queued'
-                  )}
-                >
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  className="rounded-lg bg-rose-700 px-3 py-1.5 text-sm text-white hover:bg-rose-600 disabled:opacity-50"
-                  onClick={() => act(
-                    () => invoke('deny-issue-patch', { issueId: selected.id, quarantinePlatform: true, actedBy: 'THEE_MICHAEL' }),
-                    'Patch denied — platform quarantined'
-                  )}
-                >
-                  Deny
-                </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  className="rounded-lg bg-amber-700 px-3 py-1.5 text-sm text-white hover:bg-amber-600 disabled:opacity-50"
-                  onClick={() => act(
-                    () => invoke('edit-issue-patch', { issueId: selected.id, patchCode: editPatch, actedBy: 'THEE_MICHAEL' }),
-                    'Patch saved'
-                  )}
-                >
-                  Save Edit
-                </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  className="rounded-lg border border-white/20 px-3 py-1.5 text-sm text-zinc-200 hover:bg-white/5 disabled:opacity-50"
-                  onClick={() => act(
-                    () => invoke('dispatch-issue-diagnostic-email', { issueId: selected.id }),
-                    'Diagnostic email dispatched'
-                  )}
-                >
-                  Email Report
-                </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  className="rounded-lg border border-rose-500/40 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40 disabled:opacity-50"
-                  onClick={() => act(
-                    () => invoke('delete-issue', { issueId: selected.id, actedBy: 'THEE_MICHAEL' }),
-                    'Issue removed from queue'
-                  )}
-                >
-                  Delete
-                </button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                <button type="button" className="btn primary" disabled={loading} onClick={() => act(
+                  () => invoke('approve-issue-patch', { issueId: selected.id, actedBy: 'THEE_MICHAEL' }),
+                  'Patch approved — sandbox validation queued',
+                )}>Approve</button>
+                <button type="button" className="btn" disabled={loading} onClick={() => act(
+                  () => invoke('deny-issue-patch', { issueId: selected.id, quarantinePlatform: true, actedBy: 'THEE_MICHAEL' }),
+                  'Patch denied — platform quarantined',
+                )}>Deny</button>
+                <button type="button" className="btn" disabled={loading} onClick={() => act(
+                  () => invoke('edit-issue-patch', { issueId: selected.id, patchCode: editPatch, actedBy: 'THEE_MICHAEL' }),
+                  'Patch saved',
+                )}>Save Edit</button>
+                <button type="button" className="btn" disabled={loading} onClick={() => act(
+                  () => invoke('dispatch-issue-diagnostic-email', { issueId: selected.id }),
+                  'Diagnostic email dispatched',
+                )}>Email Report</button>
+                <button type="button" className="btn" disabled={loading} onClick={() => act(
+                  () => invoke('delete-issue', { issueId: selected.id, actedBy: 'THEE_MICHAEL' }),
+                  'Issue removed from queue',
+                )}>Delete</button>
               </div>
-              <pre className="mt-4 max-h-32 overflow-auto rounded bg-black/50 p-2 text-xs text-zinc-400">{selected.traceback}</pre>
+              <pre className="post-card" style={{ marginTop: 12, maxHeight: 120, overflow: 'auto', fontSize: '0.72rem', color: '#94a3b8' }}>{selected.traceback}</pre>
             </>
           )}
-        </section>
+        </DataPanel>
       </div>
 
-      <section className="mt-6 rounded-xl border border-white/10 bg-black/40 p-4">
-        <h2 className="mb-3 text-lg font-semibold text-white">Past Issues Ledger</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-zinc-300">
+      <DataPanel title="Past Issues Ledger" live className="grid-span-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <LivePulse label={ledger.length ? 'AUDIT' : 'EMPTY'} />
+          <span className="settings-panel-desc" style={{ margin: 0 }}>
+            {ledger.length ? `${ledger.length} historical repair action(s)` : 'No ledger entries yet — approvals and denials appear here.'}
+          </span>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
             <thead>
-              <tr className="border-b border-white/10 text-xs uppercase text-zinc-500">
-                <th className="py-2 pr-4">When</th>
-                <th className="py-2 pr-4">Action</th>
-                <th className="py-2 pr-4">Signature</th>
-                <th className="py-2 pr-4">Outcome</th>
-                <th className="py-2">Ops</th>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid #334155' }}>
+                <th style={{ padding: '8px 6px' }}>When</th>
+                <th style={{ padding: '8px 6px' }}>Action</th>
+                <th style={{ padding: '8px 6px' }}>Signature</th>
+                <th style={{ padding: '8px 6px' }}>Outcome</th>
+                <th style={{ padding: '8px 6px' }}>Ops</th>
               </tr>
             </thead>
             <tbody>
               {ledger.map((row) => (
-                <tr key={row.id} className="border-b border-white/5">
-                  <td className="py-2 pr-4 text-xs">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}</td>
-                  <td className="py-2 pr-4">{row.action}</td>
-                  <td className="py-2 pr-4 font-mono text-xs">{row.issueSignature}</td>
-                  <td className="py-2 pr-4 text-xs">{row.outcome || '—'}</td>
-                  <td className="py-2">
+                <tr key={row.id} style={{ borderBottom: '1px solid #1e293b' }}>
+                  <td style={{ padding: '8px 6px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                    {row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}
+                  </td>
+                  <td style={{ padding: '8px 6px' }}>{row.action}</td>
+                  <td style={{ padding: '8px 6px', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{row.issueSignature}</td>
+                  <td style={{ padding: '8px 6px', color: '#94a3b8' }}>{row.outcome || '—'}</td>
+                  <td style={{ padding: '8px 6px' }}>
                     <button
                       type="button"
-                      className="text-xs text-rose-400 underline"
+                      className="btn"
+                      style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                      disabled={loading}
                       onClick={() => act(
                         () => invoke('delete-issue', { fromLedger: true, ledgerId: row.id }),
-                        'Ledger entry removed'
+                        'Ledger entry removed',
                       )}
                     >
                       Delete
@@ -243,8 +263,11 @@ export default function DashboardIssuesPage() {
               ))}
             </tbody>
           </table>
+          {!ledger.length && (
+            <p className="settings-panel-desc" style={{ marginTop: 12 }}>Ledger is empty — no repair tickets have been approved or denied yet.</p>
+          )}
         </div>
-      </section>
-    </PageShell>
+      </DataPanel>
+    </div>
   );
 }

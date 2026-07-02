@@ -82,6 +82,9 @@ const SECTION_WIDGETS: Record<string, WidgetConfig> = {
   'account-creator': { ...COMPACT, accounts: true },
   onboarding: { ...COMPACT, accounts: true },
   'prompt-vault': { ...COMPACT },
+  'dashboard-users': { ...COMPACT, accounts: true },
+  'dashboard-admin': { ...COMPACT },
+  'dashboard-issues': { ...COMPACT, worker: true },
 };
 
 const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: string; accent?: string }>> = {
@@ -188,6 +191,23 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
     { key: 'step', label: 'Step', sub: 'wizard' },
     { key: 'keywords', label: 'Keywords', sub: 'saved' },
     { key: 'accounts', label: 'Accounts', sub: 'linked' },
+  ],
+  'dashboard-users': [
+    { key: 'accounts', label: 'Linked', sub: 'accounts', accent: '#22c55e' },
+    { key: 'campaigns', label: 'Campaigns', sub: 'workspace' },
+    { key: 'organizations', label: 'Orgs', sub: 'memberships' },
+    { key: 'library', label: 'Library', sub: 'assets' },
+  ],
+  'dashboard-admin': [
+    { key: 'users', label: 'Users', sub: 'platform' },
+    { key: 'organizations', label: 'Orgs', sub: 'tenants' },
+    { key: 'projects', label: 'Projects', sub: 'campaigns' },
+    { key: 'apiConnected', label: 'APIs', sub: 'live' },
+  ],
+  'dashboard-issues': [
+    { key: 'issuesPending', label: 'Pending', sub: 'queue', accent: '#f59e0b' },
+    { key: 'issuesLedger', label: 'Ledger', sub: 'audit' },
+    { key: 'workerRunning', label: 'Guardian', sub: 'monitor' },
   ],
 };
 

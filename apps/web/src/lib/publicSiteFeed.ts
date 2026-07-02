@@ -1,5 +1,21 @@
 import { getAllModuleFeatures, PUBLIC_NAV_ROUTES, SITE_BRAND } from '@/lib/siteBlueprint';
 
+const STATIC_DISCOVERY_PATHS = ['/', '/login', '/subscribe', '/founder', '/dashboard', '/sitemap.html', '/feed.xml'] as const;
+
+export function getPublicDiscoveryStats() {
+  const moduleCount = getAllModuleFeatures().length;
+  const sitemapTotal = buildSitemapEntries().length;
+  const feedTotal = buildRssItems().length;
+  return {
+    sitemapTotal,
+    feedTotal,
+    moduleRoutes: moduleCount,
+    staticRoutes: Math.max(0, sitemapTotal - moduleCount),
+    feedModules: Math.max(0, feedTotal - 1),
+    staticPaths: [...STATIC_DISCOVERY_PATHS],
+  };
+}
+
 export function getSiteBaseUrl(): string {
   if (typeof window !== 'undefined') return window.location.origin.replace(/\/$/, '');
   const raw = process.env.WEB_URL || process.env.NEXT_PUBLIC_WEB_URL || 'https://www.socialimperialism.com';

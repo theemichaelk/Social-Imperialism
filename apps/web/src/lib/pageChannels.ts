@@ -108,6 +108,17 @@ export const PAGE_CHANNELS = {
     'schedule-browser-batch', 'get-browser-batch-status', 'run-browser-batch-now', 'cancel-browser-batch',
     'dedupe-profile-kits', 'clear-qa-profile-kits', 'get-account-creator-status', 'get-section-live',
   ],
+  dashboardUsers: [
+    'get-billing-plan', 'get-section-live',
+  ],
+  dashboardAdmin: [
+    'get-section-live',
+  ],
+  dashboardIssues: [
+    'get-active-issues', 'get-issues-ledger', 'run-guardian-scan',
+    'approve-issue-patch', 'deny-issue-patch', 'edit-issue-patch',
+    'delete-issue', 'dispatch-issue-diagnostic-email', 'get-section-live',
+  ],
   campaignManager: [
     'get-settings-status', 'get-active-campaign', 'get-settings', 'get-campaign-details',
     'update-campaign', 'pause-campaign', 'resume-campaign', 'delete-campaign', 'set-active-campaign',

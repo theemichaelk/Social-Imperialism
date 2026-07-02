@@ -255,6 +255,43 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
         stats: { ...base.stats, step: setup.step || 1, complete: store.getItem('onboardingComplete') === 'true' },
       };
     }
+    case 'dashboard-users': {
+      const campaigns = readJson(store, 'campaigns', []).filter((c) => !c.campaignId || c.campaignId === activeId);
+      const orgCount = parseInt(store.getItem('userAccountOrgCount') || '1', 10);
+      const campaignCount = parseInt(store.getItem('userAccountCampaignCount') || '0', 10);
+      return {
+        ...base,
+        stats: {
+          ...base.stats,
+          campaigns: campaignCount || campaigns.length || (linkedAccounts.length ? 1 : 0),
+          organizations: orgCount,
+        },
+      };
+    }
+    case 'dashboard-admin':
+      return {
+        ...base,
+        stats: {
+          ...base.stats,
+          users: parseInt(store.getItem('adminDirectoryUserCount') || '0', 10) || undefined,
+          organizations: parseInt(store.getItem('adminDirectoryOrgCount') || '0', 10) || undefined,
+          projects: parseInt(store.getItem('adminDirectoryProjectCount') || '0', 10) || undefined,
+        },
+      };
+    case 'dashboard-issues': {
+      const activeIssues = readJson(store, 'platformIssuesActive', []);
+      const ledgerIssues = readJson(store, 'platformIssuesLedger', []);
+      const pending = activeIssues.filter((x) => x.status === 'pending').length;
+      return {
+        ...base,
+        stats: {
+          ...base.stats,
+          issuesPending: pending,
+          issuesLedger: ledgerIssues.length,
+          workerRunning: store.getItem('guardianLastScanAt') ? true : base.stats.workerRunning,
+        },
+      };
+    }
     case 'dashboard': {
       const leads = readJson(store, 'leads', []);
       const workerRunning = store.getItem('workerRunningFlag') === 'true';
@@ -285,6 +322,21 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
 
 function registerSectionLiveHandlers({ ipcMain, store, resolveKeys, buildApiMetrics, fetchTrendingTopics }) {
   try { ipcMain.removeHandler('get-section-live'); } catch (e) { /* noop */ }
+
+  try { ipcMain.removeHandler('cache-admin-directory-summary'); } catch (e) { /* noop */ }
+  ipcMain.handle('cache-admin-directory-summary', (event, payload = {}) => {
+    store.setItem('adminDirectoryUserCount', String(payload.userCount ?? 0));
+    store.setItem('adminDirectoryOrgCount', String(payload.orgCount ?? 0));
+    store.setItem('adminDirectoryProjectCount', String(payload.projectCount ?? 0));
+    return { success: true };
+  });
+
+  try { ipcMain.removeHandler('cache-user-account-summary'); } catch (e) { /* noop */ }
+  ipcMain.handle('cache-user-account-summary', (event, payload = {}) => {
+    store.setItem('userAccountOrgCount', String(payload.organizations ?? 0));
+    store.setItem('userAccountCampaignCount', String(payload.campaigns ?? 0));
+    return { success: true };
+  });
 
   ipcMain.handle('get-section-live', async (event, section = 'dashboard') => {
     const activeId = store.getItem('activeCampaignId') || 'default';

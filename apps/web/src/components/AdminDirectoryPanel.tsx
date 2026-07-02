@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, invoke } from '@/lib/api';
 import { MetricTile } from '@/components/DashboardViz';
 
 type AdminUser = {
@@ -47,6 +47,13 @@ export function AdminDirectoryPanel() {
     try {
       const res = await apiFetch('/api/admin/directory') as AdminDirectory;
       setData(res);
+      if (res.summary) {
+        await invoke('cache-admin-directory-summary', {
+          userCount: res.summary.userCount,
+          orgCount: res.summary.orgCount,
+          projectCount: res.summary.projectCount,
+        }).catch(() => {});
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -70,6 +77,25 @@ export function AdminDirectoryPanel() {
     );
   }, [data?.users, filter]);
 
+  const duplicateNames = useMemo(() => {
+    const counts = new Map<string, number>();
+    (data?.users || []).forEach((u) => {
+      const key = (u.name || '').trim().toLowerCase();
+      if (!key) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }, [data?.users]);
+
+  function uniqueProjectCount(user: AdminUser) {
+    const ids = new Set<string>();
+    user.organizations.forEach((o) => o.projects.forEach((p) => ids.add(p.id)));
+    return ids.size;
+  }
+
+  const adminCount = (data?.users || []).filter((u) => u.isAdmin).length;
+  const filterActive = filter.trim().length > 0;
+
   if (loading) {
     return <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Loading platform directory…</p>;
   }
@@ -91,7 +117,11 @@ export function AdminDirectoryPanel() {
         <MetricTile label="Users" value={summary.userCount ?? 0} sub="all accounts" />
         <MetricTile label="Organizations" value={summary.orgCount ?? 0} sub="tenants" />
         <MetricTile label="Projects" value={summary.projectCount ?? 0} sub="campaigns" />
-        <MetricTile label="Filtered" value={filteredUsers.length} sub="visible rows" />
+        <MetricTile
+          label={filterActive ? 'Filtered' : 'Admins'}
+          value={filterActive ? filteredUsers.length : adminCount}
+          sub={filterActive ? 'visible rows' : 'platform'}
+        />
       </div>
 
       <div className="card" style={{ marginBottom: '1rem' }}>
@@ -105,6 +135,7 @@ export function AdminDirectoryPanel() {
           />
           <button type="button" className="btn" onClick={() => load()}>Refresh</button>
           <Link href="/dashboard/users" className="btn">My Account</Link>
+          <Link href="/dashboard/issues" className="btn">Issue Control</Link>
           <a href="/sitemap.html" target="_blank" rel="noopener noreferrer" className="btn">sitemap.html</a>
           <a href="/feed.xml" target="_blank" rel="noopener noreferrer" className="btn">feed.xml</a>
         </div>
@@ -122,12 +153,19 @@ export function AdminDirectoryPanel() {
             </thead>
             <tbody>
               {filteredUsers.map((u) => {
-                const projectCount = u.organizations.reduce((n, o) => n + o.projects.length, 0);
+                const projectCount = uniqueProjectCount(u);
+                const nameKey = (u.name || '').trim().toLowerCase();
+                const sharedName = nameKey && (duplicateNames.get(nameKey) || 0) > 1;
                 return (
                   <tr key={u.id} style={{ borderBottom: '1px solid #1e293b' }}>
                     <td style={{ padding: '8px 6px' }}>
                       <div>{u.email}</div>
-                      {u.name && <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{u.name}</div>}
+                      {u.name && (
+                        <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                          {u.name}
+                          {sharedName && <span style={{ color: '#f59e0b', marginLeft: 6 }}>shared name</span>}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '8px 6px' }}>
                       {u.isAdmin ? <span style={{ color: '#a855f7' }}>Admin</span> : 'User'}
@@ -170,7 +208,7 @@ export function AdminDirectoryPanel() {
               <tbody>
                 {(data?.organizations || []).map((o) => (
                   <tr key={o.id} style={{ borderBottom: '1px solid #1e293b' }}>
-                    <td style={{ padding: '8px 6px' }}>{o.name} <span style={{ color: '#64748b' }}>{o.slug}</span></td>
+                    <td style={{ padding: '8px 6px' }}>{o.name} <span style={{ color: '#64748b' }}>· {o.slug}</span></td>
                     <td style={{ padding: '8px 6px' }}>{o.plan}</td>
                     <td style={{ padding: '8px 6px' }}>{o.memberCount}</td>
                     <td style={{ padding: '8px 6px' }}>{o.projects.length}</td>

@@ -189,17 +189,42 @@ router.get('/me', requireAuth, async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'User not found.' });
     }
-    const org = await prisma.organization.findUnique({ where: { id: req.user.orgId } });
-    let projects = await prisma.project.findMany({ where: { organizationId: req.user.orgId } });
+    const memberships = await prisma.organizationMember.findMany({
+      where: { userId: user.id },
+      include: { organization: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const activeMembership = memberships.find((m) => m.organizationId === req.user.orgId) || memberships[0];
+    const org = activeMembership?.organization
+      || await prisma.organization.findUnique({ where: { id: req.user.orgId } });
+    let projects = await prisma.project.findMany({
+      where: { organizationId: req.user.orgId },
+      orderBy: { createdAt: 'asc' },
+    });
     let active = projects.find((p) => p.isActive) || projects[0] || null;
     if (!active) {
       active = await ensureDefaultProject(req.user.orgId);
       projects = [active];
     }
+    const allProjects = memberships.length
+      ? await prisma.project.findMany({
+        where: { organizationId: { in: memberships.map((m) => m.organizationId) } },
+        orderBy: { createdAt: 'asc' },
+      })
+      : projects;
     res.json({
       user: { id: user.id, email: user.email, name: user.name, isAdmin: isAdminEmail(user.email) },
       organization: org,
+      organizations: memberships.map((m) => ({
+        id: m.organization.id,
+        name: m.organization.name,
+        slug: m.organization.slug,
+        plan: m.organization.plan,
+        role: m.role,
+        isActive: m.organizationId === req.user.orgId,
+      })),
       projects,
+      allProjects,
       project: { id: active.id, name: active.name },
     });
   } catch (e) {

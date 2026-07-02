@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { AdminDirectoryPanel } from '@/components/AdminDirectoryPanel';
 import { checkPlatformAdmin } from '@/lib/adminAccess';
 
@@ -31,12 +32,14 @@ export default function DashboardAdminPage() {
   }
 
   return (
-    <PageShell
-      title="Admin Directory"
-      subtitle="Platform-wide view — all users, organizations, and campaigns"
-      eyebrow="Dashboard / Admin"
-    >
+    <>
+      <PageShell
+        title="Admin Directory"
+        subtitle="Platform-wide view — all users, organizations, and campaigns"
+        eyebrow="Dashboard / Admin"
+      />
+      <SectionLivePanel section="dashboard-admin" />
       <AdminDirectoryPanel />
-    </PageShell>
+    </>
   );
 }
