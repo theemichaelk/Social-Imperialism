@@ -805,7 +805,11 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
       .filter((k) => k.campaignId === activeId).map((k) => k.term);
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
     const { hasTwitterKeys, hasLinkedInKeys, hasRedditKeys } = require(path.join(__dirname, '../../../apps/desktop/services/keys'));
+    const campaigns = JSON.parse(store.getItem('campaigns') || '[]');
+    const campaign = campaigns.find((c) => c.id === activeId) || {};
     return {
+      campaignId: activeId,
+      campaignName: campaign.brandName || 'Active campaign',
       accounts: accounts.map((a) => ({ id: a.id, platform: a.platform, handle: a.handle || a.username || a.id })),
       keywords,
       apiStatus: { twitter: hasTwitterKeys(keys), linkedin: hasLinkedInKeys(keys), reddit: hasRedditKeys(keys), serp: !!keys.serpApiKey, gemini: !!keys.gemini },

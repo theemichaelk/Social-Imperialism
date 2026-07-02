@@ -46,7 +46,12 @@ export function AutomationMatrixPanel() {
 
   const refresh = useCallback(async () => {
     const data = await invoke<{ accounts?: AutomationAccount[] }>('get-automation-targets');
-    const list = data.accounts || [];
+    const seen = new Set<string>();
+    const list = (data.accounts || []).filter((a) => {
+      if (!a?.id || seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
     setAccounts(list);
     const next: Record<string, RowState> = {};
     list.forEach((acc) => {

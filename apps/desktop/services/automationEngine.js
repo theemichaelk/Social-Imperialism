@@ -70,7 +70,11 @@ function getActiveFlow(store) {
 }
 
 function saveActiveFlow(store, flow) {
-  store.setItem('activeAutomationFlow', JSON.stringify(flow));
+  const normalized = {
+    ...flow,
+    edges: normalizeEdges(flow.edges),
+  };
+  store.setItem('activeAutomationFlow', JSON.stringify(normalized));
 }
 
 function getCustomTemplates(store) {
@@ -109,12 +113,22 @@ function getTemplateById(store, templateId) {
   return null;
 }
 
+function normalizeEdge(edge) {
+  const from = edge.from || edge.source;
+  const to = edge.to || edge.target;
+  return { ...edge, from, to, source: from, target: to };
+}
+
+function normalizeEdges(edges = []) {
+  return edges.map(normalizeEdge).filter((e) => e.from && e.to);
+}
+
 function buildAdjacency(nodes, edges) {
   const byId = {};
   nodes.forEach((n) => { byId[n.id] = n; });
   const outgoing = {};
   nodes.forEach((n) => { outgoing[n.id] = []; });
-  edges.forEach((e) => {
+  normalizeEdges(edges).forEach((e) => {
     if (outgoing[e.from]) outgoing[e.from].push(e);
   });
   return { byId, outgoing };
@@ -616,24 +630,64 @@ async function testAutomationFlow(deps, draftFlow) {
   return { success: true, processed: total, message: `Test run completed — ${total} trigger(s) processed.` };
 }
 
+function applyFlowBinding(store, flow) {
+  const binding = flow.binding || {};
+  const campaignId = binding.campaignId || store.getItem('activeCampaignId') || 'default';
+  const accountIds = Array.isArray(binding.accountIds) ? binding.accountIds.filter(Boolean) : [];
+
+  if (accountIds.length) {
+    const accounts = getLinkedAccounts(store);
+    accounts.forEach((acc) => {
+      if (accountIds.includes(acc.id)) {
+        acc.settings = { ...(acc.settings || {}), automationEnabled: true };
+      }
+    });
+    store.setItem(`linkedAccounts_${campaignId}`, JSON.stringify(accounts));
+  }
+
+  const rules = loadJson(store, 'autoRulesEngine', {});
+  rules.activeAccountIds = accountIds.length ? accountIds : rules.activeAccountIds;
+  rules.flowCampaignId = campaignId;
+  rules.useBackgroundSchedule = binding.useBackgroundSchedule !== false;
+  store.setItem('autoRulesEngine', JSON.stringify(rules));
+}
+
 function deployFlow(store, flow) {
   const validation = validateFlow(flow);
   if (!validation.valid) return { success: false, error: validation.error };
 
+  const campaignId = flow.binding?.campaignId || store.getItem('activeCampaignId') || 'default';
   const deployed = {
     ...flow,
+    edges: normalizeEdges(flow.edges),
     id: flow.id || `flow_${Date.now()}`,
     status: 'active',
     deployedAt: new Date().toISOString(),
+    binding: {
+      campaignId,
+      accountIds: flow.binding?.accountIds || [],
+      useBackgroundSchedule: flow.binding?.useBackgroundSchedule !== false,
+      label: flow.binding?.label || '',
+    },
   };
 
   (deployed.nodes || []).forEach((n) => {
     if (n.title?.includes('Webhook')) ensureWebhookId(store, n.id);
+    if (n.type === 'action' && deployed.binding.accountIds?.length === 1) {
+      n.config = { ...(n.config || {}), account: deployed.binding.accountIds[0] };
+    }
   });
 
   saveActiveFlow(store, deployed);
+  applyFlowBinding(store, deployed);
   syncFlowToGlobalRules(store, deployed);
-  pushLog(store, { node: 'Deploy', status: 'success', action: 'deploy', flowId: deployed.id });
+  pushLog(store, {
+    node: 'Deploy',
+    status: 'success',
+    action: 'deploy',
+    flowId: deployed.id,
+    accounts: deployed.binding.accountIds?.length || 0,
+  });
   return { success: true, flow: deployed };
 }
 
@@ -652,14 +706,24 @@ function getAutomationStatus(store) {
   const flow = getActiveFlow(store);
   const logs = loadJson(store, 'automationExecutionLog', []);
   const workerRunning = store.getItem('workerRunningFlag') === 'true';
+  const campaign = getCampaign(store);
+  const accounts = getLinkedAccounts(store);
+  const boundIds = flow?.binding?.accountIds || [];
   return {
     status: flow?.status || 'draft',
     deployedAt: flow?.deployedAt,
     lastRunAt: flow?.lastRunAt,
     nodeCount: flow?.nodes?.length || 0,
+    edgeCount: normalizeEdges(flow?.edges).length || 0,
     workerRunning,
     recentLogs: logs.slice(0, 8),
     webhookPort: WEBHOOK_PORT,
+    campaignId: flow?.binding?.campaignId || store.getItem('activeCampaignId') || 'default',
+    campaignName: campaign.brandName || 'Active campaign',
+    boundAccounts: boundIds.length
+      ? accounts.filter((a) => boundIds.includes(a.id)).map((a) => `${a.platform}: ${a.handle || a.id}`)
+      : [],
+    useBackgroundSchedule: flow?.binding?.useBackgroundSchedule !== false,
   };
 }
 
@@ -681,4 +745,6 @@ module.exports = {
   getWebhookUrl,
   queueWebhookPayload,
   syncFlowToGlobalRules,
+  normalizeEdges,
+  normalizeEdge,
 };

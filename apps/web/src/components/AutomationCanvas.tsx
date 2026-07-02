@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { invoke } from '@/lib/api';
 
 type FlowNode = {
@@ -15,11 +16,31 @@ type FlowNode = {
 
 type FlowEdge = { source: string; target: string; type?: string };
 
+type FlowBinding = {
+  campaignId?: string;
+  accountIds?: string[];
+  useBackgroundSchedule?: boolean;
+  label?: string;
+};
+
 type Flow = {
   status?: string;
   nodes?: FlowNode[];
   edges?: FlowEdge[];
+  binding?: FlowBinding;
 };
+
+type BuilderAccount = { id: string; platform: string; handle?: string };
+
+function normalizeFlowEdges(edges: FlowEdge[] = []): FlowEdge[] {
+  return edges
+    .map((e) => {
+      const source = e.source || (e as FlowEdge & { from?: string }).from;
+      const target = e.target || (e as FlowEdge & { to?: string }).to;
+      return source && target ? { ...e, source, target } : null;
+    })
+    .filter(Boolean) as FlowEdge[];
+}
 
 const PALETTE = [
   { category: 'Triggers', items: [
@@ -61,6 +82,9 @@ export function AutomationCanvas() {
   const [loadModal, setLoadModal] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [deployModal, setDeployModal] = useState(false);
+  const [deployAccounts, setDeployAccounts] = useState<string[]>([]);
+  const [useBackgroundSchedule, setUseBackgroundSchedule] = useState(true);
 
   const nodes = flow.nodes || [];
   const edges = flow.edges || [];
@@ -73,7 +97,9 @@ export function AutomationCanvas() {
       invoke<Record<string, unknown>>('get-automation-builder-data'),
       invoke<Record<string, unknown>>('get-automation-status'),
     ]);
-    setFlow(f);
+    setFlow({ ...f, edges: normalizeFlowEdges(f.edges) });
+    setDeployAccounts((f.binding?.accountIds as string[]) || []);
+    setUseBackgroundSchedule(f.binding?.useBackgroundSchedule !== false);
     setTemplates(t || []);
     setBuilderData(b || {});
     setDeployStatus(s || {});
@@ -87,8 +113,9 @@ export function AutomationCanvas() {
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
   async function persist(next: Flow) {
-    const res = await invoke<{ flow?: Flow }>('save-automation-flow', next);
-    setFlow(res.flow || next);
+    const normalized = { ...next, edges: normalizeFlowEdges(next.edges) };
+    const res = await invoke<{ flow?: Flow }>('save-automation-flow', normalized);
+    setFlow(res.flow ? { ...res.flow, edges: normalizeFlowEdges(res.flow.edges) } : normalized);
   }
 
   function addNode(type: string, title: string, x: number, y: number) {
@@ -188,17 +215,44 @@ export function AutomationCanvas() {
     return `M ${x1} ${y1} C ${x1} ${mid}, ${x2} ${mid}, ${x2} ${y2}`;
   }
 
+  function openDeployModal() {
+    const accounts = (builderData.accounts as BuilderAccount[]) || [];
+    if (!deployAccounts.length && accounts.length) {
+      setDeployAccounts(accounts.map((a) => a.id));
+    }
+    setDeployModal(true);
+  }
+
   async function deploy() {
+    if (!deployAccounts.length) {
+      setMsg('Select at least one account to run this automation');
+      return;
+    }
     setMsg('Deploying…');
-    const res = await invoke<{ success?: boolean; error?: string }>('deploy-automation-flow', flow);
-    setMsg(res.success ? 'Flow deployed & active' : (res.error || 'Deploy failed'));
+    const payload = {
+      ...flow,
+      edges: normalizeFlowEdges(flow.edges),
+      binding: {
+        campaignId: String(builderData.campaignId || ''),
+        accountIds: deployAccounts,
+        useBackgroundSchedule,
+        label: String(builderData.campaignName || 'Campaign flow'),
+      },
+    };
+    const res = await invoke<{ success?: boolean; error?: string }>('deploy-automation-flow', payload);
+    if (res.success) {
+      setMsg(`Deployed to ${deployAccounts.length} account(s) — worker will run on your schedule`);
+      setDeployModal(false);
+    } else {
+      setMsg(res.error || 'Deploy failed');
+    }
     refresh();
   }
 
   async function loadTemplate(id: string) {
     const res = await invoke<{ success?: boolean; nodes?: FlowNode[]; edges?: FlowEdge[]; error?: string }>('load-automation-template', id);
     if (!res.success) { setMsg(res.error || 'Template not found'); return; }
-    const next = { ...flow, nodes: res.nodes || [], edges: res.edges || [] };
+    const next = { ...flow, nodes: res.nodes || [], edges: normalizeFlowEdges(res.edges) };
     setFlow(next);
     await persist(next);
     setLoadModal(false);
@@ -219,6 +273,21 @@ export function AutomationCanvas() {
   }
 
   const apiStatus = (builderData.apiStatus || {}) as Record<string, boolean>;
+  const builderAccounts = (builderData.accounts || []) as BuilderAccount[];
+  const deployInfo = deployStatus as {
+    status?: string;
+    nodeCount?: number;
+    edgeCount?: number;
+    workerRunning?: boolean;
+    campaignName?: string;
+    boundAccounts?: string[];
+    useBackgroundSchedule?: boolean;
+    lastRunAt?: string;
+  };
+
+  function toggleDeployAccount(id: string) {
+    setDeployAccounts((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
 
   return (
     <div className="automation-canvas-layout">
@@ -244,14 +313,20 @@ export function AutomationCanvas() {
       <div className="automation-main">
         <div className="automation-topbar">
           <div>
-            <strong>Campaign Pipeline</strong>
+            <strong>{String(builderData.campaignName || 'Campaign Pipeline')}</strong>
             <span style={{ marginLeft: 8, fontSize: '0.8rem', color: flow.status === 'active' ? '#10b981' : '#64748b' }}>
               / {flow.status || 'draft'}
             </span>
-            <div className="api-status-inline" style={{ marginTop: 4 }}>
-              {['reddit', 'twitter', 'linkedin', 'serp', 'gemini'].map((k) => (
-                <span key={k} className={apiStatus[k] ? 'status-ok' : 'status-partial'} style={{ fontSize: '0.7rem', marginRight: 8 }}>
-                  {k}
+            <div className="api-status-inline">
+              {[
+                { key: 'reddit', label: 'Reddit' },
+                { key: 'twitter', label: 'X' },
+                { key: 'linkedin', label: 'LinkedIn' },
+                { key: 'serp', label: 'SerpAPI' },
+                { key: 'gemini', label: 'Gemini' },
+              ].map(({ key, label }) => (
+                <span key={key} className={`api-status-chip ${apiStatus[key] ? 'on' : 'off'}`}>
+                  {label}
                 </span>
               ))}
             </div>
@@ -269,7 +344,7 @@ export function AutomationCanvas() {
               setFlow(next);
               persist(next);
             }}>Clear</button>
-            <button type="button" className="btn primary" onClick={deploy}>Deploy Flow</button>
+            <button type="button" className="btn primary" onClick={openDeployModal}>Deploy Flow</button>
           </div>
         </div>
 
@@ -364,6 +439,35 @@ export function AutomationCanvas() {
                 value={String(selected.config?.prompt || '')}
                 onChange={(e) => updateNode(selected.id, { config: { ...selected.config, prompt: e.target.value } })}
               />
+              {selected.type === 'action' && builderAccounts.length > 0 && (
+                <>
+                  <label className="ac-label">Run as account</label>
+                  <select
+                    className="input"
+                    value={String(selected.config?.account || 'Auto')}
+                    onChange={(e) => updateNode(selected.id, { config: { ...selected.config, account: e.target.value } })}
+                  >
+                    <option value="Auto">Auto (from deploy binding)</option>
+                    {builderAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>{a.platform} — {a.handle || a.id}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+              {selected.type === 'trigger' && (
+                <>
+                  <label className="ac-label">Platform filter</label>
+                  <select
+                    className="input"
+                    value={String(selected.config?.platform || 'Any')}
+                    onChange={(e) => updateNode(selected.id, { config: { ...selected.config, platform: e.target.value } })}
+                  >
+                    {['Any', 'Twitter', 'LinkedIn', 'Reddit', 'Facebook', 'Instagram'].map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </>
+              )}
               <button type="button" className="btn" style={{ marginTop: 12, color: '#ef4444' }} onClick={() => removeNode(selected.id)}>
                 Delete Node
               </button>
@@ -384,7 +488,21 @@ export function AutomationCanvas() {
         </div>
         <div className="card">
           <h4>Deploy Status</h4>
-          <pre style={{ fontSize: '0.75rem', overflow: 'auto', maxHeight: 120 }}>{JSON.stringify(deployStatus, null, 2)}</pre>
+          <div style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
+            <div><strong>Status:</strong> {deployInfo.status || 'draft'}</div>
+            <div><strong>Nodes:</strong> {deployInfo.nodeCount ?? nodes.length} · <strong>Connections:</strong> {deployInfo.edgeCount ?? edges.length}</div>
+            <div><strong>Campaign:</strong> {deployInfo.campaignName || String(builderData.campaignName || '—')}</div>
+            <div><strong>Worker:</strong> {deployInfo.workerRunning ? 'Running' : 'Idle'}</div>
+            {deployInfo.boundAccounts?.length ? (
+              <div><strong>Bound accounts:</strong> {deployInfo.boundAccounts.join(', ')}</div>
+            ) : (
+              <div className="settings-panel-desc" style={{ marginTop: 4 }}>Deploy to attach accounts and schedule.</div>
+            )}
+            {deployInfo.useBackgroundSchedule && (
+              <div className="settings-panel-desc">Uses Background Run windows from <Link href="/rules">Auto-Rules</Link>.</div>
+            )}
+            {deployInfo.lastRunAt && <div><strong>Last run:</strong> {new Date(deployInfo.lastRunAt).toLocaleString()}</div>}
+          </div>
         </div>
       </div>
 
@@ -401,6 +519,55 @@ export function AutomationCanvas() {
             <div className="modal-actions">
               <button type="button" className="btn" onClick={() => setLoadModal(false)}>Cancel</button>
               <button type="button" className="btn primary" onClick={() => selectedTemplate && loadTemplate(selectedTemplate)}>Load</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deployModal && (
+        <div className="modal-overlay" onClick={() => setDeployModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <h3>Deploy automation</h3>
+            <p className="settings-panel-desc">
+              Choose which campaign accounts run this flow. Likes, replies, and publishes respect your
+              {' '}<Link href="/rules">Auto-Rules</Link> schedule and human delay settings.
+            </p>
+            <p style={{ fontSize: '0.85rem', margin: '8px 0' }}>
+              <strong>Campaign:</strong> {String(builderData.campaignName || 'Active campaign')}
+            </p>
+            <label className="ac-label">Accounts &amp; pages</label>
+            {!builderAccounts.length && (
+              <p className="settings-panel-desc">No accounts linked — <Link href="/account-hub">connect in Account Hub</Link> first.</p>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto', marginBottom: 12 }}>
+              {builderAccounts.map((a) => (
+                <label key={a.id} className="ac-check" style={{ fontSize: '0.85rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={deployAccounts.includes(a.id)}
+                    onChange={() => toggleDeployAccount(a.id)}
+                  />
+                  {a.platform} — {a.handle || a.id}
+                </label>
+              ))}
+            </div>
+            <label className="ac-check" style={{ marginBottom: 12 }}>
+              <input
+                type="checkbox"
+                checked={useBackgroundSchedule}
+                onChange={(e) => setUseBackgroundSchedule(e.target.checked)}
+              />
+              Respect Background Run schedule (pause outside windows)
+            </label>
+            <p className="settings-panel-desc">
+              For group/page targets per account, configure targets in{' '}
+              <Link href="/rules">Auto-Rules → Per-Account Matrix</Link>.
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn" onClick={() => setDeployModal(false)}>Cancel</button>
+              <button type="button" className="btn primary" onClick={deploy} disabled={!deployAccounts.length}>
+                Deploy &amp; enable
+              </button>
             </div>
           </div>
         </div>

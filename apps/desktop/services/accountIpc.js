@@ -248,7 +248,13 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
   });
 
   ipcMain.handle('get-automation-targets', () => {
-    const accounts = getLinkedAccounts(store);
+    const raw = getLinkedAccounts(store);
+    const seen = new Set();
+    const accounts = raw.filter((a) => {
+      if (!a?.id || seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
     return {
       success: true,
       accounts,

@@ -290,8 +290,15 @@ function getAutoRulesStatus(store) {
   const accounts = loadJson(store, `linkedAccounts_${activeCampaignId}`, []);
   const tasks = loadJson(store, 'workerTasks', []).slice(0, 8);
   const workerRunning = store.getItem('workerRunningFlag') === 'true';
-  const draftCount = parseInt(store.getItem('aiDraftsCount') || '0', 10);
+  let draftCount = 0;
+  try {
+    const aiReplyStore = require('./aiReplyStore');
+    draftCount = aiReplyStore.queryHub(store, { status: 'all' }).campaignStats?.byStatus?.draft ?? 0;
+  } catch (e) {
+    draftCount = parseInt(store.getItem('aiDraftsCount') || '0', 10);
+  }
   const lastSaved = store.getItem('autoRulesLastSaved');
+  const enabledAccounts = accounts.filter((a) => a.settings?.automationEnabled !== false).length;
 
   return {
     rules,
@@ -301,7 +308,7 @@ function getAutoRulesStatus(store) {
     apiStatus: getApiStatus(keys),
     keywordCount: keywords.length,
     accountCount: accounts.length,
-    activeAccountCount: rules.activeAccountIds?.length || 0,
+    activeAccountCount: enabledAccounts || rules.activeAccountIds?.length || 0,
     draftCount,
     lastSaved,
     monitorsCount: loadJson(store, 'watchedMonitors', []).length,

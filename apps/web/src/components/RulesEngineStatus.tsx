@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import {
-  BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow,
+  BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow,
 } from '@/components/DashboardViz';
 
 type ApiStatus = Record<string, boolean>;
@@ -60,17 +60,22 @@ export function RulesEngineStatus({
 
     const counts: Record<string, { on: number; off: number }> = {};
     (targets.accounts || []).forEach((acc) => {
-      const p = (acc.platform || 'Other').slice(0, 8);
-      if (!counts[p]) counts[p] = { on: 0, off: 0 };
-      if (acc.settings?.automationEnabled !== false) counts[p].on += 1;
-      else counts[p].off += 1;
+      const plat = acc.platform || 'Other';
+      if (!counts[plat]) counts[plat] = { on: 0, off: 0 };
+      if (acc.settings?.automationEnabled !== false) counts[plat].on += 1;
+      else counts[plat].off += 1;
     });
     const colors = ['#38bdf8', '#a855f7', '#22c55e', '#f59e0b', '#f472b6'];
     setAccountBars(
       Object.entries(counts)
         .sort((a, b) => (b[1].on + b[1].off) - (a[1].on + a[1].off))
         .slice(0, 6)
-        .map(([label, c], i) => ({ label, value: c.on, color: colors[i % colors.length] })),
+        .map(([label, c], i) => ({
+          label: chartShortLabel(label, 8),
+          title: `${label}: ${c.on} enabled`,
+          value: c.on,
+          color: colors[i % colors.length],
+        })),
     );
   }, []);
 
