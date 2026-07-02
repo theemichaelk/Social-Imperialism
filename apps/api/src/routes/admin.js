@@ -1,6 +1,11 @@
 const express = require('express');
 const { prisma } = require('@si/db');
-const { isAdminEmail } = require('../subscriptionAccess');
+const {
+  isAdminEmail,
+  getOrgBilling,
+  adminSetSubscriptionStatus,
+  revokeAllUserSessions,
+} = require('../subscriptionAccess');
 
 const router = express.Router();
 
@@ -134,6 +139,69 @@ router.get('/directory', async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ error: e.message || 'Admin directory failed.' });
+  }
+});
+
+/** Admin: suspend, revoke, or activate an organization's subscription. */
+router.patch('/subscriptions/:orgId', async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const action = String(req.body?.action || '').toLowerCase();
+    const reason = String(req.body?.reason || '').trim();
+    const revokeSessions = req.body?.revokeSessions !== false;
+
+    const org = await prisma.organization.findUnique({ where: { id: orgId } });
+    if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+    const result = await adminSetSubscriptionStatus(orgId, action, {
+      reason,
+      actorEmail: req.user?.email,
+      revokeSessions,
+    });
+
+    res.json({
+      success: true,
+      orgId,
+      action,
+      status: result.billing.status,
+      sessionsRevoked: result.sessionsRevoked,
+      billing: {
+        plan: result.billing.plan,
+        planName: result.billing.planName,
+        status: result.billing.status,
+        billingEmail: result.billing.billingEmail,
+      },
+    });
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'Subscription update failed' });
+  }
+});
+
+/** Admin: read subscription status for one org. */
+router.get('/subscriptions/:orgId', async (req, res) => {
+  try {
+    const billing = await getOrgBilling(req.params.orgId);
+    if (!billing || !Object.keys(billing).length) {
+      return res.status(404).json({ error: 'Billing record not found' });
+    }
+    res.json({ orgId: req.params.orgId, billing });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/** Admin: revoke all sessions for a user (force sign-out). */
+router.post('/users/:userId/revoke-sessions', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.params.userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (isAdminEmail(user.email)) {
+      return res.status(403).json({ error: 'Cannot revoke sessions for platform admin accounts' });
+    }
+    const count = await revokeAllUserSessions(user.id);
+    res.json({ success: true, userId: user.id, sessionsRevoked: count });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

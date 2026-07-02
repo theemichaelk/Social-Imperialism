@@ -31,14 +31,25 @@ type AdminDirectory = {
     slug: string;
     plan: string;
     memberCount: number;
+    billing?: { planName?: string; status?: string; billingEmail?: string };
     projects: Array<{ id: string; name: string }>;
   }>;
 };
+
+function statusColor(status?: string) {
+  if (status === 'active') return '#22c55e';
+  if (status === 'past_due') return '#f59e0b';
+  if (status === 'suspended') return '#f97316';
+  if (status === 'canceled') return '#ef4444';
+  return '#64748b';
+}
 
 export function AdminDirectoryPanel() {
   const [data, setData] = useState<AdminDirectory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState('');
   const [filter, setFilter] = useState('');
 
   const load = useCallback(async () => {
@@ -64,6 +75,38 @@ export function AdminDirectoryPanel() {
   useEffect(() => {
     load().catch(console.error);
   }, [load]);
+
+  async function subscriptionAction(orgId: string, action: 'activate' | 'suspend' | 'revoke', label: string) {
+    if (!window.confirm(`${label} subscription for this organization?`)) return;
+    setBusy(`${action}-${orgId}`);
+    setMsg('');
+    try {
+      const res = await apiFetch(`/api/admin/subscriptions/${orgId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action, reason: `Admin directory — ${label}` }),
+      }) as { status?: string; sessionsRevoked?: number };
+      setMsg(`${label} OK — status ${res.status || action}${res.sessionsRevoked ? ` · ${res.sessionsRevoked} session(s) revoked` : ''}`);
+      await load();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function revokeUserSessions(userId: string, email: string) {
+    if (!window.confirm(`Revoke all sessions for ${email}?`)) return;
+    setBusy(`sessions-${userId}`);
+    setMsg('');
+    try {
+      const res = await apiFetch(`/api/admin/users/${userId}/revoke-sessions`, { method: 'POST' }) as { sessionsRevoked?: number };
+      setMsg(`Signed out ${email} — ${res.sessionsRevoked ?? 0} session(s) revoked`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
 
   const filteredUsers = useMemo(() => {
     const users = data?.users || [];
@@ -124,6 +167,12 @@ export function AdminDirectoryPanel() {
         />
       </div>
 
+      {msg && (
+        <div className="card" style={{ marginBottom: '1rem', borderColor: /fail|error/i.test(msg) ? '#ef4444' : '#22c55e' }}>
+          <p style={{ margin: 0, fontSize: '0.88rem' }}>{msg}</p>
+        </div>
+      )}
+
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
           <input
@@ -147,8 +196,10 @@ export function AdminDirectoryPanel() {
                 <th style={{ padding: '8px 6px' }}>User</th>
                 <th style={{ padding: '8px 6px' }}>Role</th>
                 <th style={{ padding: '8px 6px' }}>Organizations</th>
+                <th style={{ padding: '8px 6px' }}>Subscription</th>
                 <th style={{ padding: '8px 6px' }}>Campaigns</th>
                 <th style={{ padding: '8px 6px' }}>Joined</th>
+                <th style={{ padding: '8px 6px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -177,9 +228,24 @@ export function AdminDirectoryPanel() {
                         </div>
                       ))}
                     </td>
+                    <td style={{ padding: '8px 6px' }}>
+                      {u.organizations.map((o) => (
+                        <div key={o.id} style={{ color: statusColor(o.billing?.status), fontSize: '0.78rem' }}>
+                          {o.billing?.status || '—'}
+                          {o.billing?.planName ? ` · ${o.billing.planName}` : ''}
+                        </div>
+                      ))}
+                    </td>
                     <td style={{ padding: '8px 6px' }}>{projectCount}</td>
                     <td style={{ padding: '8px 6px', color: '#64748b', whiteSpace: 'nowrap' }}>
                       {new Date(u.createdAt).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '8px 6px', whiteSpace: 'nowrap' }}>
+                      {!u.isAdmin && (
+                        <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => revokeUserSessions(u.id, u.email)}>
+                          Sign out
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -201,17 +267,27 @@ export function AdminDirectoryPanel() {
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid #334155' }}>
                   <th style={{ padding: '8px 6px' }}>Org</th>
                   <th style={{ padding: '8px 6px' }}>Plan</th>
+                  <th style={{ padding: '8px 6px' }}>Status</th>
                   <th style={{ padding: '8px 6px' }}>Members</th>
                   <th style={{ padding: '8px 6px' }}>Projects</th>
+                  <th style={{ padding: '8px 6px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {(data?.organizations || []).map((o) => (
                   <tr key={o.id} style={{ borderBottom: '1px solid #1e293b' }}>
                     <td style={{ padding: '8px 6px' }}>{o.name} <span style={{ color: '#64748b' }}>· {o.slug}</span></td>
-                    <td style={{ padding: '8px 6px' }}>{o.plan}</td>
+                    <td style={{ padding: '8px 6px' }}>{o.billing?.planName || o.plan}</td>
+                    <td style={{ padding: '8px 6px', color: statusColor(o.billing?.status) }}>{o.billing?.status || '—'}</td>
                     <td style={{ padding: '8px 6px' }}>{o.memberCount}</td>
                     <td style={{ padding: '8px 6px' }}>{o.projects.length}</td>
+                    <td style={{ padding: '8px 6px' }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => subscriptionAction(o.id, 'suspend', 'Suspend')}>Suspend</button>
+                        <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => subscriptionAction(o.id, 'revoke', 'Revoke')}>Revoke</button>
+                        <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => subscriptionAction(o.id, 'activate', 'Activate')}>Activate</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

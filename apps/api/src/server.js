@@ -50,6 +50,15 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Stripe webhooks require raw body for signature verification (before JSON parser)
+const { handleStripeWebhook } = require('./routes/stripeWebhook');
+app.post(
+  '/api/billing/webhook/stripe',
+  express.raw({ type: 'application/json' }),
+  handleStripeWebhook,
+);
+
 app.use(express.json({ limit: '25mb' }));
 
 app.get('/', (req, res) => res.json({ ok: true, service: 'social-imperialism-api', version: APP_VERSION, health: '/health', api: '/api' }));

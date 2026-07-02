@@ -75,8 +75,45 @@ async function verifyCheckoutSession(secretKey, sessionId) {
   };
 }
 
+function parseStripeSignature(header) {
+  const out = {};
+  String(header || '').split(',').forEach((part) => {
+    const idx = part.indexOf('=');
+    if (idx < 0) return;
+    out[part.slice(0, idx).trim()] = part.slice(idx + 1);
+  });
+  return out;
+}
+
+/** Verify Stripe-Signature header and return parsed event (no stripe npm dep). */
+function constructWebhookEvent(rawBody, signatureHeader, secret, toleranceSec = 300) {
+  if (!secret) throw new Error('Stripe webhook secret not configured');
+  const crypto = require('crypto');
+  const payload = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody || '');
+  const parts = parseStripeSignature(signatureHeader);
+  const timestamp = parts.t;
+  const v1 = parts.v1;
+  if (!timestamp || !v1) throw new Error('Invalid Stripe-Signature header');
+
+  const signed = `${timestamp}.${payload}`;
+  const expected = crypto.createHmac('sha256', secret).update(signed, 'utf8').digest('hex');
+  const sigBuf = Buffer.from(v1, 'utf8');
+  const expBuf = Buffer.from(expected, 'utf8');
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    throw new Error('Webhook signature verification failed');
+  }
+
+  const age = Math.floor(Date.now() / 1000) - Number(timestamp);
+  if (Number.isFinite(age) && age > toleranceSec) {
+    throw new Error('Webhook timestamp outside tolerance');
+  }
+
+  return JSON.parse(payload);
+}
+
 module.exports = {
   testStripeConnection,
   createSubscriptionCheckout,
   verifyCheckoutSession,
+  constructWebhookEvent,
 };
