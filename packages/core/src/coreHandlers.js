@@ -358,8 +358,9 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   });
 
   ipcMain.handle('get-linked-accounts', (event, campaignId) => {
+    const { getLinkedAccountsDeduped } = require(path.join(__dirname, '../../../apps/desktop/services/accountAutomation'));
     const id = campaignId || store.getItem('activeCampaignId') || 'default';
-    return JSON.parse(store.getItem(`linkedAccounts_${id}`) || '[]');
+    return getLinkedAccountsDeduped(store, id);
   });
 
   ipcMain.handle('publish-post', async (event, postData) => calendarApi.executePublishPost(postData));

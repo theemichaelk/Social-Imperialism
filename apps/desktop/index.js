@@ -1317,12 +1317,9 @@ ipcMain.handle('export-data', (event) => {
 
 // Account Hub — real linked accounts per campaign (no seeded demo accounts)
 ipcMain.handle('get-linked-accounts', (event, campaignId) => {
+  const { getLinkedAccountsDeduped } = require('./services/accountAutomation');
   const targetId = campaignId || store.getItem('activeCampaignId') || 'default';
-  const data = store.getItem('linkedAccounts_' + targetId);
-  if (data) {
-    try { return JSON.parse(data); } catch(e) {}
-  }
-  return [];
+  return getLinkedAccountsDeduped(store, targetId);
 });
 
 ipcMain.handle('get-account-hub-status', () => integrations.getAccountHubStatus(store));

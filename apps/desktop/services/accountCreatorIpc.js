@@ -271,6 +271,8 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
     'cancel-browser-batch',
     'run-browser-batch-now',
     'process-browser-batch-queue',
+    'dedupe-profile-kits',
+    'clear-qa-profile-kits',
   ];
 
   channels.forEach((ch) => {
@@ -420,9 +422,43 @@ function registerAccountCreatorHandlers({ ipcMain, store, generateAI, calendarAp
     }
   });
 
-  ipcMain.handle('get-profile-kits', (event, campaignId) => {
-    const cid = campaignId || store.getItem('activeCampaignId') || 'default';
-    return accountCreator.getProfileKits(store, cid);
+  ipcMain.handle('get-profile-kits', (event, campaignIdOrPayload) => {
+    const payload = campaignIdOrPayload && typeof campaignIdOrPayload === 'object'
+      ? campaignIdOrPayload
+      : { campaignId: campaignIdOrPayload };
+    const cid = payload.campaignId || store.getItem('activeCampaignId') || 'default';
+    const all = accountCreator.getProfileKits(store, cid);
+    if (payload.includeQa === true) return all;
+    return accountCreator.filterProfileKitsForDisplay(all, { hideQa: payload.hideQa !== false });
+  });
+
+  ipcMain.handle('dedupe-profile-kits', (event, payload = {}) => {
+    const cid = payload.campaignId || store.getItem('activeCampaignId') || 'default';
+    const all = accountCreator.getProfileKits(store, cid);
+    const { kits: deduped, removed: dupRemoved } = accountCreator.dedupeProfileKits(all);
+    let kits = deduped;
+    let qaRemoved = 0;
+    if (payload.removeQa !== false) {
+      const withoutQa = kits.filter((k) => !accountCreator.isQaTestKit(k));
+      qaRemoved = kits.length - withoutQa.length;
+      kits = withoutQa;
+    }
+    accountCreator.saveProfileKits(store, cid, kits);
+    return {
+      success: true,
+      removed: dupRemoved + qaRemoved,
+      count: kits.length,
+      kits,
+    };
+  });
+
+  ipcMain.handle('clear-qa-profile-kits', (event, payload = {}) => {
+    const cid = payload.campaignId || store.getItem('activeCampaignId') || 'default';
+    const all = accountCreator.getProfileKits(store, cid);
+    const kits = all.filter((k) => !accountCreator.isQaTestKit(k));
+    const removed = all.length - kits.length;
+    accountCreator.saveProfileKits(store, cid, kits);
+    return { success: true, removed, count: kits.length, kits };
   });
 
   ipcMain.handle('get-profile-kit', (event, { campaignId, kitId }) => {

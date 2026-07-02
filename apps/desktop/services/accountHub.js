@@ -48,10 +48,14 @@ function getAccountHubStatus(store) {
   } catch (e) {}
 
   const platformKeys = platformKeyStatus(keys);
+  const configured = Object.values(platformKeys).filter(Boolean).length;
+  const linkedPlatforms = new Set(accounts.map((a) => a.platform).filter(Boolean)).size;
   return {
     accountCount: accounts.length,
+    linkedPlatforms,
+    configured,
     platformKeys,
-    hasAnyKeys: Object.values(platformKeys).some(Boolean),
+    hasAnyKeys: configured > 0,
     oauthPlatforms: ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'Reddit', 'TikTok', 'Discord', 'Pinterest', 'Threads', 'Snapchat', 'Twitch'],
   };
 }

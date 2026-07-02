@@ -95,11 +95,18 @@ export const PAGE_CHANNELS = {
     'save-auto-search-settings', 'start-worker', 'set-onboarding-complete', 'get-section-live',
     'get-linked-accounts',
   ],
+  accountHub: [
+    'get-linked-accounts', 'get-account-hub-status', 'refresh-account-profile', 'connect-platform',
+    'begin-platform-oauth', 'finish-platform-oauth-connect', 'use-selected-accounts', 'unlink-account',
+    'get-account-automation-targets', 'save-automation-target-selection', 'set-account-proxy',
+    'get-proxy-pool', 'dedupe-linked-accounts', 'get-section-live',
+  ],
   accountCreator: [
     'get-proxy-pool', 'save-proxy', 'delete-proxy', 'test-proxy', 'get-profile-kits',
     'generate-profile-kit', 'generate-bulk-profile-kits', 'delete-profile-kit', 'export-profile-kit',
     'push-kit-schedule-to-calendar', 'apply-kit-browser-automation', 'upload-kit-to-linked-accounts',
     'schedule-browser-batch', 'get-browser-batch-status', 'run-browser-batch-now', 'cancel-browser-batch',
+    'dedupe-profile-kits', 'clear-qa-profile-kits', 'get-account-creator-status', 'get-section-live',
   ],
   campaignManager: [
     'get-settings-status', 'get-active-campaign', 'get-settings', 'get-campaign-details',

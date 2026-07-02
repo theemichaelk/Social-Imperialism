@@ -32,7 +32,11 @@ function getActiveCampaignBrand(store, activeId) {
 
 function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
   const keywords = readJson(store, 'keywords', []).filter((k) => k.campaignId === activeId);
-  const linkedAccounts = readJson(store, `linkedAccounts_${activeId}`, []);
+  let linkedAccounts = readJson(store, `linkedAccounts_${activeId}`, []);
+  try {
+    const { dedupeLinkedAccounts } = require('./accountAutomation');
+    linkedAccounts = dedupeLinkedAccounts(linkedAccounts).accounts;
+  } catch (e) { /* keep raw list */ }
   const scheduled = readJson(store, 'scheduled_posts', []).filter((p) => !p.campaignId || p.campaignId === activeId);
   const postHistory = readJson(store, 'postHistory', []);
   const replies = readJson(store, 'aiRepliesHistory', []);
@@ -209,13 +213,29 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
           workerRunning: store.getItem('workerRunningFlag') === 'true',
         },
       };
-    case 'account-hub':
-    case 'account-creator': {
+    case 'account-hub': {
+      const accountCreator = require('./accountCreator');
       const proxies = readJson(store, 'proxyPool', []);
-      const kits = readJson(store, 'profileKits', []);
+      const kits = accountCreator.getProfileKits(store, activeId);
+      const linkedPlatforms = new Set(linkedAccounts.map((a) => a.platform).filter(Boolean)).size;
       return {
         ...base,
-        stats: { ...base.stats, proxies: proxies.length, kits: kits.length },
+        stats: {
+          ...base.stats,
+          proxies: proxies.length,
+          kits: kits.length,
+          linkedPlatforms,
+        },
+      };
+    }
+    case 'account-creator': {
+      const accountCreator = require('./accountCreator');
+      const proxies = readJson(store, 'proxyPool', []);
+      const allKits = accountCreator.getProfileKits(store, activeId);
+      const kits = accountCreator.filterProfileKitsForDisplay(allKits);
+      return {
+        ...base,
+        stats: { ...base.stats, proxies: proxies.length, kits: kits.length, kitsTotal: allKits.length },
       };
     }
     case 'integrations':

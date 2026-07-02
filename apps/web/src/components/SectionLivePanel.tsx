@@ -175,6 +175,7 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
   ],
   'account-hub': [
     { key: 'accounts', label: 'Linked', sub: 'accounts', accent: '#22c55e' },
+    { key: 'linkedPlatforms', label: 'Platforms', sub: 'connected' },
     { key: 'proxies', label: 'Proxies', sub: 'pool' },
     { key: 'apiConnected', label: 'APIs', sub: 'ready' },
   ],

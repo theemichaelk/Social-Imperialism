@@ -14,6 +14,8 @@ const {
   getAutomationTargets,
   getChildAccounts,
   saveAutomationTargetSelection,
+  dedupeLinkedAccounts,
+  getLinkedAccountsDeduped,
 } = require('./accountAutomation');
 const { waitBeforeAction, humanizeContent } = require('./humanBehavior');
 const { makeConnectionId } = require('./credentialAuth');
@@ -40,6 +42,7 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
     'save-automation-target-selection',
     'set-account-proxy',
     'publish-to-group',
+    'dedupe-linked-accounts',
   ];
 
   channels.forEach((ch) => {
@@ -416,7 +419,15 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
     }
   });
 
-  return { getLinkedAccounts, saveLinkedAccounts };
+  ipcMain.handle('dedupe-linked-accounts', (event, payload = {}) => {
+    const cid = payload.campaignId || store.getItem('activeCampaignId') || 'default';
+    const raw = getLinkedAccounts(store, cid);
+    const { accounts, removed } = dedupeLinkedAccounts(raw);
+    if (removed > 0) saveLinkedAccounts(store, cid, accounts);
+    return { success: true, removed, count: accounts.length, accounts };
+  });
+
+  return { getLinkedAccounts, saveLinkedAccounts, getLinkedAccountsDeduped };
 }
 
 module.exports = { registerAccountHandlers };

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
-import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 
 import {
   CREATOR_ENGINE_KEYS,
@@ -194,7 +194,7 @@ export default function AccountCreatorPage() {
   const platformBars = PLATFORM_CONNECTIONS.map((pl) => {
     const st = platformConnectionStatus(pl, keys, apiStatus);
     return {
-      label: pl.platform.slice(0, 5),
+      label: chartShortLabel(pl.platform, 8),
       title: `${pl.platform}: ${st}`,
       value: st === 'connected' ? 4 : st === 'partial' ? 2 : 1,
       color: st === 'connected' ? '#22c55e' : st === 'partial' ? '#38bdf8' : '#64748b',
@@ -202,7 +202,7 @@ export default function AccountCreatorPage() {
   });
 
   const kitStatusBars = ['ready', 'generating', 'draft', 'error'].map((st) => ({
-    label: st.slice(0, 5),
+    label: chartShortLabel(st, 8),
     title: `Kits: ${st}`,
     value: kits.filter((k) => (k.status || 'draft') === st).length || 0,
     color: st === 'ready' ? '#22c55e' : st === 'generating' ? '#a855f7' : st === 'error' ? '#ef4444' : '#64748b',
@@ -214,7 +214,7 @@ export default function AccountCreatorPage() {
     return acc;
   }, {});
   const scheduleBars = Object.entries(scheduleByPlatform).map(([label, value]) => ({
-    label: label.slice(0, 5),
+    label: chartShortLabel(label, 8),
     title: `${label}: ${value} posts`,
     value,
     color: '#38bdf8',
@@ -487,6 +487,38 @@ export default function AccountCreatorPage() {
     setMsg(`Auto-mapped ${Object.keys(next).length} platform(s)`);
   }
 
+  async function removeQaKits() {
+    if (!window.confirm('Remove all QA test profile kits from this campaign?')) return;
+    setLoading(true);
+    try {
+      const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('clear-qa-profile-kits');
+      if (!res.success) throw new Error(res.error || 'Cleanup failed');
+      setMsg(`Removed ${res.removed || 0} QA kit(s)`);
+      setSelectedKitId(null);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function dedupeKits() {
+    if (!window.confirm('Remove duplicate profile kits and QA test kits?')) return;
+    setLoading(true);
+    try {
+      const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('dedupe-profile-kits', { removeQa: true });
+      if (!res.success) throw new Error(res.error || 'Cleanup failed');
+      setMsg(`Removed ${res.removed || 0} duplicate/QA kit(s)`);
+      setSelectedKitId(null);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function cancelBatchJob(batchId: string) {
     setLoading(true);
     try {
@@ -648,6 +680,10 @@ export default function AccountCreatorPage() {
 
           <div className="grid grid-2">
             <DataPanel title={`Saved Profile Kits (${kits.length})`} live>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                <button type="button" className="btn" onClick={dedupeKits} disabled={loading || !kits.length}>Remove duplicates</button>
+                <button type="button" className="btn" onClick={removeQaKits} disabled={loading || !kits.length}>Clear QA kits</button>
+              </div>
               <div className="ac-kit-list">
                 {kits.map((k) => (
                   <button key={k.id} type="button" className={`ac-kit-item ${k.id === selectedKitId ? 'active' : ''}`} onClick={() => { setSelectedKitId(k.id); setTab('Kits'); }}>
@@ -857,6 +893,10 @@ export default function AccountCreatorPage() {
       {tab === 'Kits' && (
         <div className="grid grid-2">
           <DataPanel title={`Saved Kits (${kits.length})`} live>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+              <button type="button" className="btn" onClick={dedupeKits} disabled={loading || !kits.length}>Remove duplicates</button>
+              <button type="button" className="btn" onClick={removeQaKits} disabled={loading || !kits.length}>Clear QA kits</button>
+            </div>
             <div className="ac-kit-list">
               {kits.map((k) => (
                 <button key={k.id} type="button" className={`ac-kit-item ${k.id === selectedKitId ? 'active' : ''}`} onClick={() => setSelectedKitId(k.id)}>
@@ -1022,7 +1062,7 @@ export default function AccountCreatorPage() {
             <BarChart items={platformBars} maxHeight={100} />
             <SparkRow items={PLATFORM_CONNECTIONS.map((pl) => {
               const st = platformConnectionStatus(pl, keys, apiStatus);
-              return { label: pl.platform.slice(0, 8), value: st === 'connected' ? '●' : st === 'partial' ? '◐' : '○', status: st === 'connected' ? 'ok' : st === 'partial' ? 'warn' : 'off' };
+              return { label: chartShortLabel(pl.platform, 8), value: st === 'connected' ? '●' : st === 'partial' ? '◐' : '○', status: st === 'connected' ? 'ok' : st === 'partial' ? 'warn' : 'off' };
             })} />
             <div className="ac-connection-list">
               {PLATFORM_CONNECTIONS.map((pl) => {

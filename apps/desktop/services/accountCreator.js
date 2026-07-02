@@ -264,6 +264,44 @@ function getKitById(store, campaignId, kitId) {
   return getProfileKits(store, campaignId).find((k) => k.id === kitId) || null;
 }
 
+function isQaTestKit(kit) {
+  const name = String(kit?.name || kit?.identity?.displayName || '').trim();
+  if (!name) return false;
+  if (/^qa(\s|$|brand|lite|-)/i.test(name)) return true;
+  if (name === 'QA Lite') return true;
+  const tags = kit?.tags || [];
+  return Array.isArray(tags) && tags.some((t) => String(t).toLowerCase() === 'qa');
+}
+
+function kitFingerprint(kit) {
+  const name = String(kit?.name || kit?.identity?.displayName || '').trim().toLowerCase();
+  const platforms = [...(kit?.platforms || [])].sort().join(',');
+  const bio = String(kit?.identity?.shortBio || kit?.identity?.tagline || '').trim().toLowerCase().slice(0, 120);
+  return `${name}::${platforms}::${bio}`;
+}
+
+function dedupeProfileKits(kits) {
+  const seen = new Set();
+  const kept = [];
+  let removed = 0;
+  (kits || []).forEach((kit) => {
+    const fp = kitFingerprint(kit);
+    if (seen.has(fp)) {
+      removed += 1;
+      return;
+    }
+    seen.add(fp);
+    kept.push(kit);
+  });
+  return { kits: kept, removed };
+}
+
+function filterProfileKitsForDisplay(kits, { hideQa = true } = {}) {
+  let list = [...(kits || [])];
+  if (hideQa) list = list.filter((k) => !isQaTestKit(k));
+  return list;
+}
+
 module.exports = {
   SUPPORTED_PLATFORMS,
   VARIANT_SETTINGS,
@@ -283,4 +321,8 @@ module.exports = {
   saveKit,
   deleteKit,
   getKitById,
+  isQaTestKit,
+  kitFingerprint,
+  dedupeProfileKits,
+  filterProfileKitsForDisplay,
 };

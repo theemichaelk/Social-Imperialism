@@ -58,6 +58,8 @@ type AutomationTarget = {
 type HubStatus = {
   platformKeys?: Record<string, boolean>;
   configured?: number;
+  linkedPlatforms?: number;
+  accountCount?: number;
 };
 
 export default function AccountHubPage() {
@@ -139,6 +141,15 @@ export default function AccountHubPage() {
         refresh().catch(console.error);
       }
       window.history.replaceState({}, '', '/account-hub');
+    }
+    const relink = params.get('relink');
+    if (relink && PLATFORMS.includes(relink)) {
+      setConnectPlatform(relink);
+      setMsg(`Re-link ${relink} — use OAuth Connect or paste a fresh access token.`);
+      window.history.replaceState({}, '', '/account-hub');
+      window.setTimeout(() => {
+        document.getElementById('ah-connect-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
     }
   }, []);
 
@@ -346,6 +357,21 @@ export default function AccountHubPage() {
 
   const pk = hubStatus.platformKeys || {};
   const profile = normalizeProfile(selected?.profile);
+  const linkedPlatformCount = new Set(accounts.map((a) => a.platform).filter(Boolean)).size;
+  const keysConfigured = hubStatus.configured ?? Object.values(pk).filter(Boolean).length;
+  const needsRelink = profile?.needsRelink || profile?.authStatus;
+
+  async function removeDuplicateAccounts() {
+    if (!window.confirm('Remove duplicate linked accounts (same platform + OAuth connection)?')) return;
+    try {
+      const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('dedupe-linked-accounts');
+      if (!res.success) throw new Error(res.error || 'Cleanup failed');
+      setMsg(res.removed ? `Removed ${res.removed} duplicate account(s)` : 'No duplicate accounts found');
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  }
 
   return (
     <div>
@@ -365,14 +391,19 @@ export default function AccountHubPage() {
 
       <div className="grid grid-4">
         <div className="card kpi"><div className="kpi-val">{accounts.length}</div><div className="kpi-label">Linked</div></div>
-        <div className="card kpi"><div className="kpi-val">{PLATFORMS.length}</div><div className="kpi-label">Platforms</div></div>
-        <div className="card kpi"><div className="kpi-val">{hubStatus.configured ?? '—'}</div><div className="kpi-label">Configured</div></div>
+        <div className="card kpi"><div className="kpi-val">{linkedPlatformCount}</div><div className="kpi-label">Platforms live</div></div>
+        <div className="card kpi"><div className="kpi-val">{keysConfigured}</div><div className="kpi-label">API keys ready</div></div>
         <div className="card kpi"><div className="kpi-val status-ok">Live</div><div className="kpi-label">Hub Status</div></div>
       </div>
 
       <div className="grid grid-2">
         <div className="card">
-          <h3>Linked Accounts ({accounts.length})</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+            <h3 style={{ margin: 0 }}>Linked Accounts ({accounts.length})</h3>
+            {accounts.length > 1 && (
+              <button type="button" className="btn" onClick={removeDuplicateAccounts}>Remove duplicates</button>
+            )}
+          </div>
           {accounts.map((a) => (
             <div
               key={a.id}
@@ -398,8 +429,13 @@ export default function AccountHubPage() {
           {!accounts.length && <p style={{ color: '#94a3b8' }}>No accounts linked. Connect a platform below.</p>}
         </div>
 
-        <div className="card">
+        <div className="card" id="ah-connect-panel">
           <h3>Connect Platform</h3>
+          {needsRelink && selected && (
+            <p className="settings-panel-desc" style={{ marginBottom: 10, color: '#fbbf24' }}>
+              {selected.platform} token expired — re-link via OAuth or paste a fresh access token below.
+            </p>
+          )}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
             {PLATFORMS.map((p) => {
               const linked = accounts.some((a) => a.platform === p);

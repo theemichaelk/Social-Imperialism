@@ -107,7 +107,7 @@ export function buildRecommendations(
       label: `${platform} connection`,
       detail: tokenHint || `${platform} needs a fresh OAuth link.`,
       action: 'Re-link account',
-      href: '/account-hub',
+      href: `/account-hub?relink=${encodeURIComponent(platform)}`,
     });
   }
 

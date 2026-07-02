@@ -529,6 +529,80 @@ function groupAccountsByConnection(accounts) {
   return Array.from(groups.values());
 }
 
+function isRootProfileAccount(acc) {
+  if (!acc || acc.parentAccountId) return false;
+  const type = acc.type || 'Profile';
+  return ROOT_ACCOUNT_TYPES.has(type) && !GROUP_TYPES.has(type);
+}
+
+function linkedAccountDedupeKey(acc) {
+  if (!isRootProfileAccount(acc)) return null;
+  const platform = acc.platform || 'unknown';
+  const conn = String(acc.connectionId || '').trim();
+  if (conn) return `root:${platform}:conn:${conn}`;
+  const email = String(acc.loginEmail || '').trim().toLowerCase();
+  if (email) return `root:${platform}:email:${email}`;
+  return null;
+}
+
+function linkedAccountKeepScore(acc) {
+  let score = 0;
+  if (acc.encryptedTokens) score += 8;
+  if (acc.profileRefreshedAt) score += 4;
+  if (acc.loginEmail) score += 2;
+  if (acc.profile && !acc.profile.needsRelink) score += 6;
+  if (acc.linkedAt) score += 1;
+  return score;
+}
+
+function pickBetterLinkedAccount(a, b) {
+  const sa = linkedAccountKeepScore(a);
+  const sb = linkedAccountKeepScore(b);
+  if (sa !== sb) return sa > sb ? a : b;
+  const ta = new Date(a.profileRefreshedAt || a.linkedAt || 0).getTime();
+  const tb = new Date(b.profileRefreshedAt || b.linkedAt || 0).getTime();
+  return ta >= tb ? a : b;
+}
+
+/** Collapse duplicate root Profile rows (same OAuth connection / login on one platform). */
+function dedupeLinkedAccounts(accounts) {
+  const list = Array.isArray(accounts) ? [...accounts] : [];
+  const groups = new Map();
+  const standalone = [];
+
+  list.forEach((acc) => {
+    const key = linkedAccountDedupeKey(acc);
+    if (!key) {
+      standalone.push(acc);
+      return;
+    }
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(acc);
+  });
+
+  const kept = [...standalone];
+  let removed = 0;
+  groups.forEach((group) => {
+    if (group.length === 1) {
+      kept.push(group[0]);
+      return;
+    }
+    let best = group[0];
+    for (let i = 1; i < group.length; i += 1) {
+      best = pickBetterLinkedAccount(best, group[i]);
+    }
+    kept.push(best);
+    removed += group.length - 1;
+  });
+
+  return { accounts: kept, removed };
+}
+
+function getLinkedAccountsDeduped(store, campaignId) {
+  const raw = getLinkedAccounts(store, campaignId);
+  return dedupeLinkedAccounts(raw).accounts;
+}
+
 module.exports = {
   defaultAccountSettings,
   mergeAccountSettings,
@@ -551,4 +625,7 @@ module.exports = {
   groupAccountsByConnection,
   saveAutomationTargetSelection,
   relatedConnectionAccounts,
+  dedupeLinkedAccounts,
+  getLinkedAccountsDeduped,
+  isRootProfileAccount,
 };
