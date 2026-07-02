@@ -4,7 +4,7 @@
  */
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const nodriverBridge = require('./nodriverBridge');
 
 const STORAGE_KEY = 'nativeBrowserSettings';
@@ -78,10 +78,11 @@ async function refreshNodriverStatus() {
 
 function getDefaultSettings() {
   const installed = detectInstalledBrowsers();
-  const edge = installed.find((b) => b.id === 'edge' && b.installed);
-  const chrome = installed.find((b) => b.id === 'chrome' && b.installed);
+  const firstReady = installed.find((b) => b.installed && b.automationReady);
+  const firstInstalled = installed.find((b) => b.installed);
+  const pick = firstReady || firstInstalled;
   return {
-    browserId: edge ? 'edge' : (chrome ? 'chrome' : 'edge'),
+    browserId: pick?.id || 'edge',
     launchMode: 'app_profile',
     profileDirectory: 'Default',
     debugPort: 9222,
@@ -106,10 +107,67 @@ function saveBrowserSettings(store, partial) {
   return merged;
 }
 
+function findWindowsBrowserViaRegistry(browserId) {
+  if (process.platform !== 'win32') return null;
+  const regKeys = {
+    edge: [
+      'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe',
+      'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe',
+    ],
+    chrome: [
+      'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe',
+      'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe',
+    ],
+    opera: [
+      'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\opera.exe',
+    ],
+  };
+  for (const key of regKeys[browserId] || []) {
+    try {
+      const out = execFileSync('reg', ['query', key, '/ve'], { encoding: 'utf8', timeout: 5000 });
+      const match = out.match(/REG_SZ\s+(.+)/);
+      if (match) {
+        const candidate = match[1].trim().replace(/^"(.*)"$/, '$1');
+        if (candidate && fs.existsSync(candidate)) return candidate;
+      }
+    } catch (e) { /* try next */ }
+  }
+  const whereNames = { edge: 'msedge', chrome: 'chrome', opera: 'opera' };
+  const exe = whereNames[browserId];
+  if (exe) {
+    try {
+      const out = execFileSync('where', [exe], { encoding: 'utf8', timeout: 5000, shell: true });
+      const line = out.split(/\r?\n/).map((l) => l.trim()).find((l) => /\.exe$/i.test(l));
+      if (line && fs.existsSync(line)) return line;
+    } catch (e) { /* ignore */ }
+  }
+  return null;
+}
+
 function findExecutable(browserDef) {
   if (!browserDef || browserDef.engine === 'bundled') return null;
   for (const p of browserDef.winPaths || []) {
     if (p && fs.existsSync(p)) return p;
+  }
+  return findWindowsBrowserViaRegistry(browserDef.id);
+}
+
+function resolveBrowserExecutable(browserId) {
+  const def = BROWSER_DEFS[browserId] || BROWSER_DEFS.chrome;
+  if (def.engine === 'bundled') {
+    return { def, execPath: null, browserId: def.id };
+  }
+  const execPath = findExecutable(def);
+  return { def, execPath, browserId: def.id };
+}
+
+function findFirstInstalledChromiumBrowser() {
+  for (const id of ['edge', 'chrome', 'opera', 'chromium']) {
+    const { def, execPath } = resolveBrowserExecutable(id);
+    if (def.engine === 'bundled' && nodriverStatusCache.nodriverReady) {
+      return { browserId: id, def, execPath: null };
+    }
+    if (execPath) return { browserId: id, def, execPath };
   }
   return null;
 }
@@ -234,17 +292,31 @@ async function launchNativeBrowser({
   if (settings.launchMode === 'attach') {
     session = await connectViaCDP(settings.debugPort || 9222);
   } else {
-    const def = BROWSER_DEFS[settings.browserId] || BROWSER_DEFS.chrome;
+    let { def, execPath, browserId } = resolveBrowserExecutable(settings.browserId);
     if (def.engine === 'firefox') {
       throw new Error('Firefox automation is not supported with nodriver. Choose Chrome or Edge in Settings → Native Browser.');
     }
-    const execPath = def.engine === 'bundled' ? null : findExecutable(def);
     if (def.engine !== 'bundled' && !execPath) {
-      throw new Error(`${def.label} not found. Install it or choose another browser in Settings → Native Browser.`);
+      const fallback = findFirstInstalledChromiumBrowser();
+      if (fallback) {
+        def = fallback.def;
+        execPath = fallback.execPath;
+        browserId = fallback.browserId;
+        settings = saveBrowserSettings(store, { browserId });
+      }
+    }
+    if (def.engine !== 'bundled' && !execPath) {
+      const hostHint = process.platform === 'linux'
+        ? 'Grok browser automation requires the Social Imperialism desktop app on Windows (or a Windows API host with Edge/Chrome).'
+        : 'Install Microsoft Edge or Google Chrome, or choose another browser in Settings → Native Browser.';
+      throw new Error(`${def.label} not found. ${hostHint}`);
+    }
+    if (!nodriverStatusCache.nodriverReady) {
+      throw new Error('Python nodriver is not ready. Install Python 3 and run: pip install -r apps/desktop/services/stealthBrowser/requirements.txt');
     }
     const profileDir = getProfileDir(userDataPath, settings, profileKey);
     session = await launchChromiumBrowser({
-      settings, execPath, profileDir, headless, profileKey,
+      settings: { ...settings, browserId }, execPath, profileDir, headless, profileKey,
     });
   }
 
@@ -355,6 +427,8 @@ module.exports = {
   getBrowserSettings,
   saveBrowserSettings,
   detectInstalledBrowsers,
+  findFirstInstalledChromiumBrowser,
+  resolveBrowserExecutable,
   launchNativeBrowser,
   openUrlInNativeBrowser,
   connectViaCDP,

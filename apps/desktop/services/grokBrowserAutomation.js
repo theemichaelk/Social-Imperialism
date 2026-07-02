@@ -642,7 +642,45 @@ async function generateGrokVideo(store, userDataPath, prompt, {
   };
 }
 
+function buildConnectionHint({ nodriverStatus, browserStatus, hasCredentials, sessionValid }) {
+  if (!nodriverStatus.nodriverReady) {
+    return nodriverStatus.error
+      || 'Python nodriver is not ready — install Python 3, then: pip install -r apps/desktop/services/stealthBrowser/requirements.txt';
+  }
+  const selected = browserStatus.selectedBrowser;
+  if (!selected?.installed) {
+    const installed = (browserStatus.browsers || []).filter((b) => b.installed).map((b) => b.label);
+    if (process.platform === 'linux') {
+      return 'Grok browser automation runs on Windows (desktop app or local API). Cloud API hosts cannot launch Edge/Chrome.';
+    }
+    if (installed.length) {
+      return `Browser "${selected?.label || 'Edge'}" not found. Installed: ${installed.join(', ')} — pick one in Settings → Grok → Native Browser.`;
+    }
+    return 'Install Microsoft Edge or Google Chrome, then choose it in Settings → Native Browser.';
+  }
+  if (!selected.automationReady) {
+    return selected.note || 'Browser found but automation is not ready — check nodriver setup in Settings → Native Browser.';
+  }
+  if (!hasCredentials) {
+    return 'Save your x.ai email and password in Settings → Grok, then click Connect.';
+  }
+  if (!sessionValid) {
+    return 'Click Connect in Settings → Grok to sign in via the native browser session.';
+  }
+  return null;
+}
+
 async function getStatus(store, userDataPath) {
+  seedGrokDefaultsIfNeeded(store);
+  const nbSettings = nativeBrowser.getBrowserSettings(store);
+  const resolved = nativeBrowser.resolveBrowserExecutable(nbSettings.browserId);
+  if (!resolved.execPath && resolved.def.engine !== 'bundled') {
+    const fallback = nativeBrowser.findFirstInstalledChromiumBrowser();
+    if (fallback) {
+      nativeBrowser.saveBrowserSettings(store, { browserId: fallback.browserId });
+    }
+  }
+
   const settings = getSettings(store);
   let profileReady = false;
   let profileDir = null;
@@ -658,9 +696,20 @@ async function getStatus(store, userDataPath) {
     nodriverBridge.getStatus(),
     nativeBrowser.getBrowserStatus(store, userDataPath),
   ]);
+  const connectionHint = buildConnectionHint({
+    nodriverStatus,
+    browserStatus,
+    hasCredentials,
+    sessionValid,
+  });
+  const canAutomate = nodriverStatus.nodriverReady
+    && !!browserStatus.selectedBrowser?.automationReady
+    && process.platform !== 'linux';
   return {
     nodriverReady: nodriverStatus.nodriverReady,
     puppeteerReady: nodriverStatus.nodriverReady,
+    canAutomate,
+    connectionHint,
     nativeBrowser: browserStatus,
     settings: {
       enabled: settings.enabled,
@@ -670,7 +719,10 @@ async function getStatus(store, userDataPath) {
       hasCredentials,
       lastLoginAt: settings.lastLoginAt,
     },
-    session: sessionState,
+    session: {
+      ...sessionState,
+      loggedIn: sessionValid,
+    },
     profileReady,
     profileDir,
   };

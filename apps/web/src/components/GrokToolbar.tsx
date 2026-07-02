@@ -84,19 +84,43 @@ export function GrokToolbar({
 
   const loggedIn = !!(grokStatus as { session?: { loggedIn?: boolean } }).session?.loggedIn
     || !!(grokStatus as { settings?: { sessionValid?: boolean } }).settings?.sessionValid;
+  const connectionHint = String((grokStatus as { connectionHint?: string }).connectionHint || '');
+  const canAutomate = (grokStatus as { canAutomate?: boolean }).canAutomate !== false;
+  const nodriverReady = !!(grokStatus as { nodriverReady?: boolean }).nodriverReady;
+  const selectedBrowser = (grokStatus as { nativeBrowser?: { selectedBrowser?: { label?: string; installed?: boolean } } })
+    .nativeBrowser?.selectedBrowser;
+  const installedBrowsers = ((grokStatus as { nativeBrowser?: { browsers?: Array<{ label: string; installed?: boolean; automationReady?: boolean }> } })
+    .nativeBrowser?.browsers || []).filter((b) => b.installed);
 
   const inner = (
     <>
       {!compact && (
         <p className="settings-panel-desc">
-          Grok Text, Imagine, Video, and Infographics use a persistent Edge profile at grok.com — not an API key.
+          Grok Text, Imagine, Video, and Infographics use a native browser session at grok.com — not an API key.
           {' '}<Link href="/settings?tab=connect">Configure in Settings → Grok</Link>
         </p>
       )}
       <div className="post-card" style={{ fontSize: '0.85rem', marginBottom: 12 }}>
         {loggedIn
-          ? <span className="status-ok">Grok session active</span>
-          : <span className="status-partial">Not connected — save credentials and Connect in Settings → Grok</span>}
+          ? <span className="status-ok">Grok session active{selectedBrowser?.label ? ` · ${selectedBrowser.label}` : ''}</span>
+          : <span className="status-partial">
+              {connectionHint || 'Not connected — save credentials and Connect in Settings → Grok'}
+            </span>}
+        {!nodriverReady && (
+          <p style={{ margin: '8px 0 0', color: '#f59e0b', fontSize: '0.8rem' }}>
+            nodriver/Python not ready — see Settings → Native Browser for setup.
+          </p>
+        )}
+        {installedBrowsers.length > 0 && !selectedBrowser?.installed && (
+          <p style={{ margin: '8px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>
+            Detected: {installedBrowsers.map((b) => b.label).join(', ')} — select one in Settings → Grok.
+          </p>
+        )}
+        {!canAutomate && connectionHint.includes('Windows') && (
+          <p style={{ margin: '8px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>
+            For full Grok browser automation, use the Social Imperialism desktop app on Windows.
+          </p>
+        )}
       </div>
       <PromptVaultPicker
         feature="grok"
