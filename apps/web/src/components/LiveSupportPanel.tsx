@@ -23,6 +23,18 @@ import {
   searchRouteToAction,
   stripNavigateDirectives,
 } from '@/lib/liveSupportActions';
+import {
+  guardedExecute,
+  failTrace,
+  ingestFile,
+  ingestTextPayload,
+  pushTrace,
+  completeTrace,
+  runIngestPipeline,
+  redactSecrets,
+} from '@/lib/theeMichaelOverlord';
+import { listEnclaveEntries } from '@/lib/overlordEnclave';
+import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
 
 const PANEL_KEY = 'si_support_panel_open';
 
@@ -35,7 +47,10 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
+  const [showTrace, setShowTrace] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!embedded) {
@@ -48,6 +63,45 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
+  const handleIngest = useCallback(async (file: File) => {
+    setLoading(true);
+    const t = pushTrace(`Ingesting ${file.name}`);
+    try {
+      const result = await ingestFile(file);
+      runIngestPipeline(result);
+      const enclave = listEnclaveEntries().slice(0, 3).map((e) => `${e.label} (${e.fingerprint})`).join(', ');
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'user',
+          content: `[File drop: ${file.name}]`,
+          ts: new Date().toISOString(),
+        },
+        {
+          role: 'assistant',
+          content: `${result.summary}\n\n${enclave ? `Enclave fingerprints: ${enclave}\n\n` : ''}Navigating to the right module now — secrets never entered chat logs.`,
+          ts: new Date().toISOString(),
+        },
+      ]);
+      completeTrace(t);
+    } catch (e) {
+      failTrace(t, (e as Error).message);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: `Ingest failed — ${(e as Error).message}`, ts: new Date().toISOString() },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleIngest(file);
+  }, [handleIngest]);
+
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
@@ -59,19 +113,44 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     setInput('');
     setLoading(true);
 
+    const isBulkSetup = /set\s+up\s+(my\s+)?(entire\s+)?(agency|profile|account)/i.test(trimmed)
+      || /from\s+this\s+(text|dump|payload)/i.test(trimmed);
+
+    if (isBulkSetup && trimmed.length > 80) {
+      const t = pushTrace('Protocol Beta: autonomous setup parse');
+      const result = ingestTextPayload(trimmed);
+      runIngestPipeline(result);
+      completeTrace(t);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `${result.summary}\n\n**Autonomous setup** routed — ${result.keyCount} secrets sealed in session enclave. Review Integrations connections next.`,
+          ts: new Date().toISOString(),
+        },
+      ]);
+      setLoading(false);
+      return;
+    }
+
     try {
       if (requiresAdminApproval(trimmed)) {
-        const ticket = createApprovalTicket(trimmed);
-        setPendingCount(getPendingApprovals().length);
-        setMessages((prev) => [
-          ...prev,
-          { role: 'assistant', content: approvalAcknowledgement(ticket), ts: new Date().toISOString() },
-        ]);
+        guardedExecute('Sensitive change request', trimmed, () => {
+          const ticket = createApprovalTicket(trimmed);
+          setPendingCount(getPendingApprovals().length);
+          setMessages((prev) => [
+            ...prev,
+            { role: 'assistant', content: approvalAcknowledgement(ticket), ts: new Date().toISOString() },
+          ]);
+        });
+        setLoading(false);
         return;
       }
 
       if (navAction?.autoExecute) {
+        const t = pushTrace(`Spatial navigation → ${navAction.label}`);
         executeLiveSupportAction(navAction);
+        completeTrace(t);
         setMessages((prev) => [
           ...prev,
           {
@@ -83,13 +162,17 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         return;
       }
 
-      const prompt = buildSupportPrompt(messages, trimmed, { pathname });
+      const tAi = pushTrace('Evaluating request with live context');
+      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname });
       const reply = await invoke<string>('generate-ai', prompt);
       let raw = sanitizeAgentReply(String(reply || '').trim()) || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
+      completeTrace(tAi);
 
       const directive = parseAgentNavigateDirective(raw);
       if (directive) {
+        const tNav = pushTrace(`Executing [[NAV]] → ${directive.label}`);
         executeLiveSupportAction(directive);
+        completeTrace(tNav);
         raw = stripNavigateDirectives(raw);
       } else if (route) {
         executeLiveSupportAction(searchRouteToAction(route, true));
@@ -138,29 +221,44 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
 
   if (!embedded && !open) {
     return (
-      <button type="button" className="live-support-fab" onClick={toggle} title="Live Support">
-        <span className="live-support-fab-icon">💬</span>
+      <button type="button" className="live-support-fab" onClick={toggle} title="THEE_MICHAEL Live Support">
+        <span className="live-support-fab-icon">🛡️</span>
         {pendingCount > 0 && <span className="live-support-fab-badge">{pendingCount}</span>}
       </button>
     );
   }
 
   return (
-    <div className={`live-support-panel ${embedded ? 'live-support-embedded' : ''}`}>
+    <div
+      className={`live-support-panel ${embedded ? 'live-support-embedded' : ''} ${dragOver ? 'live-support-drag-over' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={onDrop}
+    >
       <div className="live-support-header">
         <div>
-          <p className="live-support-eyebrow">Imperialism Brain</p>
-          <h3 className="live-support-title">Live Support</h3>
+          <p className="live-support-eyebrow">THEE_MICHAEL · Overlord Protocol</p>
+          <h3 className="live-support-title">Imperialism Brain</h3>
         </div>
         <div className="live-support-header-actions">
           {pendingCount > 0 && (
             <span className="live-support-pending">Waiting on THEE_MICHAEL approval ({pendingCount})</span>
           )}
+          <button
+            type="button"
+            className="live-support-trace-toggle"
+            onClick={() => setShowTrace((s) => !s)}
+            title="Toggle cognitive trace"
+          >
+            {showTrace ? 'Trace ▾' : 'Trace ▸'}
+          </button>
           {!embedded && (
             <button type="button" className="live-support-close" onClick={toggle} aria-label="Close support">×</button>
           )}
         </div>
       </div>
+
+      {showTrace && <OverlordCognitiveTrace compact />}
 
       <div className="live-support-messages" ref={scrollRef}>
         {messages.map((m, i) => (
@@ -184,10 +282,30 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         onSubmit={(e) => { e.preventDefault(); send(input); }}
       >
         <input
+          ref={fileRef}
+          type="file"
+          accept=".txt,.csv,.json,.md,.env,.tsv"
+          className="live-support-file-input"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleIngest(f);
+            e.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          className="btn live-support-attach"
+          onClick={() => fileRef.current?.click()}
+          disabled={loading}
+          title="Drop API sheet, .env, CSV, or config"
+        >
+          📎
+        </button>
+        <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about setup, posts, replies, integrations…"
+          placeholder="Ask, navigate, or drop API docs / CSV keys…"
           disabled={loading}
           className="live-support-input"
         />
@@ -195,11 +313,9 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
       </form>
 
       <p className="live-support-footer">
-        <Link href="/support">Full support page</Link>
+        <Link href="/support">Full support workspace</Link>
         {' · '}
-        <Link href="/integrations">Integrations</Link>
-        {' · '}
-        <Link href="/dashboard">Mission Control</Link>
+        <span className="live-support-drop-hint">Drag files here — secrets stay in session enclave</span>
       </p>
     </div>
   );

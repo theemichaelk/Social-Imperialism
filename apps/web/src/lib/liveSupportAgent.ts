@@ -3,6 +3,8 @@
  * Canonical doc: brain/LIVE_SUPPORT_AGENT.md
  */
 
+import { OVERLORD_SYSTEM_APPEND } from '@/lib/theeMichaelOverlord';
+
 export const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
 export const INIT_MESSAGE =
@@ -190,7 +192,7 @@ export function buildSupportPrompt(messages: SupportMessage[], userMessage: stri
     .map((m) => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`)
     .join('\n');
   const ctx = context?.pathname ? `\nCurrent page: ${context.pathname}` : '';
-  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${ctx}
+  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${OVERLORD_SYSTEM_APPEND}${ctx}
 
 Conversation:
 ${history}

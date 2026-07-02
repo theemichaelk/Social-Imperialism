@@ -17,6 +17,9 @@
 | Support lib | `apps/web/src/lib/liveSupportAgent.ts` | — |
 | Live navigation | `apps/web/src/lib/liveSupportActions.ts` | Auto-redirect from any console |
 | Navigator host | `apps/web/src/components/BrainNavigatorHost.tsx` | Toast + sidebar highlight |
+| Overlord protocol | `apps/web/src/lib/theeMichaelOverlord.ts` | THEE_MICHAEL predictive execution |
+| Overlord host | `apps/web/src/components/OverlordProtocolHost.tsx` | Interventions + UI mutation |
+| Brain doc | `brain/THEE_MICHAEL_OVERLORD.md` | Canonical overlord spec |
 
 ## Internal agent ids (stable, not user-facing)
 

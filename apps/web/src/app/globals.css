@@ -2679,6 +2679,80 @@ textarea.input { min-height: 100px; resize: vertical; }
   pointer-events: none;
 }
 .brain-nav-toast-icon { flex-shrink: 0; }
+
+/* THEE_MICHAEL Overlord Protocol */
+.overlord-trace {
+  margin: 0 0.75rem 0.5rem; padding: 0.5rem 0.65rem; border-radius: 8px;
+  background: rgba(5, 10, 20, 0.55); border: 1px solid rgba(168, 85, 247, 0.25);
+  font-family: var(--font-mono); font-size: 0.68rem;
+}
+.overlord-trace-eyebrow { margin: 0 0 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent3); }
+.overlord-trace-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
+.overlord-trace-step { display: flex; align-items: center; gap: 0.4rem; color: var(--muted); }
+.overlord-trace-step.is-active { color: var(--accent2); }
+.overlord-trace-step.is-done { color: var(--success); opacity: 0.85; }
+.overlord-trace-step.is-error { color: var(--warn); }
+.overlord-trace-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.overlord-intervention {
+  position: fixed; top: 5.5rem; right: 1rem; z-index: 1150; max-width: min(22rem, calc(100vw - 2rem));
+}
+.overlord-intervention-inner {
+  padding: 0.85rem 1rem; border-radius: 12px;
+  background: linear-gradient(145deg, rgba(12, 22, 42, 0.98), rgba(8, 14, 28, 0.96));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+.overlord-intervention-kind { margin: 0; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent3); }
+.overlord-intervention-title { display: block; margin: 0.25rem 0; font-size: 0.92rem; }
+.overlord-intervention-body { margin: 0 0 0.65rem; font-size: 0.78rem; color: var(--muted); line-height: 1.45; }
+.overlord-intervention-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.overlord-confirm-backdrop {
+  position: fixed; inset: 0; z-index: 2000; background: rgba(0, 0, 0, 0.65);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.overlord-confirm-modal {
+  width: min(24rem, 100%); padding: 1.25rem; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--border);
+  box-shadow: var(--neon-purple);
+}
+.overlord-confirm-eyebrow { margin: 0; font-size: 0.65rem; text-transform: uppercase; color: var(--accent3); }
+.overlord-confirm-title { margin: 0.35rem 0; font-size: 1.05rem; }
+.overlord-confirm-summary { margin: 0 0 0.75rem; font-size: 0.85rem; color: var(--muted); }
+.overlord-confirm-hint { margin: 0 0 0.5rem; font-size: 0.78rem; }
+.overlord-confirm-input {
+  width: 100%; padding: 0.5rem; border-radius: 8px; margin-bottom: 0.75rem;
+  border: 1px solid var(--border); background: rgba(5, 10, 20, 0.6); color: var(--text);
+  font-family: var(--font-mono); letter-spacing: 0.12em;
+}
+.overlord-confirm-actions { display: flex; gap: 0.5rem; }
+.overlord-field-token {
+  position: absolute; z-index: 1100; padding: 0.2rem 0.45rem; border-radius: 6px;
+  font-size: 0.68rem; border: 1px solid rgba(168, 85, 247, 0.5);
+  background: rgba(15, 25, 50, 0.95); color: var(--accent2); cursor: pointer;
+}
+.overlord-ui-highlight {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+}
+.overlord-screen-flash::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background: rgba(168, 85, 247, 0.12);
+  animation: overlord-flash 0.45s ease-out;
+}
+@keyframes overlord-flash {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+.live-support-drag-over { outline: 2px dashed var(--accent2); outline-offset: 4px; }
+.live-support-file-input { display: none; }
+.live-support-attach { flex-shrink: 0; padding: 0.45rem 0.55rem; font-size: 0.85rem; }
+.live-support-trace-toggle {
+  font-size: 0.65rem; padding: 0.2rem 0.4rem; border-radius: 6px;
+  border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer;
+}
+.live-support-drop-hint { font-size: 0.65rem; color: var(--muted); }
+
 .support-module-list { margin: 0.65rem 0 0; padding-left: 1.1rem; font-size: 0.85rem; }
 .support-topics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem; }
 .support-topic-card {
