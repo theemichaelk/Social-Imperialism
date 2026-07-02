@@ -26,6 +26,22 @@ const {
 
 const router = express.Router();
 
+const loginFailMap = new Map();
+const LOGIN_FAIL_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_FAIL_CAPTURE_THRESHOLD = 5;
+
+function shouldCaptureLoginBruteForce(req, email) {
+  const key = `${req.ip || req.headers['x-forwarded-for'] || 'unknown'}:${String(email || '').toLowerCase()}`;
+  const now = Date.now();
+  let entry = loginFailMap.get(key);
+  if (!entry || now - entry.start > LOGIN_FAIL_WINDOW_MS) {
+    entry = { start: now, count: 0 };
+    loginFailMap.set(key, entry);
+  }
+  entry.count += 1;
+  return entry.count >= LOGIN_FAIL_CAPTURE_THRESHOLD;
+}
+
 router.post('/register', (_req, res) => {
   res.status(403).json({
     error: 'Open registration is disabled. Subscribe first, then set up your account.',
@@ -91,7 +107,9 @@ router.post('/login', async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { email: validation.email } });
     if (!user || !(await bcrypt.compare(validation.password, user.passwordHash))) {
-      await sovereignAuthFailureCapture(req, 'brute_force');
+      if (shouldCaptureLoginBruteForce(req, validation.email)) {
+        await sovereignAuthFailureCapture(req, 'brute_force');
+      }
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 

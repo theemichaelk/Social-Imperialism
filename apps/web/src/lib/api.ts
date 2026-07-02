@@ -106,24 +106,9 @@ export function isSovereignError(code?: string) {
   return !!code && SOVEREIGN_CODES.has(code);
 }
 
-function reportSovereignClientAnomaly(path: string, code: string, msg: string) {
-  if (typeof window === 'undefined' || path.includes('capture-sovereign-threat')) return;
-  const dedupeKey = `sov_client_${code}_${path}`;
-  try {
-    if (sessionStorage.getItem(dedupeKey)) return;
-    sessionStorage.setItem(dedupeKey, '1');
-  } catch { /* ignore */ }
-  if (!getToken()) return;
-  reportClientThreat(
-    (channel, payload) => invoke(channel, payload),
-    {
-      surface: path,
-      module: 'Web Application',
-      severity: code === 'SOVEREIGN_THREAT_CAPTURED' ? 'high' : 'medium',
-      vector: code.toLowerCase(),
-      summary: `Client observed ${code}: ${msg}`.slice(0, 240),
-    },
-  ).catch(() => {});
+function reportSovereignClientAnomaly(_path: string, code: string, _msg: string) {
+  // Do not re-capture SOVEREIGN_* client errors — that creates a feedback loop and spurious pending actions.
+  if (SOVEREIGN_CODES.has(code)) return;
 }
 
 async function sleep(ms: number) {

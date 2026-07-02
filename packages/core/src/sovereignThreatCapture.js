@@ -380,6 +380,54 @@ function shouldBlockChannelForEvent(ev) {
   return true;
 }
 
+function isKnownFalsePositiveEvent(ev) {
+  if (!ev || ev.releasedAt || ev.adminDecision === 'approved') return false;
+  const sum = String(ev.summary || '');
+  if (sum.startsWith('Client observed SOVEREIGN_')) return true;
+  if (ev.vector === 'auth_brute_force' || sum.includes('Auth failure (brute_force)')) return true;
+  if (ev.source === 'api_edge'
+    && (ev.vector === 'credential_exfiltration_attempt' || sum.includes('credential_exfil'))) return true;
+  return false;
+}
+
+function releaseKnownFalsePositives(store) {
+  const events = readEvents(store);
+  let released = 0;
+  const releasedIds = [];
+  const now = new Date().toISOString();
+  for (const ev of events) {
+    if (!isOpenThreatEvent(ev) || !isKnownFalsePositiveEvent(ev)) continue;
+    ev.adminDecision = 'approved';
+    ev.status = 'released';
+    ev.releasedAt = now;
+    ev.releasedBy = ADMIN_IDENTITY;
+    ev.releaseNote = 'known_false_positive_auto_release';
+    released += 1;
+    if (ev.eventId) releasedIds.push(ev.eventId);
+  }
+  if (released) {
+    writeEvents(store, events);
+    const history = readActionHistory(store);
+    let historyUpdated = false;
+    for (const action of history) {
+      if (action.status !== 'pending') continue;
+      const matchEvent = action.eventId && releasedIds.includes(action.eventId);
+      const matchSummary = action.summary && (
+        action.summary.startsWith('Client observed SOVEREIGN_')
+        || action.summary.includes('Auth failure (brute_force)')
+      );
+      if (!matchEvent && !matchSummary) continue;
+      action.status = 'final';
+      action.decision = 'approve';
+      action.decidedAt = now;
+      action.decidedBy = ADMIN_IDENTITY;
+      historyUpdated = true;
+    }
+    if (historyUpdated) writeActionHistory(store, history);
+  }
+  return released;
+}
+
 function releaseRoutineFalsePositives(store) {
   const events = readEvents(store);
   let released = 0;
@@ -420,6 +468,7 @@ function releaseRoutineFalsePositives(store) {
 }
 
 function reconcileContainment(store) {
+  const knownReleased = releaseKnownFalsePositives(store);
   const routineReleased = releaseRoutineFalsePositives(store);
   const events = readEvents(store);
   const open = events.filter(isOpenThreatEvent);
@@ -435,29 +484,15 @@ function reconcileContainment(store) {
   const before = readContainment(store);
   const after = { frozenModules, blockedChannels, liveFrozen };
   writeContainment(store, after);
-  return { before, after, openCount: open.length, routineReleased };
+  return { before, after, openCount: open.length, knownReleased, routineReleased };
 }
 
 function clearFalsePositiveContainment(store) {
-  const events = readEvents(store);
-  let released = 0;
-  const now = new Date().toISOString();
-  for (const ev of events) {
-    if (ev.releasedAt) continue;
-    const fp = ev.source === 'api_edge'
-      && (ev.vector === 'credential_exfiltration_attempt' || ev.summary?.includes('credential_exfil'));
-    if (!fp) continue;
-    ev.status = 'released';
-    ev.adminDecision = 'approved';
-    ev.approvedAt = now;
-    ev.releasedAt = now;
-    ev.releasedBy = ADMIN_IDENTITY;
-    ev.releaseNote = 'false_positive_credential_field';
-    released += 1;
-  }
-  if (released) writeEvents(store, events);
   const reconciled = reconcileContainment(store);
-  return { released: released + reconciled.routineReleased, containment: reconciled.after };
+  return {
+    released: (reconciled.knownReleased || 0) + (reconciled.routineReleased || 0),
+    containment: reconciled.after,
+  };
 }
 
 function captureThreatEvent(store, {
