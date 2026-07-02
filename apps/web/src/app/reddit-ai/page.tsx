@@ -80,7 +80,18 @@ const MODULE_UI: Record<string, {
   },
 };
 
-type QueueItem = { id: string; moduleId?: string; action?: string; content?: string; status?: string };
+type QueueItem = {
+  id: string;
+  moduleId?: string;
+  action?: string;
+  type?: string;
+  content?: string;
+  draft?: string;
+  postTitle?: string;
+  postUrl?: string;
+  subreddit?: string;
+  status?: string;
+};
 type SuiteSettings = Record<string, unknown> & {
   modules?: Record<string, { enabled?: boolean; autoRun?: boolean }>;
 };
@@ -93,17 +104,19 @@ export default function RedditAiPage() {
   const [leads, setLeads] = useState<Array<{ title?: string; subreddit?: string; url?: string }>>([]);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [queueTotal, setQueueTotal] = useState(0);
 
   const refresh = useCallback(async () => {
     try {
       const [st, q, s, l] = await Promise.all([
         invoke<Record<string, unknown>>('get-reddit-ai-status'),
-        invoke<{ queue?: QueueItem[] }>('get-reddit-ai-queue', activeModule),
+        invoke<{ queue?: QueueItem[]; total?: number }>('get-reddit-ai-queue', { moduleId: activeModule, status: 'pending' }),
         invoke<SuiteSettings>('get-reddit-ai-settings'),
         invoke<unknown[]>('get-leads'),
       ]);
       setSettings(s || {});
       setQueue(q.queue || []);
+      setQueueTotal(q.total ?? q.queue?.length ?? 0);
       setActivity((st.log as typeof activity) || []);
       setLeads((l as typeof leads).slice(0, 10));
     } catch (e) {
@@ -192,6 +205,32 @@ export default function RedditAiPage() {
     }
   }
 
+  async function clearPendingQueue() {
+    if (!window.confirm(`Clear all ${queue.length} pending actions for ${mod.name}?`)) return;
+    setLoading(true);
+    setMsg('Clearing queue…');
+    try {
+      const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('clear-reddit-ai-queue', {
+        moduleId: activeModule,
+        status: 'pending',
+      });
+      if (!res.success) throw new Error(res.error || 'Clear failed');
+      setMsg(`Cleared ${res.removed ?? 0} pending actions`);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function queuePreview(item: QueueItem) {
+    return item.content
+      || item.draft
+      || item.postTitle
+      || `${item.type || item.action || 'action'}${item.subreddit ? ` · ${item.subreddit}` : ''}`;
+  }
+
   async function dismissAction(id: string) {
     setMsg('Dismissing action…');
     try {
@@ -224,7 +263,7 @@ export default function RedditAiPage() {
         }
       />
 
-      <SectionLivePanel section="reddit-ai" />
+      <SectionLivePanel section="reddit-ai" accountPlatform="Reddit" />
 
       {msg && (
         <div className="card" style={{ marginBottom: 12, borderColor: msgIsError ? '#f59e0b' : '#10b981' }}>
@@ -309,17 +348,36 @@ export default function RedditAiPage() {
       </div>
 
       <div className="card">
-        <h3>Action Queue ({queue.length})</h3>
-        {queue.map((item) => (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+          <h3 style={{ margin: 0 }}>Action Queue ({queue.length} pending{queueTotal > queue.length ? ` · ${queueTotal} total` : ''})</h3>
+          {queue.length > 0 && (
+            <button type="button" className="btn" onClick={clearPendingQueue} disabled={loading}>Clear pending</button>
+          )}
+        </div>
+        <p className="settings-panel-desc" style={{ marginTop: 0 }}>
+          Connect a Reddit account in Account Hub for live posting. Actions queue for your approval before anything runs.
+        </p>
+        {queue.slice(0, 25).map((item) => (
           <div key={item.id} className="post-card">
-            <span className="badge">{item.status || 'pending'}</span> {item.moduleId}
-            <div>{(item.content || item.action || '').slice(0, 200)}</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+              <span className="badge">{item.status || 'pending'}</span>
+              <span className="badge">{item.type || item.action || 'action'}</span>
+              {item.subreddit && <span className="badge">{item.subreddit}</span>}
+            </div>
+            {item.postTitle && <div className="post-meta" style={{ marginBottom: 4 }}>{item.postTitle.slice(0, 140)}</div>}
+            <div>{queuePreview(item).slice(0, 220)}</div>
+            {item.postUrl && (
+              <a href={item.postUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', marginTop: 4, display: 'inline-block' }}>View post →</a>
+            )}
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button type="button" className="btn primary" onClick={() => approveAction(item.id)} disabled={loading}>Approve</button>
               <button type="button" className="btn" onClick={() => dismissAction(item.id)} disabled={loading}>Dismiss</button>
             </div>
           </div>
         ))}
+        {queue.length > 25 && (
+          <p className="settings-panel-desc">Showing 25 of {queue.length} — clear pending or dismiss individually.</p>
+        )}
         {!queue.length && <p className="settings-panel-desc">Run a module to populate the approval queue.</p>}
         <h4 style={{ marginTop: 16, color: '#94a3b8', fontSize: '0.85rem' }}>Recent Activity</h4>
         {activity.length ? activity.slice(0, 8).map((a, i) => (

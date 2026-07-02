@@ -216,10 +216,12 @@ function resolveWidgets(section: string, showAccounts: boolean): WidgetConfig {
 type Props = {
   section: string;
   showAccounts?: boolean;
+  /** When set, only show linked accounts for this platform (e.g. Reddit, Quora). */
+  accountPlatform?: string;
   className?: string;
 };
 
-export function SectionLivePanel({ section, showAccounts = true, className }: Props) {
+export function SectionLivePanel({ section, showAccounts = true, accountPlatform, className }: Props) {
   const [data, setData] = useState<LiveData>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -367,21 +369,30 @@ export function SectionLivePanel({ section, showAccounts = true, className }: Pr
         </DataPanel>
       )}
 
-      {widgets.accounts && (
-        <DataPanel title="Connected accounts" live className="ics-live-wide">
-          {data.accounts?.length ? (
-            <SparkRow items={data.accounts.map((a) => ({
-              label: a.platform,
-              value: a.handle || a.id.slice(0, 8),
-              status: a.status === 'disconnected' ? 'off' : 'ok',
-            }))} />
-          ) : (
-            <p className="settings-panel-desc">
-              No accounts linked — <Link href="/account-hub">connect in Account Hub</Link>
-            </p>
-          )}
-        </DataPanel>
-      )}
+      {widgets.accounts && (() => {
+        const platformNeedle = accountPlatform?.toLowerCase();
+        const filteredAccounts = platformNeedle
+          ? (data.accounts || []).filter((a) => (a.platform || '').toLowerCase().includes(platformNeedle))
+          : (data.accounts || []);
+        const panelTitle = accountPlatform ? `${accountPlatform} accounts` : 'Connected accounts';
+        return (
+          <DataPanel title={panelTitle} live className="ics-live-wide">
+            {filteredAccounts.length ? (
+              <SparkRow items={filteredAccounts.map((a) => ({
+                label: a.platform,
+                value: a.handle || a.id.slice(0, 8),
+                status: a.status === 'disconnected' ? 'off' : 'ok',
+              }))} />
+            ) : (
+              <p className="settings-panel-desc">
+                {accountPlatform
+                  ? <>No {accountPlatform} account linked — <Link href="/account-hub">connect in Account Hub</Link></>
+                  : <>No accounts linked — <Link href="/account-hub">connect in Account Hub</Link></>}
+              </p>
+            )}
+          </DataPanel>
+        );
+      })()}
 
       {widgets.timestamp && !widgets.apiHealth && data.updatedAt && (
         <p className="settings-panel-desc section-live-ts" style={{ gridColumn: '1 / -1', margin: '0 0 4px' }}>

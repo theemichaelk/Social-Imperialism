@@ -2,6 +2,8 @@ const path = require('path');
 const { withTimeout } = require('./asyncUtils');
 const { decodeHtmlEntities } = require('../../../packages/core/src/textUtils');
 const aiReplyStore = require(path.join(__dirname, 'aiReplyStore'));
+const quoraTrafficOps = require(path.join(__dirname, 'quoraTrafficOps'));
+const redditAiSuite = require(path.join(__dirname, 'redditAiSuite'));
 
 function readJson(store, key, fallback) {
   try {
@@ -165,17 +167,36 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
     case 'reddit-ai': {
       const redditStatus = readJson(store, 'redditAiStatus', {});
       const leads = readJson(store, 'leads', []);
+      const redditAccounts = linkedAccounts.filter((a) => /reddit/i.test(a.platform || ''));
+      const pendingQueue = redditAiSuite.getQueue(store, null, { status: 'pending' }).length;
       return {
         ...base,
-        stats: { ...base.stats, leads: leads.length, modulesActive: redditStatus.activeModules || 0 },
+        stats: {
+          ...base.stats,
+          leads: leads.length,
+          modulesActive: redditStatus.activeModules || 0,
+          queue: pendingQueue,
+        },
+        accounts: redditAccounts.map((a) => ({
+          id: a.id, platform: a.platform, handle: a.handle, status: a.status || 'connected',
+        })),
       };
     }
     case 'quora-traffic': {
-      const quora = readJson(store, 'quoraTrafficSettings', {});
-      const answers = readJson(store, 'quoraTrafficAnswers', []);
+      const qSettings = quoraTrafficOps.loadSettings(store, activeId);
+      const quoraAccounts = linkedAccounts.filter((a) => /quora/i.test(a.platform || ''));
+      const draftAnswers = (qSettings.answers || []).filter((a) => a.status !== 'published').length;
       return {
         ...base,
-        stats: { ...base.stats, answers: answers.length, quoraLinked: !!quora.linkedAccount },
+        stats: {
+          ...base.stats,
+          answers: draftAnswers,
+          published: (qSettings.publishedLog || []).length,
+          quoraLinked: quoraAccounts.length > 0,
+        },
+        accounts: quoraAccounts.map((a) => ({
+          id: a.id, platform: a.platform, handle: a.handle, status: a.status || 'connected',
+        })),
       };
     }
     case 'automations':

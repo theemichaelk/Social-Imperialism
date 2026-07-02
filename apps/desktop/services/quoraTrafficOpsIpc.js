@@ -20,6 +20,7 @@ function registerQuoraTrafficOpsHandlers({
     'save-quora-traffic-answer',
     'delete-quora-traffic-answer',
     'lookup-quora-question-url',
+    'clear-quora-traffic-drafts',
   ];
 
   channels.forEach((ch) => {
@@ -90,7 +91,10 @@ function registerQuoraTrafficOpsHandlers({
         { ...deps(), settings },
         { ...payload, settings },
       );
-      settings.answers = [result.answer, ...settings.answers];
+      const draft = result.answer;
+      const existingIdx = settings.answers.findIndex((a) => a.question === draft?.question && a.status === 'draft');
+      if (existingIdx >= 0) settings.answers[existingIdx] = { ...settings.answers[existingIdx], ...draft };
+      else settings.answers = [draft, ...settings.answers].slice(0, 50);
       quoraTrafficOps.saveSettings(store, campaignId(), settings);
       return result;
     } catch (e) {
@@ -127,8 +131,18 @@ function registerQuoraTrafficOpsHandlers({
     const idx = settings.answers.findIndex((a) => a.id === answer.id);
     if (idx >= 0) settings.answers[idx] = { ...settings.answers[idx], ...answer };
     else settings.answers.unshift(answer);
+    settings.answers = settings.answers.slice(0, 50);
     quoraTrafficOps.saveSettings(store, campaignId(), settings);
     return { success: true };
+  });
+
+  ipcMain.handle('clear-quora-traffic-drafts', () => {
+    const settings = quoraTrafficOps.loadSettings(store, campaignId());
+    const before = settings.answers.length;
+    settings.answers = (settings.answers || []).filter((a) => a.status === 'published');
+    const removed = before - settings.answers.length;
+    quoraTrafficOps.saveSettings(store, campaignId(), settings);
+    return { success: true, removed, count: settings.answers.length };
   });
 
   ipcMain.handle('delete-quora-traffic-answer', (event, id) => {

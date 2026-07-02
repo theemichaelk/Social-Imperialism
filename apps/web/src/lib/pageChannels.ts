@@ -84,7 +84,7 @@ export const PAGE_CHANNELS = {
   ],
   redditAi: [
     'get-reddit-ai-status', 'get-reddit-ai-queue', 'get-reddit-ai-settings', 'save-reddit-ai-settings',
-    'run-reddit-ai-module', 'approve-reddit-ai-action', 'dismiss-reddit-ai-action', 'get-leads', 'get-section-live',
+    'run-reddit-ai-module', 'approve-reddit-ai-action', 'dismiss-reddit-ai-action', 'clear-reddit-ai-queue', 'get-leads', 'get-section-live',
   ],
   onboarding: [
     'get-setup-status', 'check-api-status', 'get-settings', 'save-settings', 'set-active-campaign',

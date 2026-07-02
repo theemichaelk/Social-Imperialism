@@ -141,16 +141,36 @@ function appendLog(store, moduleId, message) {
   saveJson(store, LOG_KEY, log.slice(0, 40));
 }
 
+function actionSummary(item) {
+  const parts = [
+    item.type,
+    item.subreddit,
+    item.postTitle,
+    item.draft,
+  ].filter(Boolean);
+  return parts.join(' · ').slice(0, 280);
+}
+
 function enqueueAction(store, action) {
   const queue = loadJson(store, QUEUE_KEY, []);
-  queue.unshift({
+  const existing = queue.find((q) => q.status === 'pending'
+    && q.moduleId === action.moduleId
+    && q.type === action.type
+    && (q.postUrl || '') === (action.postUrl || '')
+    && (q.subreddit || '') === (action.subreddit || ''));
+  if (existing) return existing;
+
+  const item = {
     id: `rai_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
     status: 'pending',
     createdAt: new Date().toISOString(),
+    content: '',
     ...action,
-  });
+  };
+  item.content = actionSummary(item);
+  queue.unshift(item);
   saveJson(store, QUEUE_KEY, queue.slice(0, 100));
-  return queue[0];
+  return item;
 }
 
 function parseSubreddits(raw) {
@@ -162,9 +182,10 @@ function parseSubreddits(raw) {
 
 async function fetchSubredditHot(subreddit, limit = 10) {
   try {
-    const res = await axios.get(`https://www.reddit.com/r/${subreddit}/hot.json`, {
-      params: { limit },
-      headers: { 'User-Agent': 'SocialImperialism/1.0' },
+    const res = await axios.get(`https://www.reddit.com/r/${encodeURIComponent(subreddit)}/hot.json`, {
+      params: { limit, raw_json: 1 },
+      headers: { 'User-Agent': 'SocialImperialism/1.2 (by /u/socialimperialism)' },
+      timeout: 12000,
     });
     return (res.data?.data?.children || []).map((c) => {
       const p = c.data;
@@ -192,6 +213,14 @@ async function runSubredditAscent(store, { generateAI, campaign }) {
   for (const sub of subs.slice(0, 5)) {
     const hot = await fetchSubredditHot(sub, settings.browsePostsPerRun || 10);
     posts.push(...hot);
+  }
+
+  if (!posts.length) {
+    const msg = subs.length
+      ? `No posts fetched from ${subs.slice(0, 3).map((s) => `r/${s}`).join(', ')} — Reddit may be rate-limiting. Wait and retry.`
+      : 'Add target subreddits (e.g. r/Entrepreneur) before running.';
+    appendLog(store, 'subreddit-ascent', msg);
+    return { success: false, error: msg, actionsQueued: 0, postsScanned: 0 };
   }
 
   for (const post of posts.slice(0, settings.browsePostsPerRun || 15)) {
@@ -406,10 +435,27 @@ async function runModule(store, moduleId, deps) {
   return runner(store, deps);
 }
 
-function getQueue(store, filterModule) {
+function getQueue(store, filterModule, options = {}) {
+  let queue = loadJson(store, QUEUE_KEY, []);
+  if (filterModule) queue = queue.filter((q) => q.moduleId === filterModule);
+  if (options.status) queue = queue.filter((q) => q.status === options.status);
+  return queue.map((q) => ({
+    ...q,
+    content: q.content || actionSummary(q),
+    action: q.type,
+  }));
+}
+
+function clearQueue(store, filter = {}) {
   const queue = loadJson(store, QUEUE_KEY, []);
-  if (!filterModule) return queue;
-  return queue.filter((q) => q.moduleId === filterModule);
+  const kept = queue.filter((q) => {
+    if (filter.moduleId && q.moduleId !== filter.moduleId) return true;
+    if (filter.status && q.status !== filter.status) return true;
+    return false;
+  });
+  const removed = queue.length - kept.length;
+  saveJson(store, QUEUE_KEY, kept);
+  return { success: true, removed, count: kept.length };
 }
 
 function updateQueueItem(store, id, updates) {
@@ -438,7 +484,9 @@ module.exports = {
   saveSettings,
   runModule,
   getQueue,
+  clearQueue,
   updateQueueItem,
   getStatus,
   appendLog,
+  actionSummary,
 };

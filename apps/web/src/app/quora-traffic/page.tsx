@@ -220,9 +220,25 @@ export default function QuoraTrafficPage() {
       question: qText(selected || {}),
       status: 'draft',
       keyword,
+      createdAt: new Date().toISOString(),
     });
     setMsg('Draft saved');
     await refresh();
+  }
+
+  async function clearDrafts() {
+    if (!drafts.length) return;
+    if (!window.confirm(`Delete all ${drafts.length} Quora drafts? Published log is kept.`)) return;
+    setLoading(true);
+    try {
+      const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('clear-quora-traffic-drafts');
+      setMsg(`Removed ${res.removed ?? 0} drafts`);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function saveAngle() {
@@ -259,7 +275,7 @@ export default function QuoraTrafficPage() {
     <div className="quora-traffic-page">
       <PageShell title="Quora Traffic Ops" />
 
-      <SectionLivePanel section="quora-traffic" />
+      <SectionLivePanel section="quora-traffic" accountPlatform="Quora" />
 
       <div className="quora-hero card">
         <div className="feature-pills">
@@ -483,7 +499,12 @@ export default function QuoraTrafficPage() {
       {step === 'publish' && (
         <div className="grid grid-2">
           <div className="card">
-            <h4>Drafts ({drafts.length})</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <h4 style={{ margin: 0 }}>Drafts ({drafts.length})</h4>
+              {drafts.length > 0 && (
+                <button type="button" className="btn" onClick={clearDrafts} disabled={loading}>Clear all drafts</button>
+              )}
+            </div>
             {drafts.map((d, i) => (
               <div key={d.id || i} className="draft-card">
                 <div className="post-meta">{d.status || 'draft'} · {d.createdAt ? new Date(d.createdAt).toLocaleString() : ''}</div>

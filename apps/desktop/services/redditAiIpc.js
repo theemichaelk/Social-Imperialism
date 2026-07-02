@@ -10,6 +10,7 @@ function registerRedditAiHandlers({ ipcMain, store, generateAI, getCampaign, res
     'get-reddit-ai-queue',
     'approve-reddit-ai-action',
     'dismiss-reddit-ai-action',
+    'clear-reddit-ai-queue',
   ];
 
   channels.forEach((ch) => {
@@ -54,9 +55,14 @@ function registerRedditAiHandlers({ ipcMain, store, generateAI, getCampaign, res
     }
   });
 
-  ipcMain.handle('get-reddit-ai-queue', (event, moduleId) => ({
-    queue: redditAiSuite.getQueue(store, moduleId || null),
-  }));
+  ipcMain.handle('get-reddit-ai-queue', (event, payload) => {
+    const moduleId = typeof payload === 'string' ? payload : payload?.moduleId;
+    const status = typeof payload === 'object' && payload?.status ? payload.status : 'pending';
+    return {
+      queue: redditAiSuite.getQueue(store, moduleId || null, { status }),
+      total: redditAiSuite.getQueue(store, moduleId || null).length,
+    };
+  });
 
   ipcMain.handle('approve-reddit-ai-action', (event, id) => {
     return redditAiSuite.updateQueueItem(store, id, { status: 'approved', approvedAt: new Date().toISOString() });
@@ -64,6 +70,14 @@ function registerRedditAiHandlers({ ipcMain, store, generateAI, getCampaign, res
 
   ipcMain.handle('dismiss-reddit-ai-action', (event, id) => {
     return redditAiSuite.updateQueueItem(store, id, { status: 'dismissed' });
+  });
+
+  ipcMain.handle('clear-reddit-ai-queue', (event, payload = {}) => {
+    const filter = {
+      moduleId: payload.moduleId,
+      status: payload.status || 'pending',
+    };
+    return redditAiSuite.clearQueue(store, filter);
   });
 }
 
