@@ -236,6 +236,16 @@ function planGuideActions(query, context = {}) {
     };
   }
 
+  if (/self[\s-]?heal|daily\s+audit|run\s+audit|what\s+should\s+i\s+improve/i.test(q)) {
+    const view = resolveViewById('support');
+    const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });
+    actions.unshift({ type: 'message', text: 'Self-heal audit → Imperialism Brain…' });
+    return {
+      actions,
+      reply: 'Opening **Imperialism Brain** — say **"run audit now"** for Guardian + SEO rollup, or **"what should I improve today?"** for daily recommendations.',
+    };
+  }
+
   if (/run\s+audit|issue\s+control|gitops/i.test(q)) {
     const view = resolveViewById('issue-control');
     return {

@@ -202,6 +202,21 @@ async function interceptRuntimeIssue(store, payload = {}, deps = {}) {
     } catch { /* optional */ }
   }
 
+  try {
+    const { appendErrorJournal } = require('./selfHealJournal');
+    await appendErrorJournal(store, {
+      source: 'issue-control',
+      severity: issue.severity,
+      errorCode: issue.errorCode,
+      message: issue.traceback,
+      rootCause: issue.rootCause,
+      suggestedFix: issue.patchCode ? 'Review web-augmented patch in Issue Control' : 'Run Guardian scan and reconnect integrations',
+      component: issue.component,
+      issueSignature: issue.issueSignature,
+      learning: issue.rootCause,
+    });
+  } catch { /* self-heal journal optional */ }
+
   return { success: true, issue, emailResult, duplicate: !!dupe };
 }
 

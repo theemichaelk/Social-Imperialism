@@ -5,11 +5,12 @@
 
 import { OVERLORD_SYSTEM_APPEND } from '@/lib/theeMichaelOverlord';
 import { THEE_MICHAEL_SEO_EXPERT_APPEND, SEO_QUICK_PROMPTS } from '@/lib/theeMichaelSeoExpert';
+import { SELF_HEAL_EXPERT_APPEND } from '@/lib/selfHealIntelligence';
 
 export const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
 export const INIT_MESSAGE =
-  'Hey — welcome to Social Imperialism. I can help you discover opportunities, create content, draft replies, schedule campaigns, connect platforms, troubleshoot issues, track growth, and run live AEO/GEO/local/national SEO intelligence. What are you trying to improve first?';
+  'Hey — welcome to Social Imperialism. I run daily self-audits, document errors with fixes, learn from them, and recommend improvements across SEO, content, engagement, and integrations. Ask "what should I improve today?" or any growth question.';
 
 export const LIVE_SUPPORT_SYSTEM_PROMPT = `You are Imperialism Brain, the official live support agent for Social Imperialism (socialimperialism.com).
 Help users set up, troubleshoot, optimize, and launch social media growth workflows.
@@ -146,6 +147,7 @@ export const QUICK_PROMPTS = [
   'Posts not scheduling',
   'Ask THEE_MICHAEL',
   ...SEO_QUICK_PROMPTS.slice(0, 2),
+  'What should I improve today?',
 ];
 
 export function resolveSearchRoute(query: string): SearchRoute | null {
@@ -209,7 +211,7 @@ export function getPendingApprovals(): ApprovalTicket[] {
 export function buildSupportPrompt(
   messages: SupportMessage[],
   userMessage: string,
-  context?: { pathname?: string; seoIntel?: string },
+  context?: { pathname?: string; seoIntel?: string; selfHealIntel?: string },
 ): string {
   const history = messages
     .slice(-8)
@@ -217,7 +219,8 @@ export function buildSupportPrompt(
     .join('\n');
   const ctx = context?.pathname ? `\nCurrent page: ${context.pathname}` : '';
   const seoBlock = context?.seoIntel ? `\n${context.seoIntel}` : '';
-  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${THEE_MICHAEL_SEO_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${seoBlock}
+  const healBlock = context?.selfHealIntel ? `\n${context.selfHealIntel}` : '';
+  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${THEE_MICHAEL_SEO_EXPERT_APPEND}${SELF_HEAL_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${seoBlock}${healBlock}
 
 Conversation:
 ${history}

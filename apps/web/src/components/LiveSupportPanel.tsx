@@ -37,6 +37,13 @@ import { executeGuideActions, planGuideActions } from '@/lib/guide_executor';
 import { isNavigationRequest } from '@/lib/liveSupportActions';
 import { isSeoRelatedQuery } from '@/lib/theeMichaelSeoExpert';
 import { buildSeoAugmentedContext, fetchSeoBrief } from '@/lib/seoIntelligence';
+import {
+  buildSelfHealAugmentedContext,
+  fetchDailyRecommendations,
+  fetchSelfHealStatus,
+  formatRecommendationsBanner,
+  runSelfHealAudit,
+} from '@/lib/selfHealIntelligence';
 import { listEnclaveEntries } from '@/lib/overlordEnclave';
 import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
 
@@ -53,6 +60,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [showTrace, setShowTrace] = useState(true);
+  const [dailyRecsBanner, setDailyRecsBanner] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -62,6 +70,16 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     }
     setPendingCount(getPendingApprovals().length);
   }, [embedded, open]);
+
+  useEffect(() => {
+    if (!open && !embedded) return;
+    let cancelled = false;
+    (async () => {
+      const recs = await fetchDailyRecommendations();
+      if (!cancelled) setDailyRecsBanner(formatRecommendationsBanner(recs));
+    })();
+    return () => { cancelled = true; };
+  }, [open, embedded]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -116,6 +134,28 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
+
+    const wantsAudit = /run\s+(?:self[\s-]?)?audit|self[\s-]?heal\s+audit|audit\s+now|daily\s+audit/i.test(trimmed);
+
+    if (wantsAudit) {
+      const tAudit = pushTrace('Self-heal audit · Guardian + SEO rollup');
+      const audit = await runSelfHealAudit();
+      completeTrace(tAudit);
+      const recs = audit.recommendations?.slice(0, 5) || [];
+      const lines = recs.length
+        ? recs.map((r, i) => `${i + 1}. **${r.title}** — ${r.action}`).join('\n')
+        : 'Audit complete — no urgent items. Keep your daily SEO + engagement rhythm.';
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `**Self-heal audit complete.**\n\n${lines}\n\nDocumented in error journal with learnings for next session.`,
+          ts: new Date().toISOString(),
+        },
+      ]);
+      setLoading(false);
+      return;
+    }
 
     const isBulkSetup = /set\s+up\s+(my\s+)?(entire\s+)?(agency|profile|account)/i.test(trimmed)
       || /from\s+this\s+(text|dump|payload)/i.test(trimmed);
@@ -199,8 +239,17 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         completeTrace(tSeo);
       }
 
-      const tAi = pushTrace(seoIntel ? 'Authority SEO brief + AI synthesis' : 'Evaluating request with live context');
-      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname, seoIntel });
+      const wantsImprovement = /improve|betterment|recommend|what\s+should\s+i|audit|optimize/i.test(trimmed);
+      let selfHealIntel = '';
+      if (wantsImprovement || seoIntel) {
+        const tHeal = pushTrace('Self-heal · daily recommendations + journal');
+        const status = await fetchSelfHealStatus();
+        selfHealIntel = buildSelfHealAugmentedContext(status);
+        completeTrace(tHeal);
+      }
+
+      const tAi = pushTrace(seoIntel || selfHealIntel ? 'Authority brief + self-heal synthesis' : 'Evaluating request with live context');
+      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname, seoIntel, selfHealIntel });
       const reply = await invoke<string>('generate-ai', prompt);
       let raw = sanitizeAgentReply(String(reply || '').trim()) || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
       completeTrace(tAi);
@@ -296,6 +345,12 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
       </div>
 
       {showTrace && <OverlordCognitiveTrace compact />}
+
+      {dailyRecsBanner && (
+        <div className="live-support-daily-recs">
+          <p className="live-support-daily-recs-body">{dailyRecsBanner}</p>
+        </div>
+      )}
 
       <div className="live-support-messages" ref={scrollRef}>
         {messages.map((m, i) => (

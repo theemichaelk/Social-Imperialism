@@ -203,6 +203,9 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerIssueControlPlaneHandlers } = require('./issueControlPlane');
   registerIssueControlPlaneHandlers({ ipcMain, store, handlers, resolveKeys });
 
+  const { registerSelfHealHandlers } = require('./selfHealHandlers');
+  registerSelfHealHandlers({ ipcMain, store, handlers });
+
   const emailCampaignIpc = safeRequireService('emailCampaignIpc.js', 'Email campaign IPC');
   if (emailCampaignIpc?.registerEmailCampaignHandlers) {
     emailCampaignIpc.registerEmailCampaignHandlers({ ipcMain, store });

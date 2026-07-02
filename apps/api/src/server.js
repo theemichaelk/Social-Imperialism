@@ -158,6 +158,7 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/admin', requireAuth, require('./routes/admin'));
 app.use('/api/guide', requireAuth, require('./routes/guide'));
 app.use('/api/seo', requireAuth, require('./routes/seoIntel'));
+app.use('/api/self-heal', requireAuth, require('./routes/selfHeal'));
 app.use('/api/orgs', requireAuth, orgRoutes);
 app.use('/api/v1', partnerRoutes);
 

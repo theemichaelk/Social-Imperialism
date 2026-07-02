@@ -111,6 +111,17 @@ async function tickDripRules() {
   }
 }
 
+async function tickDailySelfHeal() {
+  try {
+    const { runDailySelfHealForAllProjects } = require('./selfHeal/selfHealEngine');
+    const results = await runDailySelfHealForAllProjects();
+    const ok = results.filter((r) => r.ok).length;
+    console.log(`[scheduler] daily self-heal: ${ok}/${results.length} projects audited`);
+  } catch (e) {
+    console.warn('[scheduler] daily self-heal:', e.message);
+  }
+}
+
 function startScheduler() {
   if (process.env.DISABLE_SCHEDULER === '1') return;
   timers.forEach(clearInterval);
@@ -119,15 +130,20 @@ function startScheduler() {
   const workerInterval = parseInt(process.env.SCHEDULER_WORKER_MS || '600000', 10);
   const postsInterval = parseInt(process.env.SCHEDULER_POSTS_MS || '120000', 10);
   const emailInterval = parseInt(process.env.SCHEDULER_ONBOARDING_EMAIL_MS || '300000', 10);
+  const selfHealInterval = parseInt(process.env.SCHEDULER_SELF_HEAL_MS || '86400000', 10);
 
   timers.push(setInterval(() => tickWorkerAndSearch().catch(console.error), workerInterval));
   timers.push(setInterval(() => tickDuePosts().catch(console.error), postsInterval));
   timers.push(setInterval(() => tickOnboardingEmails().catch(console.error), emailInterval));
   const dripInterval = parseInt(process.env.SCHEDULER_DRIP_RULES_MS || '86400000', 10);
   timers.push(setInterval(() => tickDripRules().catch(console.error), dripInterval));
+  timers.push(setInterval(() => tickDailySelfHeal().catch(console.error), selfHealInterval));
   tickOnboardingEmails().catch(console.error);
 
-  console.log(`[scheduler] Started — worker/search every ${workerInterval / 1000}s, due posts every ${postsInterval / 1000}s, nurture emails every ${emailInterval / 1000}s, drip rules every ${dripInterval / 1000}s`);
+  const selfHealDelay = parseInt(process.env.SCHEDULER_SELF_HEAL_STARTUP_DELAY_MS || '120000', 10);
+  setTimeout(() => tickDailySelfHeal().catch(console.error), selfHealDelay);
+
+  console.log(`[scheduler] Started — worker/search every ${workerInterval / 1000}s, due posts every ${postsInterval / 1000}s, nurture emails every ${emailInterval / 1000}s, drip rules every ${dripInterval / 1000}s, self-heal every ${selfHealInterval / 1000}s`);
 }
 
 function stopScheduler() {
