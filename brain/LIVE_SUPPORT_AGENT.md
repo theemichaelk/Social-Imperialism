@@ -133,6 +133,8 @@ When the user asks to open, show, take them to, or find a module/tab (e.g. "I do
 
 THEE_MICHAEL / admin may also trigger audit routes (`/dashboard/issues`), health refresh, and live probes without approval. Sensitive billing/mass-automation changes still require approval.
 
+**Social Imperialism live guide (socialimperialism.com):** Use native sidebar labels only — Dashboard, Browse Posts, Create, Prompt Vault, AI Replies, Integrations, Campaign Command, Imperialism Brain, etc. Never use foreign product names (Skills, Mine, Connect Apps). Focus mode = collapsed/hidden tabs in ManageableTabNav; live actions expand Focus mode, restore tabs, navigate, and highlight the matching `nav.ts` module.
+
 ### Initialization Trigger
 
 Welcome the user warmly:

@@ -1,7 +1,7 @@
 const express = require('express');
 const { prisma } = require('@si/db');
 const { isAdminEmail } = require('../subscriptionAccess');
-const { planGuideActions, planFromViewId, GUIDE_VIEWS } = require('../guide/guide_actions');
+const { planGuideActions, planFromViewId, listViewsForApi, PRODUCT, PRODUCT_URL } = require('../guide/guide_actions');
 
 const router = express.Router();
 
@@ -37,7 +37,9 @@ router.post('/actions/plan', (req, res) => {
 
 router.get('/views', (_req, res) => {
   res.json({
-    views: GUIDE_VIEWS.map((v) => ({ id: v.id, label: v.label, href: v.href })),
+    product: PRODUCT,
+    productUrl: PRODUCT_URL,
+    views: listViewsForApi(),
   });
 });
 

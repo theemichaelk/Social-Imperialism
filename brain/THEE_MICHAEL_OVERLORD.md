@@ -62,7 +62,18 @@ Structured actions — not just chat replies.
 
 **Action types:** `navigate`, `open_url`, `disable_simple_mode`, `expand_advanced_rail`, `restore_hidden_tabs`, `select_tab`, `highlight`, `expand_sidebar_section`, `flash_screen`, `message`, `wait`
 
-**View map (examples):** Skills → Prompt Vault · Mine → My Account · Studio → Create · Connect Apps → Integrations · Explore → Browse Posts · SEO Tools → Google Trends research
+**Social Imperialism module map** ([socialimperialism.com](https://www.socialimperialism.com)):
+
+| User says | SI module (left sidebar) |
+|-----------|--------------------------|
+| "I don't see Prompt Vault in the sidebar" | Discovery & Replies → **Prompt Vault** (Focus mode off, tabs expanded) |
+| "Open Integrations / connect platform" | System → **Integrations → Connections** |
+| "Go to https://…" | New tab (external) or in-app route (socialimperialism.com) |
+| "Google Trends / SERP research" | Discovery & Replies → **SEO Tools** |
+| "Pending AI replies" | Discovery & Replies → **AI Replies → Pending** |
+| "Campaign Command / verified nodes" | System → **Campaign Command** |
+
+Full catalog: Mission Control, Create & Publish, Discovery & Replies, Growth Labs, Automation, Accounts, System — see `apps/api/src/guide/guide_actions.js`.
 
 ## Roadmap (post v1.2.31)
 

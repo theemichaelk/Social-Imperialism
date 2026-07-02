@@ -93,11 +93,11 @@ async function runAction(action: GuideAction): Promise<void> {
       setSimpleMode(false);
       expandAdvancedRail(null);
       window.dispatchEvent(new CustomEvent(SI_GUIDE_EXPAND_SIDEBAR, { detail: { expandAll: true } }));
-      pushTrace('Simple mode disabled — advanced rail expanded');
+      pushTrace('Focus mode expanded — all tabs visible on socialimperialism.com');
       break;
     case 'enable_simple_mode':
       setSimpleMode(true);
-      pushTrace('Simple mode enabled');
+      pushTrace('Focus mode enabled — showing primary tabs only');
       break;
     case 'expand_advanced_rail':
       expandAdvancedRail(action.pageId);

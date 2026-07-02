@@ -1,24 +1,95 @@
 /**
- * THEE_MICHAEL — structured live guide action planner.
- * Plans navigate, simple-mode, tab expand, highlight, open_url sequences.
+ * THEE_MICHAEL — live guide action planner for socialimperialism.com
+ * Maps natural language → Social Imperialism sidebar modules, tabs, and routes.
  */
 
+const PRODUCT = 'Social Imperialism';
+const PRODUCT_URL = 'https://www.socialimperialism.com';
+
+/** Canonical views — ids match nav.ts where possible */
 const GUIDE_VIEWS = [
-  { id: 'skills', aliases: ['skills', 'skill tab', 'prompt vault', 'prompts', 'saved prompts'], label: 'Skills (Prompt Vault)', href: '/prompt-vault', navId: 'prompt-vault', sectionId: 'discovery' },
-  { id: 'mine', aliases: ['mine', 'my account', 'my profile', 'account hub'], label: 'Mine (My Account)', href: '/dashboard/users', navId: 'dashboard-users', sectionId: 'system' },
-  { id: 'studio', aliases: ['studio', 'create', 'content hub', 'generate'], label: 'Studio (Create)', href: '/content-hub?tab=studio', navId: 'content-hub', sectionId: 'create', tab: 'studio', pageId: 'content-hub', selectTab: 'studio' },
-  { id: 'connect-apps', aliases: ['connect apps', 'connect platform', 'connections', 'oauth', 'integrations'], label: 'Connect Apps', href: '/integrations?tab=connections', navId: 'integrations', sectionId: 'system', tab: 'connections', pageId: 'integrations', selectTab: 'connections' },
-  { id: 'explore', aliases: ['explore', 'discover', 'browse posts', 'browse'], label: 'Explore (Discover)', href: '/browse-posts', navId: 'browse-posts', sectionId: 'mission', pageId: 'browse-posts', selectTab: 'discover' },
-  { id: 'seo-tools', aliases: ['seo tools', 'google trends', 'trends', 'kgr', 'research'], label: 'SEO Tools', href: '/seo-tools', navId: 'seo-tools', sectionId: 'discovery' },
-  { id: 'keywords', aliases: ['keywords', 'keyword monitor'], label: 'Keywords', href: '/keywords', navId: 'keywords', sectionId: 'discovery' },
-  { id: 'history', aliases: ['ai replies', 'replies', 'pending review'], label: 'AI Replies', href: '/history?tab=pending', navId: 'history', sectionId: 'discovery', tab: 'pending', pageId: 'history', selectTab: 'pending' },
-  { id: 'billing', aliases: ['billing', 'subscription', 'plan'], label: 'Billing', href: '/settings?tab=billing', navId: 'settings', sectionId: 'system', tab: 'billing', pageId: 'settings', selectTab: 'billing' },
-  { id: 'campaign', aliases: ['campaign command', 'campaign manager', 'verified nodes'], label: 'Campaign Command', href: '/campaign-manager', navId: 'campaign-manager', sectionId: 'system' },
-  { id: 'admin', aliases: ['admin directory', 'admin console'], label: 'Admin Directory', href: '/dashboard/admin', navId: 'dashboard-admin', sectionId: 'system' },
+  // Mission Control
+  { id: 'dashboard', section: 'Mission Control', label: 'Dashboard', href: '/dashboard', navId: 'dashboard', sectionId: 'mission', pageId: 'dashboard', selectTab: 'overview',
+    aliases: ['dashboard', 'mission control', 'home', 'pulse', 'live feed', 'overview tab'] },
+  { id: 'browse-posts', section: 'Mission Control', label: 'Browse Posts', href: '/browse-posts', navId: 'browse-posts', sectionId: 'mission', pageId: 'browse-posts', selectTab: 'discover',
+    aliases: ['browse posts', 'discover tab', 'find conversations', 'discovery feed', 'scan posts'] },
+
+  // Create & Publish
+  { id: 'onboarding', section: 'Create & Publish', label: 'Setup Wizard', href: '/onboarding', navId: 'onboarding', sectionId: 'create',
+    aliases: ['setup wizard', 'onboarding', 'go live checklist', 'go-live'] },
+  { id: 'content-hub', section: 'Create & Publish', label: 'Create', href: '/content-hub?tab=studio', navId: 'content-hub', sectionId: 'create', tab: 'studio', pageId: 'content-hub', selectTab: 'studio',
+    aliases: ['create', 'content hub', 'generate', 'draft', 'publish', 'studio tab', 'write post'] },
+  { id: 'content-library', section: 'Create & Publish', label: 'Library', href: '/content-library', navId: 'content-library', sectionId: 'create',
+    aliases: ['library', 'content library', 'assets', 'reuse'] },
+  { id: 'design-studio', section: 'Create & Publish', label: 'Design Studio', href: '/design-studio', navId: 'design-studio', sectionId: 'create',
+    aliases: ['design studio', 'visual posts', 'templates', 'graphics'] },
+  { id: 'brand', section: 'Create & Publish', label: 'Brand', href: '/brand', navId: 'brand', sectionId: 'create',
+    aliases: ['brand', 'brand voice', 'tone', 'guidelines'] },
+  { id: 'calendar', section: 'Create & Publish', label: 'Calendar', href: '/calendar', navId: 'calendar', sectionId: 'create',
+    aliases: ['calendar', 'schedule', 'scheduling', 'publish runway'] },
+  { id: 'scheduler', section: 'Create & Publish', label: 'Scheduler', href: '/scheduler', navId: 'scheduler', sectionId: 'create',
+    aliases: ['scheduler', 'background runs', 'due posts'] },
+
+  // Discovery & Replies
+  { id: 'prompt-vault', section: 'Discovery & Replies', label: 'Prompt Vault', href: '/prompt-vault', navId: 'prompt-vault', sectionId: 'discovery',
+    aliases: ['prompt vault', 'saved prompts', 'prompts', 'vault', 'prompt library'] },
+  { id: 'engagement', section: 'Discovery & Replies', label: 'Engagement', href: '/engagement', navId: 'engagement', sectionId: 'discovery',
+    aliases: ['engagement', 'warm profiles', 'engagement crm', 'comment'] },
+  { id: 'history', section: 'Discovery & Replies', label: 'AI Replies', href: '/history?tab=pending', navId: 'history', sectionId: 'discovery', tab: 'pending', pageId: 'history', selectTab: 'pending',
+    aliases: ['ai replies', 'replies', 'pending review', 'reply queue', 'approve drafts'] },
+  { id: 'keywords', section: 'Discovery & Replies', label: 'Keywords', href: '/keywords', navId: 'keywords', sectionId: 'discovery',
+    aliases: ['keywords', 'keyword monitor', 'topics', 'monitor topics'] },
+  { id: 'seo-tools', section: 'Discovery & Replies', label: 'SEO Tools', href: '/seo-tools', navId: 'seo-tools', sectionId: 'discovery',
+    aliases: ['seo tools', 'kgr', 'keyword research', 'serp research'] },
+
+  // Growth Labs
+  { id: 'reddit-ai', section: 'Growth Labs', label: 'Growth Lab', href: '/reddit-ai', navId: 'reddit-ai', sectionId: 'labs',
+    aliases: ['growth lab', 'reddit', 'reddit ai', 'subreddit'] },
+  { id: 'quora-traffic', section: 'Growth Labs', label: 'Quora Ops', href: '/quora-traffic', navId: 'quora-traffic', sectionId: 'labs',
+    aliases: ['quora', 'quora ops', 'quora traffic', 'answers'] },
+
+  // Automation
+  { id: 'automations', section: 'Automation', label: 'Automations', href: '/automations', navId: 'automations', sectionId: 'automation',
+    aliases: ['automations', 'visual flows', 'workflows'] },
+  { id: 'rules', section: 'Automation', label: 'Auto-Rules', href: '/rules', navId: 'rules', sectionId: 'automation',
+    aliases: ['auto-rules', 'auto rules', 'keyword triggers', 'monitors'] },
+
+  // Accounts
+  { id: 'account-hub', section: 'Accounts', label: 'Accounts', href: '/account-hub', navId: 'account-hub', sectionId: 'accounts',
+    aliases: ['accounts', 'account hub', 'connected accounts', 'oauth status'] },
+  { id: 'account-creator', section: 'Accounts', label: 'Acct Creator', href: '/account-creator', navId: 'account-creator', sectionId: 'accounts',
+    aliases: ['acct creator', 'account creator', 'new profiles', 'profile kits'] },
+
+  // System
+  { id: 'my-account', section: 'System', label: 'My Account', href: '/dashboard/users', navId: 'dashboard-users', sectionId: 'system',
+    aliases: ['my account', 'profile', 'sitemap', 'feed.xml', 'organization'] },
+  { id: 'integrations', section: 'System', label: 'Integrations', href: '/integrations?tab=connections', navId: 'integrations', sectionId: 'system', tab: 'connections', pageId: 'integrations', selectTab: 'connections',
+    aliases: ['integrations', 'integrations hub', 'connect platform', 'connections', 'oauth', 'api connection', 'connect apps'] },
+  { id: 'integrations-probes', section: 'System', label: 'Integrations · Live Probes', href: '/integrations?tab=probes', navId: 'integrations', sectionId: 'system', tab: 'probes', pageId: 'integrations', selectTab: 'probes',
+    aliases: ['live probes', 'probes', 'test connections'] },
+  { id: 'settings', section: 'System', label: 'Settings', href: '/settings', navId: 'settings', sectionId: 'system', pageId: 'settings', selectTab: 'overview',
+    aliases: ['settings', 'api keys', 'configuration'] },
+  { id: 'settings-billing', section: 'System', label: 'Settings · Billing', href: '/settings?tab=billing', navId: 'settings', sectionId: 'system', tab: 'billing', pageId: 'settings', selectTab: 'billing',
+    aliases: ['billing', 'subscription', 'plan', 'payment'] },
+  { id: 'settings-guardian', section: 'System', label: 'Settings · Guardian & API', href: '/settings?tab=guardian-api', navId: 'settings', sectionId: 'system', tab: 'guardian-api', pageId: 'settings', selectTab: 'guardian-api',
+    aliases: ['guardian', 'gatekeeper', 'thee_michael security', 'security control'] },
+  { id: 'campaign-manager', section: 'System', label: 'Campaign Command', href: '/campaign-manager', navId: 'campaign-manager', sectionId: 'system',
+    aliases: ['campaign command', 'campaign manager', 'campaigns', 'verified nodes'] },
+  { id: 'dns', section: 'System', label: 'DNS', href: '/dns', navId: 'dns', sectionId: 'system',
+    aliases: ['dns', 'domain', 'domains', 'records'] },
+  { id: 'support', section: 'System', label: 'Imperialism Brain', href: '/support', navId: 'support', sectionId: 'system',
+    aliases: ['imperialism brain', 'live support', 'help', 'thee_michael', 'brain'] },
+  { id: 'download', section: 'System', label: 'Download Desktop App', href: '/download', navId: 'download', sectionId: 'system',
+    aliases: ['download', 'desktop app', 'windows installer', 'electron'] },
+  { id: 'issue-control', section: 'System', label: 'Issue Control', href: '/dashboard/issues', navId: 'dashboard-issues', sectionId: 'system', adminOnly: true,
+    aliases: ['issue control', 'gitops', 'repairs', 'audit issues'] },
+  { id: 'admin-directory', section: 'System', label: 'Admin Directory', href: '/dashboard/admin', navId: 'dashboard-admin', sectionId: 'system', adminOnly: true,
+    aliases: ['admin directory', 'admin', 'all users', 'user directory'] },
 ];
 
 const URL_RE = /\b(?:go\s+to|open)\s+(https?:\/\/[^\s]+)/i;
-const CANT_FIND_RE = /(?:don'?t\s+see|can'?t\s+find|where\s+is|take\s+me\s+to|show\s+me|open|go\s+to)/i;
+const CANT_FIND_RE = /(?:don'?t\s+see|can'?t\s+find|where\s+is|where'?s|take\s+me\s+to|show\s+me|left\s+(?:side|sidebar|nav|menu)|sidebar|tab\s+on\s+the\s+left)/i;
+const FOCUS_MODE_RE = /focus\s+mode|hidden\s+tab|collapsed|advanced\s+(?:tab|rail|group)/i;
 
 function matchView(query) {
   const q = query.toLowerCase();
@@ -37,12 +108,16 @@ function matchView(query) {
 
 function planForView(view, opts = {}) {
   const actions = [];
-  const needsSimpleOff = opts.cantFind || /tab|sidebar|left|simple|focus|hidden/i.test(opts.query || '');
+  const needsFocusExpand = opts.cantFind || FOCUS_MODE_RE.test(opts.query || '') || (view.pageId && opts.cantFind);
 
-  if (needsSimpleOff) {
-    actions.push({ type: 'message', text: 'Auditing Simple mode…' });
+  if (needsFocusExpand) {
+    actions.push({ type: 'message', text: `Checking Focus mode on ${PRODUCT}…` });
     actions.push({ type: 'disable_simple_mode' });
-    actions.push({ type: 'expand_advanced_rail', pageId: view.pageId || null });
+    if (view.pageId) {
+      actions.push({ type: 'expand_advanced_rail', pageId: view.pageId });
+    } else {
+      actions.push({ type: 'expand_advanced_rail', pageId: null });
+    }
   }
 
   if (view.sectionId) {
@@ -55,7 +130,6 @@ function planForView(view, opts = {}) {
       pageId: view.pageId,
       tabIds: [view.selectTab],
     });
-    actions.push({ type: 'expand_advanced_rail', pageId: view.pageId });
   }
 
   actions.push({
@@ -68,7 +142,7 @@ function planForView(view, opts = {}) {
   });
 
   if (view.pageId && view.selectTab) {
-    actions.push({ type: 'wait', ms: 400 });
+    actions.push({ type: 'wait', ms: 450 });
     actions.push({ type: 'select_tab', pageId: view.pageId, tabId: view.selectTab });
   }
 
@@ -76,7 +150,7 @@ function planForView(view, opts = {}) {
     type: 'highlight',
     navId: view.navId,
     sectionId: view.sectionId,
-    selector: view.pageId ? `[data-guide-tab="${view.selectTab || ''}"]` : undefined,
+    selector: view.pageId && view.selectTab ? `[data-guide-tab="${view.selectTab}"]` : undefined,
     ms: 4200,
   });
   actions.push({ type: 'flash_screen' });
@@ -86,27 +160,44 @@ function planForView(view, opts = {}) {
 
 function planGuideActions(query, context = {}) {
   const q = String(query || '').trim();
-  if (!q) return { actions: [], reply: 'Tell me where you want to go — e.g. Skills, Connect Apps, or Studio.' };
+  if (!q) {
+    return {
+      actions: [],
+      reply: `Tell me which ${PRODUCT} module to open — e.g. Integrations, Prompt Vault, Create, or Browse Posts.`,
+    };
+  }
 
   const urlMatch = q.match(URL_RE);
   if (urlMatch) {
     const url = urlMatch[1];
+    const isExternal = !url.includes('socialimperialism.com');
     return {
       actions: [
         { type: 'message', text: `Opening ${url}…` },
-        { type: 'open_url', url, target: '_blank' },
+        { type: 'open_url', url, target: isExternal ? '_blank' : '_self' },
       ],
-      reply: `Opening ${url} in a new tab.`,
+      reply: isExternal
+        ? `Opening ${url} in a new tab.`
+        : `Navigating within ${PRODUCT}.`,
     };
   }
 
-  if (/mine/i.test(q) && /trend|google/i.test(q)) {
-    const view = resolveViewById('keywords');
-    const actions = planForView(view, { cantFind: true, query: q });
-    actions.unshift({ type: 'message', text: 'Routing to Keywords — Google Trends flow lives under live metrics.' });
+  // Google Trends / SERP research — native SI paths
+  if (/google\s+trends?|trending\s+search|serp\s*api/i.test(q)) {
+    const view = resolveViewById('seo-tools');
+    const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });
+    actions.unshift({ type: 'message', text: 'Routing to SEO Tools on socialimperialism.com…' });
     return {
       actions,
-      reply: 'Opening **Keywords** with the Google Trends research path (add SERP_API_KEY in Integrations for live trends).',
+      reply: 'Opening **SEO Tools** — run KGR or scrape research, then send winners to **Keywords**. Add `SERP_API_KEY` under **Integrations → Connections** for live Google Trends data.',
+    };
+  }
+
+  if (/run\s+audit|issue\s+control|gitops/i.test(q)) {
+    const view = resolveViewById('issue-control');
+    return {
+      actions: planForView(view, { cantFind: true, query: q }),
+      reply: 'Opening **Issue Control** on socialimperialism.com for THEE_MICHAEL GitOps repairs.',
     };
   }
 
@@ -114,27 +205,21 @@ function planGuideActions(query, context = {}) {
   if (view) {
     const cantFind = CANT_FIND_RE.test(q);
     const actions = planForView(view, { cantFind, query: q });
+    const sectionHint = view.section ? ` (${view.section} in the left sidebar)` : '';
     return {
       actions,
       reply: cantFind
-        ? `Taking you to **${view.label}** — Simple mode off, advanced tabs expanded, and sidebar highlighted.`
-        : `Opening **${view.label}** now.`,
-    };
-  }
-
-  if (/run\s+audit|issue\s+control/i.test(q)) {
-    return {
-      actions: [
-        { type: 'navigate', href: '/dashboard/issues', label: 'Issue Control', navId: 'dashboard-issues', sectionId: 'system' },
-        { type: 'highlight', navId: 'dashboard-issues', ms: 3500 },
-      ],
-      reply: 'Opening Issue Control for a live audit.',
+        ? `Taking you to **${view.label}**${sectionHint} — Focus mode expanded, tabs restored, and module highlighted on ${PRODUCT_URL}.`
+        : `Opening **${view.label}** on ${PRODUCT}.`,
     };
   }
 
   return {
-    actions: [{ type: 'navigate', href: '/support', label: 'Imperialism Brain', navId: 'support', sectionId: 'system' }],
-    reply: 'I could not map that view — opening Live Support so we can narrow it down.',
+    actions: [
+      { type: 'navigate', href: '/support', label: 'Imperialism Brain', navId: 'support', sectionId: 'system' },
+      { type: 'highlight', navId: 'support', sectionId: 'system', ms: 3000 },
+    ],
+    reply: `I could not map that to a ${PRODUCT} module — opening **Imperialism Brain** live support.`,
   };
 }
 
@@ -144,13 +229,29 @@ function resolveViewById(viewId) {
 
 function planFromViewId(viewId) {
   const view = resolveViewById(viewId);
-  if (!view) return { actions: [], reply: 'Unknown view id.' };
-  return { actions: planForView(view, { cantFind: true, query: view.label }), reply: `Pushing live redirect to ${view.label}.` };
+  if (!view) return { actions: [], reply: 'Unknown Social Imperialism module id.' };
+  return {
+    actions: planForView(view, { cantFind: true, query: view.label }),
+    reply: `Pushing live redirect to **${view.label}** on ${PRODUCT_URL}.`,
+  };
+}
+
+function listViewsForApi() {
+  return GUIDE_VIEWS.map((v) => ({
+    id: v.id,
+    label: v.label,
+    href: v.href,
+    section: v.section,
+    navId: v.navId,
+  }));
 }
 
 module.exports = {
+  PRODUCT,
+  PRODUCT_URL,
   GUIDE_VIEWS,
   planGuideActions,
   planFromViewId,
   resolveViewById,
+  listViewsForApi,
 };

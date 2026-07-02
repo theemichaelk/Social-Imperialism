@@ -1,32 +1,47 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
-type GuideView = { id: string; label: string; href: string };
+type GuideView = { id: string; label: string; href: string; section?: string };
 
 export function LiveGuideRedirectPanel() {
   const [email, setEmail] = useState('');
   const [query, setQuery] = useState('');
   const [viewId, setViewId] = useState('');
   const [views, setViews] = useState<GuideView[]>([]);
+  const [productUrl, setProductUrl] = useState('https://www.socialimperialism.com');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     apiFetch('/api/guide/views')
-      .then((res) => setViews((res as { views?: GuideView[] }).views || []))
+      .then((res) => {
+        const data = res as { views?: GuideView[]; productUrl?: string };
+        setViews(data.views || []);
+        if (data.productUrl) setProductUrl(data.productUrl);
+      })
       .catch(() => setViews([]));
   }, []);
+
+  const groupedViews = useMemo(() => {
+    const groups = new Map<string, GuideView[]>();
+    for (const v of views) {
+      const g = v.section || 'Modules';
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g)!.push(v);
+    }
+    return [...groups.entries()];
+  }, [views]);
 
   const push = useCallback(async () => {
     const trimmed = email.trim();
     if (!trimmed) {
-      setMsg('Enter target user email');
+      setMsg('Enter the user’s Social Imperialism login email');
       return;
     }
     if (!viewId && !query.trim()) {
-      setMsg('Pick a view or enter natural language');
+      setMsg('Pick a module or enter natural language');
       return;
     }
     setLoading(true);
@@ -41,20 +56,20 @@ export function LiveGuideRedirectPanel() {
         }),
       }) as { success?: boolean; targetEmail?: string; actionCount?: number; reply?: string; error?: string };
       if (res.error) throw new Error(res.error);
-      setMsg(`Pushed to ${res.targetEmail} — ${res.actionCount} action(s). ${res.reply || ''}`);
+      setMsg(`Pushed to ${res.targetEmail} on ${productUrl} — ${res.actionCount} action(s). ${res.reply || ''}`);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [email, query, viewId]);
+  }, [email, query, viewId, productUrl]);
 
   return (
     <div className="card live-guide-redirect-panel" style={{ marginTop: '1rem' }}>
-      <p className="overlord-trace-eyebrow" style={{ margin: '0 0 0.35rem' }}>THEE_MICHAEL · Live Guide Redirect</p>
-      <h3 style={{ margin: '0 0 0.5rem', fontSize: '1rem' }}>Push real-time navigation to any user</h3>
+      <p className="overlord-trace-eyebrow" style={{ margin: '0 0 0.35rem' }}>THEE_MICHAEL · Social Imperialism Live Guide</p>
+      <h3 style={{ margin: '0 0 0.5rem', fontSize: '1rem' }}>Push real-time navigation on socialimperialism.com</h3>
       <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', color: 'var(--muted)' }}>
-        Target user dashboard polls every 4s — redirect executes while they are logged in.
+        The user’s session polls every 4s — their browser navigates, expands Focus mode tabs, and highlights the left sidebar module.
       </p>
 
       <label className="support-search-label" htmlFor="lgr-email">User email</label>
@@ -62,13 +77,13 @@ export function LiveGuideRedirectPanel() {
         id="lgr-email"
         type="email"
         className="support-search-input"
-        placeholder="user@company.com"
+        placeholder="user@their-domain.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         style={{ marginBottom: '0.65rem' }}
       />
 
-      <label className="support-search-label" htmlFor="lgr-view">Quick view</label>
+      <label className="support-search-label" htmlFor="lgr-view">Social Imperialism module</label>
       <select
         id="lgr-view"
         className="support-search-input"
@@ -76,9 +91,13 @@ export function LiveGuideRedirectPanel() {
         onChange={(e) => setViewId(e.target.value)}
         style={{ marginBottom: '0.65rem' }}
       >
-        <option value="">— Pick view (Skills, Mine, Studio…) —</option>
-        {views.map((v) => (
-          <option key={v.id} value={v.id}>{v.label}</option>
+        <option value="">— Pick sidebar module —</option>
+        {groupedViews.map(([section, items]) => (
+          <optgroup key={section} label={section}>
+            {items.map((v) => (
+              <option key={v.id} value={v.id}>{v.label}</option>
+            ))}
+          </optgroup>
         ))}
       </select>
 
@@ -87,7 +106,7 @@ export function LiveGuideRedirectPanel() {
         id="lgr-query"
         type="text"
         className="support-search-input"
-        placeholder="take them to Connect Apps / skills tab…"
+        placeholder="take them to Integrations / Prompt Vault / can't find AI Replies tab…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         style={{ marginBottom: '0.75rem' }}

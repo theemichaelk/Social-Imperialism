@@ -150,7 +150,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
       }
 
       const wantsLiveGuide = isNavigationRequest(trimmed)
-        || /don'?t\s+see|can'?t\s+find|skills|connect\s+apps|open\s+https?:\/\//i.test(trimmed);
+        || /don'?t\s+see|can'?t\s+find|prompt\s+vault|integrations|browse\s+posts|open\s+https?:\/\//i.test(trimmed);
 
       if (wantsLiveGuide) {
         try {
