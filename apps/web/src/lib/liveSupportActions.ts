@@ -133,7 +133,7 @@ function buildNavCatalog(): NavEntry[] {
     { match: ['content hub', 'create content', 'create post', 'content studio'], entry: { id: 'content-hub', label: 'Create', href: '/content-hub', sectionId: 'create' } },
     { match: ['integrations hub', 'connect platform', 'oauth', 'api connection'], entry: { id: 'integrations', label: 'Integrations', href: '/integrations', sectionId: 'system' } },
     { match: ['ai replies', 'reply engine', 'engagement queue', 'pending replies'], entry: { id: 'history', label: 'AI Replies', href: '/history', sectionId: 'discovery' } },
-    { match: ['setup wizard', 'onboarding', 'go live checklist'], entry: { id: 'onboarding', label: 'Setup Wizard', href: '/onboarding', sectionId: 'create' } },
+    { match: ['setup wizard', 'onboarding', 'go live checklist', 'research my brand', 'auto-fill brand', 'intelligent setup'], entry: { id: 'onboarding', label: 'Setup Wizard', href: '/onboarding', sectionId: 'create' } },
     { match: ['growth lab', 'reddit lab', 'reddit ai'], entry: { id: 'reddit-ai', label: 'Growth Lab', href: '/reddit-ai', sectionId: 'labs' } },
     { match: ['auto rules', 'auto-rules', 'keyword triggers'], entry: { id: 'rules', label: 'Auto-Rules', href: '/rules', sectionId: 'automation' } },
     { match: ['campaign command', 'verified nodes', 'campaign manager'], entry: { id: 'campaign-manager', label: 'Campaign Command', href: '/campaign-manager', sectionId: 'system' } },

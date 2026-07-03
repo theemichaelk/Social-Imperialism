@@ -44,6 +44,16 @@ import {
   formatRecommendationsBanner,
   runSelfHealAudit,
 } from '@/lib/selfHealIntelligence';
+import {
+  researchBrandWithTheeMichael,
+  fetchOnboardingContext,
+} from '@/lib/onboardingIntelligence';
+import {
+  buildOnboardingAugmentedContext,
+  extractDomainFromText,
+  formatBrandResearchSummary,
+  isBrandResearchRequest,
+} from '@/lib/theeMichaelOnboardingExpert';
 import { listEnclaveEntries } from '@/lib/overlordEnclave';
 import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
 import { TheeMichaelAvatar } from './TheeMichaelAvatar';
@@ -135,6 +145,56 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
+
+    const wantsBrandResearch = isBrandResearchRequest(trimmed);
+    if (wantsBrandResearch) {
+      const tBrand = pushTrace('THEE_MICHAEL brand research · web + SEO + module propagation');
+      let domain = extractDomainFromText(trimmed);
+      if (!domain) {
+        try {
+          const camp = await invoke<{ domain?: string }>('get-active-campaign');
+          domain = camp?.domain?.trim() || null;
+        } catch { /* optional */ }
+      }
+      if (!domain) {
+        completeTrace(tBrand);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: 'I can research your brand and auto-fill every Setup Wizard field. **What is your domain?** (e.g. acme.com)\n\n[[NAV:/onboarding|Setup Wizard]]',
+            ts: new Date().toISOString(),
+          },
+        ]);
+        executeLiveSupportAction(searchRouteToAction({ label: 'Setup Wizard', href: '/onboarding' }, true));
+        setLoading(false);
+        return;
+      }
+      const result = await researchBrandWithTheeMichael(domain);
+      completeTrace(tBrand);
+      if (result) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `${formatBrandResearchSummary(result)}\n\n[[NAV:/onboarding|Setup Wizard]] — fields are pre-filled. Finish Integrations then Campaign Command.`,
+            ts: new Date().toISOString(),
+          },
+        ]);
+        executeLiveSupportAction(searchRouteToAction({ label: 'Setup Wizard', href: '/onboarding' }, true));
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `Research failed for **${domain}** — open Setup Wizard and try again, or check Integrations for API keys.\n\n[[NAV:/onboarding|Setup Wizard]]`,
+            ts: new Date().toISOString(),
+          },
+        ]);
+      }
+      setLoading(false);
+      return;
+    }
 
     const wantsAudit = /run\s+(?:self[\s-]?)?audit|self[\s-]?heal\s+audit|audit\s+now|daily\s+audit/i.test(trimmed);
 
@@ -241,6 +301,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
       }
 
       const wantsImprovement = /improve|betterment|recommend|what\s+should\s+i|audit|optimize/i.test(trimmed);
+      const wantsOnboarding = /setup|onboard|brand|wizard|campaign\s+command/i.test(trimmed);
       let selfHealIntel = '';
       if (wantsImprovement || seoIntel) {
         const tHeal = pushTrace('Self-heal · daily recommendations + journal');
@@ -249,8 +310,16 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         completeTrace(tHeal);
       }
 
-      const tAi = pushTrace(seoIntel || selfHealIntel ? 'Authority brief + self-heal synthesis' : 'Evaluating request with live context');
-      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname, seoIntel, selfHealIntel });
+      let onboardingIntel = '';
+      if (wantsOnboarding) {
+        const tOb = pushTrace('Onboarding context · module wiring status');
+        const obCtx = await fetchOnboardingContext();
+        onboardingIntel = buildOnboardingAugmentedContext(obCtx);
+        completeTrace(tOb);
+      }
+
+      const tAi = pushTrace(seoIntel || selfHealIntel || onboardingIntel ? 'Authority brief + live context synthesis' : 'Evaluating request with live context');
+      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname, seoIntel, selfHealIntel, onboardingIntel });
       const reply = await invoke<string>('generate-ai', prompt);
       let raw = sanitizeAgentReply(String(reply || '').trim()) || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
       completeTrace(tAi);

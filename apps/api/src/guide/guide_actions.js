@@ -190,7 +190,7 @@ function planGuideActions(query, context = {}) {
     actions.unshift({ type: 'message', text: 'THEE_MICHAEL intelligent setup → enter domain and click Research My Brand…' });
     return {
       actions,
-      reply: 'Opening **Setup Wizard** — enter your domain, click **THEE_MICHAEL — Research & Auto-Fill from Web**. I pull live site data, SEO intel, keywords, and wire everything to **Campaign Command**.',
+      reply: 'Opening **Setup Wizard** — enter your domain, click **THEE_MICHAEL — Research & Auto-Fill from Web**. I pull live site data, SEO intel, keywords, Prompt Vault templates, Be-First monitors, and wire all 24 modules → **Campaign Command** verified nodes.',
     };
   }
 

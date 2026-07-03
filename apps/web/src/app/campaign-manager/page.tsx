@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
 import { CampaignOperationsPanel } from '@/components/campaign/CampaignOperationsPanel';
 import { VerifiedNodesPanel } from '@/components/campaign/VerifiedNodesPanel';
+import { OnboardingWiringBanner } from '@/components/OnboardingWiringBanner';
 
 type Tab = 'campaigns' | 'nodes';
 
@@ -45,6 +46,8 @@ export default function CampaignManagerPage() {
         Worker: focusStats.running,
       } : undefined}
     >
+      <OnboardingWiringBanner />
+
       <div
         className="card"
         style={{

@@ -119,7 +119,8 @@ export default function OnboardingPage() {
       const result = await researchBrandWithTheeMichael(domain, brand.brandName.trim() || undefined);
       if (!result) throw new Error('Brand research failed — check API connection');
       await applyResearchResult(result);
-      setMsg(`Researched ${result.brand.domain} — ${result.suggestedKeywords?.length || 0} keywords, wired to Campaign Command`);
+      const wired = result.propagation?.results?.filter((r) => r.ok).length || 0;
+      setMsg(`Researched ${result.brand.domain} — ${result.suggestedKeywords?.length || 0} keywords, ${wired} modules persisted → Campaign Command`);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -144,10 +145,16 @@ export default function OnboardingPage() {
         sampleMessages: brand.sampleMessages,
         affiliateLinks: brand.affiliateLinks,
       });
-      await propagateBrandToModules(brand);
+      await propagateBrandToModules({
+        brand,
+        keywords,
+        monitors,
+        globalPrompt,
+        platforms,
+      });
       await refreshStatus();
       setStep(2);
-      setMsg('Brand integrated with AI — data flowing to Brand, Keywords, SEO Tools, and Campaign Command');
+      setMsg('Brand integrated with AI — data flowing to all modules + Campaign Command');
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -299,7 +306,13 @@ export default function OnboardingPage() {
           }
         }
       }
-      await propagateBrandToModules(brand);
+      await propagateBrandToModules({
+        brand,
+        keywords,
+        monitors,
+        globalPrompt,
+        platforms,
+      });
       if (keywords.length) {
         await invoke('save-keywords', keywords.map((k) => ({
           term: k.term,

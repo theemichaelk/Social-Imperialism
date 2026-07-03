@@ -3046,6 +3046,13 @@ textarea.input { min-height: 100px; resize: vertical; }
 .thee-michael-setup-step-pill.warn { border-color: rgba(245, 158, 11, 0.4); color: #fcd34d; }
 .thee-michael-module-flow { margin-top: 0.75rem; }
 .thee-michael-module-flow-label { margin: 0 0 0.4rem; font-size: 0.72rem; color: var(--accent3); text-transform: uppercase; letter-spacing: 0.06em; }
+.thee-michael-module-section { margin-bottom: 0.5rem; }
+.thee-michael-module-section-label { margin: 0 0 0.3rem; font-size: 0.68rem; color: var(--muted); font-weight: 600; }
+.thee-michael-wired-summary { margin: 0.5rem 0 0; font-size: 0.72rem; color: #86efac; }
+.thee-michael-module-chip.status-wired { border-color: rgba(168, 85, 247, 0.35); }
+.thee-michael-module-chip.status-active { border-color: rgba(56, 189, 248, 0.45); }
+.thee-michael-module-chip.status-connect { border-color: rgba(245, 158, 11, 0.35); }
+.thee-michael-module-chip.status-pending { opacity: 0.75; }
 .thee-michael-module-flow-grid {
   display: flex; flex-wrap: wrap; gap: 0.4rem;
 }

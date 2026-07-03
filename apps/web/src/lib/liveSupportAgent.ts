@@ -6,6 +6,7 @@
 import { OVERLORD_SYSTEM_APPEND } from '@/lib/theeMichaelOverlord';
 import { THEE_MICHAEL_SEO_EXPERT_APPEND, SEO_QUICK_PROMPTS } from '@/lib/theeMichaelSeoExpert';
 import { SELF_HEAL_EXPERT_APPEND } from '@/lib/selfHealIntelligence';
+import { ONBOARDING_EXPERT_APPEND } from '@/lib/theeMichaelOnboardingExpert';
 
 export const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
@@ -123,6 +124,10 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Setup Wizard', href: '/onboarding' },
   },
   {
+    patterns: [/research\s+(my\s+)?brand/i, /auto[\s-]?fill\s+brand/i, /intelligent\s+setup/i],
+    route: { label: 'Setup Wizard · Research Brand', href: '/onboarding', action: 'research-brand' },
+  },
+  {
     patterns: [/desktop\s+app/i, /download\s+app/i, /install\s+desktop/i, /electron/i, /windows\s+installer/i],
     route: { label: 'Download Desktop App', href: '/download' },
   },
@@ -212,7 +217,7 @@ export function getPendingApprovals(): ApprovalTicket[] {
 export function buildSupportPrompt(
   messages: SupportMessage[],
   userMessage: string,
-  context?: { pathname?: string; seoIntel?: string; selfHealIntel?: string },
+  context?: { pathname?: string; seoIntel?: string; selfHealIntel?: string; onboardingIntel?: string },
 ): string {
   const history = messages
     .slice(-8)
@@ -221,7 +226,8 @@ export function buildSupportPrompt(
   const ctx = context?.pathname ? `\nCurrent page: ${context.pathname}` : '';
   const seoBlock = context?.seoIntel ? `\n${context.seoIntel}` : '';
   const healBlock = context?.selfHealIntel ? `\n${context.selfHealIntel}` : '';
-  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${THEE_MICHAEL_SEO_EXPERT_APPEND}${SELF_HEAL_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${seoBlock}${healBlock}
+  const onboardBlock = context?.onboardingIntel ? `\n${context.onboardingIntel}` : '';
+  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${THEE_MICHAEL_SEO_EXPERT_APPEND}${SELF_HEAL_EXPERT_APPEND}${ONBOARDING_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${seoBlock}${healBlock}${onboardBlock}
 
 Conversation:
 ${history}
