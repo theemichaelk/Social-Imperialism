@@ -42,16 +42,60 @@ export function GrokToolbar({
   const [localPrompt, setLocalPrompt] = useState(prompt);
   const [status, setStatus] = useState('');
   const [grokStatus, setGrokStatus] = useState<Record<string, unknown>>({});
+  const [statusLoadError, setStatusLoadError] = useState('');
   const [preview, setPreview] = useState('');
   const [mediaPreview, setMediaPreview] = useState('');
 
   useEffect(() => { setLocalPrompt(prompt); }, [prompt]);
 
-  useEffect(() => {
-    invoke<Record<string, unknown>>('grok-get-status').then(setGrokStatus).catch(() => {});
-  }, []);
+  const refreshGrokStatus = async () => {
+    try {
+      const st = await invoke<Record<string, unknown>>('grok-get-status');
+      setGrokStatus(st || {});
+      setStatusLoadError('');
+    } catch (e) {
+      setStatusLoadError((e as Error).message || 'Could not load Grok status');
+    }
+  };
+
+  useEffect(() => { refreshGrokStatus().catch(() => {}); }, []);
+
+  const loggedIn = !!(grokStatus as { session?: { loggedIn?: boolean } }).session?.loggedIn
+    || !!(grokStatus as { settings?: { sessionValid?: boolean } }).settings?.sessionValid;
+  const rawHint = String((grokStatus as { connectionHint?: string }).connectionHint || '');
+  const requiresWindows = !!(grokStatus as { requiresWindows?: boolean }).requiresWindows;
+  const connectionHint = (!showInfraHints && compact && /nodriver|python/i.test(rawHint))
+    ? 'Grok browser tools — configure in Settings → Grok when needed.'
+    : rawHint;
+  const canAutomate = (grokStatus as { canAutomate?: boolean }).canAutomate !== false
+    && !requiresWindows;
+  const statusMessage = statusLoadError
+    || connectionHint
+    || (loggedIn ? '' : 'Not connected — save credentials and Connect in Settings → Grok');
+  const nodriverReady = !!(grokStatus as { nodriverReady?: boolean }).nodriverReady;
+  const selectedBrowser = (grokStatus as { nativeBrowser?: { selectedBrowser?: { label?: string; installed?: boolean } } })
+    .nativeBrowser?.selectedBrowser;
+  const installedBrowsers = ((grokStatus as { nativeBrowser?: { browsers?: Array<{ label: string; installed?: boolean; automationReady?: boolean }> } })
+    .nativeBrowser?.browsers || []).filter((b) => b.installed);
+
+  function formatGrokError(message: string) {
+    if (/requires windows|desktop app|localhost:4000/i.test(message)) {
+      return `${message} Open Settings → Grok on a Windows machine with the desktop app or local dev server.`;
+    }
+    if (/edge not found|chrome not found|not found.*native browser/i.test(message)) {
+      return `${message} Go to Settings → Grok → Native Browser and pick Chrome or Edge (both are installed on this PC).`;
+    }
+    if (/not connected|connect in settings|click connect/i.test(message)) {
+      return `${message} Settings → Grok → save credentials → Connect & Authorize.`;
+    }
+    return message;
+  }
 
   async function run(channel: string, payload: Record<string, unknown>) {
+    if (!canAutomate) {
+      setStatus(formatGrokError(connectionHint || 'Grok browser automation is not available on this API host.'));
+      return;
+    }
     if (!localPrompt.trim() && channel !== 'grok-get-status') {
       setStatus('Enter a prompt first');
       return;
@@ -60,7 +104,8 @@ export function GrokToolbar({
     try {
       const res = await invoke<GrokResult>(channel, payload);
       if (res?.success === false) {
-        setStatus(res.error || 'Grok action failed');
+        setStatus(formatGrokError(res.error || 'Grok action failed'));
+        await refreshGrokStatus();
         return;
       }
       const text = String(res.text || res.answer || res.analysis || res.caption || '');
@@ -81,22 +126,10 @@ export function GrokToolbar({
         setStatus('Complete');
       }
     } catch (e) {
-      setStatus((e as Error).message);
+      setStatus(formatGrokError((e as Error).message));
+      await refreshGrokStatus();
     }
   }
-
-  const loggedIn = !!(grokStatus as { session?: { loggedIn?: boolean } }).session?.loggedIn
-    || !!(grokStatus as { settings?: { sessionValid?: boolean } }).settings?.sessionValid;
-  const rawHint = String((grokStatus as { connectionHint?: string }).connectionHint || '');
-  const connectionHint = (!showInfraHints && compact && /nodriver|python/i.test(rawHint))
-    ? 'Grok browser tools — configure in Settings → Grok when needed.'
-    : rawHint;
-  const canAutomate = (grokStatus as { canAutomate?: boolean }).canAutomate !== false;
-  const nodriverReady = !!(grokStatus as { nodriverReady?: boolean }).nodriverReady;
-  const selectedBrowser = (grokStatus as { nativeBrowser?: { selectedBrowser?: { label?: string; installed?: boolean } } })
-    .nativeBrowser?.selectedBrowser;
-  const installedBrowsers = ((grokStatus as { nativeBrowser?: { browsers?: Array<{ label: string; installed?: boolean; automationReady?: boolean }> } })
-    .nativeBrowser?.browsers || []).filter((b) => b.installed);
 
   const inner = (
     <>
@@ -109,9 +142,13 @@ export function GrokToolbar({
       <div className="post-card" style={{ fontSize: '0.85rem', marginBottom: 12 }}>
         {loggedIn
           ? <span className="status-ok">Grok session active{selectedBrowser?.label ? ` · ${selectedBrowser.label}` : ''}</span>
-          : <span className="status-partial">
-              {connectionHint || 'Not connected — save credentials and Connect in Settings → Grok'}
-            </span>}
+          : statusMessage && <span className="status-partial">{statusMessage}</span>}
+        {!loggedIn && !statusLoadError && (
+          <p style={{ margin: '8px 0 0', fontSize: '0.8rem' }}>
+            <Link href="/settings?tab=connect">Settings → Grok</Link>
+            {' '}→ save x.ai credentials → <strong>Connect &amp; Authorize</strong>
+          </p>
+        )}
         {showInfraHints && !nodriverReady && (
           <p style={{ margin: '8px 0 0', color: '#f59e0b', fontSize: '0.8rem' }}>
             nodriver/Python not ready — see Settings → Native Browser for setup.
@@ -119,12 +156,15 @@ export function GrokToolbar({
         )}
         {installedBrowsers.length > 0 && !selectedBrowser?.installed && (
           <p style={{ margin: '8px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>
-            Detected: {installedBrowsers.map((b) => b.label).join(', ')} — select one in Settings → Grok.
+            Detected: {installedBrowsers.map((b) => b.label).join(', ')} — select one in Settings → Grok → Native Browser.
           </p>
         )}
-        {!canAutomate && connectionHint.includes('Windows') && (
-          <p style={{ margin: '8px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>
-            For full Grok browser automation, use the Social Imperialism desktop app on Windows.
+        {!canAutomate && (
+          <p style={{ margin: '8px 0 0', color: '#f59e0b', fontSize: '0.8rem' }}>
+            {requiresWindows
+              ? 'Cloud API cannot launch Edge/Chrome. Use localhost:3000 with a local API, or the desktop app.'
+              : 'Browser automation is not ready on this host — check Settings → Grok → Native Browser.'}
+            {' '}<Link href="/download">Download desktop app</Link>
           </p>
         )}
       </div>
@@ -144,10 +184,10 @@ export function GrokToolbar({
         placeholder="Topic, post draft, or keyword-aware prompt…"
       />
       <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-        <button type="button" className="btn" onClick={() => run('grok-ask-text', { content: localPrompt, pageId })}>Grok Text</button>
-        <button type="button" className="btn" onClick={() => run('grok-imagine', { content: localPrompt, pageId })}>Grok Imagine</button>
-        <button type="button" className="btn" onClick={() => run('grok-generate-video', { content: localPrompt, pageId })}>Grok Video</button>
-        <button type="button" className="btn" onClick={() => run('grok-generate-infographic', { content: localPrompt, pageId })}>Infographic</button>
+        <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-ask-text', { content: localPrompt, pageId })}>Grok Text</button>
+        <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-imagine', { content: localPrompt, pageId })}>Grok Imagine</button>
+        <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-generate-video', { content: localPrompt, pageId })}>Grok Video</button>
+        <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-generate-infographic', { content: localPrompt, pageId })}>Infographic</button>
         <button type="button" className="btn" onClick={async () => {
           const p = await invoke<{ prompt?: string }>('grok-build-prompt-preview', { content: localPrompt, pageId });
           if (p?.prompt) setLocalPrompt(p.prompt);

@@ -4,13 +4,14 @@ import {
   getFounderHighlights,
   getModuleCount,
 } from '@/lib/siteBlueprint';
+import { THEE_MICHAEL_PROFILE } from '@/lib/theeMichaelProfile';
 
 export const FOUNDER = {
   name: 'Michael K',
   title: 'Founder & Author',
-  role: 'Creator of Social Imperialism',
-  image: '/founder/michael-k.png',
-  imageAlt: 'Portrait of Michael K, founder of Social Imperialism, smiling warmly',
+  role: 'Creator of Social Imperialism · THEE_MICHAEL',
+  image: THEE_MICHAEL_PROFILE.image,
+  imageAlt: THEE_MICHAEL_PROFILE.imageAlt,
   tagline: 'Building the command center for AI-powered social dominance.',
   email: 'theesaintmichael@gmail.com',
   github: 'https://github.com/theemichaelk/Social-Imperialism',

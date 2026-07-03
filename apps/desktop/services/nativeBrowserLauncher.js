@@ -172,6 +172,15 @@ function findFirstInstalledChromiumBrowser() {
   return null;
 }
 
+function ensureInstalledBrowserSettings(store) {
+  const settings = getBrowserSettings(store);
+  const { execPath, def } = resolveBrowserExecutable(settings.browserId);
+  if (execPath || def.engine === 'bundled') return settings;
+  const fallback = findFirstInstalledChromiumBrowser();
+  if (!fallback) return settings;
+  return saveBrowserSettings(store, { browserId: fallback.browserId });
+}
+
 function detectInstalledBrowsers() {
   const nodriverReady = nodriverStatusCache.nodriverReady;
   const list = [];
@@ -277,7 +286,7 @@ async function launchNativeBrowser({
 } = {}) {
   await refreshNodriverStatus();
 
-  const settings = getBrowserSettings(store);
+  const settings = ensureInstalledBrowserSettings(store);
   const sessionKey = settings.launchMode === 'attach'
     ? `attach:${settings.debugPort || 9222}`
     : `${settings.browserId}:${profileKey}`;
@@ -384,9 +393,12 @@ async function closeBrowserSession(profileKey = null) {
 
 async function getBrowserStatus(store, userDataPath) {
   const status = await refreshNodriverStatus();
-  const settings = getBrowserSettings(store);
+  const settings = ensureInstalledBrowserSettings(store);
   const browsers = detectInstalledBrowsers();
-  const selected = browsers.find((b) => b.id === settings.browserId);
+  const selected = browsers.find((b) => b.id === settings.browserId)
+    || browsers.find((b) => b.installed && b.automationReady)
+    || browsers.find((b) => b.installed)
+    || null;
   const profiles = [];
   if (userDataPath) {
     const base = path.join(userDataPath, 'native-browser-profiles');
@@ -426,6 +438,7 @@ module.exports = {
   BROWSER_DEFS,
   getBrowserSettings,
   saveBrowserSettings,
+  ensureInstalledBrowserSettings,
   detectInstalledBrowsers,
   findFirstInstalledChromiumBrowser,
   resolveBrowserExecutable,

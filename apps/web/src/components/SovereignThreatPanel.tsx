@@ -12,6 +12,8 @@ import {
   type TheeMichaelAction,
 } from '@/lib/sovereignThreatCapture';
 import { loadKineticSession, saveKineticSession } from '@/lib/sovereignKineticSession';
+import { TheeMichaelAvatar } from '@/components/TheeMichaelAvatar';
+import { THEE_MICHAEL_PROFILE } from '@/lib/theeMichaelProfile';
 
 function decisionBadge(decision?: string) {
   if (decision === 'approved') return { label: 'Approved', color: '#22c55e' };
@@ -143,7 +145,13 @@ export function SovereignThreatPanel({ onMsg }: { onMsg?: (m: string) => void })
   return (
     <div className="sovereign-threat-panel">
       <div className="card sovereign-banner-card">
-        <p className="sovereign-banner-text">{THEE_MICHAEL_BANNER}</p>
+        <div className="sovereign-banner-brand">
+          <TheeMichaelAvatar size="md" showRing />
+          <div>
+            <p className="sovereign-banner-identity">{THEE_MICHAEL_PROFILE.displayName}</p>
+            <p className="sovereign-banner-text">{THEE_MICHAEL_BANNER}</p>
+          </div>
+        </div>
         <p style={{ margin: '0.5rem 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
           Executive control: <strong>{THEE_MICHAEL}</strong> only.
           Every captured action stays <em>pending</em> until you <strong>Accept</strong> or <strong>Deny</strong>.

@@ -643,6 +643,9 @@ async function generateGrokVideo(store, userDataPath, prompt, {
 }
 
 function buildConnectionHint({ nodriverStatus, browserStatus, hasCredentials, sessionValid }) {
+  if (process.platform === 'linux') {
+    return 'Grok browser automation requires Windows — use the Social Imperialism desktop app or run the web app against a local API on localhost:4000.';
+  }
   if (!nodriverStatus.nodriverReady) {
     return nodriverStatus.error
       || 'Python nodriver is not ready — install Python 3, then: pip install -r apps/desktop/services/stealthBrowser/requirements.txt';
@@ -650,9 +653,6 @@ function buildConnectionHint({ nodriverStatus, browserStatus, hasCredentials, se
   const selected = browserStatus.selectedBrowser;
   if (!selected?.installed) {
     const installed = (browserStatus.browsers || []).filter((b) => b.installed).map((b) => b.label);
-    if (process.platform === 'linux') {
-      return 'Grok browser automation runs on Windows (desktop app or local API). Cloud API hosts cannot launch Edge/Chrome.';
-    }
     if (installed.length) {
       return `Browser "${selected?.label || 'Edge'}" not found. Installed: ${installed.join(', ')} — pick one in Settings → Grok → Native Browser.`;
     }
@@ -672,14 +672,7 @@ function buildConnectionHint({ nodriverStatus, browserStatus, hasCredentials, se
 
 async function getStatus(store, userDataPath) {
   seedGrokDefaultsIfNeeded(store);
-  const nbSettings = nativeBrowser.getBrowserSettings(store);
-  const resolved = nativeBrowser.resolveBrowserExecutable(nbSettings.browserId);
-  if (!resolved.execPath && resolved.def.engine !== 'bundled') {
-    const fallback = nativeBrowser.findFirstInstalledChromiumBrowser();
-    if (fallback) {
-      nativeBrowser.saveBrowserSettings(store, { browserId: fallback.browserId });
-    }
-  }
+  nativeBrowser.ensureInstalledBrowserSettings(store);
 
   const settings = getSettings(store);
   let profileReady = false;
@@ -709,6 +702,8 @@ async function getStatus(store, userDataPath) {
     nodriverReady: nodriverStatus.nodriverReady,
     puppeteerReady: nodriverStatus.nodriverReady,
     canAutomate,
+    hostPlatform: process.platform,
+    requiresWindows: process.platform !== 'win32',
     connectionHint,
     nativeBrowser: browserStatus,
     settings: {

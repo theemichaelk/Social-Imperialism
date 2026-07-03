@@ -1,6 +1,8 @@
 'use client';
 
 import { LiveSupportPanel } from '@/components/LiveSupportPanel';
+import { TheeMichaelAvatar } from '@/components/TheeMichaelAvatar';
+import { THEE_MICHAEL_PROFILE } from '@/lib/theeMichaelProfile';
 import { PageShell } from '@/components/PageShell';
 import { NAV_SECTIONS } from '@/lib/nav';
 import { executeLiveSupportAction, resolveNavigationIntent } from '@/lib/liveSupportActions';
@@ -31,7 +33,19 @@ export default function SupportPage() {
 
   return (
     <div className="page support-page">
-      <PageShell title="Imperialism Brain" subtitle="Live support — setup, troubleshooting, and growth guidance" />
+      <PageShell
+        title="Imperialism Brain"
+        subtitle="Live support — setup, troubleshooting, and growth guidance"
+      />
+
+      <div className="support-thee-michael-intro">
+        <TheeMichaelAvatar size="lg" showRing />
+        <div>
+          <p className="support-thee-michael-eyebrow">{THEE_MICHAEL_PROFILE.displayName}</p>
+          <p className="support-thee-michael-title">{THEE_MICHAEL_PROFILE.title}</p>
+          <p className="support-thee-michael-sub">{THEE_MICHAEL_PROFILE.subtitle}</p>
+        </div>
+      </div>
 
       <div className="support-layout">
         <div className="support-sidebar-col">

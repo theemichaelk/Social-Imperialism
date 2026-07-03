@@ -46,6 +46,7 @@ import {
 } from '@/lib/selfHealIntelligence';
 import { listEnclaveEntries } from '@/lib/overlordEnclave';
 import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
+import { TheeMichaelAvatar } from './TheeMichaelAvatar';
 
 const PANEL_KEY = 'si_support_panel_open';
 
@@ -308,7 +309,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
   if (!embedded && !open) {
     return (
       <button type="button" className="live-support-fab" onClick={toggle} title="THEE_MICHAEL Live Support">
-        <span className="live-support-fab-icon">🛡️</span>
+        <TheeMichaelAvatar size="sm" showRing className="live-support-fab-avatar" />
         {pendingCount > 0 && <span className="live-support-fab-badge">{pendingCount}</span>}
       </button>
     );
@@ -322,9 +323,12 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
       onDrop={onDrop}
     >
       <div className="live-support-header">
-        <div>
-          <p className="live-support-eyebrow">THEE_MICHAEL · Overlord Protocol</p>
-          <h3 className="live-support-title">Imperialism Brain</h3>
+        <div className="live-support-header-brand">
+          <TheeMichaelAvatar size="md" showRing />
+          <div>
+            <p className="live-support-eyebrow">THEE_MICHAEL · Overlord Protocol</p>
+            <h3 className="live-support-title">Imperialism Brain</h3>
+          </div>
         </div>
         <div className="live-support-header-actions">
           {pendingCount > 0 && (
