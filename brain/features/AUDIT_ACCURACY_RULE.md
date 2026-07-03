@@ -28,15 +28,15 @@ When reviewing **any** change — including retroactive audits of earlier assist
 
 ---
 
-## Verified facts (June 2026 — re-count when structure changes)
+## Verified facts (July 2026 — re-count when structure changes)
 
 | Claim | Verified value | How to verify |
 |-------|----------------|---------------|
-| QA module pages | **26** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
-| QA page features | **195+** OK | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
-| QA section features | **144+** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
-| `PageShell` + `PageFocusRail` | **26** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
-| SaaS IPC handlers | **379** | `node apps/desktop/_ipc-parity-report.js` → `saasHandlers` |
+| QA module pages | **28** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
+| QA page features | **207+** OK | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
+| QA section features | **143+** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
+| `PageShell` + `PageFocusRail` | **28** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
+| SaaS IPC handlers | **398** | `node apps/api/_audit-accuracy-check.js` → handler registry count |
 | Imperial pipeline A / B | **18** / **8** steps | `get-imperial-pipeline-config` |
 | `ManageableTabNav` focus mode | **7** pages | dashboard, browse-posts, history, settings, integrations, content-library, account-creator |
 | `ContentHubTabNav` focus mode | **1** page | content-hub |
@@ -70,8 +70,11 @@ When reviewing **any** change — including retroactive audits of earlier assist
 | "SOVEREIGN THREAT CAPTURED" banner | User-facing: **THEE_MICHAEL SECURITY REVIEW REQUIRED** |
 | "Kinetic code shown in production API" | Code delivered via **email/webhook** only in production |
 | "18 app modules" on landing | **26** authenticated module routes in SaaS |
-| "25 module routes" (stale) | **26** — re-count `pageFocus.ts` |
-| "350 IPC handlers" (stale) | **371** — re-run IPC parity report |
+| "25 module routes" (stale) | **28** — re-count `pageFocus.ts` |
+| "26 module routes" (stale) | **28** — re-count `pageFocus.ts` |
+| "350 IPC handlers" (stale) | **398** — re-run `npm run audit:accuracy` |
+| "371 IPC handlers" (stale) | **398** — re-run `npm run audit:accuracy` |
+| "379 IPC handlers" (stale) | **398** — re-run `npm run audit:accuracy` |
 | "7 Sovereign IPC channels" | **11** channels — see `THEE_MICHAEL_SECURITY.md` |
 | "Sovereign" user-facing brand | User-facing: **THEE_MICHAEL Security Control** |
 | "Deployed/fixed without QA" | Must run `audit:accuracy` + `test:sovereign-scan` + production QA |
@@ -100,6 +103,12 @@ All feature updates must also comply with [SOVEREIGN_THREAT_CAPTURE.md](../SOVER
 | [THEE_MICHAEL_SECURITY.md](./THEE_MICHAEL_SECURITY.md) | THEE_MICHAEL Security Control — Accept/Deny/Undo |
 | [AETHELGARD_PROTOCOL.md](./AETHELGARD_PROTOCOL.md) | THEE_MICHAEL v3.0-Aethelgard — pipelines, R2, lead capture |
 | [DESIGN_STUDIO.md](./DESIGN_STUDIO.md) | Design Studio — Imperialism Design Compositor |
+| [THEE_MICHAEL_SELF_HEAL.md](./THEE_MICHAEL_SELF_HEAL.md) | Self-heal journal, daily audit, recommendations |
+| [THEE_MICHAEL_SEO_INTELLIGENCE.md](./THEE_MICHAEL_SEO_INTELLIGENCE.md) | AEO/GEO/local/national SEO intelligence |
+| [THEE_MICHAEL_OVERLORD.md](./THEE_MICHAEL_OVERLORD.md) | Predictive overlord + live guide actions |
+| [ISSUE_CONTROL_PLANE.md](./ISSUE_CONTROL_PLANE.md) | THEE_MICHAEL GitOps issue console |
+| [CAMPAIGN_MASTERY.md](./CAMPAIGN_MASTERY.md) | A→Z campaign mastery guide |
+| [ONBOARDING_INTELLIGENCE.md](./ONBOARDING_INTELLIGENCE.md) | Setup wizard brand research + drip |
 
 ---
 
@@ -126,6 +135,9 @@ When implementing, documenting, or summarizing any Social Imperialism change:
 | `brain/PROMPT_VAULT.md` | Prompt Vault |
 | `brain/GROK.md` | Grok Engine |
 | `brain/SOVEREIGN_THREAT_CAPTURE.md` | Sovereign security layer |
+| `brain/THEE_MICHAEL_SELF_HEAL.md` | Self-heal + daily improvements |
+| `brain/THEE_MICHAEL_SEO_INTELLIGENCE.md` | SEO intelligence layer |
+| `brain/THEE_MICHAEL_OVERLORD.md` | Predictive overlord protocol |
 | `brain/features/*.md` | Per-feature indexes |
 | `brain/features/SITE_BLUEPRINT.md` | Public pages self-update rule |
 | `apps/web/src/lib/siteBlueprint.ts` | Marketing nav, footer, stats source |

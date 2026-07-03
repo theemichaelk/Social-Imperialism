@@ -360,6 +360,50 @@ export default function DashboardPage() {
 
   return (
     <div>
+      <CampaignMasteryPanel />
+
+      {tab === 'overview' && (
+        <div className="grid grid-2" style={{ marginBottom: 12 }}>
+          <DataPanel title="Campaign Pulse" live>
+            <p style={{ color: '#e2e8f0', fontSize: '0.95rem', margin: '0 0 8px' }}>
+              <strong>{campaign.brandName || 'Campaign'}</strong> · {campaign.domain || 'no domain'}
+            </p>
+            <SparkRow items={[
+              { label: 'Mode', value: stats.autoRulesEnabled ? 'Auto' : 'Manual', status: stats.autoRulesEnabled ? 'ok' : 'warn' },
+              { label: 'Setup', value: String(setup.nextStep ?? '—') },
+              { label: 'Queue', value: engagementQueue.length, status: engagementQueue.length ? 'warn' : 'ok' },
+              { label: 'Worker', value: worker.running || worker.isRunning ? 'Active' : 'Idle', status: worker.running ? 'ok' : 'off' },
+            ]} />
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: 12, marginBottom: 0 }}>
+              {worker.statusString || stats.workerStatus || 'Worker idle'} · {connectedApis}/{totalApis} APIs connected
+            </p>
+          </DataPanel>
+          <DataPanel title="Topic analysis" live>
+            {trending.slice(0, 4).map((t, i) => (
+              <div key={i} style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem' }}>{t.topic}</span>
+                <button className="btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => analyzeTopic(t.topic || '')}>Analyze</button>
+              </div>
+            ))}
+            {!trending.length && <p className="settings-panel-desc">Trending topics appear in the live strip above.</p>}
+            {topicAnalysis && <div className="post-card" style={{ marginTop: 8, fontSize: '0.85rem' }}>{topicAnalysis}</div>}
+          </DataPanel>
+          <DataPanel title="Live Headlines" live>
+            {news.map((n, i) => (
+              <div key={i} style={{ marginBottom: 8, fontSize: '0.85rem' }}>
+                {n.url ? <a href={n.url} target="_blank" rel="noreferrer">{n.title}</a> : n.title}
+                {n.source && <span style={{ color: '#64748b', fontSize: '0.7rem', marginLeft: 6 }}>{n.source}</span>}
+              </div>
+            ))}
+          </DataPanel>
+          {feedPlatforms.length > 0 && (
+            <DataPanel title="Feed Platform Mix" live>
+              <BarChart items={feedPlatforms} />
+            </DataPanel>
+          )}
+        </div>
+      )}
+
       <PageShell
         title="Mission Control"
         subtitle={`${campaign.brandName || 'Campaign'} · ${campaign.domain || 'no domain'}`}
@@ -425,51 +469,6 @@ export default function DashboardPage() {
         focusTabIds={[...DASHBOARD_FOCUS_TABS]}
         collapseGroups={[...DASHBOARD_COLLAPSE_GROUPS]}
       />
-
-      {tab === 'overview' && (
-        <>
-        <CampaignMasteryPanel />
-        <div className="grid grid-2">
-          <DataPanel title="Campaign Pulse" live>
-            <p style={{ color: '#e2e8f0', fontSize: '0.95rem', margin: '0 0 8px' }}>
-              <strong>{campaign.brandName || 'Campaign'}</strong> · {campaign.domain || 'no domain'}
-            </p>
-            <SparkRow items={[
-              { label: 'Mode', value: stats.autoRulesEnabled ? 'Auto' : 'Manual', status: stats.autoRulesEnabled ? 'ok' : 'warn' },
-              { label: 'Setup', value: String(setup.nextStep ?? '—') },
-              { label: 'Queue', value: engagementQueue.length, status: engagementQueue.length ? 'warn' : 'ok' },
-              { label: 'Worker', value: worker.running || worker.isRunning ? 'Active' : 'Idle', status: worker.running ? 'ok' : 'off' },
-            ]} />
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: 12, marginBottom: 0 }}>
-              {worker.statusString || stats.workerStatus || 'Worker idle'} · {connectedApis}/{totalApis} APIs connected
-            </p>
-          </DataPanel>
-          <DataPanel title="Topic analysis" live>
-            {trending.slice(0, 4).map((t, i) => (
-              <div key={i} style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem' }}>{t.topic}</span>
-                <button className="btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => analyzeTopic(t.topic || '')}>Analyze</button>
-              </div>
-            ))}
-            {!trending.length && <p className="settings-panel-desc">Trending topics appear in the live strip above.</p>}
-            {topicAnalysis && <div className="post-card" style={{ marginTop: 8, fontSize: '0.85rem' }}>{topicAnalysis}</div>}
-          </DataPanel>
-          <DataPanel title="Live Headlines" live>
-            {news.map((n, i) => (
-              <div key={i} style={{ marginBottom: 8, fontSize: '0.85rem' }}>
-                {n.url ? <a href={n.url} target="_blank" rel="noreferrer">{n.title}</a> : n.title}
-                {n.source && <span style={{ color: '#64748b', fontSize: '0.7rem', marginLeft: 6 }}>{n.source}</span>}
-              </div>
-            ))}
-          </DataPanel>
-          {feedPlatforms.length > 0 && (
-            <DataPanel title="Feed Platform Mix" live>
-              <BarChart items={feedPlatforms} />
-            </DataPanel>
-          )}
-        </div>
-        </>
-      )}
 
       {tab === 'feed' && (
         <div className="grid grid-2">

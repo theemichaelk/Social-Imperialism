@@ -94,6 +94,21 @@ export function ImperialContentStudio() {
 
   const approved = useMemo(() => posts.filter((p) => p.status === 'approved'), [posts]);
 
+  async function pollImperialPipelineResult(maxMs = 600000) {
+    const started = Date.now();
+    while (Date.now() - started < maxMs) {
+      await new Promise((r) => setTimeout(r, 3000));
+      const poll = await invoke<{
+        status?: string;
+        result?: { success?: boolean; stepCount?: number; assembled?: string; error?: string };
+        error?: string;
+      }>('get-imperial-pipeline-result');
+      if (poll.status === 'completed' && poll.result) return poll.result;
+      if (poll.status === 'failed') throw new Error(poll.error || poll.result?.error || 'Pipeline failed');
+    }
+    throw new Error('Pipeline timed out — check back in a few minutes');
+  }
+
   async function runImperialPipeline() {
     const topic = imperialTopic.trim() || keywords.split(/[,\n]+/).map((s) => s.trim()).filter(Boolean)[0];
     if (!topic) { setMsg('Enter a topic or keyword for the imperial pipeline'); return; }
@@ -101,15 +116,23 @@ export function ImperialContentStudio() {
     setImperialResult(null);
     setMsg(`Running ${imperialPipeline === 'strategy' ? 'Strategy (8-step)' : 'Content (18-step)'} pipeline…`);
     try {
-      const res = await invoke<{ success?: boolean; stepCount?: number; assembled?: string; error?: string }>('run-imperial-pipeline', {
+      const res = await invoke<{
+        success?: boolean;
+        async?: boolean;
+        stepCount?: number;
+        assembled?: string;
+        error?: string;
+      }>('run-imperial-pipeline', {
         pipeline: imperialPipeline,
         topic,
         brandName: campaign.brandName || 'Your Brand',
         keyword: topic,
       });
       if (res.error || res.success === false) throw new Error(res.error || 'Pipeline failed');
-      setImperialResult({ stepCount: res.stepCount, assembled: res.assembled });
-      setMsg(`Pipeline complete — ${res.stepCount} steps`);
+      const final = res.async ? await pollImperialPipelineResult() : res;
+      if (final.error || final.success === false) throw new Error(final.error || 'Pipeline failed');
+      setImperialResult({ stepCount: final.stepCount, assembled: final.assembled });
+      setMsg(`Pipeline complete — ${final.stepCount} steps`);
     } catch (e) {
       const err = (e as Error).message;
       setImperialResult({ error: err });

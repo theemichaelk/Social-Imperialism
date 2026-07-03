@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   dismissMasteryReminderForSession,
@@ -11,11 +12,14 @@ import {
 } from '@/lib/campaignMastery';
 
 export function CampaignMasteryBanner() {
+  const pathname = usePathname();
   const [status, setStatus] = useState<CampaignMasteryStatus | null>(null);
   const [hidden, setHidden] = useState(true);
   const [loading, setLoading] = useState(false);
+  const onDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
 
   useEffect(() => {
+    if (onDashboard) return;
     if (isMasteryReminderDismissed()) {
       setHidden(true);
       return;
@@ -24,9 +28,9 @@ export function CampaignMasteryBanner() {
       setStatus(st);
       setHidden(!st || st.complete);
     }).catch(() => setHidden(true));
-  }, []);
+  }, [onDashboard]);
 
-  if (hidden || !status || status.complete) return null;
+  if (onDashboard || hidden || !status || status.complete) return null;
 
   const step = status.currentStep;
 

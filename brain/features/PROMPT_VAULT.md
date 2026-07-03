@@ -9,10 +9,14 @@
 
 `/prompt-vault` — `PromptVaultPanel`, `PromptVaultPicker`
 
-## Seeded templates (includes security + brain)
+## Seeded templates (**8** starters)
 
 | Seed id | Feature tag |
 |---------|-------------|
+| `pv_seed_linkedin_post` | content-hub |
+| `pv_seed_reply_helpful` | replies |
+| `pv_seed_grok_imagine` | grok |
+| `pv_seed_keyword_monitor` | keywords |
 | `pv_seed_live_support` | support |
 | `pv_seed_omni_brain` | omni-brain |
 | `pv_seed_guardian_gatekeeper` | guardian |

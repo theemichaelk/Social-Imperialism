@@ -2,7 +2,7 @@
 
 Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the brain's feature index.
 
-**Audit accuracy rule (mandatory):** Before any feature update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md). Run `npm run audit:accuracy`, `npm run test:sovereign-scan`, and production QA (**152/152** page features, **138/138** section features — re-count after test changes). Feature indexes live in `brain/features/*.md`.
+**Audit accuracy rule (mandatory):** Before any feature update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md). Run `npm run audit:accuracy`, `npm run test:sovereign-scan`, and production QA (**207+** page features, **143+** section features — re-count after test changes). Feature indexes live in `brain/features/*.md`.
 
 ## Grok Engine (browser — no API)
 
@@ -68,7 +68,7 @@ Public marketing pages (`/`, `/founder`, footer, nav) self-update from `apps/web
 
 | Surface | Coverage |
 |---------|----------|
-| `PageShell` + `PageFocusRail` | **26** authenticated module routes in `pageFocus.ts` |
+| `PageShell` + `PageFocusRail` | **28** authenticated module routes in `pageFocus.ts` |
 | `ManageableTabNav` focus mode | **7** tab-heavy pages: Dashboard, Browse Posts, History, Settings, Integrations, Content Library, Account Creator |
 | `ContentHubTabNav` focus mode | Content Hub (dedicated tab catalog) |
 | Sidebar hints | All nav items in `nav.ts` |
@@ -102,14 +102,33 @@ Persistent requirement for all past, current, and future modules — every actio
 
 | Capability | API / Core | Web |
 |------------|------------|-----|
-| Imperial pipeline A (content) | `run-imperial-pipeline` (18 steps) | `ImperialContentStudio.tsx` |
-| Imperial pipeline B (strategy) | same (8 steps) | Pipeline selector in Content Hub |
+| Imperial pipeline A (content) | `run-imperial-pipeline` (18 steps, async) | `ImperialContentStudio.tsx` |
+| Imperial pipeline B (strategy) | same (8 steps, async) | Pipeline selector in Content Hub |
+| Pipeline status poll | `get-imperial-pipeline-result` | Poll after async accept |
 | R2 edge storage | `apps/api/src/r2.js` | `S3StatusPanel` shows R2 status |
 | Lead capture modal | `POST /api/leads/capture` | `LeadCaptureModal` on `/` + `/founder` |
 | Welcome email drip | `leadCaptureService` + scheduler | — |
 | Predictive motivation | — | `PredictiveMotivationPanel` on dashboard |
 
-**IPC handlers:** **371** (verify via `node apps/desktop/_ipc-parity-report.js`)
+**IPC handlers:** **398** (verify via `npm run audit:accuracy`)
+
+## Imperialism Brain extensions (July 2026)
+
+| Capability | Brain | Feature index |
+|------------|-------|---------------|
+| Self-Heal & daily improvements | [THEE_MICHAEL_SELF_HEAL.md](./THEE_MICHAEL_SELF_HEAL.md) | [features/THEE_MICHAEL_SELF_HEAL.md](./features/THEE_MICHAEL_SELF_HEAL.md) |
+| SEO Intelligence (AEO/GEO/local/national) | [THEE_MICHAEL_SEO_INTELLIGENCE.md](./THEE_MICHAEL_SEO_INTELLIGENCE.md) | [features/THEE_MICHAEL_SEO_INTELLIGENCE.md](./features/THEE_MICHAEL_SEO_INTELLIGENCE.md) |
+| Overlord Protocol + live guide | [THEE_MICHAEL_OVERLORD.md](./THEE_MICHAEL_OVERLORD.md) | [features/THEE_MICHAEL_OVERLORD.md](./features/THEE_MICHAEL_OVERLORD.md) |
+| Issue Control Plane | — | [features/ISSUE_CONTROL_PLANE.md](./features/ISSUE_CONTROL_PLANE.md) |
+| Campaign Mastery A→Z | — | [features/CAMPAIGN_MASTERY.md](./features/CAMPAIGN_MASTERY.md) |
+| Onboarding Intelligence | — | [features/ONBOARDING_INTELLIGENCE.md](./features/ONBOARDING_INTELLIGENCE.md) |
+
+| Route | Module |
+|-------|--------|
+| `/campaign-manager` | Campaign Command (verified nodes) |
+| `/dashboard/issues` | Issue Control Plane (admin) |
+| `/dashboard/admin` | Admin directory + live guide push |
+| `/dashboard/users` | My Account |
 
 ## Design Studio — Imperialism Design Compositor (July 2026)
 

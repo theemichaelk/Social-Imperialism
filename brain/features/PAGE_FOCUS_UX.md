@@ -8,7 +8,7 @@
 
 | Mechanism | Count | Pages / routes |
 |-----------|-------|----------------|
-| `PageShell` + `PageFocusRail` | **24** | All authenticated module routes in `pageFocus.ts` |
+| `PageShell` + `PageFocusRail` | **28** | All authenticated module routes in `pageFocus.ts` |
 | `ManageableTabNav` focus mode | **7** | dashboard, browse-posts, history, settings, integrations, content-library, account-creator |
 | `ContentHubTabNav` focus mode | **1** | content-hub |
 | Sidebar hints | **all nav items** | `apps/web/src/lib/nav.ts` |

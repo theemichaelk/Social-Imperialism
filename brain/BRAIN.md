@@ -21,6 +21,15 @@ This folder is the **internal intelligence layer** for Social Imperialism deskto
 | [features/GROK_ENGINE.md](./features/GROK_ENGINE.md) | Feature index — Grok browser automation |
 | [features/AETHELGARD_PROTOCOL.md](./features/AETHELGARD_PROTOCOL.md) | THEE_MICHAEL v3.0-Aethelgard — pipelines, R2, lead capture |
 | [features/DESIGN_STUDIO.md](./features/DESIGN_STUDIO.md) | Design Studio — Imperialism Design Compositor |
+| [THEE_MICHAEL_SELF_HEAL.md](./THEE_MICHAEL_SELF_HEAL.md) | **Self-Heal** — error journal, daily audit, safe auto-fixes |
+| [THEE_MICHAEL_SEO_INTELLIGENCE.md](./THEE_MICHAEL_SEO_INTELLIGENCE.md) | **SEO Intelligence** — AEO, GEO, local, national augmentation |
+| [THEE_MICHAEL_OVERLORD.md](./THEE_MICHAEL_OVERLORD.md) | **Overlord Protocol** — predictive execution, live guide actions |
+| [features/THEE_MICHAEL_SELF_HEAL.md](./features/THEE_MICHAEL_SELF_HEAL.md) | Feature index — self-heal |
+| [features/THEE_MICHAEL_SEO_INTELLIGENCE.md](./features/THEE_MICHAEL_SEO_INTELLIGENCE.md) | Feature index — SEO intelligence |
+| [features/THEE_MICHAEL_OVERLORD.md](./features/THEE_MICHAEL_OVERLORD.md) | Feature index — overlord protocol |
+| [features/ISSUE_CONTROL_PLANE.md](./features/ISSUE_CONTROL_PLANE.md) | Feature index — Issue Control GitOps console |
+| [features/CAMPAIGN_MASTERY.md](./features/CAMPAIGN_MASTERY.md) | Feature index — A→Z campaign mastery |
+| [features/ONBOARDING_INTELLIGENCE.md](./features/ONBOARDING_INTELLIGENCE.md) | Feature index — onboarding intelligence |
 | [AGENTS.md](./AGENTS.md) | Agent registry — IDs, surfaces, routing keywords |
 | [PROMPT_VAULT.md](./PROMPT_VAULT.md) | Prompt Vault — create, search, load, export, delete templates per campaign |
 | [FEATURES.md](./FEATURES.md) | Master feature catalog (desktop + web parity) |

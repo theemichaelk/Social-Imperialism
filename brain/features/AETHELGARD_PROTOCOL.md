@@ -20,9 +20,9 @@
 | Strategy Engine (B) | 8 | same |
 | Humanization | 16 max | `packages/core/src/contentHumanization.js` |
 
-IPC: `get-imperial-pipeline-config`, `run-imperial-pipeline`  
-Web UI: `ImperialContentStudio.tsx` — Run Imperial Pipeline panel  
-QA: `_test-qa-all-pages.js` content-hub imperial pipeline tests
+IPC: `get-imperial-pipeline-config`, `run-imperial-pipeline` (async default), `get-imperial-pipeline-result`  
+Web UI: `ImperialContentStudio.tsx` — Run Imperial Pipeline panel (polls async result)  
+QA: `_test-qa-all-pages.js` uses `quick: true` stub to avoid gateway timeout
 
 ## Section 6 — Automation Hub
 
@@ -42,8 +42,8 @@ QA: `_test-qa-all-pages.js` content-hub imperial pipeline tests
 
 | Claim | Value | Verify |
 |-------|-------|--------|
-| SaaS IPC handlers | **371** | `node apps/desktop/_ipc-parity-report.js` → `saasHandlers` |
-| Module routes | **26** | `pageFocus.ts` keys |
+| SaaS IPC handlers | **398** | `npm run audit:accuracy` → handler registry count |
+| Module routes | **28** | `pageFocus.ts` keys |
 | Imperial pipeline A steps | **18** | `get-imperial-pipeline-config` |
 | Imperial pipeline B steps | **8** | same |
 

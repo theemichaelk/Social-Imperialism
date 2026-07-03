@@ -13,7 +13,7 @@ export const PAGE_CHANNELS = {
     'serp-search', 'generate-image', 'schedule-post', 'publish-post', 'get-section-live',
   ],
   contentHub: [
-    'get-imperial-pipeline-config', 'run-imperial-pipeline',
+    'get-imperial-pipeline-config', 'run-imperial-pipeline', 'get-imperial-pipeline-result',
     'publish-post', 'schedule-post', 'generate-ai', 'generate-image', 'search-stock-photo',
     'curate-from-rss', 'run-content-studio', 'generate-content-batch', 'get-content-studio-config',
     'generate-viral-thumbnail', 'generate-viral-thumbnail-batch', 'get-thumbnail-studio-config',

@@ -166,7 +166,7 @@ const SECTIONS = [
       { name: 'Watched monitors', channel: 'get-watched-monitors', validate: (d) => Array.isArray(d) },
       { name: 'Worker status', channel: 'get-worker-status', validate: (d) => typeof d === 'object' },
       { name: 'Automation targets', channel: 'get-automation-targets', validate: (d) => typeof d === 'object' },
-      { name: 'Run auto rules', channel: 'run-auto-rules-now', validate: (d) => d?.success !== false || typeof d === 'object' },
+      { name: 'Run auto rules', channel: 'run-auto-rules-now', args: [{ quick: true }], validate: (d) => d?.success === true },
     ],
   },
   {

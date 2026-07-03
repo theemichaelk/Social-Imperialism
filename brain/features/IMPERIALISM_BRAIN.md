@@ -25,6 +25,11 @@
 
 - `omni-brain-planner` — workflow blueprints
 - `live-support-growth` — in-product support
+- `thee-michael-overlord` — predictive execution + guide actions
+- `thee-michael-self-heal` — daily improvements + error journal
+- `thee-michael-seo-intel` — AEO/GEO/local/national briefs
+- `onboarding-intelligence` — setup wizard expert
+- `campaign-mastery` — A→Z campaign guide
 
 ## Prompt Vault seeds
 

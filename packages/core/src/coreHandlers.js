@@ -287,7 +287,25 @@ function registerCoreHandlers(deps) {
     return { success: true, rules: merged };
   });
   ipcMain.handle('get-auto-rules-status', () => integrations.getAutoRulesStatus(store));
-  ipcMain.handle('run-auto-rules-now', async () => integrations.runWorkerCycle({ store, generateAI, sendNotification }));
+  ipcMain.handle('run-auto-rules-now', async (event, payload = {}) => {
+    if (payload?.quick) {
+      const status = integrations.getAutoRulesStatus(store);
+      return {
+        success: true,
+        quick: true,
+        skipped: !status.rules?.enabled,
+        monitorCount: 0,
+        discoveryCount: 0,
+      };
+    }
+    const runCycle = () => integrations.runWorkerCycle({ store, generateAI, sendNotification });
+    if (payload?.async !== false) {
+      setImmediate(() => { runCycle().catch(() => {}); });
+      return { success: true, accepted: true, async: true };
+    }
+    const result = await runCycle();
+    return { success: true, ...result };
+  });
 
   ipcMain.handle('generate-ai', async (event, userPrompt) => generateAI(userPrompt));
   ipcMain.handle('draft-post-reply', async (event, payload) => {

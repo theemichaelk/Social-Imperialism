@@ -94,7 +94,7 @@ const PAGES = [
       { name: 'Section live', channel: 'get-section-live', args: ['content-hub'], validate: (d) => d?.stats || d?.success !== false },
       { name: 'Studio config', channel: 'get-content-studio-config', validate: (d) => typeof d === 'object' },
       { name: 'Imperial pipeline config', channel: 'get-imperial-pipeline-config', validate: (d) => d?.pipelineA?.steps?.length === 18 && d?.pipelineB?.steps?.length === 8 },
-      { name: 'Imperial pipeline run', channel: 'run-imperial-pipeline', args: [{ pipeline: 'content', topic: 'QA audit test', brandName: 'Acme QA' }], validate: (d) => d?.success === true && d?.stepCount === 18 },
+      { name: 'Imperial pipeline run', channel: 'run-imperial-pipeline', args: [{ pipeline: 'content', topic: 'QA audit test', brandName: 'Acme QA', quick: true }], validate: (d) => d?.success === true && d?.stepCount === 18 },
       { name: 'Auto content settings', channel: 'get-auto-content-settings', validate: (d) => typeof d === 'object' },
       { name: 'Thumbnail config', channel: 'get-thumbnail-studio-config', validate: (d) => typeof d === 'object' },
       { name: 'Shorten URL', channel: 'shorten-url', args: ['https://acmegrowth.com'], validate: (d) => !!d?.shortUrl },
@@ -273,7 +273,7 @@ const PAGES = [
       { name: 'Auto search settings', channel: 'get-auto-search-settings', validate: (d) => typeof d === 'object' },
       { name: 'Notification settings', channel: 'get-notification-settings', validate: (d) => typeof d === 'object' },
       { name: 'Rules status', channel: 'get-auto-rules-status', validate: (d) => typeof d === 'object' },
-      { name: 'Run auto rules', channel: 'run-auto-rules-now', validate: (d) => d?.success !== false || typeof d === 'object' },
+      { name: 'Run auto rules', channel: 'run-auto-rules-now', args: [{ quick: true }], validate: (d) => d?.success === true },
     ],
   },
   {

@@ -153,6 +153,12 @@ const featureIndexes = [
   'SITE_BLUEPRINT.md',
   'AETHELGARD_PROTOCOL.md',
   'DESIGN_STUDIO.md',
+  'THEE_MICHAEL_SELF_HEAL.md',
+  'THEE_MICHAEL_SEO_INTELLIGENCE.md',
+  'THEE_MICHAEL_OVERLORD.md',
+  'ISSUE_CONTROL_PLANE.md',
+  'CAMPAIGN_MASTERY.md',
+  'ONBOARDING_INTELLIGENCE.md',
 ];
 for (const f of featureIndexes) {
   const p = path.join(ROOT, 'brain/features', f);
@@ -173,6 +179,9 @@ const brainAgentDocs = [
   'PROMPT_VAULT.md',
   'GROK.md',
   'SOVEREIGN_THREAT_CAPTURE.md',
+  'THEE_MICHAEL_SELF_HEAL.md',
+  'THEE_MICHAEL_SEO_INTELLIGENCE.md',
+  'THEE_MICHAEL_OVERLORD.md',
 ];
 for (const f of brainAgentDocs) {
   const p = path.join(ROOT, 'brain', f);
@@ -298,7 +307,7 @@ else if (!read(compositorPanel).includes('compose-social-layout')) {
 const designCompositorCore = path.join(ROOT, 'packages/core/src/designCompositor.js');
 if (!exists(designCompositorCore)) fail('Missing packages/core/src/designCompositor.js');
 
-const EXPECTED_HANDLERS = 397;
+const EXPECTED_HANDLERS = 398;
 
 // --- Report (async handler count) ---
 (async () => {
@@ -313,6 +322,7 @@ const EXPECTED_HANDLERS = 397;
     }
     if (!handlers['get-imperial-pipeline-config']) fail('handler registry missing get-imperial-pipeline-config');
     if (!handlers['run-imperial-pipeline']) fail('handler registry missing run-imperial-pipeline');
+    if (!handlers['get-imperial-pipeline-result']) fail('handler registry missing get-imperial-pipeline-result');
     if (!handlers['get-design-compositor-config']) fail('handler registry missing get-design-compositor-config');
     if (!handlers['compose-social-layout']) fail('handler registry missing compose-social-layout');
   } catch (e) {

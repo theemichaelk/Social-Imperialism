@@ -67,17 +67,83 @@ async function runPipeline(pipelineId, ctx, generateAI) {
   };
 }
 
-function registerImperialPipelineHandlers({ ipcMain, generateAI }) {
+const PIPELINE_JOB_KEY = 'imperialPipelineJob';
+
+function resolvePipelineId(payload = {}) {
+  return payload.pipeline === 'strategy' || payload.pipelineId === 'strategy' ? 'strategy' : 'content';
+}
+
+function runQuickPipeline(pipelineId, ctx) {
+  const steps = pipelineId === 'strategy' ? PIPELINE_B_STEPS : PIPELINE_A_STEPS;
+  const topic = ctx.topic || ctx.keyword || 'topic';
+  const brand = ctx.brandName || 'brand';
+  const outputs = {};
+  for (const step of steps) {
+    outputs[step.id] = `[QA] ${step.label} — ${brand} / ${topic}`;
+  }
+  return {
+    success: true,
+    quick: true,
+    pipelineId: pipelineId === 'strategy' ? 'pipeline-b' : 'pipeline-a',
+    stepCount: steps.length,
+    outputs,
+    assembled: outputs[steps[steps.length - 1].id],
+  };
+}
+
+function readPipelineJob(store) {
+  if (!store?.getItem) return null;
+  try {
+    return JSON.parse(store.getItem(PIPELINE_JOB_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function writePipelineJob(store, job) {
+  if (!store?.setItem) return;
+  store.setItem(PIPELINE_JOB_KEY, JSON.stringify(job));
+}
+
+function registerImperialPipelineHandlers({ ipcMain, generateAI, store }) {
   ipcMain.handle('get-imperial-pipeline-config', () => ({
     pipelineA: { id: 'content', label: 'Content Engine (18-Step)', steps: PIPELINE_A_STEPS },
     pipelineB: { id: 'strategy', label: 'Strategy Engine (8-Step)', steps: PIPELINE_B_STEPS },
   }));
 
+  ipcMain.handle('get-imperial-pipeline-result', () => {
+    const job = readPipelineJob(store);
+    if (!job) return { success: true, status: 'idle' };
+    return { success: true, ...job };
+  });
+
   ipcMain.handle('run-imperial-pipeline', async (event, payload = {}) => {
     try {
-      const pipelineId = payload.pipeline === 'strategy' || payload.pipelineId === 'strategy'
-        ? 'strategy'
-        : 'content';
+      const pipelineId = resolvePipelineId(payload);
+      if (payload.quick) return runQuickPipeline(pipelineId, payload);
+
+      const runSync = payload.sync === true || payload.async === false;
+      if (!runSync && store?.setItem) {
+        const existing = readPipelineJob(store);
+        if (existing?.status === 'running') {
+          return { success: true, accepted: true, async: true, status: 'running' };
+        }
+        writePipelineJob(store, {
+          status: 'running',
+          pipelineId: pipelineId === 'strategy' ? 'pipeline-b' : 'pipeline-a',
+          startedAt: new Date().toISOString(),
+        });
+        setImmediate(async () => {
+          try {
+            const result = await runPipeline(pipelineId, payload, generateAI);
+            writePipelineJob(store, { status: 'completed', completedAt: new Date().toISOString(), result });
+          } catch (e) {
+            writePipelineJob(store, { status: 'failed', completedAt: new Date().toISOString(), error: e.message });
+          }
+        });
+        return { success: true, accepted: true, async: true, status: 'running' };
+      }
+
       return await runPipeline(pipelineId, payload, generateAI);
     } catch (e) {
       return { success: false, error: e.message };

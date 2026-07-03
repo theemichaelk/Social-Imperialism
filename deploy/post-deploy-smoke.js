@@ -34,7 +34,14 @@ function versionGte(a, b) {
   const { token, project } = await login.json();
   if (!token) throw new Error(`login failed: ${login.status}`);
 
-  for (const [channel, args] of [['get-setup-status', []], ['get-section-live', ['onboarding']]]) {
+  const smokeChannels = [
+    ['get-setup-status', []],
+    ['get-section-live', ['onboarding']],
+    ['run-imperial-pipeline', [{ pipeline: 'content', topic: 'smoke', brandName: 'Smoke', quick: true }]],
+    ['run-auto-rules-now', [{ quick: true }]],
+    ['get-imperial-pipeline-result', []],
+  ];
+  for (const [channel, args] of smokeChannels) {
     const res = await fetch(`${API}/api/invoke/${channel}`, {
       method: 'POST',
       headers: {

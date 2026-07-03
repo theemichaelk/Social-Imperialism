@@ -76,9 +76,10 @@ try {
     for (const ch of required) {
       if (!handlers[ch]) errors.push(`handler missing after registry: ${ch}`);
     }
-    assert(Object.keys(handlers).length >= 379, `expected 379+ handlers, got ${Object.keys(handlers).length}`);
+    assert(Object.keys(handlers).length >= 398, `expected 398+ handlers, got ${Object.keys(handlers).length}`);
     if (!handlers['get-imperial-pipeline-config']) errors.push('handler missing: get-imperial-pipeline-config');
     if (!handlers['run-imperial-pipeline']) errors.push('handler missing: run-imperial-pipeline');
+    if (!handlers['get-imperial-pipeline-result']) errors.push('handler missing: get-imperial-pipeline-result');
   } catch (e) {
     errors.push(`registerAllHandlers failed: ${e.message}`);
   }

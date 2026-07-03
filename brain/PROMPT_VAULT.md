@@ -38,7 +38,7 @@ Pickers filter by feature + `general` fallbacks.
 ## Storage
 
 - Desktop / SaaS bridge: `promptVault_{activeCampaignId}` in project store
-- Seeded with 4 starter templates on first access
+- Seeded with **8** starter templates on first access
 - Does not overwrite keywords, post history, or automation rules on delete
 
 ## THEE_MICHAEL Security Control (security)

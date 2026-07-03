@@ -8,7 +8,7 @@
 
 Marketing and public pages self-update from the same sources as the product Brain:
 
-- `apps/web/src/lib/nav.ts` — module routes (25 items → features grid, module count, ticker)
+- `apps/web/src/lib/nav.ts` — module routes (28 items → features grid, module count, ticker)
 - `brain/FEATURES.md` — capability catalog
 - `brain/features/*.md` — per-feature indexes
 - `PRD.md` — product blueprint
