@@ -1,10 +1,17 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { invoke, getProjectId } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { LivePulse, RingChart, BarChart, DataPanel, chartShortLabel } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
+import { TheeMichaelSetupGuide } from '@/components/TheeMichaelSetupGuide';
+import {
+  researchBrandWithTheeMichael,
+  propagateBrandToModules,
+  type BrandResearchResult,
+} from '@/lib/onboardingIntelligence';
 import { useRouter } from 'next/navigation';
 
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
@@ -41,6 +48,7 @@ export default function OnboardingPage() {
   const [watchTerm, setWatchTerm] = useState('');
   const [watchType, setWatchType] = useState('keyword');
   const [watchPlatform, setWatchPlatform] = useState('All');
+  const [research, setResearch] = useState<BrandResearchResult | null>(null);
 
   const refreshStatus = useCallback(async (opts?: { applyStep?: boolean }) => {
     const [s, api] = await Promise.all([
@@ -76,6 +84,49 @@ export default function OnboardingPage() {
   const connectedCount = Object.values(apiMetrics).filter((v) => v === 'Connected').length;
   const totalApis = Object.keys(apiMetrics).length || 1;
 
+  async function applyResearchResult(result: BrandResearchResult) {
+    setResearch(result);
+    if (result.brand) {
+      setBrand({
+        brandName: result.brand.brandName || brand.brandName,
+        domain: result.brand.domain || brand.domain,
+        description: result.brand.description || '',
+        tone: result.brand.tone || 'Professional',
+        audience: result.brand.audience || '',
+        disallowedTopics: result.brand.disallowedTopics || '',
+        sampleMessages: result.brand.sampleMessages || '',
+        affiliateLinks: result.brand.affiliateLinks || '',
+      });
+    }
+    if (result.keywords?.length) {
+      setKeywords(result.keywords);
+      setSuggested(result.suggestedKeywords || result.keywords.map((k) => k.term));
+    }
+    if (result.platforms?.length) setPlatforms(result.platforms);
+    if (result.globalPrompt) setGlobalPrompt(result.globalPrompt);
+    if (result.monitors?.length) setMonitors(result.monitors);
+  }
+
+  async function researchMyBrand() {
+    const domain = brand.domain.trim();
+    if (!domain) {
+      setMsg('Enter your domain first — e.g. acme.com');
+      return;
+    }
+    setLoading(true);
+    setMsg('THEE_MICHAEL researching your brand online (website + SEO + keywords)…');
+    try {
+      const result = await researchBrandWithTheeMichael(domain, brand.brandName.trim() || undefined);
+      if (!result) throw new Error('Brand research failed — check API connection');
+      await applyResearchResult(result);
+      setMsg(`Researched ${result.brand.domain} — ${result.suggestedKeywords?.length || 0} keywords, wired to Campaign Command`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function saveBrand() {
     if (!brand.brandName.trim() || !brand.domain.trim()) {
       setMsg('Brand name and domain are required.');
@@ -93,9 +144,10 @@ export default function OnboardingPage() {
         sampleMessages: brand.sampleMessages,
         affiliateLinks: brand.affiliateLinks,
       });
+      await propagateBrandToModules(brand);
       await refreshStatus();
       setStep(2);
-      setMsg('Brand integrated with AI — wire your API connections next');
+      setMsg('Brand integrated with AI — data flowing to Brand, Keywords, SEO Tools, and Campaign Command');
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -152,6 +204,7 @@ export default function OnboardingPage() {
     try {
       const posts = await invoke<Post[]>('get-live-feed', { quick: !full, refresh: full });
       setFeed((posts || []).slice(0, 8));
+      await invoke('set-onboarding-feed-previewed').catch(() => null);
       setStep(4);
       setMsg(`${(posts || []).length} posts discovered`);
     } catch (e) {
@@ -246,10 +299,18 @@ export default function OnboardingPage() {
           }
         }
       }
+      await propagateBrandToModules(brand);
+      if (keywords.length) {
+        await invoke('save-keywords', keywords.map((k) => ({
+          term: k.term,
+          platforms: k.platforms?.length ? k.platforms : platforms,
+        })));
+      }
+      if (monitors.length) await invoke('save-watched-monitors', monitors);
       await invoke('trigger-full-auto-search').catch(() => null);
       if (enableWorker) await invoke('start-worker').catch(() => null);
       await invoke('set-onboarding-complete', true);
-      router.push('/dashboard');
+      router.push('/campaign-manager');
     } catch (e) {
       setMsg((e as Error).message);
       setLoading(false);
@@ -286,6 +347,15 @@ export default function OnboardingPage() {
       />
 
       <SectionLivePanel section="onboarding" />
+
+      <TheeMichaelSetupGuide
+        step={step}
+        loading={loading}
+        research={research}
+        domain={brand.domain}
+        canResearch={step === 1}
+        onResearch={researchMyBrand}
+      />
 
       <div className="dash-hero" style={{ marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}>
@@ -333,6 +403,9 @@ export default function OnboardingPage() {
           <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Every reply, keyword, and analysis uses this profile.</p>
           <input className="input" placeholder="Brand name *" value={brand.brandName} onChange={(e) => setBrand({ ...brand, brandName: e.target.value })} style={{ marginBottom: 8 }} />
           <input className="input" placeholder="Domain * (e.g. acme.com)" value={brand.domain} onChange={(e) => setBrand({ ...brand, domain: e.target.value })} style={{ marginBottom: 8 }} />
+          <button className="btn" style={{ marginBottom: 8 }} onClick={researchMyBrand} disabled={loading || !brand.domain.trim()}>
+            ✨ THEE_MICHAEL — Research & Auto-Fill from Web
+          </button>
           <textarea className="input" placeholder="Brand description — what you do, who you help" value={brand.description} onChange={(e) => setBrand({ ...brand, description: e.target.value })} style={{ marginBottom: 8 }} />
           <input className="input" placeholder="Target audience (optional)" value={brand.audience} onChange={(e) => setBrand({ ...brand, audience: e.target.value })} style={{ marginBottom: 8 }} />
           <select className="input" value={brand.tone} onChange={(e) => setBrand({ ...brand, tone: e.target.value })}>
@@ -474,9 +547,13 @@ export default function OnboardingPage() {
             <div className="metric-tile"><div className="metric-tile-val">{monitors.length}</div><div className="metric-tile-label">Monitors</div></div>
             <div className="metric-tile"><div className="metric-tile-val">{connectedCount}</div><div className="metric-tile-label">APIs Live</div></div>
           </div>
-          <button className="btn primary" onClick={finish} disabled={loading}>
-            {loading ? 'Finishing…' : 'Finish Setup → Dashboard'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn primary" onClick={finish} disabled={loading}>
+              {loading ? 'Finishing…' : 'Finish Setup → Campaign Command'}
+            </button>
+            <Link href="/campaign-manager?tab=nodes" className="btn">Open Verified Nodes →</Link>
+            <Link href="/support" className="btn">Ask Imperialism Brain</Link>
+          </div>
         </div>
       )}
 

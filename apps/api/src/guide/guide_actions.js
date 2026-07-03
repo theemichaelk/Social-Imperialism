@@ -16,7 +16,7 @@ const GUIDE_VIEWS = [
 
   // Create & Publish
   { id: 'onboarding', section: 'Create & Publish', label: 'Setup Wizard', href: '/onboarding', navId: 'onboarding', sectionId: 'create',
-    aliases: ['setup wizard', 'onboarding', 'go live checklist', 'go-live'] },
+    aliases: ['setup wizard', 'onboarding', 'go live checklist', 'go-live', 'brand profile', 'research my brand', 'auto-fill brand'] },
   { id: 'content-hub', section: 'Create & Publish', label: 'Create', href: '/content-hub?tab=studio', navId: 'content-hub', sectionId: 'create', tab: 'studio', pageId: 'content-hub', selectTab: 'studio',
     aliases: ['create', 'content hub', 'generate', 'draft', 'publish', 'studio tab', 'write post'] },
   { id: 'content-library', section: 'Create & Publish', label: 'Library', href: '/content-library', navId: 'content-library', sectionId: 'create',
@@ -181,6 +181,16 @@ function planGuideActions(query, context = {}) {
       reply: isExternal
         ? `Opening ${url} in a new tab.`
         : `Navigating within ${PRODUCT}.`,
+    };
+  }
+
+  if (/research\s+my\s+brand|auto[\s-]?fill\s+brand|setup\s+wizard|brand\s+profile/i.test(q)) {
+    const view = resolveViewById('onboarding');
+    const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });
+    actions.unshift({ type: 'message', text: 'THEE_MICHAEL intelligent setup → enter domain and click Research My Brand…' });
+    return {
+      actions,
+      reply: 'Opening **Setup Wizard** — enter your domain, click **THEE_MICHAEL — Research & Auto-Fill from Web**. I pull live site data, SEO intel, keywords, and wire everything to **Campaign Command**.',
     };
   }
 

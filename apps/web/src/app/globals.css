@@ -3021,6 +3021,49 @@ textarea.input { min-height: 100px; resize: vertical; }
 .thee-michael-avatar-md { width: 3.25rem; height: 3.25rem; }
 .thee-michael-avatar-lg { width: 4.5rem; height: 4.5rem; }
 .thee-michael-avatar-hero { width: 7rem; height: 7rem; }
+/* THEE_MICHAEL intelligent setup wizard */
+.thee-michael-setup-guide {
+  margin-bottom: 1.25rem; padding: 1rem 1.1rem; border-radius: 12px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.07), rgba(168, 85, 247, 0.05));
+}
+.thee-michael-setup-guide-header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;
+}
+.thee-michael-setup-eyebrow {
+  margin: 0; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--accent3);
+}
+.thee-michael-setup-title { margin: 0.2rem 0 0; font-size: 0.85rem; line-height: 1.45; color: var(--muted); max-width: 36rem; }
+.thee-michael-research-btn { margin-left: auto; flex-shrink: 0; }
+.thee-michael-setup-steps {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.65rem;
+}
+.thee-michael-setup-step-pill {
+  font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--muted);
+}
+.thee-michael-setup-step-pill.ok { border-color: rgba(34, 197, 94, 0.4); color: #86efac; }
+.thee-michael-setup-step-pill.warn { border-color: rgba(245, 158, 11, 0.4); color: #fcd34d; }
+.thee-michael-module-flow { margin-top: 0.75rem; }
+.thee-michael-module-flow-label { margin: 0 0 0.4rem; font-size: 0.72rem; color: var(--accent3); text-transform: uppercase; letter-spacing: 0.06em; }
+.thee-michael-module-flow-grid {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+}
+.thee-michael-module-chip {
+  display: flex; flex-direction: column; gap: 0.1rem;
+  padding: 0.35rem 0.55rem; border-radius: 8px; text-decoration: none;
+  border: 1px solid var(--border); background: rgba(10, 18, 35, 0.6);
+  min-width: 7rem;
+}
+.thee-michael-module-chip:hover { border-color: var(--accent); text-decoration: none; }
+.thee-michael-module-name { font-size: 0.72rem; font-weight: 600; color: var(--text); }
+.thee-michael-module-data { font-size: 0.62rem; color: var(--muted); }
+.thee-michael-module-chip.status-ready { border-color: rgba(34, 197, 94, 0.35); }
+.thee-michael-module-chip.status-live { border-color: rgba(56, 189, 248, 0.45); }
+.thee-michael-setup-recs {
+  margin: 0.65rem 0 0; padding-left: 1.1rem; font-size: 0.78rem; color: var(--muted);
+}
+.thee-michael-setup-recs a { color: var(--accent); }
 .sovereign-banner-compact {
   display: flex;
   flex-wrap: wrap;

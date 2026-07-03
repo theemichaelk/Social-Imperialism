@@ -107,9 +107,11 @@ function registerCoreHandlers(deps) {
     const linkedAccountsCount = JSON.parse(store.getItem(`linkedAccounts_${activeCampaignId}`) || '[]').length;
     const globalKeys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
     const apiConnected = Object.values(buildApiMetrics(globalKeys)).filter((v) => v === 'Connected').length;
+    const feedPreviewed = store.getItem('onboardingFeedPreviewed') === 'true';
     let nextStep = 1;
     if (hasProject && apiConnected < 5) nextStep = 2;
     else if (hasProject && !keywords.length) nextStep = 3;
+    else if (hasProject && keywords.length && !feedPreviewed) nextStep = 4;
     else if (hasProject && keywords.length && !onboardingComplete) nextStep = 5;
     else if (hasProject && keywords.length && onboardingComplete) nextStep = 5;
     return {
@@ -123,6 +125,11 @@ function registerCoreHandlers(deps) {
 
   ipcMain.handle('set-onboarding-complete', (event, value) => {
     store.setItem('onboardingComplete', value ? 'true' : 'false');
+    return { success: true };
+  });
+
+  ipcMain.handle('set-onboarding-feed-previewed', () => {
+    store.setItem('onboardingFeedPreviewed', 'true');
     return { success: true };
   });
 

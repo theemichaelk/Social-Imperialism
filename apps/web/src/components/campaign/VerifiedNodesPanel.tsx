@@ -95,6 +95,7 @@ export function VerifiedNodesPanel() {
   const [selectedNodes, setSelectedNodes] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
+  const [brandTargetUrl, setBrandTargetUrl] = useState('https://www.socialimperialism.com');
   const [stats, setStats] = useState({ verified: 0, awaiting: 0, total: 0 });
   const [newCampaignName, setNewCampaignName] = useState('');
 
@@ -116,10 +117,15 @@ export function VerifiedNodesPanel() {
     setLoading(true);
     setMsg('');
     try {
-      const [treeRes, campRes] = await Promise.all([
+      const [treeRes, campRes, activeBrand] = await Promise.all([
         invoke<{ nodes: VerifiedNode[]; verifiedCount: number; awaitingAction: number }>('get-verified-node-tree'),
         invoke<{ campaigns: Campaign[] }>('list-verified-campaigns'),
+        invoke<{ domain?: string; brandName?: string } | null>('get-active-campaign').catch(() => null),
       ]);
+      if (activeBrand?.domain) {
+        const d = activeBrand.domain.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+        setBrandTargetUrl(`https://${d}`);
+      }
       setNodes(treeRes?.nodes || []);
       setStats({
         verified: treeRes?.verifiedCount || 0,
@@ -145,7 +151,7 @@ export function VerifiedNodesPanel() {
     try {
       const res = await invoke<{ verified: number; failed: number }>('discover-verify-platform-tree', {
         autoVerify: true,
-        targetUrl: 'https://www.socialimperialism.com',
+        targetUrl: brandTargetUrl,
       });
       setMsg(`Discovery complete — ${res?.verified || 0} verified, ${res?.failed || 0} need repair.`);
       await refresh();
@@ -188,7 +194,7 @@ export function VerifiedNodesPanel() {
     try {
       const res = await invoke<{ success?: boolean; campaign?: Campaign; error?: string }>('create-verified-campaign', {
         name: newCampaignName.trim(),
-        targetUrl: 'https://www.socialimperialism.com',
+        targetUrl: brandTargetUrl,
       });
       if (res?.success === false) {
         setMsg(res.error || 'Create failed');

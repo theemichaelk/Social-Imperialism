@@ -92,8 +92,8 @@ export const PAGE_CHANNELS = {
     'test-all-connections', 'run-live-connection-audit', 'generate-keywords', 'save-keywords', 'get-keywords',
     'get-keyword-api-status', 'get-live-feed', 'trigger-full-auto-search', 'generate-global-custom-prompt',
     'get-watched-monitors', 'save-watched-monitors', 'get-auto-rules', 'save-auto-rules',
-    'save-auto-search-settings', 'start-worker', 'set-onboarding-complete', 'get-section-live',
-    'get-linked-accounts',
+    'save-auto-search-settings', 'start-worker', 'set-onboarding-complete', 'set-onboarding-feed-previewed',
+    'seed-brand-from-website', 'get-section-live', 'get-linked-accounts',
   ],
   accountHub: [
     'get-linked-accounts', 'get-account-hub-status', 'refresh-account-profile', 'connect-platform',

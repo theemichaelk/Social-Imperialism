@@ -148,6 +148,7 @@ export const QUICK_PROMPTS = [
   'Ask THEE_MICHAEL',
   ...SEO_QUICK_PROMPTS.slice(0, 2),
   'What should I improve today?',
+  'Research my brand in Setup Wizard',
 ];
 
 export function resolveSearchRoute(query: string): SearchRoute | null {
