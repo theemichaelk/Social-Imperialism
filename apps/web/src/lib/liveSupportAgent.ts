@@ -7,11 +7,12 @@ import { OVERLORD_SYSTEM_APPEND } from '@/lib/theeMichaelOverlord';
 import { THEE_MICHAEL_SEO_EXPERT_APPEND, SEO_QUICK_PROMPTS } from '@/lib/theeMichaelSeoExpert';
 import { SELF_HEAL_EXPERT_APPEND } from '@/lib/selfHealIntelligence';
 import { ONBOARDING_EXPERT_APPEND } from '@/lib/theeMichaelOnboardingExpert';
+import { MASTERY_EXPERT_APPEND, MASTERY_QUICK_PROMPTS } from '@/lib/theeMichaelMasteryExpert';
 
 export const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
 export const INIT_MESSAGE =
-  'Hey — welcome to Social Imperialism. I run daily self-audits, document errors with fixes, learn from them, and recommend improvements across SEO, content, engagement, and integrations. Ask "what should I improve today?" or any growth question.';
+  'Hey — welcome to Social Imperialism. THEE_MICHAEL will walk you **A→Z through every module** (26 steps) and remember where you left off. Say **"Walk me through A-Z setup now"** or ask "where am I in setup?" — I also run daily audits and SEO intelligence. What should we tackle first?';
 
 export const LIVE_SUPPORT_SYSTEM_PROMPT = `You are Imperialism Brain, the official live support agent for Social Imperialism (socialimperialism.com).
 Help users set up, troubleshoot, optimize, and launch social media growth workflows.
@@ -120,6 +121,10 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Open Discovery', href: '/browse-posts' },
   },
   {
+    patterns: [/walk\s+(me\s+)?through/i, /a[\s-]?z\s+setup/i, /campaign\s+mastery/i, /continue\s+(my\s+)?setup/i, /where\s+am\s+i/i, /finish\s+setup/i],
+    route: { label: 'Campaign Mastery', href: '/dashboard', action: 'campaign-mastery' },
+  },
+  {
     patterns: [/setup\s+wizard/i, /onboard/i, /brand\s+profile/i],
     route: { label: 'Setup Wizard', href: '/onboarding' },
   },
@@ -146,11 +151,10 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
 ];
 
 export const QUICK_PROMPTS = [
+  ...MASTERY_QUICK_PROMPTS,
   'Take me to Integrations',
-  'Open billing settings',
   'Connect a platform',
   'Posts not scheduling',
-  'Ask THEE_MICHAEL',
   ...SEO_QUICK_PROMPTS.slice(0, 2),
   'What should I improve today?',
   'Research my brand in Setup Wizard',
@@ -217,7 +221,7 @@ export function getPendingApprovals(): ApprovalTicket[] {
 export function buildSupportPrompt(
   messages: SupportMessage[],
   userMessage: string,
-  context?: { pathname?: string; seoIntel?: string; selfHealIntel?: string; onboardingIntel?: string },
+  context?: { pathname?: string; seoIntel?: string; selfHealIntel?: string; onboardingIntel?: string; masteryIntel?: string },
 ): string {
   const history = messages
     .slice(-8)
@@ -227,7 +231,8 @@ export function buildSupportPrompt(
   const seoBlock = context?.seoIntel ? `\n${context.seoIntel}` : '';
   const healBlock = context?.selfHealIntel ? `\n${context.selfHealIntel}` : '';
   const onboardBlock = context?.onboardingIntel ? `\n${context.onboardingIntel}` : '';
-  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${THEE_MICHAEL_SEO_EXPERT_APPEND}${SELF_HEAL_EXPERT_APPEND}${ONBOARDING_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${seoBlock}${healBlock}${onboardBlock}
+  const masteryBlock = context?.masteryIntel ? `\n${context.masteryIntel}` : '';
+  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${THEE_MICHAEL_SEO_EXPERT_APPEND}${SELF_HEAL_EXPERT_APPEND}${ONBOARDING_EXPERT_APPEND}${MASTERY_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${seoBlock}${healBlock}${onboardBlock}${masteryBlock}
 
 Conversation:
 ${history}

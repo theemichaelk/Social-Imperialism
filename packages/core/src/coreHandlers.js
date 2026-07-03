@@ -1100,6 +1100,8 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     }
   });
 
+  const { registerCampaignMasteryHandlers } = require('./campaignMasteryGuide');
+  registerCampaignMasteryHandlers({ ipcMain, store, resolveKeys, buildApiMetrics });
 }
 
 module.exports = { registerCoreHandlers };

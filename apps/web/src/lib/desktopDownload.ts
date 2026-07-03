@@ -1,25 +1,53 @@
-/** Desktop app download metadata — installer hosted on S3 or overridden via env. */
+/** Desktop app download metadata — installer served via authenticated presigned S3 URL. */
+
+import { apiFetch } from '@/lib/api';
 
 export const DESKTOP_APP_VERSION = '1.2.26';
 
-export type DesktopDownloadInfo = {
+export type DesktopDownloadMeta = {
   version: string;
-  url: string;
   filename: string;
   platform: 'windows';
   sizeHint?: string;
+  requiresAuth: true;
 };
 
-export function getDesktopDownloadInfo(): DesktopDownloadInfo {
+export type DesktopDownloadUrl = DesktopDownloadMeta & {
+  url: string;
+  expiresIn: number;
+};
+
+export function getDesktopDownloadMeta(): DesktopDownloadMeta {
   const version = process.env.NEXT_PUBLIC_DESKTOP_APP_VERSION || DESKTOP_APP_VERSION;
-  const encoded = encodeURIComponent(`Social Imperialism Setup ${version}.exe`);
-  const defaultUrl = `https://social-imperialism.s3.us-east-1.amazonaws.com/releases/${encoded}`;
-  const url = process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL || defaultUrl;
   return {
     version,
-    url,
     filename: `Social Imperialism Setup ${version}.exe`,
     platform: 'windows',
     sizeHint: '~180 MB',
+    requiresAuth: true,
   };
+}
+
+export async function fetchDesktopDownloadInfo(): Promise<DesktopDownloadMeta> {
+  try {
+    const res = await apiFetch('/api/desktop/info') as DesktopDownloadMeta & { ok?: boolean };
+    if (res?.version) {
+      return {
+        version: res.version,
+        filename: res.filename || `Social Imperialism Setup ${res.version}.exe`,
+        platform: 'windows',
+        sizeHint: res.sizeHint || '~180 MB',
+        requiresAuth: true,
+      };
+    }
+  } catch { /* fall through */ }
+  return getDesktopDownloadMeta();
+}
+
+export async function fetchDesktopDownloadUrl(): Promise<DesktopDownloadUrl> {
+  const res = await apiFetch('/api/desktop/download-url') as DesktopDownloadUrl & { ok?: boolean; error?: string };
+  if (!res?.ok || !res?.url) {
+    throw new Error(res?.error || 'Download link unavailable — sign in and try again');
+  }
+  return res;
 }

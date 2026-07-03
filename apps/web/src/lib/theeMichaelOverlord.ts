@@ -28,6 +28,8 @@ export type CognitiveTraceStep = {
 
 export type OverlordIntervention = {
   id: string;
+  /** Stable key for session dismiss — survives poll cycles with changing ids */
+  dismissKey?: string;
   kind: 'friction' | 'scaling' | 'onboarding' | 'health' | 'navigation';
   title: string;
   body: string;
@@ -37,6 +39,44 @@ export type OverlordIntervention = {
   priority: number;
   createdAt: string;
 };
+
+export type PageHealthSnapshot = {
+  summary?: { ok?: number; warn?: number; broken?: number };
+  sections?: Array<{ label?: string; status?: string }>;
+};
+
+const DISMISS_KEY = 'si_overlord_dismissed';
+
+export function isInterventionDismissed(dismissKey: string): boolean {
+  if (typeof window === 'undefined' || !dismissKey) return false;
+  try {
+    const raw = sessionStorage.getItem(DISMISS_KEY);
+    const arr = raw ? JSON.parse(raw) as string[] : [];
+    return arr.includes(dismissKey);
+  } catch {
+    return false;
+  }
+}
+
+export function dismissInterventionByKey(dismissKey: string): void {
+  if (typeof window === 'undefined' || !dismissKey) return;
+  try {
+    const raw = sessionStorage.getItem(DISMISS_KEY);
+    const arr = raw ? JSON.parse(raw) as string[] : [];
+    if (!arr.includes(dismissKey)) arr.push(dismissKey);
+    sessionStorage.setItem(DISMISS_KEY, JSON.stringify(arr));
+  } catch { /* ignore */ }
+}
+
+export function clearDismissedIntervention(dismissKey: string): void {
+  if (typeof window === 'undefined' || !dismissKey) return;
+  try {
+    const raw = sessionStorage.getItem(DISMISS_KEY);
+    const arr = raw ? JSON.parse(raw) as string[] : [];
+    const next = arr.filter((k) => k !== dismissKey);
+    sessionStorage.setItem(DISMISS_KEY, JSON.stringify(next));
+  } catch { /* ignore */ }
+}
 
 export type UiMutateDetail = {
   selector?: string;
@@ -308,26 +348,49 @@ export function buildInterventionsForContext(ctx: {
   dwellMs: number;
   healthBroken?: number;
   healthWarn?: number;
+  brokenModuleLabels?: string[];
+  isAdmin?: boolean;
   isIntegrations?: boolean;
   isApiKeys?: boolean;
 }): OverlordIntervention[] {
   const out: OverlordIntervention[] = [];
 
   if ((ctx.healthBroken || 0) > 0) {
+    const count = ctx.healthBroken || 0;
+    const sample = (ctx.brokenModuleLabels || []).slice(0, 3);
+    const sampleText = sample.length
+      ? ` Affected: ${sample.join(', ')}${count > sample.length ? '…' : ''}.`
+      : '';
+    const isAdmin = !!ctx.isAdmin;
     out.push({
-      id: `int_health_${Date.now()}`,
+      id: 'int_health_degraded',
+      dismissKey: 'health_degraded',
       kind: 'health',
       title: 'Friction detected in platform health',
-      body: `${ctx.healthBroken} module(s) reported degraded status. I can open Issue Control and run a live audit.`,
+      body: isAdmin
+        ? `${count} module(s) reported degraded status. I can open Issue Control and run a live audit.${sampleText}`
+        : `${count} module(s) need attention. I can open Integrations and run live connection probes.${sampleText}`,
       actionLabel: 'Run audit',
-      action: {
-        type: 'audit',
-        label: 'Issue Control',
-        href: '/dashboard/issues',
-        navId: 'dashboard-issues',
-        sectionId: 'system',
-        autoExecute: true,
-      },
+      action: isAdmin
+        ? {
+            type: 'audit',
+            label: 'Issue Control',
+            href: '/dashboard/issues',
+            navId: 'dashboard-issues',
+            sectionId: 'system',
+            autoExecute: true,
+            message: 'THEE_MICHAEL — running live platform audit…',
+          }
+        : {
+            type: 'audit',
+            label: 'Live Probes',
+            href: '/integrations?tab=probes',
+            tab: 'probes',
+            navId: 'integrations',
+            sectionId: 'system',
+            autoExecute: true,
+            message: 'THEE_MICHAEL — running connection audit…',
+          },
       priority: 90,
       createdAt: new Date().toISOString(),
     });
@@ -388,6 +451,47 @@ export function buildInterventionsForContext(ctx: {
   }
 
   return out.sort((a, b) => b.priority - a.priority);
+}
+
+/** Fetch page health and dispatch the highest-priority non-dismissed intervention. */
+export async function pollOverlordInterventions(ctx: {
+  pathname: string;
+  dwellMs?: number;
+  isAdmin?: boolean;
+  invokeHealth: () => Promise<PageHealthSnapshot>;
+}): Promise<void> {
+  let healthBroken = 0;
+  let healthWarn = 0;
+  let brokenModuleLabels: string[] = [];
+
+  try {
+    const h = await ctx.invokeHealth();
+    healthBroken = h?.summary?.broken || 0;
+    healthWarn = h?.summary?.warn || 0;
+    brokenModuleLabels = (h?.sections || [])
+      .filter((s) => s.status === 'broken')
+      .map((s) => s.label || '')
+      .filter(Boolean);
+    if (healthBroken === 0) clearDismissedIntervention('health_degraded');
+  } catch { /* ignore */ }
+
+  const interventions = buildInterventionsForContext({
+    pathname: ctx.pathname,
+    dwellMs: ctx.dwellMs ?? 0,
+    healthBroken,
+    healthWarn,
+    brokenModuleLabels,
+    isAdmin: ctx.isAdmin,
+    isIntegrations: ctx.pathname === '/integrations',
+    isApiKeys: ctx.pathname === '/settings' && typeof window !== 'undefined' && window.location.search.includes('tab=api-keys'),
+  });
+
+  for (const int of interventions) {
+    const dismissKey = int.dismissKey || int.id;
+    if (isInterventionDismissed(dismissKey)) continue;
+    dispatchIntervention(int);
+    break;
+  }
 }
 
 export function guardedExecute(

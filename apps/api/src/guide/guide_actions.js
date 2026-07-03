@@ -184,6 +184,16 @@ function planGuideActions(query, context = {}) {
     };
   }
 
+  if (/walk\s+(me\s+)?through|a[\s-]?z\s+setup|campaign\s+mastery|continue\s+(my\s+)?setup|where\s+am\s+i|finish\s+setup|get\s+started|full\s+setup/i.test(q)) {
+    const view = resolveViewById('dashboard');
+    const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });
+    actions.unshift({ type: 'message', text: 'THEE_MICHAEL Campaign Mastery A→Z — opening Mission Control progress panel…' });
+    return {
+      actions,
+      reply: 'Opening **Mission Control** — use the **THEE_MICHAEL · Campaign Mastery** panel or Imperialism Brain. Say **"Walk me through A-Z setup now"** and I will highlight each sidebar module step-by-step. Progress is saved per campaign until you hit 100%.',
+    };
+  }
+
   if (/research\s+my\s+brand|auto[\s-]?fill\s+brand|setup\s+wizard|brand\s+profile/i.test(q)) {
     const view = resolveViewById('onboarding');
     const actions = planForView(view, { cantFind: CANT_FIND_RE.test(q), query: q });

@@ -13,8 +13,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  function getReturnTo(): string {
+    if (typeof window === 'undefined') return '/dashboard';
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('returnTo') || params.get('next') || '/dashboard';
+    return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/dashboard';
+  }
+
   useEffect(() => {
-    if (getToken()) window.location.replace('/dashboard');
+    if (getToken()) window.location.replace(getReturnTo());
   }, []);
 
   useEffect(() => {
@@ -47,7 +54,7 @@ export default function LoginPage() {
     try {
       const res = await auth.login(emailResult.ok ? emailResult.email : email.trim().toLowerCase(), password);
       setSession(res);
-      window.location.replace('/dashboard');
+      window.location.replace(getReturnTo());
     } catch (err) {
       const e = err as ApiError;
       if (e.setupUrl) {

@@ -3,9 +3,11 @@
  * Used by LiveSupportPanel, ImperialismBrainPromptBar, and BrainNavigatorHost.
  */
 
+import { invoke } from '@/lib/api';
 import { NAV_SECTIONS } from '@/lib/nav';
 import { PAGE_FOCUS } from '@/lib/pageFocus';
 import { SEARCH_ROUTES, type SearchRoute } from '@/lib/liveSupportAgent';
+import { runSelfHealAudit } from '@/lib/selfHealIntelligence';
 
 function resolveSearchRoute(query: string): SearchRoute | null {
   const q = query.trim();
@@ -370,6 +372,20 @@ export function dispatchHighlightNav(navId: string, sectionId?: string, ms = 320
   window.dispatchEvent(new CustomEvent(SI_BRAIN_HIGHLIGHT_NAV, { detail: { navId, sectionId, ms } }));
 }
 
+async function runLivePlatformAudit(action: LiveSupportAction): Promise<void> {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('si-brain-refresh-health'));
+  try {
+    await invoke('get-page-health');
+    if (action.href?.includes('/dashboard/issues')) {
+      await invoke('run-guardian-scan').catch(() => null);
+    } else if (action.href?.includes('/integrations')) {
+      await invoke('run-live-connection-audit').catch(() => invoke('test-all-connections'));
+    }
+    await runSelfHealAudit();
+  } catch { /* ignore */ }
+}
+
 export function executeLiveSupportAction(action: LiveSupportAction): boolean {
   if (!action.autoExecute && action.type === 'navigate') return false;
 
@@ -377,6 +393,10 @@ export function executeLiveSupportAction(action: LiveSupportAction): boolean {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('si-brain-refresh-health'));
     }
+  }
+
+  if (action.type === 'audit') {
+    void runLivePlatformAudit(action);
   }
 
   const detail: BrainNavigateDetail = {

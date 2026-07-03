@@ -3,27 +3,40 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   SI_OVERLORD_INTERVENTION,
+  OVERLORD_IDENTITY,
+  dismissInterventionByKey,
+  isInterventionDismissed,
   type OverlordIntervention,
 } from '@/lib/theeMichaelOverlord';
 import { executeLiveSupportAction } from '@/lib/liveSupportActions';
 
+function interventionDismissKey(int: OverlordIntervention): string {
+  return int.dismissKey || int.id;
+}
+
+function kindLabel(int: OverlordIntervention): string {
+  if (int.kind === 'health') return OVERLORD_IDENTITY;
+  return int.kind.replace('_', ' ');
+}
+
 export function OverlordInterventionBanner() {
   const [current, setCurrent] = useState<OverlordIntervention | null>(null);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const onIntervention = (ev: Event) => {
       const detail = (ev as CustomEvent<OverlordIntervention>).detail;
-      if (!detail?.id || dismissed.has(detail.id)) return;
+      if (!detail?.id) return;
+      const dismissKey = interventionDismissKey(detail);
+      if (isInterventionDismissed(dismissKey)) return;
       setCurrent((prev) => (!prev || detail.priority >= prev.priority ? detail : prev));
     };
     window.addEventListener(SI_OVERLORD_INTERVENTION, onIntervention);
     return () => window.removeEventListener(SI_OVERLORD_INTERVENTION, onIntervention);
-  }, [dismissed]);
+  }, []);
 
   const dismiss = useCallback(() => {
     if (!current) return;
-    setDismissed((d) => new Set(d).add(current.id));
+    dismissInterventionByKey(interventionDismissKey(current));
     setCurrent(null);
   }, [current]);
 
@@ -46,7 +59,7 @@ export function OverlordInterventionBanner() {
   return (
     <div className="overlord-intervention" role="dialog" aria-label="THEE_MICHAEL proactive guidance">
       <div className="overlord-intervention-inner">
-        <p className="overlord-intervention-kind">{current.kind.replace('_', ' ')}</p>
+        <p className="overlord-intervention-kind">{kindLabel(current)}</p>
         <strong className="overlord-intervention-title">{current.title}</strong>
         <p className="overlord-intervention-body">{current.body}</p>
         <div className="overlord-intervention-actions">

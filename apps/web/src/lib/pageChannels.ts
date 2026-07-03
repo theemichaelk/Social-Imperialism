@@ -2,6 +2,7 @@
 export const PAGE_CHANNELS = {
   dashboard: [
     'get-dashboard-stats', 'get-live-feed', 'get-trending-topics', 'get-live-news', 'get-setup-status',
+    'get-campaign-mastery-status', 'mark-campaign-mastery-step',
     'get-active-campaign', 'get-domain-metrics', 'get-domdetailer-metrics', 'get-project-metrics', 'analyze-topic',
     'discover-best-questions', 'get-unanswered-questions', 'get-qa-settings', 'get-qa-sources', 'get-qa-ad-suggestions',
     'search-discovered-posts', 'compose-qa-answer', 'publish-qa-answer', 'get-leads', 'scan-reddit-now',

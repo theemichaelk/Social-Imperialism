@@ -54,6 +54,14 @@ import {
   formatBrandResearchSummary,
   isBrandResearchRequest,
 } from '@/lib/theeMichaelOnboardingExpert';
+import {
+  buildMasteryAugmentedContext,
+  fetchCampaignMasteryStatus,
+  markMasteryStep,
+  planMasteryWalkthrough,
+  startMasteryWalkthrough,
+} from '@/lib/campaignMastery';
+import { isMasteryRequest } from '@/lib/theeMichaelMasteryExpert';
 import { listEnclaveEntries } from '@/lib/overlordEnclave';
 import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
 import { TheeMichaelAvatar } from './TheeMichaelAvatar';
@@ -145,6 +153,48 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
+
+    const wantsMastery = isMasteryRequest(trimmed) || /^(done|next\s+step|mark\s+done)$/i.test(trimmed);
+    if (wantsMastery) {
+      const tMastery = pushTrace('THEE_MICHAEL Campaign Mastery A→Z');
+      try {
+        let mastery = await fetchCampaignMasteryStatus();
+        if (/^(done|next\s+step|mark\s+done)$/i.test(trimmed) && mastery?.currentStep?.id) {
+          mastery = await markMasteryStep(mastery.currentStep.id, true);
+        }
+        if (mastery) {
+          const plan = planMasteryWalkthrough(mastery);
+          await executeGuideActions(plan.actions);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: `${plan.reply}\n\nProgress: **${mastery.doneCount}/${mastery.totalSteps}** (${mastery.percent}%). Say **done** when finished to advance.`,
+              ts: new Date().toISOString(),
+            },
+          ]);
+        } else {
+          const reply = await startMasteryWalkthrough(null);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: reply || 'Starting A→Z at Setup Wizard — enter your brand domain.',
+              ts: new Date().toISOString(),
+            },
+          ]);
+        }
+      } catch (e) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: `Mastery walkthrough error — ${(e as Error).message}`, ts: new Date().toISOString() },
+        ]);
+      } finally {
+        completeTrace(tMastery);
+        setLoading(false);
+      }
+      return;
+    }
 
     const wantsBrandResearch = isBrandResearchRequest(trimmed);
     if (wantsBrandResearch) {
@@ -318,8 +368,14 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         completeTrace(tOb);
       }
 
-      const tAi = pushTrace(seoIntel || selfHealIntel || onboardingIntel ? 'Authority brief + live context synthesis' : 'Evaluating request with live context');
-      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname, seoIntel, selfHealIntel, onboardingIntel });
+      let masteryIntel = '';
+      const tMasteryCtx = pushTrace('Campaign Mastery progress snapshot');
+      const masteryStatus = await fetchCampaignMasteryStatus();
+      masteryIntel = buildMasteryAugmentedContext(masteryStatus);
+      completeTrace(tMasteryCtx);
+
+      const tAi = pushTrace(seoIntel || selfHealIntel || onboardingIntel || masteryIntel ? 'Authority brief + live context synthesis' : 'Evaluating request with live context');
+      const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), { pathname, seoIntel, selfHealIntel, onboardingIntel, masteryIntel });
       const reply = await invoke<string>('generate-ai', prompt);
       let raw = sanitizeAgentReply(String(reply || '').trim()) || 'Hmm — I did not get a response. Try again or open Integrations to check connections.';
       completeTrace(tAi);

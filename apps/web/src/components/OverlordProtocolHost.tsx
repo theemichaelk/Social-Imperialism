@@ -1,14 +1,15 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@/lib/api';
+import { checkPlatformAdmin } from '@/lib/adminAccess';
 import {
   SI_OVERLORD_FLASH,
   SI_OVERLORD_UI_MUTATE,
-  buildInterventionsForContext,
-  dispatchIntervention,
+  pollOverlordInterventions,
   recordPageEnter,
+  type PageHealthSnapshot,
   type UiMutateDetail,
 } from '@/lib/theeMichaelOverlord';
 import { OverlordInterventionBanner } from './OverlordInterventionBanner';
@@ -26,13 +27,20 @@ async function simulateTyping(el: HTMLInputElement | HTMLTextAreaElement, value:
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+const HEALTH_POLL_MS = 45_000;
+
 export function OverlordProtocolHost() {
   const pathname = usePathname();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isAdminRef = useRef(false);
 
   useEffect(() => {
     recordPageEnter(pathname);
   }, [pathname]);
+
+  useEffect(() => {
+    checkPlatformAdmin().then((admin) => { isAdminRef.current = admin; }).catch(() => { /* ignore */ });
+  }, []);
 
   useEffect(() => {
     const applyMutate = async (detail: UiMutateDetail) => {
@@ -73,47 +81,52 @@ export function OverlordProtocolHost() {
     };
   }, []);
 
+  const runHealthPoll = useCallback(async () => {
+    const entered = sessionStorage.getItem('si_overlord_telemetry');
+    if (!entered) return;
+    let tel: { pathname: string; enteredAt: number };
+    try {
+      tel = JSON.parse(entered);
+    } catch {
+      return;
+    }
+    if (tel.pathname !== pathname) return;
+    const dwellMs = Date.now() - tel.enteredAt;
+
+    if (!isAdminRef.current) {
+      isAdminRef.current = await checkPlatformAdmin().catch(() => false);
+    }
+
+    await pollOverlordInterventions({
+      pathname,
+      dwellMs,
+      isAdmin: isAdminRef.current,
+      invokeHealth: () => invoke<PageHealthSnapshot>('get-page-health'),
+    });
+  }, [pathname]);
+
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
 
-    pollRef.current = setInterval(async () => {
-      const entered = sessionStorage.getItem('si_overlord_telemetry');
-      if (!entered) return;
-      let tel: { pathname: string; enteredAt: number };
-      try {
-        tel = JSON.parse(entered);
-      } catch {
-        return;
-      }
-      if (tel.pathname !== pathname) return;
-      const dwellMs = Date.now() - tel.enteredAt;
+    // Immediate health check on login / route change — don't wait 45s
+    runHealthPoll().catch(() => { /* ignore */ });
 
-      let healthBroken = 0;
-      let healthWarn = 0;
-      try {
-        const h = await invoke<{ summary?: { broken?: number; warn?: number } }>('get-page-health');
-        healthBroken = h?.summary?.broken || 0;
-        healthWarn = h?.summary?.warn || 0;
-      } catch { /* ignore */ }
-
-      const interventions = buildInterventionsForContext({
-        pathname,
-        dwellMs,
-        healthBroken,
-        healthWarn,
-        isIntegrations: pathname === '/integrations',
-        isApiKeys: pathname === '/settings' && typeof window !== 'undefined' && window.location.search.includes('tab=api-keys'),
-      });
-
-      for (const int of interventions.slice(0, 1)) {
-        dispatchIntervention(int);
-      }
-    }, 45_000);
+    pollRef.current = setInterval(() => {
+      runHealthPoll().catch(() => { /* ignore */ });
+    }, HEALTH_POLL_MS);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [pathname]);
+  }, [pathname, runHealthPoll]);
+
+  useEffect(() => {
+    const onRefreshHealth = () => {
+      runHealthPoll().catch(() => { /* ignore */ });
+    };
+    window.addEventListener('si-brain-refresh-health', onRefreshHealth);
+    return () => window.removeEventListener('si-brain-refresh-health', onRefreshHealth);
+  }, [runHealthPoll]);
 
   return (
     <>

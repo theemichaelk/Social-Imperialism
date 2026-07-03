@@ -11,12 +11,13 @@ import { GuideExecutorHost } from './GuideExecutorHost';
 import { bootstrapSession, enforceAccessGate, getToken, clearSession } from '@/lib/api';
 import { SovereignThreatBanner } from './SovereignThreatBanner';
 import { LeadCaptureModal } from './LeadCaptureModal';
+import { CampaignMasteryBanner } from './CampaignMasteryBanner';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
 const PUBLIC_PATHS = new Set([
   '/', '/login', '/subscribe', '/setup-account', '/forgot-password', '/reset-password',
-  '/founder', '/download', '/oauth/callback', '/billing/success', '/billing/cancel',
+  '/founder', '/oauth/callback', '/billing/success', '/billing/cancel',
   '/sitemap.html', '/feed.xml',
 ]);
 
@@ -39,7 +40,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useLayoutEffect(() => {
     const token = getToken();
     if (!token && !isPublic) {
-      window.location.replace('/login');
+      const returnTo = encodeURIComponent(pathname || '/dashboard');
+      window.location.replace(`/login?returnTo=${returnTo}`);
       return;
     }
     if (token && !isPublic) {
@@ -121,6 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="mobile-top-title">Social Imperialism</span>
         </div>
         <ImperialismBrainPromptBar />
+        <CampaignMasteryBanner />
         <SovereignThreatBanner />
         {children}
         <FooterCredit className="app-footer-credit" />

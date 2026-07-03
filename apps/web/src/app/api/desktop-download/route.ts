@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getDesktopDownloadInfo } from '@/lib/desktopDownload';
 
 export const dynamic = 'force-dynamic';
 
+/** Legacy route — desktop downloads are auth-gated on the Express API. */
 export async function GET() {
-  const info = getDesktopDownloadInfo();
-  return NextResponse.json({
-    ok: true,
-    version: info.version,
-    platform: info.platform,
-    url: info.url,
-    filename: info.filename,
-    sizeHint: info.sizeHint,
-  });
+  return NextResponse.json(
+    {
+      ok: false,
+      error: 'Sign in and use /api/desktop/download-url for a secure installer link',
+      requiresAuth: true,
+    },
+    { status: 401 },
+  );
 }

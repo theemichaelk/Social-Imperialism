@@ -16,6 +16,7 @@ import { FetchProfileFilters } from '@/lib/fetchProfiles';
 import { QaSettingsPanel } from '@/components/QaSettingsPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { PredictiveMotivationPanel } from '@/components/PredictiveMotivationPanel';
+import { CampaignMasteryPanel } from '@/components/CampaignMasteryPanel';
 import { useSiEvents } from '@/hooks/useSiEvents';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
 import {
@@ -427,6 +428,7 @@ export default function DashboardPage() {
 
       {tab === 'overview' && (
         <>
+        <CampaignMasteryPanel />
         <div className="grid grid-2">
           <DataPanel title="Campaign Pulse" live>
             <p style={{ color: '#e2e8f0', fontSize: '0.95rem', margin: '0 0 8px' }}>

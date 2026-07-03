@@ -2,7 +2,9 @@ const {
   S3Client,
   PutObjectCommand,
   ListObjectsV2Command,
+  GetObjectCommand,
 } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 function getS3Config() {
   const bucket = process.env.AWS_S3_BUCKET_NAME;
@@ -134,10 +136,29 @@ function getS3Status() {
   };
 }
 
+async function getPresignedDownloadUrl(key, { expiresIn = 3600, filename } = {}) {
+  const config = getS3Config();
+  if (!config) throw new Error('S3 not configured — set AWS_S3_* in apps/api/.env');
+
+  const client = createClient(config);
+  const command = new GetObjectCommand({
+    Bucket: config.bucket,
+    Key: key,
+    ...(filename ? {
+      ResponseContentDisposition: `attachment; filename="${filename.replace(/"/g, '')}"`,
+    } : {}),
+  });
+
+  const url = await getSignedUrl(client, command, { expiresIn });
+  return { url, bucket: config.bucket, key, expiresIn };
+}
+
 module.exports = {
   getS3Config,
   getS3Status,
+  createClient,
   uploadDataUrl,
   uploadBuffer,
   listUploads,
+  getPresignedDownloadUrl,
 };
