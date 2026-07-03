@@ -2,7 +2,7 @@
 
 Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the brain's feature index.
 
-**Audit accuracy rule (mandatory):** Before any feature update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md). Run `npm run audit:accuracy`, `npm run test:sovereign-scan`, and production QA (**207+** page features, **143+** section features — re-count after test changes). Feature indexes live in `brain/features/*.md`.
+**Audit accuracy rule (mandatory):** Before any feature update, comply with [features/AUDIT_ACCURACY_RULE.md](./features/AUDIT_ACCURACY_RULE.md). Run `npm run audit:accuracy`, `npm run test:sovereign-scan`, and production QA (**210/210** page features, **144/144** section features — re-count after test changes). Feature indexes live in `brain/features/*.md`.
 
 ## Grok Engine (browser — no API)
 

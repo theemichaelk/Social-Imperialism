@@ -133,7 +133,7 @@ const SECTIONS = [
     features: [
       { name: 'Reddit AI status', channel: 'get-reddit-ai-status', validate: (d) => typeof d === 'object' },
       { name: 'Module queue', channel: 'get-reddit-ai-queue', args: ['subreddit-ascent'], validate: (d) => d?.queue !== undefined },
-      { name: 'Run module', channel: 'run-reddit-ai-module', args: ['subreddit-ascent'], validate: (d) => d?.success !== false || d?.actions },
+      { name: 'Run module', channel: 'run-reddit-ai-module', args: ['subreddit-ascent'], validate: (d) => d?.success === true || d?.actionsQueued !== undefined },
       { name: 'Scan reddit', channel: 'scan-reddit-now', validate: (d) => d?.success !== false },
     ],
   },

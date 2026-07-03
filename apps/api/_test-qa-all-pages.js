@@ -234,7 +234,7 @@ const PAGES = [
       { name: 'Reddit AI status', channel: 'get-reddit-ai-status', validate: (d) => typeof d === 'object' },
       { name: 'Module queue', channel: 'get-reddit-ai-queue', args: ['subreddit-ascent'], validate: (d) => d?.queue !== undefined },
       { name: 'Reddit settings', channel: 'get-reddit-ai-settings', validate: (d) => typeof d === 'object' },
-      { name: 'Run module', channel: 'run-reddit-ai-module', args: ['subreddit-ascent'], validate: (d) => d?.success !== false || d?.actions },
+      { name: 'Run module', channel: 'run-reddit-ai-module', args: ['subreddit-ascent'], validate: (d) => d?.success === true || d?.actionsQueued !== undefined },
       { name: 'Leads', channel: 'get-leads', validate: (d) => Array.isArray(d) },
       { name: 'Save settings', channel: 'save-reddit-ai-settings', args: [{ modules: { 'subreddit-ascent': { enabled: true } } }], validate: (d) => d?.success !== false || d?.settings },
       { name: 'Section live', channel: 'get-section-live', args: ['reddit-ai'], validate: (d) => d?.stats },
