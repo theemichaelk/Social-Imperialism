@@ -7,9 +7,17 @@ import { invoke } from '@/lib/api';
 import { approvalAcknowledgement, requiresAdminApproval, shouldAutoExecuteRoute } from '@/lib/liveSupportAgent';
 import {
   executeLiveSupportAction,
+  isCantFindNavigation,
   isNavigationRequest,
+  normalizeBrainQuery,
   resolveNavigationIntent,
 } from '@/lib/liveSupportActions';
+import {
+  buildMasteryProgressReply,
+  fetchCampaignMasteryStatus,
+  startMasteryWalkthrough,
+} from '@/lib/campaignMastery';
+import { isMasteryDetailedProgress, isMasteryProgressOnly, isMasteryRequest } from '@/lib/theeMichaelMasteryExpert';
 import { executeGuideActions, planGuideActions } from '@/lib/guide_executor';
 import {
   OMNI_BRAIN_ADMIN,
@@ -25,6 +33,7 @@ import {
   handleSensitiveRequest,
   type WorkflowBlueprint,
 } from '@/lib/omniBrainPlanner';
+import { ImperialismBrainAvatar } from '@/components/ImperialismBrainAvatar';
 
 export function ImperialismBrainPromptBar() {
   const router = useRouter();
@@ -44,15 +53,66 @@ export function ImperialismBrainPromptBar() {
   }, []);
 
   const plan = useCallback(async (text: string) => {
-    const trimmed = text.trim();
+    const trimmed = normalizeBrainQuery(text);
     if (!trimmed || loading) return;
 
     setLoading(true);
     setMsg('');
     setExpanded(true);
 
-    const wantsLiveGuide = isNavigationRequest(trimmed)
-      || /don'?t\s+see|can'?t\s+find|prompt\s+vault|integrations|browse\s+posts|open\s+https?:\/\//i.test(trimmed);
+    const preferExecute = isNavigationRequest(trimmed) || shouldAutoExecuteRoute(trimmed);
+    const cantFind = isCantFindNavigation(trimmed);
+
+    // Fast path: Resume A→Z Campaign Mastery — open current step in sidebar
+    if (isMasteryRequest(trimmed)) {
+      try {
+        const st = await fetchCampaignMasteryStatus();
+        if (!st) {
+          setBlueprint(null);
+          setMsg('No active campaign yet — open **Setup Wizard** and enter your brand domain first.');
+          setExpanded(true);
+          setLoading(false);
+          return;
+        }
+        if (isMasteryProgressOnly(trimmed) && !isMasteryDetailedProgress(trimmed)) {
+          setBlueprint(null);
+          setMsg(buildMasteryProgressReply(st));
+          setExpanded(true);
+          setLoading(false);
+          return;
+        }
+        const reply = await startMasteryWalkthrough(st);
+        setBlueprint(null);
+        setMsg(reply || 'Opening your next A→Z setup step…');
+        setExpanded(true);
+        setQuery('');
+        setLoading(false);
+        return;
+      } catch (e) {
+        setBlueprint(null);
+        setMsg((e as Error).message || 'Could not resume A→Z setup.');
+        setExpanded(true);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Fast path: "Take me to Integrations" — instant client-side nav (no API wait)
+    if (preferExecute && !cantFind) {
+      const instantNav = resolveNavigationIntent(trimmed, { pathname, preferExecute: true });
+      if (instantNav?.autoExecute) {
+        executeLiveSupportAction(instantNav);
+        setBlueprint(null);
+        setMsg(instantNav.message || `Taking you to ${instantNav.label}…`);
+        setExpanded(true);
+        setQuery('');
+        setLoading(false);
+        return;
+      }
+    }
+
+    const wantsLiveGuide = cantFind
+      || /prompt\s+vault|browse\s+posts|open\s+https?:\/\//i.test(trimmed);
 
     if (wantsLiveGuide) {
       try {
@@ -69,10 +129,7 @@ export function ImperialismBrainPromptBar() {
       }
     }
 
-    const navAction = resolveNavigationIntent(trimmed, {
-      pathname,
-      preferExecute: isNavigationRequest(trimmed) || shouldAutoExecuteRoute(trimmed),
-    });
+    const navAction = resolveNavigationIntent(trimmed, { pathname, preferExecute });
     if (navAction?.autoExecute) {
       executeLiveSupportAction(navAction);
       setBlueprint(null);
@@ -152,16 +209,20 @@ export function ImperialismBrainPromptBar() {
     }
   }, [blueprint, executing, router]);
 
+  const activePlaceholder = OMNI_PLACEHOLDERS[placeholderIdx];
+  const planText = query.trim() || normalizeBrainQuery(activePlaceholder);
+  const hasPanelContent = !!(blueprint || msg);
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    plan(query);
+    plan(planText);
   };
 
   return (
     <div className={`imperialism-brain-bar ${expanded ? 'imperialism-brain-expanded' : ''}`}>
       <form className="imperialism-brain-form" onSubmit={onSubmit}>
         <div className="imperialism-brain-badge" title="Imperialism Brain">
-          <span className="imperialism-brain-icon">🧠</span>
+          <ImperialismBrainAvatar size="sm" />
           <span className="imperialism-brain-label">Imperialism Brain</span>
         </div>
         <input
@@ -171,11 +232,16 @@ export function ImperialismBrainPromptBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setExpanded(true)}
-          placeholder={OMNI_PLACEHOLDERS[placeholderIdx]}
+          placeholder={activePlaceholder}
           disabled={loading}
           aria-label="Imperialism Brain keyword prompt"
         />
-        <button type="submit" className="btn imperialism-brain-plan-btn" disabled={loading || !query.trim()}>
+        <button
+          type="submit"
+          className="btn imperialism-brain-plan-btn"
+          disabled={loading || !planText}
+          title={!query.trim() ? `Plan: ${planText}` : undefined}
+        >
           {loading ? 'Planning…' : 'Plan'}
         </button>
         {blueprint && (
@@ -189,15 +255,18 @@ export function ImperialismBrainPromptBar() {
             {executing ? 'Running…' : 'Run'}
           </button>
         )}
-        <button
-          type="button"
-          className="imperialism-brain-toggle"
-          onClick={() => setExpanded((e) => !e)}
-          aria-expanded={expanded}
-          title={expanded ? 'Collapse' : 'Expand blueprint'}
-        >
-          {expanded ? '▾' : '▸'}
-        </button>
+        {hasPanelContent && (
+          <button
+            type="button"
+            className="imperialism-brain-toggle"
+            onClick={() => setExpanded((e) => !e)}
+            aria-expanded={expanded}
+            aria-label={expanded ? 'Collapse Imperialism Brain results' : 'Expand Imperialism Brain results'}
+            title={expanded ? 'Collapse' : 'Expand results'}
+          >
+            {expanded ? '▾' : '▸'}
+          </button>
+        )}
       </form>
 
       {expanded && (blueprint || msg) && (

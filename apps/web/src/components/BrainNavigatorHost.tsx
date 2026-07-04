@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
+import { ImperialismBrainAvatar } from '@/components/ImperialismBrainAvatar';
 import {
   SI_BRAIN_HIGHLIGHT_NAV,
   SI_BRAIN_NAVIGATE,
@@ -72,7 +73,7 @@ export function BrainNavigatorHost() {
 
   return (
     <div className="brain-nav-toast" role="status" aria-live="polite">
-      <span className="brain-nav-toast-icon">🧠</span>
+      <ImperialismBrainAvatar size="sm" className="brain-nav-toast-icon" />
       {toast}
     </div>
   );

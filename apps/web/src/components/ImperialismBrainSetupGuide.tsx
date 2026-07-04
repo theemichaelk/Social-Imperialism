@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ImperialismBrainAvatar } from '@/components/ImperialismBrainAvatar';
 import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
 import {
   groupModuleFlowBySection,
@@ -455,7 +456,7 @@ export function ImperialismBrainSetupGuide({
   return (
     <div className="brain-setup-guide">
       <div className="brain-setup-guide-header">
-        <span className="imperialism-brain-icon brain-setup-icon" aria-hidden>🧠</span>
+        <ImperialismBrainAvatar size="xl" className="brain-setup-icon" />
         <div className="brain-setup-header-copy">
           <p className="brain-setup-eyebrow">Imperialism Brain · Intelligent Setup</p>
           <p className="brain-setup-step-label">{step}. {stepLabel}</p>

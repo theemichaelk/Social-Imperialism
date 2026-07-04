@@ -2,15 +2,14 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { TheeMichaelAvatar } from '@/components/TheeMichaelAvatar';
 import { RingChart, DataPanel } from '@/components/DashboardViz';
+import { ImperialismBrainAvatar } from '@/components/ImperialismBrainAvatar';
 import {
   fetchCampaignMasteryStatus,
   markMasteryStep,
   startMasteryWalkthrough,
   type CampaignMasteryStatus,
 } from '@/lib/campaignMastery';
-import { THEE_MICHAEL_PROFILE } from '@/lib/theeMichaelProfile';
 
 export function CampaignMasteryPanel({ compact }: { compact?: boolean }) {
   const [status, setStatus] = useState<CampaignMasteryStatus | null>(null);
@@ -27,7 +26,7 @@ export function CampaignMasteryPanel({ compact }: { compact?: boolean }) {
 
   async function walkthrough() {
     setLoading(true);
-    setMsg('THEE_MICHAEL is opening your next step…');
+    setMsg('Imperialism Brain is opening your next step…');
     try {
       const st = await refresh();
       const reply = await startMasteryWalkthrough(st);
@@ -61,10 +60,10 @@ export function CampaignMasteryPanel({ compact }: { compact?: boolean }) {
   const inner = (
     <>
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <TheeMichaelAvatar size="md" showRing />
+        <ImperialismBrainAvatar size="md" />
         <div style={{ flex: 1, minWidth: 200 }}>
           <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {THEE_MICHAEL_PROFILE.displayName} · Campaign Mastery A→Z
+            Imperialism Brain · Campaign Mastery A→Z
           </p>
           <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 600 }}>
             {status.complete
@@ -122,7 +121,7 @@ export function CampaignMasteryPanel({ compact }: { compact?: boolean }) {
     return <div className="card campaign-mastery-compact" style={{ marginBottom: 12, borderColor: 'rgba(168, 85, 247, 0.35)' }}>{inner}</div>;
   }
   return (
-    <DataPanel title="THEE_MICHAEL · Campaign Mastery" live>
+    <DataPanel title="Imperialism Brain · Campaign Mastery" live>
       {inner}
     </DataPanel>
   );

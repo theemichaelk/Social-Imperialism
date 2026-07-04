@@ -79,6 +79,7 @@ import {
 import { isMasteryDetailedProgress, isMasteryRequest, isMasteryProgressOnly } from '@/lib/theeMichaelMasteryExpert';
 import { SI_NOTIFICATION_CHANGED } from '@/lib/theeMichaelNotificationLedger';
 import { listEnclaveEntries } from '@/lib/overlordEnclave';
+import { ImperialismBrainAvatar } from './ImperialismBrainAvatar';
 import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
 
 const PANEL_KEY = 'si_support_panel_open';
@@ -642,7 +643,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
   if (!embedded && !open) {
     return (
       <button type="button" className="live-support-fab" onClick={toggle} title="Imperialism Brain · Live Support">
-        <span className="live-support-fab-icon" aria-hidden>🧠</span>
+        <ImperialismBrainAvatar size="fab" className="live-support-fab-avatar" />
         {pendingCount > 0 && <span className="live-support-fab-badge">{pendingCount}</span>}
       </button>
     );
@@ -658,7 +659,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
       <div className="live-support-header">
         <div className="live-support-header-brand">
           <div className="imperialism-brain-badge live-support-header-badge" title="Imperialism Brain">
-            <span className="imperialism-brain-icon" aria-hidden>🧠</span>
+            <ImperialismBrainAvatar size="lg" />
           </div>
           <div>
             <p className="live-support-eyebrow">Live Support</p>
