@@ -118,6 +118,7 @@ h1 { margin: 0; color: #f1f5f9; font-size: 1.5rem; display: flex; align-items: c
 .engagement-chart-wrap canvas { width: 100% !important; height: 130px !important; }
 
 .bg-run-panel { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px; margin-bottom: 1rem; font-size: 0.75rem; }
+#scheduler.scheduler-focus { outline: 2px solid rgba(56, 189, 248, 0.65); outline-offset: 4px; border-radius: 10px; box-shadow: 0 0 24px rgba(56, 189, 248, 0.2); }
 .bg-run-status { padding: 6px 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.7rem; }
 .bg-run-status.active { background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #6ee7b7; }
 .bg-run-status.paused { background: rgba(100,116,139,0.15); border: 1px solid #475569; color: #94a3b8; }
@@ -200,8 +201,8 @@ h1 { margin: 0; color: #f1f5f9; font-size: 1.5rem; display: flex; align-items: c
           <div class="list-view" id="listContainer"></div>
         </div>
       </div>
-      <div class="calendar-side-panel">
-        <div class="side-panel-title">Background Run Schedule</div>
+      <div class="calendar-side-panel" id="scheduler">
+        <div class="side-panel-title">Scheduler — Background Run Schedule</div>
         <div class="bg-run-panel" id="bgRunPanel">
           <label style="display:flex;align-items:center;gap:6px;color:#cbd5e1;margin-bottom:6px;cursor:pointer;">
             <input type="checkbox" id="bgRunEnabled" style="width:auto;"> Enable scheduled background runs
@@ -1120,6 +1121,18 @@ async function deleteBackgroundRun(id) {
   }
 }
 
+function focusSchedulerPanel() {
+  const panel = document.getElementById('scheduler');
+  if (!panel) return;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  panel.classList.add('scheduler-focus');
+  setTimeout(() => panel.classList.remove('scheduler-focus'), 2400);
+}
+
+function handleSchedulerHash() {
+  if (window.location.hash === '#scheduler') focusSchedulerPanel();
+}
+
 function initBackgroundRunPanel() {
   const bgRunAt = document.getElementById('bgRunAt');
   if (bgRunAt) {
@@ -1187,6 +1200,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadBackgroundRunSettings();
   await refreshBackgroundRunStatus();
   setInterval(refreshBackgroundRunStatus, 30000);
+
+  handleSchedulerHash();
+  window.addEventListener('hashchange', handleSchedulerHash);
 
   suggestBestTimes();
   setInterval(() => loadPostsFromStore(), 60000);

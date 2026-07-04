@@ -114,7 +114,7 @@ export default function OnboardingPage() {
       return;
     }
     setLoading(true);
-    setMsg('THEE_MICHAEL researching your brand online (website + SEO + keywords)…');
+    setMsg('Imperialism Brain researching your brand online (website + SEO + keywords)…');
     try {
       const result = await researchBrandWithTheeMichael(domain, brand.brandName.trim() || undefined);
       if (!result) throw new Error('Brand research failed — check API connection');
@@ -417,7 +417,7 @@ export default function OnboardingPage() {
           <input className="input" placeholder="Brand name *" value={brand.brandName} onChange={(e) => setBrand({ ...brand, brandName: e.target.value })} style={{ marginBottom: 8 }} />
           <input className="input" placeholder="Domain * (e.g. acme.com)" value={brand.domain} onChange={(e) => setBrand({ ...brand, domain: e.target.value })} style={{ marginBottom: 8 }} />
           <button className="btn" style={{ marginBottom: 8 }} onClick={researchMyBrand} disabled={loading || !brand.domain.trim()}>
-            ✨ THEE_MICHAEL — Research & Auto-Fill from Web
+            ✨ Imperialism Brain — Research & Auto-Fill from Web
           </button>
           <textarea className="input" placeholder="Brand description — what you do, who you help" value={brand.description} onChange={(e) => setBrand({ ...brand, description: e.target.value })} style={{ marginBottom: 8 }} />
           <input className="input" placeholder="Target audience (optional)" value={brand.audience} onChange={(e) => setBrand({ ...brand, audience: e.target.value })} style={{ marginBottom: 8 }} />

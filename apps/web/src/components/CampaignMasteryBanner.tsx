@@ -49,7 +49,7 @@ export function CampaignMasteryBanner() {
     }}>
       <div style={{ flex: 1, minWidth: 220 }}>
         <p style={{ margin: 0, fontSize: '0.72rem', color: '#c4b5fd', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          THEE_MICHAEL · Resume A→Z Setup
+          Imperialism Brain · Resume A→Z Setup
         </p>
         <p style={{ margin: '4px 0 0', fontSize: '0.9rem' }}>
           <strong>{status.percent}%</strong> complete — next: <strong>{step?.label}</strong>

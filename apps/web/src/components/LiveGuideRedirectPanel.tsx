@@ -66,7 +66,7 @@ export function LiveGuideRedirectPanel() {
 
   return (
     <div className="card live-guide-redirect-panel" style={{ marginTop: '1rem' }}>
-      <p className="overlord-trace-eyebrow" style={{ margin: '0 0 0.35rem' }}>THEE_MICHAEL · Social Imperialism Live Guide</p>
+      <p className="overlord-trace-eyebrow" style={{ margin: '0 0 0.35rem' }}>Imperialism Brain · Live Guide</p>
       <h3 style={{ margin: '0 0 0.5rem', fontSize: '1rem' }}>Push real-time navigation on socialimperialism.com</h3>
       <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', color: 'var(--muted)' }}>
         The user’s session polls every 4s — their browser navigates, expands Focus mode tabs, and highlights the left sidebar module.

@@ -33,7 +33,7 @@ export function extractDomainFromText(text: string): string | null {
 }
 
 export function isBrandResearchRequest(text: string): boolean {
-  return /research\s+(my\s+)?brand|auto[\s-]?fill\s+(my\s+)?brand|setup\s+my\s+brand|wire\s+my\s+brand|intelligent\s+setup/i.test(text);
+  return /research\s+(my\s+)?brand|research\s+my\s+brand\s+in\s+setup|auto[\s-]?fill\s+(my\s+)?brand|setup\s+my\s+brand|wire\s+my\s+brand|intelligent\s+setup|setup\s+wizard.*research/i.test(text);
 }
 
 export function formatBrandResearchSummary(result: BrandResearchResult): string {

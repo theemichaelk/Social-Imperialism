@@ -1,8 +1,6 @@
 'use client';
 
 import { LiveSupportPanel } from '@/components/LiveSupportPanel';
-import { TheeMichaelAvatar } from '@/components/TheeMichaelAvatar';
-import { THEE_MICHAEL_PROFILE } from '@/lib/theeMichaelProfile';
 import { PageShell } from '@/components/PageShell';
 import { NAV_SECTIONS } from '@/lib/nav';
 import { executeLiveSupportAction, resolveNavigationIntent } from '@/lib/liveSupportActions';
@@ -16,7 +14,7 @@ const HELP_TOPICS = [
   { title: 'Discovery', desc: 'Keywords, browse posts, engagement queue', href: '/browse-posts', icon: '🧭' },
   { title: 'Setup Wizard', desc: 'Brand, tone, keywords, go-live checklist', href: '/onboarding', icon: '🚀' },
   { title: 'Desktop app', desc: 'Download Windows installer & install steps', href: '/download', icon: '💻' },
-  { title: 'Ask THEE_MICHAEL', desc: 'Admin approval for sensitive changes', href: '/support', icon: '🛡️' },
+  { title: 'Admin approvals', desc: 'Sensitive changes require platform admin sign-off', href: '/settings?tab=guardian-api', icon: '🛡️' },
 ];
 
 export default function SupportPage() {
@@ -35,17 +33,8 @@ export default function SupportPage() {
     <div className="page support-page">
       <PageShell
         title="Imperialism Brain"
-        subtitle="Live support — setup, troubleshooting, and growth guidance"
+        subtitle="Setup, troubleshooting, SEO intelligence, and growth guidance"
       />
-
-      <div className="support-thee-michael-intro">
-        <TheeMichaelAvatar size="lg" showRing />
-        <div>
-          <p className="support-thee-michael-eyebrow">{THEE_MICHAEL_PROFILE.displayName}</p>
-          <p className="support-thee-michael-title">{THEE_MICHAEL_PROFILE.title}</p>
-          <p className="support-thee-michael-sub">{THEE_MICHAEL_PROFILE.subtitle}</p>
-        </div>
-      </div>
 
       <div className="support-layout">
         <div className="support-sidebar-col">

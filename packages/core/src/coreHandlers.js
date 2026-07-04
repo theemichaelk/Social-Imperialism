@@ -384,8 +384,10 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
 
   ipcMain.handle('get-linked-accounts', (event, campaignId) => {
     const { getLinkedAccountsDeduped } = require(path.join(__dirname, '../../../apps/desktop/services/accountAutomation'));
+    const { enrichLinkedAccountsPublic } = require(path.join(__dirname, '../../../apps/desktop/services/accountDisplay'));
     const id = campaignId || store.getItem('activeCampaignId') || 'default';
-    return getLinkedAccountsDeduped(store, id);
+    const accounts = getLinkedAccountsDeduped(store, id);
+    return enrichLinkedAccountsPublic(accounts);
   });
 
   ipcMain.handle('publish-post', async (event, postData) => calendarApi.executePublishPost(postData));

@@ -16,7 +16,7 @@ export function GuideExecutorHost() {
       try {
         const { pending, actions, reply } = await pollRemoteGuideActions();
         if (pending && actions.length) {
-          if (reply) dispatchBrainToast(`THEE_MICHAEL: ${reply.replace(/\*\*/g, '')}`);
+          if (reply) dispatchBrainToast(`Imperialism Brain: ${reply.replace(/\*\*/g, '')}`);
           await executeGuideActions(actions);
         }
       } catch {

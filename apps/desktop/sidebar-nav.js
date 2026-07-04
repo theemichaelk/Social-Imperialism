@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { id: 'brand', href: 'brand.html', icon: 'fa-bullseye', label: 'Brand' },
   { id: 'calendar', href: 'calendar.html', icon: 'fa-calendar-alt', label: 'Calendar' },
   { id: 'scheduler', href: 'calendar.html#scheduler', icon: 'fa-clock', label: 'Scheduler' },
+  { id: 'prompt-vault', href: '#', icon: 'fa-archive', label: 'Prompt Vault', saasPath: '/prompt-vault' },
   { id: 'engagement', href: 'engagement.html', icon: 'fa-users', label: 'Engagement' },
   { id: 'history', href: 'history.html', icon: 'fa-history', label: 'AI Replies' },
   { id: 'keywords', href: 'keywords.html', icon: 'fa-tags', label: 'Keywords' },
@@ -23,17 +24,19 @@ const NAV_ITEMS = [
   { id: 'account-creator', href: 'account-creator.html', icon: 'fa-user-plus', label: 'Acct Creator' },
   { id: 'dns', href: 'dns.html', icon: 'fa-globe', label: 'DNS' },
   { id: 'integrations', href: 'integrations.html', icon: 'fa-plug', label: 'Integrations' },
-  { id: 'settings', href: 'settings.html', icon: 'fa-sliders-h', label: 'Campaign Manager' },
+  { id: 'settings', href: 'settings.html', icon: 'fa-sliders-h', label: 'Settings' },
+  { id: 'support', href: '#', icon: 'fa-comments', label: 'Imperialism Brain', saasPath: '/support' },
+  { id: 'campaign-manager', href: '#', icon: 'fa-clipboard-list', label: 'Campaign Command', saasPath: '/campaign-manager' },
 ];
 
 const NAV_SECTIONS = [
   { id: 'mission', label: 'Mission Control', ids: ['dashboard', 'browse-posts'] },
   { id: 'create', label: 'Create & Publish', ids: ['onboarding', 'content-hub', 'content-library', 'design-studio', 'brand', 'calendar', 'scheduler'] },
-  { id: 'discovery', label: 'Discovery & Replies', ids: ['engagement', 'history', 'keywords', 'seo-tools'] },
+  { id: 'discovery', label: 'Discovery & Replies', ids: ['prompt-vault', 'engagement', 'history', 'keywords', 'seo-tools'] },
   { id: 'labs', label: 'Growth Labs', ids: ['reddit-ai', 'quora-traffic'] },
   { id: 'automation', label: 'Automation', ids: ['automations', 'rules'] },
   { id: 'accounts', label: 'Accounts', ids: ['account-hub', 'account-creator'] },
-  { id: 'system', label: 'System', ids: ['dns', 'integrations', 'settings'] },
+  { id: 'system', label: 'System', ids: ['dns', 'integrations', 'settings', 'support', 'campaign-manager'] },
 ];
 
 const NAV_BY_ID = Object.fromEntries(NAV_ITEMS.map((item) => [item.id, item]));
@@ -93,6 +96,17 @@ function saveCollapsedSections(map) {
   } catch (e) { /* ignore */ }
 }
 
+async function openSaasModule(path) {
+  try {
+    const { ipcRenderer } = require('electron');
+    const base = await ipcRenderer.invoke('get-saas-web-url');
+    const url = `${String(base || 'https://www.socialimperialism.com').replace(/\/$/, '')}${path}`;
+    await ipcRenderer.invoke('open-external-url', url);
+  } catch (e) {
+    console.warn('SaaS nav open failed:', e.message);
+  }
+}
+
 function sectionForPageId(pageId) {
   const sec = NAV_SECTIONS.find((s) => s.ids.includes(pageId));
   return sec?.id || null;
@@ -109,7 +123,8 @@ function buildNavHtml(activeId) {
       .filter(Boolean)
       .map((item) => {
         const cls = item.id === active ? 'nav-link active' : 'nav-link';
-        return `<a href="${item.href}" class="${cls}" data-nav-id="${item.id}" data-nav-label="${item.label.toLowerCase()}"><i class="fas ${item.icon}"></i><span>${item.label}</span></a>`;
+        const saasAttr = item.saasPath ? ` data-saas-path="${item.saasPath}"` : '';
+        return `<a href="${item.href}" class="${cls}" data-nav-id="${item.id}" data-nav-label="${item.label.toLowerCase()}"${saasAttr}><i class="fas ${item.icon}"></i><span>${item.label}</span></a>`;
       })
       .join('');
     if (!links) return '';
@@ -258,6 +273,12 @@ function bindSidebarNavLinks() {
   nav.addEventListener('click', (e) => {
     const link = e.target.closest('a.nav-link');
     if (!link) return;
+    const saasPath = link.dataset.saasPath;
+    if (saasPath) {
+      e.preventDefault();
+      openSaasModule(saasPath);
+      return;
+    }
     const href = link.getAttribute('href') || '';
     if (!href.includes('#')) return;
 

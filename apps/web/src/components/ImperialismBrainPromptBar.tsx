@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@/lib/api';
-import { approvalAcknowledgement, requiresAdminApproval } from '@/lib/liveSupportAgent';
+import { approvalAcknowledgement, requiresAdminApproval, shouldAutoExecuteRoute } from '@/lib/liveSupportAgent';
 import {
   executeLiveSupportAction,
   isNavigationRequest,
@@ -69,7 +69,10 @@ export function ImperialismBrainPromptBar() {
       }
     }
 
-    const navAction = resolveNavigationIntent(trimmed, { pathname, preferExecute: isNavigationRequest(trimmed) });
+    const navAction = resolveNavigationIntent(trimmed, {
+      pathname,
+      preferExecute: isNavigationRequest(trimmed) || shouldAutoExecuteRoute(trimmed),
+    });
     if (navAction?.autoExecute) {
       executeLiveSupportAction(navAction);
       setBlueprint(null);

@@ -128,7 +128,7 @@ function buildAuthUrl(platform, keys, state, pkce, redirectUri = REDIRECT_URI, o
 
     case 'LinkedIn':
       if (!keys.liId) return null;
-      return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${keys.liId}&redirect_uri=${encodedRedirect}&state=${state}&scope=${encodeURIComponent('openid profile email w_member_social r_organization_social w_organization_social')}`;
+      return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${keys.liId}&redirect_uri=${encodedRedirect}&state=${state}&scope=${encodeURIComponent('openid profile email w_member_social r_organization_social w_organization_social r_organization_admin rw_organization_admin')}`;
 
     case 'Facebook':
       if (!keys.fbId) return null;

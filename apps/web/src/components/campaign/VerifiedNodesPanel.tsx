@@ -279,7 +279,7 @@ export function VerifiedNodesPanel() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.25rem', alignItems: 'start' }}>
+      <div className="verified-nodes-split">
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Verified Tree Matrix</h3>
           {nodes.length === 0 ? (

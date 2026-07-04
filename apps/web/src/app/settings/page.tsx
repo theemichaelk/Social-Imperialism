@@ -428,7 +428,7 @@ function SettingsContent() {
 
       {tab === 'connect' && (
         <>
-          <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          <div className="source-tabs">
             <button type="button" className={`tab ${connectSection === 'live-probes' ? 'active' : ''}`} onClick={() => setConnectSection('live-probes')}>Live Probes</button>
             <button type="button" className={`tab ${connectSection === 'grok' ? 'active' : ''}`} onClick={() => setConnectSection('grok')}>Grok & Browser</button>
           </div>

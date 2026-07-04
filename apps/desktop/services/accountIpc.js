@@ -289,6 +289,7 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
   });
 
   ipcMain.handle('get-account-automation-targets', (event, accountId) => {
+    const { enrichLinkedAccount } = require('./accountDisplay');
     const accounts = getLinkedAccounts(store);
     const account = findAccountById(accounts, accountId);
     if (!account) return { success: false, error: 'Account not found', targets: [] };
@@ -302,7 +303,7 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
           ? activeGroupIds.includes(String(t.id))
           : t.automationEnabled !== false,
       })),
-      account,
+      account: enrichLinkedAccount(account, accounts),
     };
   });
 

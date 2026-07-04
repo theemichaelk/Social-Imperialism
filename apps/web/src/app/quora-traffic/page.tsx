@@ -346,25 +346,27 @@ export default function QuoraTrafficPage() {
           </div>
 
           {questions.length > 0 ? (
-            <table className="quora-questions-table">
-              <thead>
-                <tr><th>Question</th><th>Views</th><th>Upvotes</th><th>Answers</th></tr>
-              </thead>
-              <tbody>
-                {questions.map((q, i) => (
-                  <tr
-                    key={q.id || i}
-                    className={selected === q ? 'selected' : ''}
-                    onClick={() => setSelected(q)}
-                  >
-                    <td>{qText(q).slice(0, 120)}</td>
-                    <td>{q.viewsLabel || formatNum(q.views)}{q.metricsSource === 'estimated' ? ' (est)' : ''}</td>
-                    <td>▲ {q.upvotesLabel || formatNum(q.upvotes)}</td>
-                    <td>✎ {q.answerCount ?? 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="table-scroll-wrap">
+              <table className="quora-questions-table">
+                <thead>
+                  <tr><th>Question</th><th>Views</th><th>Upvotes</th><th>Answers</th></tr>
+                </thead>
+                <tbody>
+                  {questions.map((q, i) => (
+                    <tr
+                      key={q.id || i}
+                      className={selected === q ? 'selected' : ''}
+                      onClick={() => setSelected(q)}
+                    >
+                      <td>{qText(q).slice(0, 120)}</td>
+                      <td>{q.viewsLabel || formatNum(q.views)}{q.metricsSource === 'estimated' ? ' (est)' : ''}</td>
+                      <td>▲ {q.upvotesLabel || formatNum(q.upvotes)}</td>
+                      <td>✎ {q.answerCount ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className="settings-panel-desc">Enter a keyword and scrape to see high-traffic questions.</p>
           )}

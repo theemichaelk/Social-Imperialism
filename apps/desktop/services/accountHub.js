@@ -70,6 +70,7 @@ async function refreshAccountProfile(store, accountId, keys) {
   const profile = await buildIntelligenceProfile(account, keys);
   accounts[idx].profile = profile;
   accounts[idx].profileRefreshedAt = new Date().toISOString();
+  if (profile?.apiNote) accounts[idx].lastApiNote = profile.apiNote;
 
   let groups = accounts[idx].groups || [];
   let newAccounts = [];
@@ -94,9 +95,10 @@ async function refreshAccountProfile(store, accountId, keys) {
   }
 
   store.setItem(`linkedAccounts_${activeCampaignId}`, JSON.stringify(accounts));
+  const { enrichLinkedAccount } = require('./accountDisplay');
   return {
     success: !discoveryError,
-    account: accounts[idx],
+    account: enrichLinkedAccount(accounts[idx], accounts),
     profile,
     groups,
     newAccounts,

@@ -90,15 +90,17 @@ export function UserAccountPanel({ compact = false }: { compact?: boolean }) {
       <div className={compact ? 'grid grid-1' : 'grid grid-2'}>
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Your profile</h3>
-          <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+          <div className="table-scroll-wrap">
+          <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse', minWidth: 280 }}>
             <tbody>
-              <tr><td style={{ color: '#94a3b8', padding: '4px 8px 4px 0' }}>User ID</td><td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{user?.id}</td></tr>
+              <tr><td style={{ color: '#94a3b8', padding: '4px 8px 4px 0' }}>User ID</td><td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', wordBreak: 'break-all' }}>{user?.id}</td></tr>
               <tr><td style={{ color: '#94a3b8', padding: '4px 8px 4px 0' }}>Name</td><td>{user?.name || '—'}</td></tr>
               <tr><td style={{ color: '#94a3b8', padding: '4px 8px 4px 0' }}>Email</td><td>{user?.email}</td></tr>
               <tr><td style={{ color: '#94a3b8', padding: '4px 8px 4px 0' }}>Role</td><td>{user?.isAdmin ? 'Platform Admin' : 'Subscriber'}</td></tr>
               <tr><td style={{ color: '#94a3b8', padding: '4px 8px 4px 0' }}>Org slug</td><td>{org?.slug || '—'}</td></tr>
             </tbody>
           </table>
+          </div>
           <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Link href="/settings" className="btn">Settings</Link>
             <Link href="/account-hub" className="btn">Account Hub</Link>

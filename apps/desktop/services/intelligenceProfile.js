@@ -101,16 +101,34 @@ async function buildIntelligenceProfile(account, keys) {
   }
 
   const platform = account.platform || 'Account';
-  const needsRelink = !!accessToken;
-  const authStatus = needsRelink
-    ? `${platform} token expired or invalid — re-link via Account Hub.`
-    : `Connect ${platform} in Account Hub or add API keys in Settings.`;
+  let authStatus = null;
+  let apiNote = null;
+  let needsRelink = false;
+
+  if (platform === 'LinkedIn' || platform === 'LinkedIn Page') {
+    const linkedin = require('./platforms/linkedin');
+    const { error } = await linkedin.getProfileDetailed(accessToken);
+    if (error) {
+      apiNote = error;
+      needsRelink = /expired|permission|re-authorize|re-link/i.test(error);
+      authStatus = needsRelink ? error : null;
+    }
+  }
+
+  if (!authStatus && !apiNote) {
+    needsRelink = !!accessToken;
+    authStatus = needsRelink
+      ? `${platform} token expired or invalid — re-link via Account Hub.`
+      : `Connect ${platform} in Account Hub or add API keys in Settings.`;
+    if (!accessToken) needsRelink = false;
+  }
 
   return {
     followers: '—',
     likes: '—',
     bestTime: '—',
     authStatus,
+    apiNote,
     needsRelink,
     topTrendingNiche: '—',
     growthVelocity: '—',

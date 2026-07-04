@@ -1,5 +1,11 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
+function ResultTable({ children }: { children: ReactNode }) {
+  return <div className="table-scroll-wrap">{children}</div>;
+}
+
 type KgrData = {
   allintitle?: number | string;
   searchVolume?: number | string;
@@ -52,17 +58,19 @@ export function SeoToolResults({ toolId, data }: { toolId: string; data: Record<
         {d.momentum && <span style={{ marginLeft: 8, color: '#64748b', fontSize: '0.75rem' }}>Trend {d.momentum}</span>}
         <p style={{ margin: '1rem 0 0.5rem', fontSize: '0.75rem', color: '#64748b' }}>KGR &lt; 0.25 = golden keyword opportunity</p>
         {(d.topResults || []).length > 0 && (
-          <table className="seo-results-table">
-            <thead><tr><th>Title</th><th>URL</th></tr></thead>
-            <tbody>
-              {(d.topResults || []).map((r, i) => (
-                <tr key={i}>
-                  <td>{r.title}</td>
-                  <td>{r.link ? <a href={r.link} target="_blank" rel="noreferrer">{r.link.slice(0, 50)}…</a> : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ResultTable>
+            <table className="seo-results-table">
+              <thead><tr><th>Title</th><th>URL</th></tr></thead>
+              <tbody>
+                {(d.topResults || []).map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.title}</td>
+                    <td>{r.link ? <a href={r.link} target="_blank" rel="noreferrer">{r.link.slice(0, 50)}…</a> : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </ResultTable>
         )}
       </div>
     );
@@ -75,24 +83,28 @@ export function SeoToolResults({ toolId, data }: { toolId: string; data: Record<
       <div>
         <p style={{ color: '#94a3b8' }}>{String(data.count || 0)} posts found</p>
         <strong style={{ fontSize: '0.75rem', color: '#64748b' }}>TOP SUBREDDITS</strong>
-        <table className="seo-results-table">
-          <thead><tr><th>Subreddit</th><th>Posts</th><th>Upvotes</th></tr></thead>
-          <tbody>
-            {subs.map((s, i) => <tr key={i}><td>{s.subreddit}</td><td>{s.posts}</td><td>{s.totalUps}</td></tr>)}
-          </tbody>
-        </table>
+        <ResultTable>
+          <table className="seo-results-table">
+            <thead><tr><th>Subreddit</th><th>Posts</th><th>Upvotes</th></tr></thead>
+            <tbody>
+              {subs.map((s, i) => <tr key={i}><td>{s.subreddit}</td><td>{s.posts}</td><td>{s.totalUps}</td></tr>)}
+            </tbody>
+          </table>
+        </ResultTable>
         <strong style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginTop: '1rem' }}>HOT POSTS</strong>
-        <table className="seo-results-table">
-          <thead><tr><th>Sub</th><th>Title</th><th>Ups</th><th></th></tr></thead>
-          <tbody>
-            {posts.map((p, i) => (
-              <tr key={i}>
-                <td>{p.subreddit}</td><td>{p.title}</td><td>{p.ups}</td>
-                <td>{p.url ? <a href={p.url} target="_blank" rel="noreferrer">open</a> : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ResultTable>
+          <table className="seo-results-table">
+            <thead><tr><th>Sub</th><th>Title</th><th>Ups</th><th></th></tr></thead>
+            <tbody>
+              {posts.map((p, i) => (
+                <tr key={i}>
+                  <td>{p.subreddit}</td><td>{p.title}</td><td>{p.ups}</td>
+                  <td>{p.url ? <a href={p.url} target="_blank" rel="noreferrer">open</a> : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ResultTable>
       </div>
     );
   }
@@ -102,18 +114,20 @@ export function SeoToolResults({ toolId, data }: { toolId: string; data: Record<
     return (
       <div>
         <p style={{ color: '#94a3b8' }}>{String(data.count || questions.length)} questions</p>
-        <table className="seo-results-table">
-          <thead><tr><th>Question</th><th>Snippet</th><th></th></tr></thead>
-          <tbody>
-            {questions.map((q, i) => (
-              <tr key={i}>
-                <td>{q.question}</td>
-                <td>{(q.snippet || '').slice(0, 120)}</td>
-                <td>{q.link ? <a href={q.link} target="_blank" rel="noreferrer">open</a> : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ResultTable>
+          <table className="seo-results-table">
+            <thead><tr><th>Question</th><th>Snippet</th><th></th></tr></thead>
+            <tbody>
+              {questions.map((q, i) => (
+                <tr key={i}>
+                  <td>{q.question}</td>
+                  <td>{(q.snippet || '').slice(0, 120)}</td>
+                  <td>{q.link ? <a href={q.link} target="_blank" rel="noreferrer">open</a> : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ResultTable>
       </div>
     );
   }
@@ -123,18 +137,20 @@ export function SeoToolResults({ toolId, data }: { toolId: string; data: Record<
     return (
       <div>
         <p style={{ color: '#94a3b8' }}>{String(data.note || `Checked ${data.checked || data.count || results.length}`)}</p>
-        <table className="seo-results-table">
-          <thead><tr><th>URL</th><th>Status</th><th>Detail</th></tr></thead>
-          <tbody>
-            {results.map((r, i) => (
-              <tr key={i}>
-                <td style={{ wordBreak: 'break-all' }}>{r.url}</td>
-                <td>{r.indexed !== undefined ? (r.indexed ? '✓ Indexed' : '✗ Not found') : (r.status || '—')}</td>
-                <td>{r.foundUrl || r.note || r.error || ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ResultTable>
+          <table className="seo-results-table">
+            <thead><tr><th>URL</th><th>Status</th><th>Detail</th></tr></thead>
+            <tbody>
+              {results.map((r, i) => (
+                <tr key={i}>
+                  <td style={{ wordBreak: 'break-all' }}>{r.url}</td>
+                  <td>{r.indexed !== undefined ? (r.indexed ? '✓ Indexed' : '✗ Not found') : (r.status || '—')}</td>
+                  <td>{r.foundUrl || r.note || r.error || ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ResultTable>
       </div>
     );
   }
@@ -144,19 +160,21 @@ export function SeoToolResults({ toolId, data }: { toolId: string; data: Record<
     return (
       <div>
         <p style={{ color: '#94a3b8' }}>{data.total ? `${data.total} total · ` : ''}{results.length} results</p>
-        <table className="seo-results-table">
-          <thead><tr><th>#</th><th>Title</th><th>Link</th><th>Snippet</th></tr></thead>
-          <tbody>
-            {results.map((r, i) => (
-              <tr key={i}>
-                <td>{r.position || '—'}</td>
-                <td>{r.title}</td>
-                <td>{r.link ? <a href={r.link} target="_blank" rel="noreferrer">{(r.displayed_link || r.link || '').slice(0, 40)}</a> : '—'}</td>
-                <td>{(r.snippet || '').slice(0, 100)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ResultTable>
+          <table className="seo-results-table">
+            <thead><tr><th>#</th><th>Title</th><th>Link</th><th>Snippet</th></tr></thead>
+            <tbody>
+              {results.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.position || '—'}</td>
+                  <td>{r.title}</td>
+                  <td>{r.link ? <a href={r.link} target="_blank" rel="noreferrer">{(r.displayed_link || r.link || '').slice(0, 40)}</a> : '—'}</td>
+                  <td>{(r.snippet || '').slice(0, 100)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ResultTable>
       </div>
     );
   }
@@ -194,17 +212,19 @@ export function SeoToolResults({ toolId, data }: { toolId: string; data: Record<
     return (
       <div>
         <p style={{ color: '#94a3b8' }}>{String(data.count || suggestions.length)} related searches</p>
-        <table className="seo-results-table">
-          <thead><tr><th>Query</th><th></th></tr></thead>
-          <tbody>
-            {suggestions.map((s, i) => (
-              <tr key={i}>
-                <td>{s.query}</td>
-                <td>{s.link ? <a href={s.link} target="_blank" rel="noreferrer">open</a> : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ResultTable>
+          <table className="seo-results-table">
+            <thead><tr><th>Query</th><th></th></tr></thead>
+            <tbody>
+              {suggestions.map((s, i) => (
+                <tr key={i}>
+                  <td>{s.query}</td>
+                  <td>{s.link ? <a href={s.link} target="_blank" rel="noreferrer">open</a> : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ResultTable>
       </div>
     );
   }

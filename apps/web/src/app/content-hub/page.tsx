@@ -254,7 +254,7 @@ function ContentHubContent() {
       )}
 
       {tab === 'compose' && (
-        <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <div className="source-tabs">
           <button type="button" className={`tab ${composeMode === 'quick' ? 'active' : ''}`} onClick={() => setComposeMode('quick')}>Quick Post</button>
           <button type="button" className={`tab ${composeMode === 'wizard' ? 'active' : ''}`} onClick={() => setComposeMode('wizard')}>Publish Wizard</button>
         </div>

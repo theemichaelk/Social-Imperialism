@@ -24,7 +24,7 @@ const MASTERY_STEPS = [
     navId: 'onboarding',
     instructions: [
       'Enter brand name, domain, description, tone, and audience.',
-      'Click **Research My Brand** so THEE_MICHAEL auto-fills from your live site.',
+      'Click **Research My Brand** so Imperialism Brain auto-fills from your live site.',
       'Save the campaign — this wires Brand, Keywords, and Prompt Vault.',
     ],
     checkKey: 'hasProject',

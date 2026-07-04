@@ -6,6 +6,7 @@ import { openOAuthPopup, pollOAuthUntilComplete } from '@/lib/oauthConnect';
 import { PageShell } from '@/components/PageShell';
 import { IntelligenceProfilePanel } from '@/components/IntelligenceProfilePanel';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
+import { AccountConnectionDetails } from '@/components/AccountConnectionDetails';
 import { useIntelligence } from '@/hooks/useIntelligence';
 import { normalizeProfile } from '@/lib/intelligenceProfile';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
@@ -39,8 +40,22 @@ type Account = {
   loginEmail?: string;
   proxyId?: string | null;
   useProxy?: boolean;
+  status?: string;
+  linkedAt?: string;
+  displayName?: string;
   profile?: Record<string, unknown>;
   profileRefreshedAt?: string;
+  health?: { status: string; label: string };
+  counts?: {
+    automationTargets?: number;
+    storedGroups?: number;
+    childAccounts?: number;
+    enabledTargets?: number;
+  };
+  detailLines?: Array<{ key: string; value: string }>;
+  targetsPreview?: Array<{ id: string; name: string; type?: string; platform?: string; source?: string }>;
+  groupsPreview?: Array<{ id: string; name: string; memberCount?: number | null }>;
+  childrenPreview?: Array<{ id: string; platform: string; handle?: string; type?: string }>;
 };
 
 type AutomationTarget = {
@@ -417,11 +432,20 @@ export default function AccountHubPage() {
             >
               <div>
                 <span className="badge">{PLATFORM_ICONS[a.platform] || '?'} {a.platform}</span>
-                {' '}{a.handle || a.username || a.id}
+                {' '}{a.displayName || a.handle || a.username || a.id}
                 {a.type && <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}> · {a.type}</span>}
+                {a.health?.status === 'relink' && (
+                  <span className="badge status-warn" style={{ marginLeft: 6, fontSize: '0.7rem' }}>Re-link</span>
+                )}
                 {a.useProxy && a.proxyId && (
                   <span className="badge" style={{ marginLeft: 6, fontSize: '0.7rem' }}>Proxy</span>
                 )}
+                <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: 4 }}>
+                  {a.loginEmail && <span>{a.loginEmail} · </span>}
+                  {a.counts?.automationTargets != null && <span>{a.counts.automationTargets} targets · </span>}
+                  {a.counts?.storedGroups != null && a.counts.storedGroups > 0 && <span>{a.counts.storedGroups} groups · </span>}
+                  {a.linkedAt && <span>linked {new Date(a.linkedAt).toLocaleDateString()}</span>}
+                </div>
               </div>
               <button className="btn" onClick={async (e) => { e.stopPropagation(); await invoke('unlink-account', a.id); refresh(); }}>Disconnect</button>
             </div>
@@ -505,6 +529,7 @@ export default function AccountHubPage() {
           <div className="card">
             <h3>Workspace — {selected.platform}{selected.type ? ` (${selected.type})` : ''}</h3>
             <p className="ah-workspace-handle">{selected.handle || selected.username}</p>
+            <AccountConnectionDetails account={selected} />
             {profile ? (
               <>
                 <IntelligenceProfilePanel

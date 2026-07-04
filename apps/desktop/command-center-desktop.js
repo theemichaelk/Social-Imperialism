@@ -16,6 +16,7 @@ const DESKTOP_COMMAND_SECTIONS = [
     { id: 'scheduler', href: 'calendar.html#scheduler', icon: '⏱️', label: 'Scheduler', desc: 'Queue and background run windows' },
   ]},
   { label: 'Discovery & Replies', items: [
+    { id: 'prompt-vault', saasPath: '/prompt-vault', icon: '🗄️', label: 'Prompt Vault', desc: 'Saved prompt templates per campaign' },
     { id: 'engagement', href: 'engagement.html', icon: '👥', label: 'Engagement', desc: 'CRM — LinkedIn lists, AI comments' },
     { id: 'history', href: 'history.html', icon: '📜', label: 'AI Replies', desc: 'Approval workflow and agency reports' },
     { id: 'keywords', href: 'keywords.html', icon: '🏷️', label: 'Keywords', desc: 'AI suggestions, Quantum Pages' },
@@ -37,12 +38,31 @@ const DESKTOP_COMMAND_SECTIONS = [
     { id: 'dns', href: 'dns.html', icon: '🌐', label: 'DNS', desc: 'Route53 registry, record CRUD' },
     { id: 'integrations', href: 'integrations.html', icon: '🔌', label: 'Integrations', desc: 'Live probes, email, webhooks' },
     { id: 'settings', href: 'settings.html', icon: '🎛️', label: 'Settings', desc: 'Campaigns, billing, Grok, health' },
+    { id: 'support', saasPath: '/support', icon: '💬', label: 'Imperialism Brain', desc: 'Live support & THEE_MICHAEL guide' },
+    { id: 'campaign-manager', saasPath: '/campaign-manager', icon: '📋', label: 'Campaign Command', desc: 'Verified nodes & campaign ops (SaaS)' },
   ]},
 ];
+
+function countDesktopModules() {
+  return DESKTOP_COMMAND_SECTIONS.reduce((n, sec) => n + sec.items.length, 0);
+}
+
+async function openSaasModule(path) {
+  try {
+    const { ipcRenderer } = require('electron');
+    const base = await ipcRenderer.invoke('get-saas-web-url');
+    const url = `${String(base || 'https://www.socialimperialism.com').replace(/\/$/, '')}${path}`;
+    await ipcRenderer.invoke('open-external-url', url);
+  } catch (e) {
+    console.warn('SaaS module open failed:', e.message);
+  }
+}
 
 function renderDesktopCommandCenter(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
+
+  const moduleCount = countDesktopModules();
 
   const sectionsHtml = DESKTOP_COMMAND_SECTIONS.map((sec) => `
     <div class="command-section" style="margin-bottom:1rem">
@@ -51,14 +71,18 @@ function renderDesktopCommandCenter(containerId) {
         <span style="font-size:0.68rem;color:#64748b">${sec.items.length} modules</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-        ${sec.items.map((item) => `
-          <a href="${item.href}" class="neo-card" style="text-decoration:none;color:inherit;margin:0;padding:0.85rem;display:flex;flex-direction:column;gap:4px">
+        ${sec.items.map((item) => {
+          const isSaas = !!item.saasPath;
+          const href = isSaas ? '#' : item.href;
+          const launch = isSaas ? 'Open in browser →' : 'Launch →';
+          return `
+          <a href="${href}" class="neo-card${isSaas ? ' command-saas-card' : ''}" data-saas-path="${isSaas ? item.saasPath : ''}" style="text-decoration:none;color:inherit;margin:0;padding:0.85rem;display:flex;flex-direction:column;gap:4px">
             <span style="font-size:1.2rem">${item.icon}</span>
             <strong style="font-size:0.88rem;color:#e8f0fc">${item.label}</strong>
             <span style="font-size:0.72rem;color:#8ba3c7;line-height:1.4">${item.desc}</span>
-            <span style="font-size:0.68rem;color:#38bdf8;margin-top:4px">Launch →</span>
-          </a>
-        `).join('')}
+            <span style="font-size:0.68rem;color:#38bdf8;margin-top:4px">${launch}</span>
+          </a>`;
+        }).join('')}
       </div>
     </div>
   `).join('');
@@ -67,10 +91,19 @@ function renderDesktopCommandCenter(containerId) {
     <div class="neo-page-header" style="margin-bottom:1rem">
       <p class="neo-eyebrow">Neural Command Matrix</p>
       <h2 class="neo-title" style="font-size:1.2rem">Full Platform Capability Grid</h2>
-      <p class="neo-subtitle" style="font-size:0.82rem">22 modules — desktop parity with live SaaS at socialimperialism.com</p>
+      <p class="neo-subtitle" style="font-size:0.82rem">${moduleCount} modules — native desktop + SaaS browser bridges at socialimperialism.com</p>
     </div>
     ${sectionsHtml}
   `;
+
+  el.querySelectorAll('[data-saas-path]').forEach((card) => {
+    const path = card.getAttribute('data-saas-path');
+    if (!path) return;
+    card.addEventListener('click', (e) => {
+      e.preventDefault();
+      openSaasModule(path);
+    });
+  });
 }
 
 if (typeof module !== 'undefined') {

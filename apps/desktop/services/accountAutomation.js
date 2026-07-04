@@ -194,7 +194,12 @@ async function discoverForLinkedAccount(account, keys, allAccounts = []) {
       break;
     case 'LinkedIn':
     case 'LinkedIn Page':
-      discovered = await linkedin.discoverAccounts(keys, account.handle, accessToken);
+      try {
+        discovered = await linkedin.discoverAccounts(keys, account.handle, accessToken, { allowPlaceholder: false });
+      } catch (e) {
+        warnings.push(e.message);
+        discovered = [];
+      }
       break;
     case 'Discord':
       discovered = await discord.discoverAccounts(accessToken, keys.discordBotToken, account.handle);
@@ -538,10 +543,12 @@ function isRootProfileAccount(acc) {
 function linkedAccountDedupeKey(acc) {
   if (!isRootProfileAccount(acc)) return null;
   const platform = acc.platform || 'unknown';
-  const conn = String(acc.connectionId || '').trim();
-  if (conn) return `root:${platform}:conn:${conn}`;
   const email = String(acc.loginEmail || '').trim().toLowerCase();
   if (email) return `root:${platform}:email:${email}`;
+  const conn = String(acc.connectionId || '').trim();
+  if (conn) return `root:${platform}:conn:${conn}`;
+  const handle = String(acc.handle || '').trim().toLowerCase();
+  if (handle) return `root:${platform}:handle:${handle}`;
   return null;
 }
 

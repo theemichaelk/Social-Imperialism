@@ -112,7 +112,7 @@ const INTENT_PATTERNS: Array<{ patterns: RegExp[]; route: IntentRoute }> = [
   },
   {
     patterns: [/fix/i, /broken/i, /not\s+work/i, /stuck/i, /troubleshoot/i, /help/i],
-    route: { intent: 'troubleshoot', label: 'Live Support', href: '/support', module: 'Live Support' },
+    route: { intent: 'troubleshoot', label: 'Imperialism Brain', href: '/support', module: 'Imperialism Brain' },
   },
   {
     patterns: [/thee_michael/i, /admin\s+approv/i, /go\s+live\s+for\s+every/i],

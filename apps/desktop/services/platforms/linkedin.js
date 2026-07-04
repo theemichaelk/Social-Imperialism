@@ -1,31 +1,89 @@
 const axios = require('axios');
 
+const LINKEDIN_REST_VERSION = '202306';
+
+function parseLinkedInError(err) {
+  const status = err?.response?.status;
+  const data = err?.response?.data;
+  const msg = data?.message || data?.error_description || data?.error || err?.message || 'LinkedIn API error';
+  if (status === 401) return 'LinkedIn token expired — re-authorize via OAuth in Account Hub.';
+  if (status === 403) return `LinkedIn permission denied: ${msg}. Enable Community Management / Sign In with LinkedIn products and re-authorize with organization scopes.`;
+  if (status === 429) return 'LinkedIn API rate limit reached — wait and click Refresh Profile, or re-link tomorrow.';
+  if (status === 426) return `LinkedIn API version mismatch: ${msg}`;
+  return msg;
+}
+
 async function getProfile(accessToken) {
-  if (!accessToken) return null;
+  const detailed = await getProfileDetailed(accessToken);
+  return detailed.profile;
+}
+
+async function getProfileDetailed(accessToken) {
+  if (!accessToken) {
+    return { profile: null, error: 'No LinkedIn access token on this account.' };
+  }
+
   try {
     const res = await axios.get('https://api.linkedin.com/v2/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 20000,
     });
     const d = res.data;
     return {
-      followers: 'Check LinkedIn Analytics',
-      likes: 'N/A',
-      bestTime: 'Tuesday–Thursday 9–11 AM',
-      topTrendingNiche: 'Professional networking',
-      growthVelocity: 'Track via LinkedIn Creator tools',
-      suggestedGroups: ['LinkedIn Groups in your industry'],
-      raw: d,
+      profile: {
+        followers: d.followers_count != null ? String(d.followers_count) : 'Check LinkedIn Analytics',
+        likes: 'N/A',
+        bestTime: 'Tuesday–Thursday 9–11 AM',
+        topTrendingNiche: 'Professional networking',
+        growthVelocity: 'Track via LinkedIn Creator tools',
+        suggestedGroups: ['LinkedIn Groups in your industry'],
+        email: d.email || null,
+        name: d.name || [d.given_name, d.family_name].filter(Boolean).join(' ') || null,
+        raw: d,
+      },
+      error: null,
     };
   } catch (e) {
-    console.error('LinkedIn profile error:', e.message);
-    return null;
+    const error = parseLinkedInError(e);
+    console.error('LinkedIn profile error:', error);
+    return { profile: null, error };
   }
 }
 
 async function discoverOrganizations(accessToken) {
-  if (!accessToken) return [];
-  try {
-    const res = await axios.get('https://api.linkedin.com/v2/organizationAcls', {
+  const detailed = await discoverOrganizationsDetailed(accessToken);
+  return detailed.orgs;
+}
+
+async function discoverOrganizationsDetailed(accessToken) {
+  if (!accessToken) return { orgs: [], error: 'No LinkedIn access token.' };
+
+  const attempts = [
+    {
+      url: 'https://api.linkedin.com/rest/organizationAcls',
+      params: { q: 'roleAssignee', role: 'ADMINISTRATOR' },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': LINKEDIN_REST_VERSION,
+      },
+      map: (elements) => elements.map((el) => {
+        const org = el.organization || el['organization~'] || {};
+        const orgUrn = typeof org === 'string' ? org : (org.id ? `urn:li:organization:${org.id}` : '');
+        const orgObj = typeof org === 'object' ? org : {};
+        const orgId = String(orgObj.id || orgUrn.replace('urn:li:organization:', '') || '');
+        const name = orgObj.localizedName || orgObj.vanityName || orgObj.name || 'Company Page';
+        return {
+          platform: 'LinkedIn Page',
+          handle: `${name} (Page)`,
+          type: 'Page',
+          id: orgId || `li_org_${Date.now()}`,
+          orgUrn: orgUrn || (orgId ? `urn:li:organization:${orgId}` : null),
+        };
+      }),
+    },
+    {
+      url: 'https://api.linkedin.com/v2/organizationAcls',
       params: {
         q: 'roleAssignee',
         role: 'ADMINISTRATOR',
@@ -35,32 +93,73 @@ async function discoverOrganizations(accessToken) {
         Authorization: `Bearer ${accessToken}`,
         'X-Restli-Protocol-Version': '2.0.0',
       },
-    });
+      map: (elements) => elements.map((el) => {
+        const org = el['organization~'] || {};
+        const orgUrn = el.organization || '';
+        const orgId = orgUrn.replace('urn:li:organization:', '');
+        return {
+          platform: 'LinkedIn Page',
+          handle: `${org.localizedName || org.vanityName || 'Company Page'} (Page)`,
+          type: 'Page',
+          id: orgId || `li_org_${Date.now()}`,
+          orgUrn,
+        };
+      }),
+    },
+    {
+      url: 'https://api.linkedin.com/rest/organizationAcls',
+      params: { q: 'roleAssignee' },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': LINKEDIN_REST_VERSION,
+      },
+      map: (elements) => elements.map((el) => {
+        const orgRef = el.organization || el['organization~'];
+        const orgUrn = typeof orgRef === 'string' ? orgRef : '';
+        const orgId = orgUrn.replace('urn:li:organization:', '');
+        return {
+          platform: 'LinkedIn Page',
+          handle: `Organization ${orgId || 'Page'} (Page)`,
+          type: 'Page',
+          id: orgId || `li_org_${Date.now()}`,
+          orgUrn: orgUrn || null,
+          role: el.role || null,
+        };
+      }),
+    },
+  ];
 
-    return (res.data?.elements || []).map((el) => {
-      const org = el['organization~'] || {};
-      const orgUrn = el.organization || '';
-      const orgId = orgUrn.replace('urn:li:organization:', '');
-      return {
-        platform: 'LinkedIn Page',
-        handle: `${org.localizedName || org.vanityName || 'Company Page'} (Page)`,
-        type: 'Page',
-        id: orgId || `li_org_${Date.now()}`,
-        orgUrn,
-      };
-    });
-  } catch (e) {
-    console.error('LinkedIn org discovery error:', e.message);
-    return [];
+  const errors = [];
+  for (const attempt of attempts) {
+    try {
+      const res = await axios.get(attempt.url, {
+        params: attempt.params,
+        headers: attempt.headers,
+        timeout: 20000,
+      });
+      const elements = res.data?.elements || [];
+      const orgs = attempt.map(elements).filter((o) => o.id);
+      if (orgs.length) return { orgs, error: null };
+    } catch (e) {
+      errors.push(parseLinkedInError(e));
+    }
   }
+
+  return {
+    orgs: [],
+    error: errors[0] || 'No LinkedIn company pages returned. Grant organization scopes and enable Community Management in your LinkedIn Developer app.',
+  };
 }
 
-async function discoverAccounts(keys, username, accessToken) {
+async function discoverAccounts(keys, username, accessToken, options = {}) {
+  const { allowPlaceholder = true } = options || {};
   const token = accessToken || keys.linkedinAccessToken;
   const accounts = [];
+  const warnings = [];
 
   if (token) {
-    const profile = await getProfile(token);
+    const { profile, error: profileError } = await getProfileDetailed(token);
     if (profile?.raw) {
       const name = profile.raw.name || profile.raw.given_name || username;
       accounts.push({
@@ -68,14 +167,31 @@ async function discoverAccounts(keys, username, accessToken) {
         handle: name,
         type: 'Profile',
         id: profile.raw.sub || `li_${Date.now()}`,
+        email: profile.raw.email || null,
       });
-    }
-    const orgs = await discoverOrganizations(token);
+    } else if (profileError) warnings.push(`Profile: ${profileError}`);
+
+    const { orgs, error: orgError } = await discoverOrganizationsDetailed(token);
     accounts.push(...orgs);
+    if (orgError && !orgs.length) warnings.push(`Pages: ${orgError}`);
   }
 
-  if (accounts.length) return accounts;
-  return [{ platform: 'LinkedIn', handle: username || 'LinkedIn Profile', type: 'Profile', id: `li_${Date.now()}` }];
+  if (accounts.length) {
+    if (warnings.length) accounts[0]._warnings = warnings;
+    return accounts;
+  }
+
+  if (!allowPlaceholder) {
+    throw new Error(warnings.join(' · ') || 'LinkedIn discovery returned no accounts. Re-link with OAuth or paste a fresh token.');
+  }
+
+  return [{
+    platform: 'LinkedIn',
+    handle: username || 'LinkedIn Profile',
+    type: 'Profile',
+    id: `li_${Date.now()}`,
+    _warnings: warnings,
+  }];
 }
 
 async function publish(postData, accessToken) {
@@ -212,4 +328,15 @@ async function fetchRecentPostsForMember(profileUrl, accessToken) {
   }
 }
 
-module.exports = { getProfile, discoverAccounts, discoverOrganizations, publish, engage, fetchRecentPostsForMember, getActorUrn };
+module.exports = {
+  getProfile,
+  getProfileDetailed,
+  discoverAccounts,
+  discoverOrganizations,
+  discoverOrganizationsDetailed,
+  publish,
+  engage,
+  fetchRecentPostsForMember,
+  getActorUrn,
+  parseLinkedInError,
+};

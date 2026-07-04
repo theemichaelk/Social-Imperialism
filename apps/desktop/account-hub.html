@@ -473,6 +473,11 @@ button.publish-btn:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5); transf
 
       <div id="subAccountsBanner" class="sub-accounts-banner hidden"></div>
 
+      <div id="accountDetailsPanel" style="background:rgba(15,23,42,0.5);border:1px solid #334155;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+        <h3 style="margin:0 0 0.75rem;color:#e2e8f0;font-size:1rem;">Connection Details</h3>
+        <div id="accountDetailsBody" style="font-size:0.82rem;color:#94a3b8;">Select a connection to view login, targets, groups, and API health.</div>
+      </div>
+
       <div id="intelligencePanel" style="background:rgba(15,23,42,0.6);border:1px solid #334155;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
           <h3 style="margin:0;color:#38bdf8;font-size:1.1rem;">Account Intelligence</h3>
@@ -557,6 +562,35 @@ function showToast(msg, type) {
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderAccountDetails(acc) {
+  const el = document.getElementById('accountDetailsBody');
+  if (!el || !acc) return;
+  const lines = acc.detailLines || [];
+  const counts = acc.counts || {};
+  const health = acc.health?.label || 'Unknown';
+  const targetPreview = (acc.targetsPreview || []).slice(0, 8);
+  const groupPreview = (acc.groupsPreview || []).slice(0, 6);
+  let html = `<div style="margin-bottom:8px;"><strong style="color:#cbd5e1;">Health:</strong> ${escapeHtml(health)}</div>`;
+  html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">`;
+  html += `<div class="profile-stat"><div class="val">${counts.automationTargets || 0}</div><div class="lbl">Targets</div></div>`;
+  html += `<div class="profile-stat"><div class="val">${counts.storedGroups || 0}</div><div class="lbl">Groups</div></div>`;
+  html += `<div class="profile-stat"><div class="val">${counts.childAccounts || 0}</div><div class="lbl">Sub-accts</div></div>`;
+  html += `<div class="profile-stat"><div class="val">${counts.enabledTargets || 0}</div><div class="lbl">Enabled</div></div>`;
+  html += `</div>`;
+  if (lines.length) {
+    html += lines.map((l) => `<div style="margin-bottom:4px;"><strong style="color:#cbd5e1;">${escapeHtml(l.key)}:</strong> ${escapeHtml(l.value)}</div>`).join('');
+  }
+  if (targetPreview.length) {
+    html += `<div style="margin-top:10px;font-weight:600;color:#e2e8f0;">Discovered targets</div>`;
+    html += targetPreview.map((t) => `<div style="margin-top:4px;">${escapeHtml(t.name)} <span style="color:#64748b;">· ${escapeHtml([t.platform, t.type, t.source].filter(Boolean).join(' · '))}</span></div>`).join('');
+  }
+  if (groupPreview.length) {
+    html += `<div style="margin-top:10px;font-weight:600;color:#e2e8f0;">Groups / communities</div>`;
+    html += groupPreview.map((g) => `<div style="margin-top:4px;">${escapeHtml(g.name || g.id)}</div>`).join('');
+  }
+  el.innerHTML = html;
 }
 
 function renderProfile(profile, refreshedAt) {
@@ -677,6 +711,7 @@ async function refreshAccountData({ silent = false } = {}) {
     const res = await ipcRenderer.invoke('refresh-account-profile', currentAccountId);
     if (res.success) {
       currentAccount = res.account;
+      renderAccountDetails(res.account);
       renderProfile(res.profile, res.account?.profileRefreshedAt);
       if (res.newAccounts?.length) showSubAccountsBanner(res.newAccounts);
       await loadAutomationTargets();
@@ -687,6 +722,7 @@ async function refreshAccountData({ silent = false } = {}) {
         if (res.warnings?.length) msg += ' Some items need extra Meta permissions.';
         showToast(msg, res.error ? 'error' : 'success');
       }
+      await loadAccounts();
       if (res.error && !silent) showToast(res.error, 'error');
       if (res.warnings?.length && !silent) console.warn('Facebook discovery warnings:', res.warnings);
     } else if (!silent) {
@@ -738,12 +774,17 @@ async function loadAccounts() {
       const div = document.createElement('div');
       div.className = `account-item ${index === 0 ? 'active' : ''}`;
       div.id = acc.id;
+      const targetCount = acc.counts?.automationTargets ?? 0;
+      const groupCount = acc.counts?.storedGroups ?? 0;
+      const healthBadge = acc.health?.status === 'relink'
+        ? '<span style="color:#fbbf24;font-size:0.7rem;"> · Re-link</span>' : '';
       div.innerHTML = `
         <div class="acc-icon ${config.class}" ${extraStyle}>${config.icon}</div>
         <div class="acc-details">
-          <h4>${acc.platform}${acc.type ? ' · ' + acc.type : ''}</h4>
-          <p><span class="status-dot"></span> ${acc.handle}</p>
-          ${acc.loginEmail ? `<p style="margin:2px 0 0 0; font-size:0.7rem; color:#64748b;">${acc.loginEmail}</p>` : ''}
+          <h4>${acc.platform}${acc.type ? ' · ' + acc.type : ''}${healthBadge}</h4>
+          <p><span class="status-dot"></span> ${escapeHtml(acc.displayName || acc.handle)}</p>
+          ${acc.loginEmail ? `<p style="margin:2px 0 0 0; font-size:0.7rem; color:#64748b;">${escapeHtml(acc.loginEmail)}</p>` : ''}
+          <p style="margin:2px 0 0 0; font-size:0.68rem; color:#64748b;">${targetCount} targets${groupCount ? ` · ${groupCount} groups` : ''}${acc.linkedAt ? ` · ${new Date(acc.linkedAt).toLocaleDateString()}` : ''}</p>
         </div>
       `;
       
@@ -776,6 +817,7 @@ async function selectAccount(acc, element, config) {
   else iconEl.style.cssText = `width: 56px; height: 56px; font-size: 1.8rem;`;
 
   hideSubAccountsBanner();
+  renderAccountDetails(acc);
   renderProfile(acc.profile, acc.profileRefreshedAt);
   await loadAutomationTargets();
   refreshAccountData({ silent: true });

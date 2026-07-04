@@ -3,10 +3,13 @@ export type IntelligenceProfile = {
   likes?: string | number;
   bestTime?: string;
   authStatus?: string;
+  apiNote?: string;
   needsRelink?: boolean;
   topTrendingNiche?: string;
   growthVelocity?: string;
   suggestedGroups?: string[];
+  email?: string;
+  name?: string;
 };
 
 export type LinkedAccountIntel = {

@@ -62,6 +62,16 @@ export function IntelligenceProfilePanel({
         </div>
       </div>
       <div className="ip-extra">
+        {profile.apiNote && (
+          <div className="ip-api-note" style={{ color: '#fbbf24', marginBottom: 8 }}>
+            <strong>API note:</strong> {profile.apiNote}
+          </div>
+        )}
+        {profile.authStatus && (
+          <div className="ip-api-note" style={{ color: '#f87171', marginBottom: 8 }}>
+            <strong>Connection:</strong> {profile.authStatus}
+          </div>
+        )}
         <div><strong>Best time:</strong> {bestTime || '—'}</div>
         <div><strong>Trending niche:</strong> {profile.topTrendingNiche || '—'}</div>
         <div><strong>Suggested communities:</strong> {groups}</div>
