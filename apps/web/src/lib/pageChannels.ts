@@ -12,8 +12,16 @@ export const PAGE_CHANNELS = {
     'engage-post', 'draft-post-reply', 'save-ai-reply', 'export-data', 'curate-from-rss', 'search-stock-photo',
     'serp-search', 'generate-image', 'schedule-post', 'publish-post', 'get-section-live',
   ],
+  videoStudio: [
+    'get-imperial-video-studio-config', 'get-imperial-video-tool-registry', 'get-imperial-video-skills-index',
+    'run-imperial-video-pipeline', 'get-imperial-video-pipeline-result', 'analyze-reference-video',
+    'run-imperial-video-compose', 'grok-generate-video', 'grok-imagine', 'grok-ask-text', 'grok-get-status',
+    'export-design-subtitles', 'compose-social-layout', 'generate-viral-thumbnail', 'search-stock-photo',
+    'play-tts', 'publish-post', 'schedule-post', 'get-content-library', 'get-section-live',
+  ],
   contentHub: [
     'get-imperial-pipeline-config', 'run-imperial-pipeline', 'get-imperial-pipeline-result',
+    'get-imperial-video-studio-config', 'run-imperial-video-pipeline',
     'publish-post', 'schedule-post', 'generate-ai', 'generate-image', 'search-stock-photo',
     'curate-from-rss', 'run-content-studio', 'generate-content-batch', 'get-content-studio-config',
     'generate-viral-thumbnail', 'generate-viral-thumbnail-batch', 'get-thumbnail-studio-config',

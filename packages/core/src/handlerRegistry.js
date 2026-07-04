@@ -219,6 +219,9 @@ async function registerAllHandlers(store, deps = {}) {
   const { registerImperialPipelineHandlers } = require('./imperialContentPipeline');
   registerImperialPipelineHandlers({ ipcMain, generateAI, store });
 
+  const { registerImperialVideoStudioHandlers } = require('./imperialVideoStudio');
+  registerImperialVideoStudioHandlers({ ipcMain, generateAI, store });
+
   // Core index.js handlers
   const { registerCoreHandlers } = require('./coreHandlers');
   registerCoreHandlers({

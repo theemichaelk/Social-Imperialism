@@ -16,6 +16,7 @@
 | `issue-control-plane` | Issue Control Plane | [features/ISSUE_CONTROL_PLANE.md](./features/ISSUE_CONTROL_PLANE.md) | `/dashboard/issues`, web-augmented GitOps repairs |
 | `campaign-mastery` | Campaign Mastery A→Z | [features/CAMPAIGN_MASTERY.md](./features/CAMPAIGN_MASTERY.md) | Dashboard mastery panel, `theeMichaelMasteryExpert` |
 | `onboarding-intelligence` | Onboarding Intelligence | [features/ONBOARDING_INTELLIGENCE.md](./features/ONBOARDING_INTELLIGENCE.md) | `/onboarding`, brand research orchestrator |
+| `imperial-video-studio` | Imperial Video Studio | [features/IMPERIAL_VIDEO_STUDIO.md](./features/IMPERIAL_VIDEO_STUDIO.md) | `/video-studio`, 12 pipelines, production board |
 
 ## Search routing keywords
 

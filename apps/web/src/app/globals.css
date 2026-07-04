@@ -2874,6 +2874,55 @@ textarea.input { min-height: 100px; resize: vertical; }
 .overlord-intervention-title { display: block; margin: 0.25rem 0; font-size: 0.92rem; }
 .overlord-intervention-body { margin: 0 0 0.65rem; font-size: 0.78rem; color: var(--muted); line-height: 1.45; }
 .overlord-intervention-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.imperial-video-studio { padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.imperial-video-studio-head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.imperial-video-studio-head h2 { margin: 0.15rem 0 0; font-size: 1.15rem; }
+.imperial-video-studio-tools { margin: 0.35rem 0 0; font-size: 0.68rem; color: var(--muted); }
+.imperial-video-studio-ref-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.imperial-video-studio-ref-row .input { flex: 1; min-width: 200px; }
+.imperial-video-studio-analysis {
+  margin: 0.5rem 0 0; padding: 0.65rem 0.75rem; font-size: 0.72rem; line-height: 1.45;
+  background: rgba(56, 189, 248, 0.06); border: 1px solid var(--border); border-radius: 8px;
+  white-space: pre-wrap;
+}
+.imperial-video-studio-pipeline-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem;
+}
+.imperial-video-studio-pipeline-card {
+  text-align: left; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); cursor: pointer; display: flex; flex-direction: column; gap: 0.25rem;
+}
+.imperial-video-studio-pipeline-card.is-selected { border-color: var(--accent3); box-shadow: 0 0 0 1px var(--accent3); }
+.imperial-video-studio-pipeline-card .stability {
+  font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+}
+.imperial-video-studio-pipeline-card .stability.is-production { color: var(--accent3); }
+.imperial-video-studio-pipeline-card .stability.is-beta { color: var(--muted); }
+.imperial-video-studio-pipeline-card strong { font-size: 0.78rem; }
+.imperial-video-studio-pipeline-card .muted { font-size: 0.65rem; line-height: 1.35; }
+.imperial-video-studio-run-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.imperial-video-studio-stage-flow { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+.imperial-video-studio-stage {
+  display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.45rem 0.55rem;
+  border-radius: 8px; border: 1px solid var(--border);
+}
+.imperial-video-studio-stage.is-done { background: rgba(56, 189, 248, 0.06); }
+.imperial-video-studio-stage.is-pending { opacity: 0.65; }
+.imperial-video-studio-stage .stage-dot {
+  width: 8px; height: 8px; border-radius: 50%; margin-top: 0.35rem;
+  background: var(--accent3); flex-shrink: 0;
+}
+.imperial-video-studio-stage.is-pending .stage-dot { background: var(--muted); }
+.imperial-video-studio-stage .stage-gate { display: block; font-size: 0.62rem; color: var(--muted); }
+.imperial-video-studio-stage .stage-approval-badge {
+  display: inline-block; margin-top: 0.2rem; font-size: 0.58rem; color: var(--accent2);
+}
+.imperial-video-studio-deliverable pre {
+  margin: 0.35rem 0 0; padding: 0.65rem; font-size: 0.68rem; line-height: 1.4;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  max-height: 220px; overflow: auto;
+}
+
 .overlord-notification-stack { display: flex; flex-direction: column; gap: 0.5rem; margin: 0 0 0.75rem; }
 .thee-michael-notification-history-collapsed {
   width: 100%; text-align: left; font-size: 0.72rem; padding: 0.45rem 0.75rem;

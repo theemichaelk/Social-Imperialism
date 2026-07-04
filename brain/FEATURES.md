@@ -110,7 +110,7 @@ Persistent requirement for all past, current, and future modules — every actio
 | Welcome email drip | `leadCaptureService` + scheduler | — |
 | Predictive motivation | — | `PredictiveMotivationPanel` on dashboard |
 
-**IPC handlers:** **398** (verify via `npm run audit:accuracy`)
+**IPC handlers:** **405** (verify via `npm run audit:accuracy`)
 
 ## Imperialism Brain extensions (July 2026)
 
@@ -129,6 +129,22 @@ Persistent requirement for all past, current, and future modules — every actio
 | `/dashboard/issues` | Issue Control Plane (admin) |
 | `/dashboard/admin` | Admin directory + live guide push |
 | `/dashboard/users` | My Account |
+
+## Imperial Video Studio (July 2026)
+
+**Brain:** [features/IMPERIAL_VIDEO_STUDIO.md](./features/IMPERIAL_VIDEO_STUDIO.md) · **Route:** `/video-studio` · **Skills:** [skills/video-studio/INDEX.md](./skills/video-studio/INDEX.md)
+
+| Capability | API / Core | Web |
+|------------|------------|-----|
+| 12 agentic pipelines | `imperialVideoStudio.js` | `ImperialVideoStudioPanel.tsx` |
+| 52-tool registry | `get-imperial-video-tool-registry` | Capability menu in panel |
+| 500+ agent skills | `get-imperial-video-skills-index` | Brain + coding agents |
+| Reference video analysis | `analyze-reference-video` | URL paste → concepts |
+| 7-stage production flow | `run-imperial-video-pipeline` | Production board |
+| Approval gates | THEE_MICHAEL notification ledger | Script/assets gates |
+| Compose & publish | `run-imperial-video-compose` | → Content Hub Media |
+
+**IPC handlers:** **405** (verify via `npm run audit:accuracy`)
 
 ## Design Studio — Imperialism Design Compositor (July 2026)
 

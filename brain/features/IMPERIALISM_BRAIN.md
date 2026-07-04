@@ -30,6 +30,7 @@
 - `thee-michael-seo-intel` — AEO/GEO/local/national briefs
 - `onboarding-intelligence` — setup wizard expert
 - `campaign-mastery` — A→Z campaign guide
+- `imperial-video-studio` — 12 agentic video pipelines (see [IMPERIAL_VIDEO_STUDIO.md](./IMPERIAL_VIDEO_STUDIO.md))
 
 ## Prompt Vault seeds
 

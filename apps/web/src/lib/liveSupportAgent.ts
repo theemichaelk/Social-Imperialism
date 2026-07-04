@@ -144,6 +144,14 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Keywords · Local', href: '/keywords' },
   },
   {
+    patterns: [
+      /video\s+studio/i, /make\s+(a\s+)?video/i, /agentic\s+video/i, /video\s+pipeline/i,
+      /animated\s+explainer/i, /cinematic\s+teaser/i, /clip\s+repurpose/i, /stock\s+montage/i,
+      /like\s+this\s+(short|reel|video)/i, /reference\s+video/i,
+    ],
+    route: { label: 'Video Studio', href: '/video-studio', action: 'video-studio' },
+  },
+  {
     patterns: [/\bkgr\b/i, /keyword\s+research/i, /serp\s+research/i, /national\s+seo/i],
     route: { label: 'SEO Tools', href: '/seo-tools' },
   },
@@ -316,6 +324,7 @@ export function inferModule(text: string): string {
   if (/rule|automation|worker/.test(t)) return 'Auto-Rules';
   if (/billing|subscription|plan/.test(t)) return 'Settings / Billing';
   if (/reddit|quora|growth/.test(t)) return 'Growth Lab';
+  if (/video|explainer|montage|trailer|reel|shorts?|grok\s+video/.test(t)) return 'Video Studio';
   return 'Mission Control';
 }
 

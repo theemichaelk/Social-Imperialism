@@ -83,7 +83,7 @@ function countQaPages() {
 
 // --- Checks ---
 const pageFocusRoutes = countPageFocusRoutes();
-const EXPECTED_MODULES = 28;
+const EXPECTED_MODULES = 29;
 
 if (pageFocusRoutes !== EXPECTED_MODULES) fail(`pageFocus.ts routes: expected ${EXPECTED_MODULES}, got ${pageFocusRoutes}`);
 
@@ -307,7 +307,7 @@ else if (!read(compositorPanel).includes('compose-social-layout')) {
 const designCompositorCore = path.join(ROOT, 'packages/core/src/designCompositor.js');
 if (!exists(designCompositorCore)) fail('Missing packages/core/src/designCompositor.js');
 
-const EXPECTED_HANDLERS = 398;
+const EXPECTED_HANDLERS = 405;
 
 // --- Report (async handler count) ---
 (async () => {
@@ -323,6 +323,9 @@ const EXPECTED_HANDLERS = 398;
     if (!handlers['get-imperial-pipeline-config']) fail('handler registry missing get-imperial-pipeline-config');
     if (!handlers['run-imperial-pipeline']) fail('handler registry missing run-imperial-pipeline');
     if (!handlers['get-imperial-pipeline-result']) fail('handler registry missing get-imperial-pipeline-result');
+    if (!handlers['get-imperial-video-studio-config']) fail('handler registry missing get-imperial-video-studio-config');
+    if (!handlers['run-imperial-video-pipeline']) fail('handler registry missing run-imperial-video-pipeline');
+    if (!handlers['get-imperial-video-tool-registry']) fail('handler registry missing get-imperial-video-tool-registry');
     if (!handlers['get-design-compositor-config']) fail('handler registry missing get-design-compositor-config');
     if (!handlers['compose-social-layout']) fail('handler registry missing compose-social-layout');
   } catch (e) {

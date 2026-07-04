@@ -121,7 +121,23 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
       { label: 'Create Post', href: '/content-hub?tab=studio', primary: true },
       { label: 'Library', href: '/content-library' },
     ],
-    related: [{ label: 'Brand', href: '/brand' }],
+    related: [{ label: 'Brand', href: '/brand' }, { label: 'Video Studio', href: '/video-studio' }],
+  },
+  '/video-studio': {
+    id: 'video-studio',
+    title: 'Video Studio',
+    outcome: 'Turn Imperialism Brain into a full agentic video production studio — script to render with approval gates.',
+    subtitle: '12 pipelines · 52 tools · 500+ agent skills · reference analysis · living production board.',
+    flow: ['Reference or brief', 'Pick pipeline', 'Approve gates', 'Compose & publish'],
+    actions: [
+      { label: 'Run pipeline', href: '/video-studio', primary: true },
+      { label: 'Media & Grok', href: '/content-hub?tab=media' },
+      { label: 'Design captions', href: '/design-studio' },
+    ],
+    related: [
+      { label: 'Create', href: '/content-hub?tab=studio' },
+      { label: 'Library', href: '/content-library' },
+    ],
   },
   '/brand': {
     id: 'brand',
@@ -314,9 +330,9 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
   },
   '/support': {
     id: 'support',
-    title: 'Live Support',
+    title: 'Imperialism Brain',
     outcome: 'Get unstuck fast — Imperialism Brain routes you to the right fix.',
-    subtitle: 'Setup, troubleshooting, and THEE_MICHAEL approvals.',
+    subtitle: 'Imperialism Brain — setup, troubleshooting, and admin approvals when required.',
     flow: ['Ask', 'Diagnose', 'Route', 'Resolve'],
     actions: [
       { label: 'Integrations', href: '/integrations', primary: true },
@@ -407,7 +423,7 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
       { label: 'Guardian', tab: 'guardian-api' },
     ],
     related: [
-      { label: 'Live Support', href: '/support' },
+      { label: 'Imperialism Brain', href: '/support' },
       { label: 'Billing', href: '/settings?tab=billing' },
     ],
   },

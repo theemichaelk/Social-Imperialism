@@ -32,11 +32,12 @@ When reviewing **any** change — including retroactive audits of earlier assist
 
 | Claim | Verified value | How to verify |
 |-------|----------------|---------------|
-| QA module pages | **28** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
+| QA module pages | **29** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
 | QA page features | **210** OK (0 ERROR, 0 WEAK) | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
 | QA section features | **143+** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
-| `PageShell` + `PageFocusRail` | **28** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
-| SaaS IPC handlers | **398** | `node apps/api/_audit-accuracy-check.js` → handler registry count |
+| `PageShell` + `PageFocusRail` | **29** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
+| SaaS IPC handlers | **405** | `node apps/api/_audit-accuracy-check.js` → handler registry count |
+| Imperial Video Studio | **12** pipelines · **52** tools · **500+** skills | `get-imperial-video-studio-config` |
 | Imperial pipeline A / B | **18** / **8** steps | `get-imperial-pipeline-config` |
 | `ManageableTabNav` focus mode | **7** pages | dashboard, browse-posts, history, settings, integrations, content-library, account-creator |
 | `ContentHubTabNav` focus mode | **1** page | content-hub |

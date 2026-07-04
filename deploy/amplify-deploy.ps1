@@ -1,9 +1,27 @@
-# Full Amplify deployment zip with pre-built .next (WEB_COMPUTE / Next.js SSR)
+# Amplify web deploy — git-connected apps use start-job; manual apps upload a pre-built zip.
 param(
   [string]$AppId = "d204r2r6gar3c8",
   [string]$Branch = "main",
-  [string]$RepoRoot = "E:\OneDrive\Documents\Factory AI.02.20.26\Social Imperialism"
+  [string]$RepoRoot = "E:\OneDrive\Documents\Factory AI.02.20.26\Social Imperialism",
+  [switch]$ForceZip
 )
+
+$appMeta = aws amplify get-app --app-id $AppId --region us-east-1 --output json 2>$null | ConvertFrom-Json
+$repository = $appMeta.app.repository
+if ($repository -and -not $ForceZip) {
+  Write-Host "Amplify app is git-connected ($repository) — triggering rebuild from $Branch..."
+  $job = aws amplify start-job `
+    --app-id $AppId `
+    --branch-name $Branch `
+    --job-type RELEASE `
+    --region us-east-1 `
+    --output json | ConvertFrom-Json
+  $jobId = $job.jobSummary.jobId
+  Write-Host "Started Amplify job $jobId (RELEASE from git)"
+  Write-Host "Monitor: aws amplify get-job --app-id $AppId --branch-name $Branch --job-id $jobId --region us-east-1"
+  Write-Host "URL: https://main.${AppId}.amplifyapp.com"
+  exit 0
+}
 
 $webRoot = Join-Path $RepoRoot "apps\web"
 if (-not (Test-Path (Join-Path $webRoot ".next"))) {

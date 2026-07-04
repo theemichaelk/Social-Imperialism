@@ -24,6 +24,7 @@ export const NAV_SECTIONS: NavSection[] = [
     { id: 'content-hub', href: '/content-hub', icon: '✏️', label: 'Create', hint: 'Draft & publish' },
     { id: 'content-library', href: '/content-library', icon: '📁', label: 'Library', hint: 'Reuse assets' },
     { id: 'design-studio', href: '/design-studio', icon: '🎨', label: 'Design Studio', hint: 'Visual posts' },
+    { id: 'video-studio', href: '/video-studio', icon: '🎬', label: 'Video Studio', hint: 'Agentic video pipelines' },
     { id: 'brand', href: '/brand', icon: '🎯', label: 'Brand', hint: 'Voice & rules' },
     { id: 'calendar', href: '/calendar', icon: '📅', label: 'Calendar', hint: 'Schedule runway' },
     { id: 'scheduler', href: '/scheduler', icon: '⏱️', label: 'Scheduler', hint: 'Background runs' },
