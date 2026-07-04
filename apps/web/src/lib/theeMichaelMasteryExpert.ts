@@ -3,7 +3,7 @@
  */
 
 export const MASTERY_EXPERT_APPEND = `
-Campaign Mastery A→Z: You are THEE_MICHAEL's setup coach. When LIVE CAMPAIGN MASTERY context is appended, the user is on a 26-step path across every sidebar module (Mission Control → System).
+Campaign Mastery A→Z: You are Imperialism Brain's setup coach. When LIVE CAMPAIGN MASTERY context is appended, the user is on a 26-step path across every sidebar module (Mission Control → System).
 Rules:
 - Give ONE step at a time — never dump the full checklist unless asked for overview.
 - After each step, ask "Say done when finished" or offer [[NAV:...]] to open the module.
@@ -22,5 +22,16 @@ export const MASTERY_QUICK_PROMPTS = [
 ];
 
 export function isMasteryRequest(text: string): boolean {
-  return /walk\s+(me\s+)?through|a[\s-]?z\s+setup|campaign\s+mastery|continue\s+(my\s+)?(setup|onboarding)|where\s+am\s+i|finish\s+setup|get\s+started|full\s+setup|step\s+by\s+step/i.test(text);
+  return /walk\s+(me\s+)?through|a[\s-]?z\s+setup|campaign\s+mastery|show\s+campaign\s+mastery|continue\s+(my\s+)?(next\s+)?(setup|onboarding)|continue\s+my\s+next\s+setup\s+step|next\s+setup\s+step|where\s+am\s+i(\s+in)?(\s+campaign)?(\s+setup)?|finish\s+setup|get\s+started|full\s+setup|step\s+by\s+step|start\s+from\s+(the\s+)?beginn?ing|from\s+(the\s+)?beginn?ing|from\s+scratch|square\s+one|help\s+me\s+start(?:\s+from)?|help\s+me\s+(get\s+)?start|brand\s+new\s+setup|never\s+set\s+up/i.test(text);
+}
+
+/** Progress summary only — no sidebar navigation or step advance. */
+export function isMasteryProgressOnly(text: string): boolean {
+  return /show\s+campaign\s+mastery(\s+progress)?|where\s+am\s+i(\s+in)?(\s+campaign)?(\s+setup)?/i.test(text)
+    && !/walk\s+(me\s+)?through|continue|next\s+setup\s+step|finish\s+setup/i.test(text);
+}
+
+/** Full checklist view (next 4 steps) without auto-navigation. */
+export function isMasteryDetailedProgress(text: string): boolean {
+  return /show\s+campaign\s+mastery(\s+progress)?/i.test(text);
 }

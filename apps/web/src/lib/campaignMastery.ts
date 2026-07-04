@@ -86,11 +86,49 @@ export function dismissMasteryReminderForSession() {
   } catch { /* ignore */ }
 }
 
+export function buildMasteryProgressReply(
+  status: CampaignMasteryStatus,
+  opts?: { detailed?: boolean },
+): string {
+  const step = status.currentStep;
+  const signals = status.signals;
+  const signalLine = signals
+    ? `APIs connected: ${signals.apisConnected ?? '—'} · Keywords: ${signals.keywordCount ?? 0} · Accounts: ${signals.linkedAccountsCount ?? 0}`
+    : '';
+
+  if (status.complete) {
+    return `Campaign Mastery complete — **${status.doneCount}/${status.totalSteps}** (100%). You're ready for daily Mission Control. Ask **what should I improve today?** for your daily SEO pulse.`;
+  }
+
+  const instr = (step?.instructions || []).slice(0, 2).map((line, i) => `${i + 1}. ${line}`).join('\n');
+
+  if (opts?.detailed) {
+    const upcoming = status.steps.filter((s) => !s.done).slice(0, 4);
+    const checklist = upcoming
+      .map((s) => `- ${s.done ? '✓' : '○'} **${s.order}. ${s.label}** (${s.phase})`)
+      .join('\n');
+    return [
+      `**Campaign Mastery — full progress** ${status.doneCount}/${status.totalSteps} (${status.percent}%)`,
+      signalLine,
+      checklist,
+      '\nTap **Continue my next setup step** to open the current module, or **done** when you finish a step.',
+    ].filter(Boolean).join('\n\n');
+  }
+
+  return [
+    `**You are here:** Step ${step?.order ?? '?'}/${status.totalSteps} — **${step?.label ?? 'Setup'}** (${step?.phase ?? 'A→Z'})`,
+    `Overall: **${status.doneCount}/${status.totalSteps}** (${status.percent}%)`,
+    signalLine,
+    instr ? `\n${instr}` : '',
+    '\nSay **Continue my next setup step** to navigate there, or **done** when finished.',
+  ].filter(Boolean).join('\n');
+}
+
 export function buildMasteryAugmentedContext(status: CampaignMasteryStatus | null): string {
   if (!status?.steps?.length) return '';
   const current = status.currentStep;
   const nextThree = status.steps.filter((s) => !s.done).slice(0, 3);
-  return `LIVE CAMPAIGN MASTERY (THEE_MICHAEL A→Z):
+  return `LIVE CAMPAIGN MASTERY (Imperialism Brain A→Z):
 Campaign: ${status.campaignName || 'active'} · Progress: ${status.doneCount}/${status.totalSteps} (${status.percent}%)
 Current step: ${current?.order}. ${current?.label} — ${current?.phase}
 Instructions: ${(current?.instructions || []).join(' → ')}
@@ -108,7 +146,7 @@ export function planMasteryWalkthrough(status: CampaignMasteryStatus): { actions
   }
   rememberMasteryStep(step.id);
   const actions: GuideAction[] = [
-    { type: 'message', text: `THEE_MICHAEL A→Z · Step ${step.order}/${status.totalSteps}: ${step.label}` },
+    { type: 'message', text: `Campaign Mastery A→Z · Step ${step.order}/${status.totalSteps}: ${step.label}` },
     { type: 'disable_simple_mode' },
   ];
   if (step.navId) {

@@ -27,6 +27,20 @@ export const SEO_QUICK_PROMPTS = [
   'Open SEO Tools',
 ];
 
+/** Quick prompts that need live SEO brief + AI — not immediate navigation. */
+export const SEO_INTELLIGENCE_PROMPTS = [
+  'AEO plan for my niche',
+  'GEO visibility audit',
+  'Local SEO near me strategy',
+  'Run KGR on a keyword',
+] as const;
+
+export function isSeoIntelligencePrompt(query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (SEO_INTELLIGENCE_PROMPTS.some((p) => p.toLowerCase() === q)) return true;
+  return /aeo\s+plan|geo\s+visibility\s+audit|local\s+seo.*strategy|run\s+kgr/i.test(query);
+}
+
 export const SEO_INTENT_PATTERNS: Array<{ intent: string; patterns: RegExp[] }> = [
   { intent: 'aeo', patterns: [/\bae[no]\b/i, /answer\s+engine/i, /featured\s+snippet/i, /people\s+also\s+ask/i, /\bpaa\b/i, /voice\s+search/i] },
   { intent: 'geo', patterns: [/\bgeo\b/i, /generative\s+engine/i, /ai\s+overview/i, /perplexity/i, /chatgpt\s+(?:seo|rank|citat)/i, /llm\s+visibility/i] },
