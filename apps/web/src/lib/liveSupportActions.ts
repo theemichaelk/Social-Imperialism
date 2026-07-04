@@ -59,6 +59,22 @@ type NavEntry = {
 const NAVIGATION_VERBS =
   /(?:take\s+me\s+to|go\s+to|open(?:\s+up)?|show\s+me|navigate\s+to|bring\s+me\s+to|jump\s+to|switch\s+to|where\s+is|where'?s|can\s+you\s+(?:take|bring|show)|i\s+(?:can'?t|don'?t)\s+(?:find|see|locate)|left\s+(?:side(?:bar)?|nav(?:igation)?|menu|panel)|sidebar|tab\s+on\s+the\s+left|in\s+the\s+(?:left\s+)?(?:nav|menu|sidebar))/i;
 
+const CANT_FIND_NAV_RE =
+  /don'?t\s+see|can'?t\s+find|where\s+is|where'?s|left\s+(?:side|sidebar|nav|menu)|hidden\s+tab|focus\s+mode|collapsed/i;
+
+/** Strip decorative trailing ellipsis from planner placeholders and chips. */
+export function normalizeBrainQuery(query: string): string {
+  return String(query || '')
+    .trim()
+    .replace(/[\u2026]+$/g, '')
+    .replace(/\.{2,}$/g, '')
+    .trim();
+}
+
+export function isCantFindNavigation(query: string): boolean {
+  return CANT_FIND_NAV_RE.test(normalizeBrainQuery(query));
+}
+
 const ADMIN_ACTION_PATTERNS: Array<{ patterns: RegExp[]; action: LiveSupportAction }> = [
   {
     patterns: [/\brun\s+audit\b/i, /\baudit\s+(the\s+)?(app|site|issues)\b/i, /\bissue\s+control\b/i],
@@ -133,7 +149,7 @@ function buildNavCatalog(): NavEntry[] {
 
   type ExtraAlias = { match: string[]; entry: Partial<NavEntry> & { href: string; label: string } };
   const extraAliases: ExtraAlias[] = [
-    { match: ['mission control', 'live feed', 'home dashboard'], entry: { id: 'dashboard', label: 'Dashboard', href: '/dashboard', sectionId: 'mission' } },
+    { match: ['mission control', 'live feed', 'home dashboard', 'open mission control'], entry: { id: 'dashboard', label: 'Mission Control', href: '/dashboard', sectionId: 'mission' } },
     { match: ['content hub', 'create content', 'create post', 'content studio'], entry: { id: 'content-hub', label: 'Create', href: '/content-hub', sectionId: 'create' } },
     { match: ['integrations hub', 'api connection', 'api keys'], entry: { id: 'integrations', label: 'Integrations', href: '/integrations', sectionId: 'system' } },
     { match: ['connect platform', 'connect a platform', 'oauth', 'link account', 'account hub'], entry: { id: 'account-hub', label: 'Account Hub', href: '/account-hub', sectionId: 'accounts' } },
@@ -178,7 +194,7 @@ export function buildActionHref(path: string, tab?: string): string {
 }
 
 export function isNavigationRequest(query: string): boolean {
-  const q = query.trim();
+  const q = normalizeBrainQuery(query);
   if (!q) return false;
   if (NAVIGATION_VERBS.test(q)) return true;
   if (/^(open|show|go)\s+\w/i.test(q)) return true;
@@ -220,7 +236,7 @@ export function resolveNavigationIntent(
   query: string,
   context?: { pathname?: string; preferExecute?: boolean },
 ): LiveSupportAction | null {
-  const q = query.trim();
+  const q = normalizeBrainQuery(query);
   if (!q) return null;
 
   for (const entry of ADMIN_ACTION_PATTERNS) {
