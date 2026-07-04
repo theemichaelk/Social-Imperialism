@@ -13,6 +13,7 @@ import {
   type GuardianConfig,
 } from '@/lib/guardianGatekeeper';
 import { loadKineticSession } from '@/lib/sovereignKineticSession';
+import { emitNotificationChanged } from '@/lib/theeMichaelNotificationLedger';
 
 type PartnerConfig = {
   partnerApiKeyFull?: string | null;
@@ -90,6 +91,7 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
       const res = await invoke<{ success?: boolean; error?: string }>('approve-guardian-change', { ticketId });
       onMsg?.(res?.success ? `Approved — ${GUARDIAN_ADMIN}` : (res?.error || 'Approval failed'));
       await refresh();
+      emitNotificationChanged();
     } catch (e) { onMsg?.((e as Error).message); }
     finally { setLoading(false); }
   }
@@ -105,6 +107,7 @@ export function GuardianGatekeeperPanel({ onMsg }: { onMsg?: (m: string) => void
       const res = await invoke<{ success?: boolean; error?: string }>('release-guardian-fix', { ticketId, sessionToken });
       onMsg?.(res?.success ? 'Fix released to production' : (res?.error || 'Release failed'));
       await refresh();
+      emitNotificationChanged();
     } catch (e) { onMsg?.((e as Error).message); }
     finally { setLoading(false); }
   }

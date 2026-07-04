@@ -4,15 +4,18 @@
  */
 
 import { OVERLORD_SYSTEM_APPEND } from '@/lib/theeMichaelOverlord';
-import { THEE_MICHAEL_SEO_EXPERT_APPEND, SEO_QUICK_PROMPTS } from '@/lib/theeMichaelSeoExpert';
+import { recordApprovalResolution } from '@/lib/theeMichaelNotificationLedger';
+import { isSeoIntelligencePrompt, THEE_MICHAEL_SEO_EXPERT_APPEND, SEO_QUICK_PROMPTS } from '@/lib/theeMichaelSeoExpert';
 import { SELF_HEAL_EXPERT_APPEND } from '@/lib/selfHealIntelligence';
 import { ONBOARDING_EXPERT_APPEND } from '@/lib/theeMichaelOnboardingExpert';
-import { MASTERY_EXPERT_APPEND, MASTERY_QUICK_PROMPTS } from '@/lib/theeMichaelMasteryExpert';
+import { isMasteryRequest, MASTERY_EXPERT_APPEND, MASTERY_QUICK_PROMPTS } from '@/lib/theeMichaelMasteryExpert';
 
 export const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
+export const INIT_MESSAGE_VERSION = 4;
+
 export const INIT_MESSAGE =
-  'Hey — welcome to Social Imperialism. THEE_MICHAEL will walk you **A→Z through every module** (26 steps) and remember where you left off. Say **"Walk me through A-Z setup now"** or ask "where am I in setup?" — I also run daily audits and SEO intelligence. What should we tackle first?';
+  'Welcome to Social Imperialism — I\'m **Imperialism Brain**. I can walk you A→Z through every module (26 steps) and remember where you left off. New here? Tap **Walk me through A-Z setup now** or say "help me start from the beginning." What should we tackle first?';
 
 export const LIVE_SUPPORT_SYSTEM_PROMPT = `You are Imperialism Brain, the official live support agent for Social Imperialism (socialimperialism.com).
 Help users set up, troubleshoot, optimize, and launch social media growth workflows.
@@ -54,7 +57,7 @@ export type ApprovalTicket = {
   riskLevel: 'low' | 'medium' | 'high';
   recommendedAction: string;
   rollbackNote: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'routed';
   routedTo: typeof ADMIN_IDENTITY;
   createdAt: string;
 };
@@ -66,6 +69,26 @@ export type SearchRoute = {
 };
 
 const APPROVAL_STORAGE_KEY = 'si_support_approvals';
+
+function normalizeApprovalRequest(request: string): string {
+  return request.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 240);
+}
+
+function readAllApprovals(): ApprovalTicket[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem(APPROVAL_STORAGE_KEY) || '[]') as ApprovalTicket[];
+  } catch {
+    return [];
+  }
+}
+
+function writeAllApprovals(tickets: ApprovalTicket[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(APPROVAL_STORAGE_KEY, JSON.stringify(tickets.slice(0, 30)));
+  } catch { /* ignore */ }
+}
 
 const SENSITIVE_PATTERNS = [
   /\bglobal\s+auto[- ]?reply\b/i,
@@ -85,16 +108,24 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Ask THEE_MICHAEL', href: '/support', action: 'admin-approval' },
   },
   {
-    patterns: [/connect\s+platform/i, /\boauth\b/i, /integration/i, /expired\s+token/i],
-    route: { label: 'Connect Platform', href: '/integrations' },
+    patterns: [/connect\s+(a\s+)?platform/i, /link\s+(a\s+)?platform/i, /oauth\s+connect/i, /expired\s+token/i],
+    route: { label: 'Account Hub', href: '/account-hub', action: 'connect-platform' },
+  },
+  {
+    patterns: [/integration/i, /api\s+keys?/i],
+    route: { label: 'Integrations · Connections', href: '/integrations?tab=connections' },
   },
   {
     patterns: [/reply\s+engine/i, /fix\s+reply/i, /ai\s+repl/i, /engagement\s+queue/i],
     route: { label: 'Review Replies', href: '/history' },
   },
   {
-    patterns: [/campaign\s+not\s+post/i, /not\s+schedul/i, /calendar/i, /schedule\s+post/i],
-    route: { label: 'Schedule Campaign', href: '/calendar' },
+    patterns: [/posts?\s+not\s+schedul/i, /not\s+schedul/i, /campaign\s+not\s+post/i, /won'?t\s+post/i, /failed\s+to\s+publish/i],
+    route: { label: 'Content Calendar', href: '/calendar', action: 'scheduling-troubleshoot' },
+  },
+  {
+    patterns: [/schedule\s+post/i, /content\s+calendar/i],
+    route: { label: 'Content Calendar', href: '/calendar' },
   },
   {
     patterns: [/mission\s+control/i, /live\s+feed/i, /dashboard/i, /worker\s+status/i],
@@ -121,8 +152,8 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Open Discovery', href: '/browse-posts' },
   },
   {
-    patterns: [/walk\s+(me\s+)?through/i, /a[\s-]?z\s+setup/i, /campaign\s+mastery/i, /continue\s+(my\s+)?setup/i, /where\s+am\s+i/i, /finish\s+setup/i],
-    route: { label: 'Campaign Mastery', href: '/dashboard', action: 'campaign-mastery' },
+    patterns: [/walk\s+(me\s+)?through/i, /a[\s-]?z\s+setup/i, /show\s+campaign\s+mastery/i, /campaign\s+mastery/i, /continue\s+(my\s+)?(next\s+)?setup/i, /where\s+am\s+i/i, /finish\s+setup/i, /start\s+from\s+(the\s+)?beginn?ing/i, /from\s+(the\s+)?beginn?ing/i, /from\s+scratch/i, /help\s+me\s+start(?:\s+from)?/i, /help\s+me\s+(get\s+)?start/i],
+    route: { label: 'Campaign Mastery A→Z', href: '/onboarding', action: 'campaign-mastery' },
   },
   {
     patterns: [/setup\s+wizard/i, /onboard/i, /brand\s+profile/i],
@@ -137,8 +168,8 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Download Desktop App', href: '/download' },
   },
   {
-    patterns: [/\bhelp\b/i, /\bsupport\b/i, /\bstuck\b/i, /troubleshoot/i],
-    route: { label: 'Live Support', href: '/support' },
+    patterns: [/\bneed\s+help\b/i, /\bget\s+help\b/i, /\bstuck\b/i, /troubleshoot/i, /live\s+support/i, /\bsupport\s+(page|workspace)\b/i],
+    route: { label: 'Imperialism Brain', href: '/support' },
   },
   {
     patterns: [/guardian/i, /gatekeeper/i, /self[- ]?heal/i, /monitor/i, /webhook/i, /partner\s+api/i],
@@ -151,18 +182,120 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
 ];
 
 export const QUICK_PROMPTS = [
-  ...MASTERY_QUICK_PROMPTS,
+  MASTERY_QUICK_PROMPTS[0],
   'Take me to Integrations',
   'Connect a platform',
   'Posts not scheduling',
-  ...SEO_QUICK_PROMPTS.slice(0, 2),
+  SEO_QUICK_PROMPTS[0],
+  SEO_QUICK_PROMPTS[1],
   'What should I improve today?',
   'Research my brand in Setup Wizard',
 ];
 
+export function buildConnectPlatformReply(): string {
+  return [
+    '**Connect a platform**',
+    '',
+    '1. **Account Hub** — OAuth for LinkedIn, X, Meta, Reddit, etc.',
+    '2. **Integrations → Connections** — API keys (SerpAPI, Gemini/OpenRouter) if you have not added them yet.',
+    '',
+    'Taking you to **Account Hub** now.',
+  ].join('\n');
+}
+
+export function buildSchedulingTroubleshootReply(): string {
+  return [
+    '**Posts not scheduling — fix checklist**',
+    '',
+    '1. **Account Hub** — platform must show **Connected** (not expired or needs relink).',
+    '2. **Integrations → Live Probes** — publish/worker paths should be green.',
+    '3. **Content Calendar** — item must be **Scheduled** with a future time (not Draft-only).',
+    '4. **Scheduler** — worker enabled in Setup Wizard step 5.',
+    '',
+    'Opening **Calendar** first — verify pending/scheduled items.',
+  ].join('\n');
+}
+
+export function buildAeoPlanScaffold(brandHint?: string): string {
+  const niche = brandHint ? ` for **${brandHint}**` : '';
+  return [
+    `**AEO plan${niche}** (Answer Engine Optimization)`,
+    '',
+    '1. **Question map** — 10 buyer questions (who / what / how / best / vs / cost).',
+    '2. **Snippet blocks** — 40–60 word direct answers under H2 question headers.',
+    '3. **Schema** — FAQPage + HowTo on your top 3 money pages.',
+    '4. **Inside Social Imperialism:**',
+    '   - **Keywords** — add question-style terms',
+    '   - **SEO Tools** — AEO framework scan',
+    '   - **Content Hub** — publish FAQ posts',
+    '   - **Quora Ops** — corroborating answers',
+    '',
+    'Connect **SerpAPI** in Integrations for live PAA/snippet data, then open SEO Tools.',
+    '[[NAV:/seo-tools|SEO Tools]]',
+  ].join('\n');
+}
+
+export function buildGeoAuditScaffold(brandHint?: string): string {
+  const brand = brandHint ? ` for **${brandHint}**` : '';
+  return [
+    `**GEO visibility audit${brand}** (Generative Engine Optimization)`,
+    '',
+    '**Score these 5 surfaces** (1–5 each — aim for 4+):',
+    '1. **Entity clarity** — consistent brand name, domain, and offer on site + socials.',
+    '2. **Original data** — stats, benchmarks, or proprietary insights LLMs can cite.',
+    '3. **Corroboration** — Quora, Reddit, LinkedIn posts echoing your core claims.',
+    '4. **AI Overview readiness** — clear H2 answers, tables, and cited sources on money pages.',
+    '5. **Multi-engine parity** — Bing/IndexNow + Google depth (not Google-only).',
+    '',
+    '**Fix loop in Social Imperialism:**',
+    '- **SEO Tools** → GEO framework scan',
+    '- **Content Hub** → publish cite-worthy research posts',
+    '- **Quora Ops / Growth Lab** → seed third-party mentions',
+    '- **Prompt Vault** → align reply tone with entity facts',
+    '',
+    'Connect **SerpAPI** for live AI Overview / SERP signals, then run GEO in SEO Tools.',
+    '[[NAV:/seo-tools|SEO Tools]]',
+  ].join('\n');
+}
+
+export function buildSeoIntelligenceFallback(query: string, brandHint?: string): string {
+  const q = query.toLowerCase();
+  if (/\bgeo\b|generative\s+engine|visibility\s+audit/i.test(q)) return buildGeoAuditScaffold(brandHint);
+  if (/local\s+seo|near\s+me/i.test(q)) {
+    return [
+      `**Local SEO strategy${brandHint ? ` for **${brandHint}**` : ''}**`,
+      '',
+      '1. NAP consistency (name, address, phone) across site + profiles.',
+      '2. City/service landing pages with map-pack keywords.',
+      '3. Review velocity + GBP-style post cadence.',
+      '[[NAV:/keywords|Keywords]]',
+    ].join('\n');
+  }
+  if (/kgr/i.test(q)) {
+    return 'Add monitored keywords in **Keywords** first, then run KGR in **SEO Tools**.\n\n[[NAV:/keywords|Keywords]]';
+  }
+  return buildAeoPlanScaffold(brandHint);
+}
+
+export function shouldAutoExecuteRoute(query: string): boolean {
+  const q = query.trim();
+  if (!q) return false;
+  if (isSeoIntelligencePrompt(q)) return false;
+  if (QUICK_PROMPTS.some((p) => p.toLowerCase() === q.toLowerCase())) return true;
+  const route = resolveSearchRoute(q);
+  if (route?.action === 'campaign-mastery' || route?.action === 'research-brand') {
+    return false;
+  }
+  return !!route;
+}
+
 export function resolveSearchRoute(query: string): SearchRoute | null {
   const q = query.trim();
   if (!q) return null;
+  if (isMasteryRequest(q)) {
+    const mastery = SEARCH_ROUTES.find((e) => e.route.action === 'campaign-mastery');
+    if (mastery) return mastery.route;
+  }
   for (const entry of SEARCH_ROUTES) {
     if (entry.patterns.some((p) => p.test(q))) return entry.route;
   }
@@ -187,6 +320,12 @@ export function inferModule(text: string): string {
 }
 
 export function createApprovalTicket(request: string): ApprovalTicket {
+  const norm = normalizeApprovalRequest(request);
+  const duplicate = readAllApprovals().find(
+    (t) => t.status === 'pending' && normalizeApprovalRequest(t.request) === norm,
+  );
+  if (duplicate) return duplicate;
+
   const ticket: ApprovalTicket = {
     id: `apr_${Date.now()}`,
     request: request.slice(0, 500),
@@ -198,24 +337,43 @@ export function createApprovalTicket(request: string): ApprovalTicket {
     routedTo: ADMIN_IDENTITY,
     createdAt: new Date().toISOString(),
   };
-  if (typeof window !== 'undefined') {
-    try {
-      const existing = JSON.parse(localStorage.getItem(APPROVAL_STORAGE_KEY) || '[]') as ApprovalTicket[];
-      existing.unshift(ticket);
-      localStorage.setItem(APPROVAL_STORAGE_KEY, JSON.stringify(existing.slice(0, 20)));
-    } catch { /* ignore */ }
-  }
+  const existing = readAllApprovals();
+  existing.unshift(ticket);
+  writeAllApprovals(existing);
   return ticket;
 }
 
 export function getPendingApprovals(): ApprovalTicket[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    return (JSON.parse(localStorage.getItem(APPROVAL_STORAGE_KEY) || '[]') as ApprovalTicket[])
-      .filter((t) => t.status === 'pending');
-  } catch {
-    return [];
-  }
+  return readAllApprovals().filter((t) => t.status === 'pending');
+}
+
+export function getApprovalHistory(): ApprovalTicket[] {
+  return readAllApprovals();
+}
+
+export function resolveApprovalTicket(
+  ticketId: string,
+  status: 'approved' | 'rejected' | 'routed',
+  note?: string,
+): ApprovalTicket | null {
+  const tickets = readAllApprovals();
+  const idx = tickets.findIndex((t) => t.id === ticketId);
+  if (idx < 0) return null;
+  tickets[idx] = { ...tickets[idx], status };
+  writeAllApprovals(tickets);
+
+  recordApprovalResolution(
+    `approval_${ticketId}`,
+    tickets[idx].module,
+    status === 'approved' ? 'approved' : status === 'routed' ? 'routed' : 'denied',
+    {
+      body: tickets[idx].request,
+      resumeHref: status === 'routed' ? '/settings?tab=guardian-api' : undefined,
+      note: note || `Approval ticket ${status}`,
+    },
+  );
+
+  return tickets[idx];
 }
 
 export function buildSupportPrompt(

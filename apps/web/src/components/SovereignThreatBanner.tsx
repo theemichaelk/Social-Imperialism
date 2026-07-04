@@ -8,6 +8,7 @@ import {
   THEE_MICHAEL_BANNER,
   type SovereignStatus,
 } from '@/lib/sovereignThreatCapture';
+import { SI_NOTIFICATION_CHANGED } from '@/lib/theeMichaelNotificationLedger';
 
 export function SovereignThreatBanner() {
   const [status, setStatus] = useState<SovereignStatus | null>(null);
@@ -21,7 +22,12 @@ export function SovereignThreatBanner() {
   useEffect(() => {
     loadStatus();
     const id = setInterval(loadStatus, 120000);
-    return () => clearInterval(id);
+    const onChanged = () => loadStatus();
+    window.addEventListener(SI_NOTIFICATION_CHANGED, onChanged);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener(SI_NOTIFICATION_CHANGED, onChanged);
+    };
   }, []);
 
   const pending = status?.pendingReviewCount ?? 0;

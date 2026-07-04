@@ -10,6 +10,7 @@ import { OverlordProtocolHost } from './OverlordProtocolHost';
 import { GuideExecutorHost } from './GuideExecutorHost';
 import { bootstrapSession, enforceAccessGate, getToken, clearSession } from '@/lib/api';
 import { SovereignThreatBanner } from './SovereignThreatBanner';
+import { OverlordInterventionBanner } from './OverlordInterventionBanner';
 import { LeadCaptureModal } from './LeadCaptureModal';
 import { CampaignMasteryBanner } from './CampaignMasteryBanner';
 
@@ -32,6 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const isPublic = isPublicPath(pathname);
+  const isSupportWorkspace = pathname === '/support';
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -122,12 +124,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <span className="mobile-top-title">Social Imperialism</span>
         </div>
-        <ImperialismBrainPromptBar />
+        {!isSupportWorkspace && <ImperialismBrainPromptBar />}
         <CampaignMasteryBanner />
         <SovereignThreatBanner />
+        <OverlordInterventionBanner />
         {children}
         <FooterCredit className="app-footer-credit" />
-        <LiveSupportPanel />
+        {!isSupportWorkspace && <LiveSupportPanel />}
         <BrainNavigatorHost />
         <OverlordProtocolHost />
         <GuideExecutorHost />

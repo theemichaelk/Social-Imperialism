@@ -14,6 +14,7 @@ import {
 import { loadKineticSession, saveKineticSession } from '@/lib/sovereignKineticSession';
 import { TheeMichaelAvatar } from '@/components/TheeMichaelAvatar';
 import { THEE_MICHAEL_PROFILE } from '@/lib/theeMichaelProfile';
+import { emitNotificationChanged } from '@/lib/theeMichaelNotificationLedger';
 
 function decisionBadge(decision?: string) {
   if (decision === 'approved') return { label: 'Approved', color: '#22c55e' };
@@ -53,6 +54,7 @@ export function SovereignThreatPanel({ onMsg }: { onMsg?: (m: string) => void })
       });
       onMsg?.(res.message || `${THEE_MICHAEL} ${decision}d action`);
       await refresh();
+      emitNotificationChanged();
     } catch (e) { onMsg?.((e as Error).message); }
     finally { setLoading(false); }
   }

@@ -1,6 +1,7 @@
 /**
- * THEE_MICHAEL — Omnipresent Predictive Overlord Protocol
- * Cognitive trace, interventions, UI mutation, ingest, checkpoints.
+ * Omnipresent Predictive Overlord Protocol (internal engine).
+ * User-facing trace label: Imperialism Brain · Cognitive Trace.
+ * THEE_MICHAEL is admin identity only — not shown on cognitive trace UI.
  */
 
 import { redactSecrets, storeEnclaveSecret, type EnclaveEntry } from '@/lib/overlordEnclave';
@@ -8,8 +9,22 @@ import { redactSecrets, storeEnclaveSecret, type EnclaveEntry } from '@/lib/over
 export { redactSecrets } from '@/lib/overlordEnclave';
 import { executeLiveSupportAction, type LiveSupportAction } from '@/lib/liveSupportActions';
 import { requiresAdminApproval } from '@/lib/liveSupportAgent';
+import {
+  clearDismissedInterventionKey,
+  isNotificationSuppressed,
+  suppressNotificationKey,
+} from '@/lib/theeMichaelNotificationLedger';
 
 export const OVERLORD_IDENTITY = 'THEE_MICHAEL';
+
+/** User-facing header inside Trace ▾ panel (not THEE_MICHAEL). */
+export const COGNITIVE_TRACE_EYEBROW = 'Imperialism Brain · Cognitive Trace';
+
+/** User-facing trace step when Brain navigates the live app (replaces "Spatial navigation → …"). */
+export function formatNavigationTraceLabel(destination: string): string {
+  const label = destination.trim() || 'module';
+  return `Opening ${label}`;
+}
 
 export const SI_OVERLORD_TRACE = 'si-overlord-trace';
 export const SI_OVERLORD_INTERVENTION = 'si-overlord-intervention';
@@ -45,37 +60,16 @@ export type PageHealthSnapshot = {
   sections?: Array<{ label?: string; status?: string }>;
 };
 
-const DISMISS_KEY = 'si_overlord_dismissed';
-
 export function isInterventionDismissed(dismissKey: string): boolean {
-  if (typeof window === 'undefined' || !dismissKey) return false;
-  try {
-    const raw = sessionStorage.getItem(DISMISS_KEY);
-    const arr = raw ? JSON.parse(raw) as string[] : [];
-    return arr.includes(dismissKey);
-  } catch {
-    return false;
-  }
+  return isNotificationSuppressed(dismissKey);
 }
 
 export function dismissInterventionByKey(dismissKey: string): void {
-  if (typeof window === 'undefined' || !dismissKey) return;
-  try {
-    const raw = sessionStorage.getItem(DISMISS_KEY);
-    const arr = raw ? JSON.parse(raw) as string[] : [];
-    if (!arr.includes(dismissKey)) arr.push(dismissKey);
-    sessionStorage.setItem(DISMISS_KEY, JSON.stringify(arr));
-  } catch { /* ignore */ }
+  suppressNotificationKey(dismissKey);
 }
 
 export function clearDismissedIntervention(dismissKey: string): void {
-  if (typeof window === 'undefined' || !dismissKey) return;
-  try {
-    const raw = sessionStorage.getItem(DISMISS_KEY);
-    const arr = raw ? JSON.parse(raw) as string[] : [];
-    const next = arr.filter((k) => k !== dismissKey);
-    sessionStorage.setItem(DISMISS_KEY, JSON.stringify(next));
-  } catch { /* ignore */ }
+  clearDismissedInterventionKey(dismissKey);
 }
 
 export type UiMutateDetail = {
@@ -379,7 +373,7 @@ export function buildInterventionsForContext(ctx: {
             navId: 'dashboard-issues',
             sectionId: 'system',
             autoExecute: true,
-            message: 'THEE_MICHAEL — running live platform audit…',
+            message: 'Imperialism Brain — running live platform audit…',
           }
         : {
             type: 'audit',
@@ -389,7 +383,7 @@ export function buildInterventionsForContext(ctx: {
             navId: 'integrations',
             sectionId: 'system',
             autoExecute: true,
-            message: 'THEE_MICHAEL — running connection audit…',
+            message: 'Imperialism Brain — running connection audit…',
           },
       priority: 90,
       createdAt: new Date().toISOString(),
@@ -398,7 +392,8 @@ export function buildInterventionsForContext(ctx: {
 
   if (ctx.isIntegrations && ctx.dwellMs > 90_000) {
     out.push({
-      id: `int_onboard_api_${Date.now()}`,
+      id: 'int_onboard_api_dwell',
+      dismissKey: 'integrations_dwell_friction',
       kind: 'onboarding',
       title: 'API setup taking longer than usual',
       body: 'Drop your raw developer documentation, .env export, or CSV key sheet here — I will parse, validate fingerprints, and route you to Connections without exposing secrets in chat.',
@@ -419,7 +414,8 @@ export function buildInterventionsForContext(ctx: {
 
   if (ctx.isApiKeys && ctx.dwellMs > 120_000) {
     out.push({
-      id: `int_api_keys_${Date.now()}`,
+      id: 'int_api_keys_dwell',
+      dismissKey: 'api_keys_dwell_friction',
       kind: 'friction',
       title: 'Stuck on API keys?',
       body: 'Paste a key sheet or upload a config file in Imperialism Brain — secrets stay in a session enclave only.',
@@ -432,7 +428,8 @@ export function buildInterventionsForContext(ctx: {
 
   if (ctx.pathname === '/history' && ctx.dwellMs > 60_000) {
     out.push({
-      id: `int_scale_replies_${Date.now()}`,
+      id: 'int_scale_replies_dwell',
+      dismissKey: 'history_reply_scaling',
       kind: 'scaling',
       title: 'Reply queue momentum',
       body: 'Users at your stage often pair AI Replies with Auto-Rules for keyword monitors. I can map keyword triggers and open the rules panel.',
@@ -535,10 +532,11 @@ export function guardedExecute(
 }
 
 export const OVERLORD_SYSTEM_APPEND = `
-You are operating under THEE_MICHAEL Omnipresent Overlord Protocol.
+You are Imperialism Brain operating with Omnipresent Overlord Protocol tooling (navigation, enclave, cognitive trace).
+- Speak as Imperialism Brain — never introduce yourself as THEE_MICHAEL. THEE_MICHAEL is admin identity for approvals only.
 - Use spatial awareness: when users need a module, emit [[NAV:/path?tab=x|Label]] and describe what you are opening.
 - Never echo raw API keys, tokens, or passwords — reference enclave fingerprints only (••••last4).
-- For risky global changes, state that cryptographic confirmation is required before commit.
+- For risky global changes, state that admin approval by THEE_MICHAEL is required before commit.
 - Think step-by-step internally; user sees cognitive trace labels only (no hidden chain-of-thought essays).
 - Proactively suggest the fastest success path benchmarked against high-performing accounts on the platform.
 `;

@@ -1,22 +1,30 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@/lib/api';
 import {
   INIT_MESSAGE,
+  INIT_MESSAGE_VERSION,
+  buildSeoIntelligenceFallback,
+  buildConnectPlatformReply,
+  buildSchedulingTroubleshootReply,
+  shouldAutoExecuteRoute,
   QUICK_PROMPTS,
   approvalAcknowledgement,
   buildSupportPrompt,
   createApprovalTicket,
   getPendingApprovals,
+  resolveApprovalTicket,
   requiresAdminApproval,
   resolveSearchRoute,
   sanitizeAgentReply,
   type SupportMessage,
 } from '@/lib/liveSupportAgent';
 import {
+  displayNavLabel,
   executeLiveSupportAction,
   parseAgentNavigateDirective,
   resolveNavigationIntent,
@@ -26,6 +34,7 @@ import {
 import {
   guardedExecute,
   failTrace,
+  formatNavigationTraceLabel,
   ingestFile,
   ingestTextPayload,
   pushTrace,
@@ -35,13 +44,17 @@ import {
 } from '@/lib/theeMichaelOverlord';
 import { executeGuideActions, planGuideActions } from '@/lib/guide_executor';
 import { isNavigationRequest } from '@/lib/liveSupportActions';
-import { isSeoRelatedQuery } from '@/lib/theeMichaelSeoExpert';
+import { isSeoIntelligencePrompt, isSeoRelatedQuery } from '@/lib/theeMichaelSeoExpert';
 import { buildSeoAugmentedContext, fetchSeoBrief } from '@/lib/seoIntelligence';
 import {
+  buildDailyImprovementReply,
   buildSelfHealAugmentedContext,
   fetchDailyRecommendations,
   fetchSelfHealStatus,
-  formatRecommendationsBanner,
+  isDailyImprovementRequest,
+  parseDailyRecsPreview,
+  recNavigationLabel,
+  type DailyRecsPreview,
   runSelfHealAudit,
 } from '@/lib/selfHealIntelligence';
 import {
@@ -60,26 +73,53 @@ import {
   markMasteryStep,
   planMasteryWalkthrough,
   startMasteryWalkthrough,
+  buildMasteryProgressReply,
 } from '@/lib/campaignMastery';
-import { isMasteryRequest } from '@/lib/theeMichaelMasteryExpert';
+import { isMasteryDetailedProgress, isMasteryRequest, isMasteryProgressOnly } from '@/lib/theeMichaelMasteryExpert';
+import { SI_NOTIFICATION_CHANGED } from '@/lib/theeMichaelNotificationLedger';
 import { listEnclaveEntries } from '@/lib/overlordEnclave';
 import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
-import { TheeMichaelAvatar } from './TheeMichaelAvatar';
 
 const PANEL_KEY = 'si_support_panel_open';
+const INIT_MSG_VERSION_KEY = 'si_support_init_version';
+
+/** Renders assistant/user text with basic **bold** (no raw markdown in UI). */
+function SupportMessageBody({ content }: { content: string }) {
+  const parts: ReactNode[] = [];
+  const re = /\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = re.exec(content)) !== null) {
+    if (match.index > last) parts.push(content.slice(last, match.index));
+    parts.push(<strong key={key++}>{match[1]}</strong>);
+    last = match.index + match[0].length;
+  }
+  if (last < content.length) parts.push(content.slice(last));
+  return <div className="live-support-bubble-body">{parts.length ? parts : content}</div>;
+}
 
 export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(embedded);
-  const [messages, setMessages] = useState<SupportMessage[]>([
-    { role: 'assistant', content: INIT_MESSAGE, ts: new Date().toISOString() },
-  ]);
+  const [messages, setMessages] = useState<SupportMessage[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const v = Number(localStorage.getItem(INIT_MSG_VERSION_KEY) || '0');
+        if (v !== INIT_MESSAGE_VERSION) {
+          localStorage.setItem(INIT_MSG_VERSION_KEY, String(INIT_MESSAGE_VERSION));
+        }
+      } catch { /* ignore */ }
+    }
+    return [{ role: 'assistant', content: INIT_MESSAGE, ts: new Date().toISOString() }];
+  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [dragOver, setDragOver] = useState(false);
-  const [showTrace, setShowTrace] = useState(true);
-  const [dailyRecsBanner, setDailyRecsBanner] = useState<string | null>(null);
+  const [showTrace, setShowTrace] = useState(false);
+  const [dailyRecs, setDailyRecs] = useState<DailyRecsPreview | null>(null);
+  const [dailyRecsDismissed, setDailyRecsDismissed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -87,18 +127,42 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     if (!embedded) {
       try { setOpen(localStorage.getItem(PANEL_KEY) === '1'); } catch { /* ignore */ }
     }
-    setPendingCount(getPendingApprovals().length);
+    const refreshPending = () => setPendingCount(getPendingApprovals().length);
+    refreshPending();
+    window.addEventListener(SI_NOTIFICATION_CHANGED, refreshPending);
+    return () => window.removeEventListener(SI_NOTIFICATION_CHANGED, refreshPending);
   }, [embedded, open]);
 
   useEffect(() => {
+    if (!pathname.startsWith('/settings')) return;
+    const tab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+    if (tab !== 'guardian-api') return;
+    for (const ticket of getPendingApprovals()) {
+      resolveApprovalTicket(ticket.id, 'routed', 'Opened THEE_MICHAEL Security Control for review');
+    }
+    setPendingCount(0);
+  }, [pathname]);
+
+  useEffect(() => {
     if (!open && !embedded) return;
+    try {
+      const dismissed = sessionStorage.getItem('si_daily_recs_dismissed');
+      if (dismissed === new Date().toISOString().slice(0, 10)) setDailyRecsDismissed(true);
+    } catch { /* ignore */ }
     let cancelled = false;
     (async () => {
       const recs = await fetchDailyRecommendations();
-      if (!cancelled) setDailyRecsBanner(formatRecommendationsBanner(recs));
+      if (!cancelled) setDailyRecs(parseDailyRecsPreview(recs));
     })();
     return () => { cancelled = true; };
   }, [open, embedded]);
+
+  const dismissDailyRecs = useCallback(() => {
+    setDailyRecsDismissed(true);
+    try {
+      sessionStorage.setItem('si_daily_recs_dismissed', new Date().toISOString().slice(0, 10));
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -147,32 +211,76 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
-    const navAction = resolveNavigationIntent(trimmed, { pathname, preferExecute: true });
     const route = resolveSearchRoute(trimmed);
+    const navAction = resolveNavigationIntent(trimmed, {
+      pathname,
+      preferExecute: isNavigationRequest(trimmed)
+        || /take\s+me\s+to|open\s+|go\s+to/i.test(trimmed)
+        || shouldAutoExecuteRoute(trimmed),
+    });
     const userMsg: SupportMessage = { role: 'user', content: trimmed, ts: new Date().toISOString() };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
 
+    const dailyPick = /^[123]$/.test(trimmed) ? Number(trimmed) - 1 : -1;
+    if (dailyPick >= 0 && dailyRecs?.items[dailyPick]) {
+      const item = dailyRecs.items[dailyPick];
+      const navLabel = recNavigationLabel(item);
+      const t = pushTrace(formatNavigationTraceLabel(navLabel));
+      executeLiveSupportAction({
+        type: 'navigate',
+        label: navLabel,
+        href: item.href,
+        autoExecute: true,
+        message: `Opening ${navLabel}…`,
+      });
+      completeTrace(t);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `**${item.title}** — ${item.action}\n\nTaking you to **${navLabel}** now.`,
+          ts: new Date().toISOString(),
+        },
+      ]);
+      setLoading(false);
+      return;
+    }
+
     const wantsMastery = isMasteryRequest(trimmed) || /^(done|next\s+step|mark\s+done)$/i.test(trimmed);
     if (wantsMastery) {
-      const tMastery = pushTrace('THEE_MICHAEL Campaign Mastery A→Z');
+      const tMastery = pushTrace('Imperialism Brain · Campaign Mastery A→Z');
       try {
         let mastery = await fetchCampaignMasteryStatus();
         if (/^(done|next\s+step|mark\s+done)$/i.test(trimmed) && mastery?.currentStep?.id) {
           mastery = await markMasteryStep(mastery.currentStep.id, true);
         }
         if (mastery) {
-          const plan = planMasteryWalkthrough(mastery);
-          await executeGuideActions(plan.actions);
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: 'assistant',
-              content: `${plan.reply}\n\nProgress: **${mastery.doneCount}/${mastery.totalSteps}** (${mastery.percent}%). Say **done** when finished to advance.`,
-              ts: new Date().toISOString(),
-            },
-          ]);
+          if (isMasteryProgressOnly(trimmed)) {
+            const progressReply = buildMasteryProgressReply(mastery, {
+              detailed: isMasteryDetailedProgress(trimmed),
+            });
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: progressReply,
+                ts: new Date().toISOString(),
+              },
+            ]);
+          } else {
+            const plan = planMasteryWalkthrough(mastery);
+            await executeGuideActions(plan.actions);
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `${plan.reply}\n\nProgress: **${mastery.doneCount}/${mastery.totalSteps}** (${mastery.percent}%). Say **done** when finished to advance.`,
+                ts: new Date().toISOString(),
+              },
+            ]);
+          }
         } else {
           const reply = await startMasteryWalkthrough(null);
           setMessages((prev) => [
@@ -198,7 +306,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
 
     const wantsBrandResearch = isBrandResearchRequest(trimmed);
     if (wantsBrandResearch) {
-      const tBrand = pushTrace('THEE_MICHAEL brand research · web + SEO + module propagation');
+      const tBrand = pushTrace('Imperialism Brain · brand research · web + SEO + module propagation');
       let domain = extractDomainFromText(trimmed);
       if (!domain) {
         try {
@@ -212,7 +320,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
           ...prev,
           {
             role: 'assistant',
-            content: 'I can research your brand and auto-fill every Setup Wizard field. **What is your domain?** (e.g. acme.com)\n\n[[NAV:/onboarding|Setup Wizard]]',
+            content: 'I can research your brand and auto-fill every Setup Wizard field.\n\n**Reply with your domain** (e.g. `acme.com`) or enter it in Setup Wizard step 1, then tap **Imperialism Brain — Research & Auto-Fill from Web**.\n\nOpening Setup Wizard now.',
             ts: new Date().toISOString(),
           },
         ]);
@@ -243,6 +351,42 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         ]);
       }
       setLoading(false);
+      return;
+    }
+
+    if (isDailyImprovementRequest(trimmed)) {
+      const tImprove = pushTrace('Daily improvement recommendations');
+      try {
+        let recs = await fetchDailyRecommendations();
+        if (!recs?.items?.length) {
+          const tAudit = pushTrace('Self-heal audit · generating daily recommendations');
+          await runSelfHealAudit();
+          completeTrace(tAudit);
+          recs = await fetchDailyRecommendations();
+        }
+        const preview = parseDailyRecsPreview(recs);
+        if (preview) setDailyRecs(preview);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: buildDailyImprovementReply(recs),
+            ts: new Date().toISOString(),
+          },
+        ]);
+      } catch (e) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `Could not load daily recommendations — ${(e as Error).message}. Try **run audit now**.`,
+            ts: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        completeTrace(tImprove);
+        setLoading(false);
+      }
       return;
     }
 
@@ -288,6 +432,83 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
       return;
     }
 
+    if (isSeoIntelligencePrompt(trimmed) || (isSeoRelatedQuery(trimmed) && /plan|audit|strategy/i.test(trimmed))) {
+      const tSeo = pushTrace('SEO Intelligence · live SERP pulse');
+      let brandHint: string | undefined;
+      try {
+        const camp = await invoke<{ brandName?: string; domain?: string }>('get-active-campaign');
+        brandHint = camp?.brandName || camp?.domain || undefined;
+      } catch { /* optional */ }
+      const brief = await fetchSeoBrief(trimmed, pathname);
+      const seoIntel = buildSeoAugmentedContext(brief);
+      completeTrace(tSeo);
+      try {
+        const tAi = pushTrace(/\bgeo\b/i.test(trimmed) ? 'GEO visibility audit synthesis' : 'SEO intelligence synthesis');
+        const prompt = buildSupportPrompt(messages, redactSecrets(trimmed), {
+          pathname,
+          seoIntel,
+          selfHealIntel: '',
+          onboardingIntel: '',
+          masteryIntel: '',
+        });
+        const reply = await invoke<string>('generate-ai', prompt);
+        let raw = sanitizeAgentReply(String(reply || '').trim());
+        completeTrace(tAi);
+        if (!raw) raw = buildSeoIntelligenceFallback(trimmed, brandHint);
+        const directive = parseAgentNavigateDirective(raw);
+        if (directive) {
+          executeLiveSupportAction(directive);
+          raw = stripNavigateDirectives(raw);
+          raw += `\n\n**${directive.label}** — opening now.`;
+        } else {
+          executeLiveSupportAction(searchRouteToAction({ label: 'SEO Tools', href: '/seo-tools' }, true));
+        }
+        setMessages((prev) => [...prev, { role: 'assistant', content: raw, ts: new Date().toISOString() }]);
+      } catch (e) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `${buildSeoIntelligenceFallback(trimmed, brandHint)}\n\n_(Live AI unavailable — ${(e as Error).message})_`,
+            ts: new Date().toISOString(),
+          },
+        ]);
+        executeLiveSupportAction(searchRouteToAction({ label: 'SEO Tools', href: '/seo-tools' }, true));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const navHref = navAction?.href?.split('?')[0];
+    const onSamePage = navHref && pathname.replace(/\/$/, '') === navHref;
+
+    if (navAction?.autoExecute && !onSamePage) {
+      const sidebarLabel = displayNavLabel(navAction);
+      const t = pushTrace(formatNavigationTraceLabel(sidebarLabel));
+      executeLiveSupportAction({ ...navAction, label: sidebarLabel });
+      completeTrace(t);
+      let content: string;
+      if (route?.action === 'connect-platform') {
+        content = buildConnectPlatformReply();
+      } else if (route?.action === 'scheduling-troubleshoot') {
+        content = buildSchedulingTroubleshootReply();
+      } else {
+        const tabHint = navAction.tab === 'connections'
+          ? '\n\nOpen the **Connections** tab to add API keys and OAuth.'
+          : navAction.href?.startsWith('/integrations')
+            ? '\n\nUse **Connections** for API keys/OAuth and **Live Probes** to verify health.'
+            : '';
+        content = `${navAction.message || `Taking you to ${sidebarLabel}…`}\n\nYou should see **${sidebarLabel}** in the left sidebar.${tabHint} Tell me if the screen looks wrong and I will audit it.`;
+      }
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content, ts: new Date().toISOString() },
+      ]);
+      setLoading(false);
+      return;
+    }
+
     try {
       if (requiresAdminApproval(trimmed)) {
         guardedExecute('Sensitive change request', trimmed, () => {
@@ -302,14 +523,14 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         return;
       }
 
-      const wantsLiveGuide = isNavigationRequest(trimmed)
-        || /don'?t\s+see|can'?t\s+find|prompt\s+vault|integrations|browse\s+posts|open\s+https?:\/\//i.test(trimmed);
+      const wantsLiveGuide = /don'?t\s+see|can'?t\s+find|prompt\s+vault|open\s+https?:\/\//i.test(trimmed)
+        || (!/take\s+me\s+to|go\s+to|open\s+(?:the\s+)?\w/i.test(trimmed) && /integrations|browse\s+posts/i.test(trimmed));
 
       if (wantsLiveGuide) {
         try {
           const planned = await planGuideActions(trimmed, pathname);
           if (planned.actions.length) {
-            const t = pushTrace('THEE_MICHAEL live action plan');
+            const t = pushTrace('Imperialism Brain · live action plan');
             await executeGuideActions(planned.actions);
             completeTrace(t);
             setMessages((prev) => [
@@ -325,21 +546,6 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         } catch {
           /* fall through to legacy nav */
         }
-      }
-
-      if (navAction?.autoExecute) {
-        const t = pushTrace(`Spatial navigation → ${navAction.label}`);
-        executeLiveSupportAction(navAction);
-        completeTrace(t);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: `${navAction.message || `Taking you to ${navAction.label}…`}\n\nYou should see **${navAction.label}** in the left sidebar. Tell me if the screen looks wrong and I will audit it.`,
-            ts: new Date().toISOString(),
-          },
-        ]);
-        return;
       }
 
       let seoIntel = '';
@@ -382,7 +588,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
 
       const directive = parseAgentNavigateDirective(raw);
       if (directive) {
-        const tNav = pushTrace(`Executing [[NAV]] → ${directive.label}`);
+        const tNav = pushTrace(formatNavigationTraceLabel(directive.label));
         executeLiveSupportAction(directive);
         completeTrace(tNav);
         raw = stripNavigateDirectives(raw);
@@ -419,7 +625,7 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     } finally {
       setLoading(false);
     }
-  }, [loading, messages, pathname]);
+  }, [loading, messages, pathname, dailyRecs]);
 
   const toggle = useCallback(() => {
     setOpen((o) => {
@@ -433,8 +639,8 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
 
   if (!embedded && !open) {
     return (
-      <button type="button" className="live-support-fab" onClick={toggle} title="THEE_MICHAEL Live Support">
-        <TheeMichaelAvatar size="sm" showRing className="live-support-fab-avatar" />
+      <button type="button" className="live-support-fab" onClick={toggle} title="Imperialism Brain · Live Support">
+        <span className="live-support-fab-icon" aria-hidden>🧠</span>
         {pendingCount > 0 && <span className="live-support-fab-badge">{pendingCount}</span>}
       </button>
     );
@@ -449,42 +655,75 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
     >
       <div className="live-support-header">
         <div className="live-support-header-brand">
-          <TheeMichaelAvatar size="md" showRing />
+          <div className="imperialism-brain-badge live-support-header-badge" title="Imperialism Brain">
+            <span className="imperialism-brain-icon" aria-hidden>🧠</span>
+          </div>
           <div>
-            <p className="live-support-eyebrow">THEE_MICHAEL · Overlord Protocol</p>
+            <p className="live-support-eyebrow">Live Support</p>
             <h3 className="live-support-title">Imperialism Brain</h3>
+            <p className="live-support-sub">Setup, troubleshooting, SEO intelligence, and growth guidance</p>
           </div>
         </div>
         <div className="live-support-header-actions">
           {pendingCount > 0 && (
-            <span className="live-support-pending">Waiting on THEE_MICHAEL approval ({pendingCount})</span>
+            <span className="live-support-pending">Admin approval pending ({pendingCount})</span>
           )}
           <button
             type="button"
             className="live-support-trace-toggle"
             onClick={() => setShowTrace((s) => !s)}
-            title="Toggle cognitive trace"
+            aria-expanded={showTrace}
+            aria-label={showTrace ? 'Hide live trace' : 'Show live trace'}
+            title="Live trace — steps while Brain navigates, audits, or ingests files (optional)"
           >
             {showTrace ? 'Trace ▾' : 'Trace ▸'}
           </button>
           {!embedded && (
-            <button type="button" className="live-support-close" onClick={toggle} aria-label="Close support">×</button>
+            <button type="button" className="live-support-close" onClick={toggle} aria-label="Close Imperialism Brain panel" title="Close">×</button>
           )}
         </div>
       </div>
 
-      {showTrace && <OverlordCognitiveTrace compact />}
+      {showTrace && (
+        <div className="live-support-activity-panel">
+          <OverlordCognitiveTrace compact showEmptyHint />
+        </div>
+      )}
 
-      {dailyRecsBanner && (
+      {dailyRecs && !dailyRecsDismissed && (
         <div className="live-support-daily-recs">
-          <p className="live-support-daily-recs-body">{dailyRecsBanner}</p>
+          <div className="live-support-daily-recs-head">
+            <span className="live-support-daily-recs-title">
+              Today&apos;s top improvements ({dailyRecs.dateLabel})
+            </span>
+            <button type="button" className="live-support-daily-recs-dismiss" onClick={dismissDailyRecs} aria-label="Dismiss daily tips">
+              ×
+            </button>
+          </div>
+          <ol className="live-support-daily-recs-list">
+            {dailyRecs.items.map((r, i) => (
+              <li key={`${r.category}-${r.title}`}>
+                <button
+                  type="button"
+                  className="live-support-daily-recs-item"
+                  onClick={() => send(String(i + 1))}
+                  disabled={loading}
+                  title={r.action}
+                >
+                  <span className="live-support-daily-recs-num">{i + 1}.</span>
+                  <strong>{r.title}</strong>
+                  <span> — {r.action}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
         </div>
       )}
 
       <div className="live-support-messages" ref={scrollRef}>
         {messages.map((m, i) => (
           <div key={i} className={`live-support-bubble ${m.role}`}>
-            <div className="live-support-bubble-body">{m.content}</div>
+            <SupportMessageBody content={m.content} />
           </div>
         ))}
         {loading && <div className="live-support-bubble assistant"><div className="live-support-typing">Thinking…</div></div>}
@@ -526,18 +765,28 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask, navigate, or drop API docs / CSV keys…"
+          placeholder="Ask anything, navigate, or attach keys (📎)…"
+          aria-label="Message Imperialism Brain — ask a question, request navigation, or attach API keys with the paperclip"
           disabled={loading}
           className="live-support-input"
         />
-        <button type="submit" className="btn live-support-send" disabled={loading || !input.trim()}>Send</button>
+        <button
+          type="submit"
+          className={`btn live-support-send${input.trim() ? ' primary' : ''}`}
+          disabled={loading || !input.trim()}
+          aria-label={input.trim() ? 'Send message' : 'Type a message to send'}
+          title={input.trim() ? 'Send (Enter)' : 'Type a message or use a quick action above'}
+        >
+          {loading ? '…' : 'Send'}
+        </button>
       </form>
 
-      <p className="live-support-footer">
-        <Link href="/support">Full support workspace</Link>
-        {' · '}
-        <span className="live-support-drop-hint">Drag files here — secrets stay in session enclave</span>
-      </p>
+      {!embedded && (
+        <p className="live-support-footer">
+          <Link href="/support">Open full support workspace</Link>
+          <span className="live-support-drop-hint"> · 📎 attach or drag API keys onto this panel</span>
+        </p>
+      )}
     </div>
   );
 }

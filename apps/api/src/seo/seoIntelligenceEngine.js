@@ -163,7 +163,7 @@ function extractKeyword(query) {
   const forMatch = q.match(/\b(?:for|keyword|term|query|rank(?:ing)?)\s+["']?([a-z0-9][\w\s\-]{2,60})/i);
   if (forMatch) return forMatch[1].replace(/[?.!,]$/, '').trim();
 
-  const stop = new Set(['how', 'what', 'why', 'when', 'where', 'the', 'a', 'an', 'my', 'our', 'best', 'good', 'help', 'with', 'for', 'seo', 'local', 'national', 'aeo', 'geo']);
+  const stop = new Set(['how', 'what', 'why', 'when', 'where', 'the', 'a', 'an', 'my', 'our', 'best', 'good', 'help', 'with', 'for', 'seo', 'local', 'national', 'aeo', 'geo', 'daily', 'growth', 'audit', 'platform', 'health']);
   const words = q.toLowerCase().replace(/[^\w\s-]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !stop.has(w));
   if (words.length >= 2) return words.slice(0, 4).join(' ');
   if (words.length === 1) return words[0];

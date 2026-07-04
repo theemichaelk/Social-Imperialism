@@ -4,9 +4,11 @@
  */
 
 import { invoke } from '@/lib/api';
+import { resolveInterventionsForHref } from '@/lib/theeMichaelNotificationLedger';
 import { NAV_SECTIONS } from '@/lib/nav';
 import { PAGE_FOCUS } from '@/lib/pageFocus';
 import { SEARCH_ROUTES, type SearchRoute } from '@/lib/liveSupportAgent';
+import { isMasteryRequest } from '@/lib/theeMichaelMasteryExpert';
 import { runSelfHealAudit } from '@/lib/selfHealIntelligence';
 
 function resolveSearchRoute(query: string): SearchRoute | null {
@@ -133,7 +135,8 @@ function buildNavCatalog(): NavEntry[] {
   const extraAliases: ExtraAlias[] = [
     { match: ['mission control', 'live feed', 'home dashboard'], entry: { id: 'dashboard', label: 'Dashboard', href: '/dashboard', sectionId: 'mission' } },
     { match: ['content hub', 'create content', 'create post', 'content studio'], entry: { id: 'content-hub', label: 'Create', href: '/content-hub', sectionId: 'create' } },
-    { match: ['integrations hub', 'connect platform', 'oauth', 'api connection'], entry: { id: 'integrations', label: 'Integrations', href: '/integrations', sectionId: 'system' } },
+    { match: ['integrations hub', 'api connection', 'api keys'], entry: { id: 'integrations', label: 'Integrations', href: '/integrations', sectionId: 'system' } },
+    { match: ['connect platform', 'connect a platform', 'oauth', 'link account', 'account hub'], entry: { id: 'account-hub', label: 'Account Hub', href: '/account-hub', sectionId: 'accounts' } },
     { match: ['ai replies', 'reply engine', 'engagement queue', 'pending replies'], entry: { id: 'history', label: 'AI Replies', href: '/history', sectionId: 'discovery' } },
     { match: ['setup wizard', 'onboarding', 'go live checklist', 'research my brand', 'auto-fill brand', 'intelligent setup'], entry: { id: 'onboarding', label: 'Setup Wizard', href: '/onboarding', sectionId: 'create' } },
     { match: ['growth lab', 'reddit lab', 'reddit ai'], entry: { id: 'reddit-ai', label: 'Growth Lab', href: '/reddit-ai', sectionId: 'labs' } },
@@ -265,6 +268,9 @@ export function resolveNavigationIntent(
   }
 
   if (legacyRoute && wantsNav) {
+    if (legacyRoute.action === 'campaign-mastery' || legacyRoute.action === 'research-brand' || isMasteryRequest(q)) {
+      return null;
+    }
     const path = legacyRoute.href.split('?')[0];
     const tab = new URLSearchParams(legacyRoute.href.split('?')[1] || '').get('tab') || undefined;
     const navItem = NAV_CATALOG.find((e) => e.href === path || legacyRoute.href.startsWith(e.href));
@@ -372,6 +378,14 @@ export function dispatchHighlightNav(navId: string, sectionId?: string, ms = 320
   window.dispatchEvent(new CustomEvent(SI_BRAIN_HIGHLIGHT_NAV, { detail: { navId, sectionId, ms } }));
 }
 
+/** User-facing sidebar label (never "Live Support" — use Imperialism Brain). */
+export function displayNavLabel(action: Pick<LiveSupportAction, 'label' | 'href' | 'navId'>): string {
+  const path = action.href?.split('?')[0];
+  if (path === '/support' || action.navId === 'support') return 'Imperialism Brain';
+  if (/live\s+support/i.test(action.label)) return 'Imperialism Brain';
+  return action.label;
+}
+
 async function runLivePlatformAudit(action: LiveSupportAction): Promise<void> {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent('si-brain-refresh-health'));
@@ -411,6 +425,8 @@ export function executeLiveSupportAction(action: LiveSupportAction): boolean {
   dispatchBrainNavigate(detail);
 
   if (action.navId) dispatchHighlightNav(action.navId, action.sectionId);
+
+  resolveInterventionsForHref(action.href);
 
   return true;
 }

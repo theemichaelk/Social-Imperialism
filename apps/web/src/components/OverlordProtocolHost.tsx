@@ -1,7 +1,8 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
+import { resolveInterventionsForHref } from '@/lib/theeMichaelNotificationLedger';
 import { invoke } from '@/lib/api';
 import { checkPlatformAdmin } from '@/lib/adminAccess';
 import {
@@ -12,7 +13,6 @@ import {
   type PageHealthSnapshot,
   type UiMutateDetail,
 } from '@/lib/theeMichaelOverlord';
-import { OverlordInterventionBanner } from './OverlordInterventionBanner';
 import { OverlordConfirmModal } from './OverlordConfirmModal';
 import { OverlordFieldGuard } from './OverlordFieldGuard';
 
@@ -31,12 +31,16 @@ const HEALTH_POLL_MS = 45_000;
 
 export function OverlordProtocolHost() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isAdminRef = useRef(false);
 
   useEffect(() => {
     recordPageEnter(pathname);
-  }, [pathname]);
+    const tab = searchParams?.get('tab');
+    const href = tab ? `${pathname}?tab=${tab}` : pathname;
+    resolveInterventionsForHref(href);
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     checkPlatformAdmin().then((admin) => { isAdminRef.current = admin; }).catch(() => { /* ignore */ });
@@ -130,7 +134,6 @@ export function OverlordProtocolHost() {
 
   return (
     <>
-      <OverlordInterventionBanner />
       <OverlordConfirmModal />
       <OverlordFieldGuard />
     </>

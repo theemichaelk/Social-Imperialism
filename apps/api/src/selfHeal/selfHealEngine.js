@@ -65,6 +65,28 @@ function extractGuardianIssues(scanData) {
   return Array.isArray(alerts) ? alerts : [];
 }
 
+function pickSeedKeyword(keywords = []) {
+  for (const kw of keywords) {
+    if (typeof kw === 'string' && kw.trim()) return kw.trim();
+    if (kw && typeof kw === 'object') {
+      const term = kw.keyword || kw.term || kw.text || kw.phrase;
+      if (typeof term === 'string' && term.trim()) return term.trim();
+    }
+  }
+  return null;
+}
+
+/** Replace audit-query junk ("daily growth audit") with a real monitored keyword. */
+function personalizeKgrAction(action, seedKeyword) {
+  const a = String(action || '');
+  if (!/\bkgr\b/i.test(a)) return a;
+  if (seedKeyword) return `Run KGR on "${seedKeyword}" in SEO Tools`;
+  if (/daily\s+(?:seo\s+)?growth\s+audit|daily\s+seo/i.test(a)) {
+    return 'Run KGR on your top monitored keyword in SEO Tools';
+  }
+  return a;
+}
+
 function buildRecommendationsFromAudit(ctx) {
   const {
     checks = [],
@@ -107,18 +129,27 @@ function buildRecommendationsFromAudit(ctx) {
     );
   }
 
-  if (!keywords?.length) {
-    add('SEO', 'No keywords monitored', 'Add 3–5 high-intent terms in Keywords, then run KGR in SEO Tools', '/keywords', 60);
-  } else if (keywords.length < 5) {
-    add('SEO', 'Thin keyword coverage', `You monitor ${keywords.length} terms — expand to 10+ for better SERP signal`, '/keywords', 55);
+  const keywordCount = Array.isArray(keywords) ? keywords.length : 0;
+  const hasKeywords = keywordCount > 0;
+
+  if (!hasKeywords) {
+    add('Keywords', 'Add monitored keywords', 'Add 3–5 high-intent terms, then run KGR in SEO Tools', '/keywords', 78);
+  } else if (keywordCount < 5) {
+    add('SEO', 'Thin keyword coverage', `You monitor ${keywordCount} terms — expand to 10+ for better SERP signal`, '/keywords', 55);
   }
 
-  if (seoBrief?.recommendations?.length) {
-    for (const sr of seoBrief.recommendations.slice(0, 3)) {
+  // KGR / SEO Tools runs require monitored keywords — skip brief KGR recs when keyword list is empty.
+  if (hasKeywords && seoBrief?.recommendations?.length) {
+    const seedKeyword = pickSeedKeyword(keywords);
+    const seoRecs = seoBrief.recommendations;
+    const preferred = seedKeyword
+      ? seoRecs.find((r) => r.label === 'Keyword Intelligence') || seoRecs[0]
+      : seoRecs.find((r) => r.label === 'National SEO') || seoRecs[0];
+    if (preferred) {
       add(
-        'SEO',
-        `${sr.framework}: ${sr.label}`,
-        sr.actions[0],
+        preferred.framework || 'SEO',
+        preferred.label,
+        personalizeKgrAction(preferred.actions[0], seedKeyword),
         '/seo-tools',
         65,
       );
@@ -147,7 +178,32 @@ function buildRecommendationsFromAudit(ctx) {
 
   add('Growth', 'Daily improvement habit', 'Run one SEO Tools scan + approve 3 replies + schedule 1 post — compound growth loop', '/dashboard', 40);
 
-  return recs.sort((a, b) => b.priority - a.priority).slice(0, 12);
+  return dedupeRecommendations(recs).sort((a, b) => b.priority - a.priority).slice(0, 12);
+}
+
+/** Collapse redundant SEO/KGR rows so daily top-3 is actionable, not repetitive. */
+function dedupeRecommendations(recs) {
+  const seen = new Set();
+  const out = [];
+  let kgrSlots = 0;
+
+  for (const r of recs) {
+    const actionKey = String(r.action || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const titleKey = String(r.title || '').toLowerCase();
+    const hrefKey = String(r.href || '').split('?')[0];
+    const fingerprint = `${r.category}|${hrefKey}|${titleKey}|${actionKey.slice(0, 48)}`;
+    if (seen.has(fingerprint)) continue;
+
+    const isKgr = /\bkgr\b/i.test(r.action) || /\bseo tools\b/i.test(actionKey);
+    if (isKgr) {
+      if (kgrSlots >= 1) continue;
+      kgrSlots += 1;
+    }
+
+    seen.add(fingerprint);
+    out.push(r);
+  }
+  return out;
 }
 
 async function applySafeAutoFixes(store, projectId, organizationId, failures = []) {
@@ -212,9 +268,14 @@ async function runProjectSelfAudit(projectId, organizationId, opts = {}) {
 
   const project = await require('@si/db').prisma.project.findUnique({ where: { id: projectId } });
 
+  const seedKeyword = pickSeedKeyword(keywords);
+  const briefQuery = seedKeyword
+    ? `KGR and national SEO for "${seedKeyword}"`
+    : 'national SEO topical map and keyword research';
+
   let seoBrief = null;
   try {
-    seoBrief = await buildIntelligenceBrief('daily SEO growth audit', {
+    seoBrief = await buildIntelligenceBrief(briefQuery, {
       keys,
       invoke,
       projectId,
