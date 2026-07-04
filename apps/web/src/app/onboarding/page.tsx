@@ -1,15 +1,16 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { invoke, getProjectId } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { LivePulse, RingChart, BarChart, DataPanel, chartShortLabel } from '@/components/DashboardViz';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
-import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
-import { TheeMichaelSetupGuide } from '@/components/TheeMichaelSetupGuide';
+
+import { ImperialismBrainSetupGuide } from '@/components/ImperialismBrainSetupGuide';
 import {
   researchBrandWithTheeMichael,
   propagateBrandToModules,
+  formatBrandResearchError,
+  fetchOnboardingContext,
   type BrandResearchResult,
 } from '@/lib/onboardingIntelligence';
 import { useRouter } from 'next/navigation';
@@ -77,9 +78,40 @@ export default function OnboardingPage() {
     setKeywords((s.keywords as Keyword[]) || []);
     const mons = await invoke<Monitor[]>('get-watched-monitors').catch(() => []);
     setMonitors(Array.isArray(mons) ? mons : []);
+    const metrics = (s.apiMetrics as Record<string, string>) || api || {};
+    return {
+      connectedCount: Object.values(metrics).filter((v) => v === 'Connected').length,
+    };
   }, []);
 
   useEffect(() => { refreshStatus({ applyStep: true }).catch(console.error); }, [refreshStatus]);
+
+  useEffect(() => {
+    fetchOnboardingContext().then((ctx) => {
+      if (!ctx?.brand?.domain) return;
+      setResearch((prev) => prev ?? {
+        success: true,
+        brand: {
+          brandName: ctx.brand.brandName || '',
+          domain: ctx.brand.domain || '',
+          description: ctx.brand.description || '',
+          tone: ctx.brand.tone || 'Professional',
+          audience: ctx.brand.audience || '',
+          disallowedTopics: '',
+          sampleMessages: '',
+          affiliateLinks: '',
+        },
+        keywords: [],
+        suggestedKeywords: [],
+        platforms: [],
+        globalPrompt: '',
+        monitors: [],
+        moduleFlow: ctx.moduleFlow,
+        recommendations: [],
+        targetUrl: ctx.targetUrl,
+      });
+    }).catch(() => null);
+  }, []);
 
   const connectedCount = Object.values(apiMetrics).filter((v) => v === 'Connected').length;
   const totalApis = Object.keys(apiMetrics).length || 1;
@@ -117,12 +149,16 @@ export default function OnboardingPage() {
     setMsg('Imperialism Brain researching your brand online (website + SEO + keywords)…');
     try {
       const result = await researchBrandWithTheeMichael(domain, brand.brandName.trim() || undefined);
-      if (!result) throw new Error('Brand research failed — check API connection');
       await applyResearchResult(result);
       const wired = result.propagation?.results?.filter((r) => r.ok).length || 0;
-      setMsg(`Researched ${result.brand.domain} — ${result.suggestedKeywords?.length || 0} keywords, ${wired} modules persisted → Campaign Command`);
+      const partial = result.steps?.some((s) => !s.ok);
+      setMsg(
+        partial
+          ? `Partial research for ${result.brand.domain} — ${result.suggestedKeywords?.length || 0} keywords, ${wired} modules saved. Add AI keys in Integrations for full auto-fill.`
+          : `Researched ${result.brand.domain} — ${result.suggestedKeywords?.length || 0} keywords, ${wired} modules persisted → Campaign Command`,
+      );
     } catch (e) {
-      setMsg((e as Error).message);
+      setMsg(formatBrandResearchError(e));
     } finally {
       setLoading(false);
     }
@@ -152,9 +188,9 @@ export default function OnboardingPage() {
         globalPrompt,
         platforms,
       });
-      await refreshStatus();
+      const refreshed = await refreshStatus();
       setStep(2);
-      setMsg('Brand integrated with AI — data flowing to all modules + Campaign Command');
+      setMsg(`Brand integrated — ${refreshed?.connectedCount ?? connectedCount} APIs live. Connect keys below, then continue to Keywords & Platforms.`);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -197,7 +233,7 @@ export default function OnboardingPage() {
       })));
       await refreshStatus();
       setStep(4);
-      setMsg(`Saved ${keywords.length} keywords across ${platforms.length} platforms`);
+      setMsg(`Saved ${keywords.length} keywords across ${platforms.length} platforms — run Feed Preview next.`);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -212,8 +248,8 @@ export default function OnboardingPage() {
       const posts = await invoke<Post[]>('get-live-feed', { quick: !full, refresh: full });
       setFeed((posts || []).slice(0, 8));
       await invoke('set-onboarding-feed-previewed').catch(() => null);
-      setStep(4);
-      setMsg(`${(posts || []).length} posts discovered`);
+      setStep((current) => (current < 4 ? 4 : current));
+      setMsg(`${(posts || []).length} posts discovered — continue to AI Replies & Be First when ready.`);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -239,7 +275,7 @@ export default function OnboardingPage() {
       const res = await invoke<{ success?: boolean; prompt?: string; error?: string }>('generate-global-custom-prompt');
       if (res.prompt) {
         setGlobalPrompt(res.prompt);
-        setMsg('Global prompt ready — review and finish setup');
+        setMsg('Global prompt ready — set scan frequency, add monitors, then finish to Campaign Command.');
       } else {
         setMsg(res.error || 'AI fill failed — add API keys in Settings');
       }
@@ -361,15 +397,73 @@ export default function OnboardingPage() {
 
       <SectionLivePanel section="onboarding" />
 
-      <TheeMichaelSetupGuide
+      <div className="wizard-progress">
+        {STEPS.map((label, i) => (
+          <button
+            key={label}
+            type="button"
+            className={`wizard-step ${step === i + 1 ? 'active' : ''} ${(status.nextStep as number) > i + 1 ? 'done' : ''}`}
+            onClick={() => setStep(i + 1)}
+          >
+            {i + 1}. {label}
+          </button>
+        ))}
+      </div>
+
+      <ImperialismBrainSetupGuide
         step={step}
         loading={loading}
         research={research}
         domain={brand.domain}
-        canResearch={step === 1}
         onResearch={researchMyBrand}
+        brand={step === 1 ? brand : undefined}
+        onBrandChange={step === 1 ? (patch) => setBrand((prev) => ({ ...prev, ...patch })) : undefined}
+        onSaveBrand={step === 1 ? saveBrand : undefined}
+        statusMessage={msg}
+        apiMetrics={apiMetrics}
+        connectedCount={connectedCount}
+        onConnectionsSaved={() => refreshStatus()}
+        onContinueToKeywords={() => setStep(3)}
+        onSkipConnections={() => setStep(3)}
+        keywords={keywords}
+        suggested={suggested}
+        manualKw={manualKw}
+        platforms={platforms}
+        platformOptions={PLATFORMS}
+        platformLabel={platformDisplayName}
+        onManualKwChange={setManualKw}
+        onSuggestKeywords={suggestKeywords}
+        onAddKeywords={addKeywords}
+        onTogglePlatform={togglePlatform}
+        onSaveKeywords={saveKeywords}
+        onSkipKeywords={() => setStep(4)}
+        feed={feed}
+        onQuickPreview={() => previewFeed(false)}
+        onFullScan={runFirstScan}
+        onContinueToReplies={() => setStep(5)}
+        globalPrompt={globalPrompt}
+        onGlobalPromptChange={setGlobalPrompt}
+        autoSearchFreq={autoSearchFreq}
+        beFirstFreq={beFirstFreq}
+        onAutoSearchFreqChange={setAutoSearchFreq}
+        onBeFirstFreqChange={setBeFirstFreq}
+        enableWorker={enableWorker}
+        onEnableWorkerChange={setEnableWorker}
+        watchTerm={watchTerm}
+        watchType={watchType}
+        watchPlatform={watchPlatform}
+        onWatchTermChange={setWatchTerm}
+        onWatchTypeChange={setWatchType}
+        onWatchPlatformChange={setWatchPlatform}
+        monitors={monitors}
+        onAddMonitor={addMonitor}
+        onRemoveMonitor={removeMonitor}
+        onAutoFillPrompt={autoFillPrompt}
+        onFinish={finish}
+        summaryBrandName={brand.brandName}
       />
 
+      {step === 1 && (
       <div className="dash-hero" style={{ marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}>
           <RingChart percent={(connectedCount / totalApis) * 100} label="APIs Live" color="#22c55e" />
@@ -396,185 +490,9 @@ export default function OnboardingPage() {
           </div>
         </div>
       </div>
-
-      <div className="wizard-progress">
-        {STEPS.map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            className={`wizard-step ${step === i + 1 ? 'active' : ''} ${(status.nextStep as number) > i + 1 ? 'done' : ''}`}
-            onClick={() => setStep(i + 1)}
-          >
-            {i + 1}. {label}
-          </button>
-        ))}
-      </div>
-
-      {step === 1 && (
-        <div className="card">
-          <h3>Brand Profile — AI Integration</h3>
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Every reply, keyword, and analysis uses this profile.</p>
-          <input className="input" placeholder="Brand name *" value={brand.brandName} onChange={(e) => setBrand({ ...brand, brandName: e.target.value })} style={{ marginBottom: 8 }} />
-          <input className="input" placeholder="Domain * (e.g. acme.com)" value={brand.domain} onChange={(e) => setBrand({ ...brand, domain: e.target.value })} style={{ marginBottom: 8 }} />
-          <button className="btn" style={{ marginBottom: 8 }} onClick={researchMyBrand} disabled={loading || !brand.domain.trim()}>
-            ✨ Imperialism Brain — Research & Auto-Fill from Web
-          </button>
-          <textarea className="input" placeholder="Brand description — what you do, who you help" value={brand.description} onChange={(e) => setBrand({ ...brand, description: e.target.value })} style={{ marginBottom: 8 }} />
-          <input className="input" placeholder="Target audience (optional)" value={brand.audience} onChange={(e) => setBrand({ ...brand, audience: e.target.value })} style={{ marginBottom: 8 }} />
-          <select className="input" value={brand.tone} onChange={(e) => setBrand({ ...brand, tone: e.target.value })}>
-            <option>Professional</option><option>Casual</option><option>Bold</option><option>Educational</option><option>Friendly</option>
-          </select>
-          <textarea className="input" placeholder="Disallowed topics (optional)" value={brand.disallowedTopics} onChange={(e) => setBrand({ ...brand, disallowedTopics: e.target.value })} style={{ marginTop: 8 }} />
-          <textarea className="input" placeholder="Sample messages / voice examples (optional)" value={brand.sampleMessages} onChange={(e) => setBrand({ ...brand, sampleMessages: e.target.value })} style={{ marginTop: 8 }} />
-          <input className="input" placeholder="Affiliate links / USPs (optional)" value={brand.affiliateLinks} onChange={(e) => setBrand({ ...brand, affiliateLinks: e.target.value })} style={{ marginTop: 8 }} />
-          <button className="btn primary" style={{ marginTop: 12 }} onClick={saveBrand} disabled={loading}>Save & Integrate with AI →</button>
-        </div>
       )}
 
-      {step === 2 && (
-        <div className="card wizard-connections-step">
-          <h3>API Connections — wire every integration</h3>
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-            Admins: keys load from server .env automatically. Each field below can be tested live before you continue.
-          </p>
-          <SetupConnectionsPanel onSaved={() => refreshStatus()} />
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-            <button className="btn primary" onClick={() => setStep(3)} disabled={connectedCount < 3}>
-              Continue — {connectedCount} APIs live →
-            </button>
-            <button className="btn" onClick={() => setStep(3)}>Skip for now →</button>
-          </div>
-        </div>
-      )}
 
-      {step === 3 && (
-        <div className="card">
-          <h3>Keywords & Social Platforms</h3>
-          <button className="btn" onClick={suggestKeywords} disabled={loading} style={{ marginBottom: 12 }}>✨ AI Suggest Keywords</button>
-          {suggested.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                {suggested.map((t) => (
-                  <button key={t} className="badge" style={{ cursor: 'pointer' }} onClick={() => addKeywords([t])}>+ {t}</button>
-                ))}
-              </div>
-              <button className="btn primary" onClick={() => addKeywords(suggested)}>Add All Suggestions</button>
-            </div>
-          )}
-          <textarea className="input" placeholder="Manual keywords (comma or newline)" value={manualKw} onChange={(e) => setManualKw(e.target.value)} style={{ marginBottom: 8 }} />
-          <button className="btn" onClick={() => { addKeywords(manualKw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean)); setManualKw(''); }}>+ Add Manual</button>
-          <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: 16 }}>Track on platforms:</p>
-          <div className="grid grid-4" style={{ marginBottom: 12 }}>
-            {PLATFORMS.map((p) => (
-              <div key={p} className={`platform-chip ${platforms.includes(p) ? 'selected' : ''}`} onClick={() => togglePlatform(p)} role="button" tabIndex={0}>
-                {platformDisplayName(p)}
-              </div>
-            ))}
-          </div>
-          <p style={{ fontSize: '0.85rem' }}>Tracked ({keywords.length}): {keywords.map((k) => k.term).join(', ') || 'none yet'}</p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn primary" onClick={saveKeywords} disabled={loading || !keywords.length}>Save Keywords →</button>
-            <button className="btn" onClick={() => setStep(4)}>Skip →</button>
-          </div>
-        </div>
-      )}
-
-      {step === 4 && (
-        <div className="card">
-          <h3>Feed Preview</h3>
-          <p style={{ color: '#94a3b8' }}>Posts matching your keywords from connected APIs and web discovery.</p>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <button className="btn primary" onClick={() => previewFeed(false)} disabled={loading}>Quick Preview</button>
-            <button className="btn" onClick={runFirstScan} disabled={loading}>Full First Scan</button>
-            <button className="btn" onClick={() => setStep(5)}>Continue →</button>
-          </div>
-          {feed.map((p, i) => (
-            <div key={i} className="post-card">
-              <span className="badge">{p.platform}</span>
-              {p.matchScore != null && <span style={{ fontSize: '0.7rem', color: '#64748b', marginLeft: 6 }}>score {p.matchScore}</span>}
-              <div>{(p.content || '').slice(0, 200)}</div>
-            </div>
-          ))}
-          {!feed.length && !loading && <p style={{ color: '#94a3b8' }}>Click Quick Preview to load matching posts.</p>}
-        </div>
-      )}
-
-      {step === 5 && (
-        <div className="card">
-          <h3>AI Replies &amp; Be First Monitors</h3>
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Configure global reply voice, scan frequency, and real-time monitors.</p>
-          <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Global Custom Prompt</label>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <textarea className="input" rows={4} value={globalPrompt} onChange={(e) => setGlobalPrompt(e.target.value)} placeholder="Always naturally mention our brand and domain…" style={{ flex: 1, margin: 0 }} />
-            <button className="btn" onClick={autoFillPrompt} disabled={loading}>✨ AI Auto-Fill</button>
-          </div>
-          <div className="grid grid-2" style={{ marginBottom: 12 }}>
-            <div>
-              <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Auto Search frequency</label>
-              <select className="input" value={autoSearchFreq} onChange={(e) => setAutoSearchFreq(e.target.value)}>
-                {['5m', '10m', '15m', '30m', 'hourly', 'daily', 'weekly', 'monthly'].map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Be-First monitor frequency</label>
-              <select className="input" value={beFirstFreq} onChange={(e) => setBeFirstFreq(e.target.value)}>
-                {['5m', '10m', '15m', '30m', 'hourly', 'daily', 'realtime'].map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Be-First Monitor — watch keyword, page, or account</label>
-          <div className="wizard-monitor-grid" style={{ marginBottom: 8 }}>
-            <input className="input" placeholder="Keyword, @handle, or page" value={watchTerm} onChange={(e) => setWatchTerm(e.target.value)} style={{ margin: 0 }} />
-            <select className="input" value={watchType} onChange={(e) => setWatchType(e.target.value)} style={{ margin: 0 }}>
-              <option value="keyword">Keyword</option>
-              <option value="account">Account</option>
-              <option value="page">Page</option>
-              <option value="post">Post</option>
-            </select>
-            <select className="input" value={watchPlatform} onChange={(e) => setWatchPlatform(e.target.value)} style={{ margin: 0 }}>
-              <option value="All">All Platforms</option>
-              {PLATFORMS.map((p) => <option key={p} value={p}>{platformDisplayName(p)}</option>)}
-            </select>
-            <button className="btn" onClick={addMonitor}>+ Watch</button>
-          </div>
-          {monitors.length === 0 && (
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No monitors yet — add a keyword or account to watch for Be-First replies.</p>
-          )}
-          {monitors.map((m, i) => (
-            <div key={m.id || i} className="post-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span><span className="badge">{m.type}</span> {m.term} · {m.platform}</span>
-              <button className="btn" onClick={() => removeMonitor(i)}>Remove</button>
-            </div>
-          ))}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, cursor: 'pointer' }}>
-            <input type="checkbox" checked={enableWorker} onChange={(e) => setEnableWorker(e.target.checked)} />
-            Enable background worker (Be First delay jitter in Auto-Rules)
-          </label>
-          <div className="dash-hero-grid" style={{ margin: '16px 0' }}>
-            <div className="metric-tile"><div className="metric-tile-val">{brand.brandName || '—'}</div><div className="metric-tile-label">Brand</div></div>
-            <div className="metric-tile"><div className="metric-tile-val">{keywords.length}</div><div className="metric-tile-label">Keywords</div></div>
-            <div className="metric-tile"><div className="metric-tile-val">{monitors.length}</div><div className="metric-tile-label">Monitors</div></div>
-            <div className="metric-tile"><div className="metric-tile-val">{connectedCount}</div><div className="metric-tile-label">APIs Live</div></div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn primary" onClick={finish} disabled={loading}>
-              {loading ? 'Finishing…' : 'Finish Setup → Campaign Command'}
-            </button>
-            <Link href="/campaign-manager?tab=nodes" className="btn">Open Verified Nodes →</Link>
-            <Link href="/support" className="btn">Ask Imperialism Brain</Link>
-          </div>
-        </div>
-      )}
-
-      {msg && (
-        <div className="card" style={{ marginTop: 12, borderColor: msg.includes('required') || msg.includes('failed') || msg.includes('error') ? '#f59e0b' : '#10b981' }}>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
-        </div>
-      )}
     </div>
   );
 }

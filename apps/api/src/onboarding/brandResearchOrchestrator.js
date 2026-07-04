@@ -105,7 +105,7 @@ function resolveModuleData(module, ctx) {
     Accounts: { data: 'Connect & health', status: 'connect' },
     'Acct Creator': { data: 'New profiles', status: 'connect' },
     'Campaign Command': { data: brand?.domain || 'target URL', status: brand?.domain ? 'ready' : 'pending' },
-    'Imperialism Brain': { data: 'THEE_MICHAEL guidance', status: 'active' },
+    'Imperialism Brain': { data: 'Live support', status: 'active' },
     Integrations: { data: apiConnected >= 5 ? `${apiConnected} APIs live` : 'OAuth + API keys', status: apiConnected >= 5 ? 'ready' : 'connect' },
     Settings: { data: 'API keys & billing', status: 'wired' },
   };

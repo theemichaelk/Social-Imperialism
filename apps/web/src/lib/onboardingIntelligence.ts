@@ -1,7 +1,7 @@
 /**
- * THEE_MICHAEL Setup Wizard intelligence — brand research + module propagation
+ * Imperialism Brain Setup Wizard intelligence — brand research + module propagation
  */
-import { apiFetch } from '@/lib/api';
+import { apiFetch, type ApiError } from '@/lib/api';
 
 export type ModuleFlowItem = {
   section?: string;
@@ -51,20 +51,90 @@ export type OnboardingContext = {
   targetUrl: string;
 };
 
+export class BrandResearchError extends Error {
+  detail?: string;
+  steps?: BrandResearchResult['steps'];
+
+  constructor(message: string, opts?: { detail?: string; steps?: BrandResearchResult['steps'] }) {
+    super(message);
+    this.name = 'BrandResearchError';
+    this.detail = opts?.detail;
+    this.steps = opts?.steps;
+  }
+}
+
+function failedResearchSteps(steps?: BrandResearchResult['steps']) {
+  return (steps || []).filter((s) => !s.ok);
+}
+
+export function formatBrandResearchError(err: unknown): string {
+  if (err instanceof BrandResearchError) return err.message;
+  const e = err as ApiError & Error;
+  const msg = String(e?.message || '').trim();
+
+  if (/^unauthorized$/i.test(msg) || /invalid token|not authenticated|401/i.test(msg)) {
+    return 'Session expired — log in again, then retry brand research.';
+  }
+  if (/project not found|no project/i.test(msg)) {
+    return 'Workspace project not found — refresh the page or open Dashboard to sync your session.';
+  }
+  if (/domain is required/i.test(msg)) {
+    return 'Enter a valid domain first (e.g. acme.com).';
+  }
+  if (/subscription|SUBSCRIPTION_REQUIRED/i.test(msg) || e?.code === 'SUBSCRIPTION_REQUIRED') {
+    return 'Active subscription required before brand research can run.';
+  }
+  if (/SOVEREIGN_|live.?freeze|security review/i.test(msg) || (e?.code || '').startsWith('SOVEREIGN_')) {
+    return 'Request blocked by security review — open Settings → Guardian & API → Security Control, then retry.';
+  }
+  if (/gemini|openrouter|openai|anthropic|api key|no ai|provider/i.test(msg)) {
+    return `AI provider unavailable${msg ? ` (${msg})` : ''} — add Gemini or OpenRouter keys under Integrations → Connections.`;
+  }
+  if (/fetch failed|network|ECONNREFUSED|ENOTFOUND|502|503|504|timeout/i.test(msg)) {
+    return `Cannot reach the API server${msg ? ` (${msg})` : ''} — check your connection or retry in a moment.`;
+  }
+  return msg || 'Brand research failed — open Integrations and confirm API keys, then try again.';
+}
+
 export async function researchBrandWithTheeMichael(
   domain: string,
   brandName?: string,
   opts?: { persist?: boolean },
-): Promise<BrandResearchResult | null> {
+): Promise<BrandResearchResult> {
+  let res: BrandResearchResult;
   try {
-    const res = await apiFetch('/api/onboarding/research-brand', {
+    res = await apiFetch('/api/onboarding/research-brand', {
       method: 'POST',
       body: JSON.stringify({ domain, brandName, persist: opts?.persist }),
     }) as BrandResearchResult;
-    return res?.success ? res : null;
-  } catch {
-    return null;
+  } catch (e) {
+    throw new BrandResearchError(formatBrandResearchError(e), { detail: (e as Error).message });
   }
+
+  if (!res || typeof res !== 'object') {
+    throw new BrandResearchError('Invalid response from brand research API — check API connection and retry.');
+  }
+
+  if (!res.success) {
+    const failed = failedResearchSteps(res.steps);
+    const stepHint = failed.length
+      ? ` Failed steps: ${failed.map((s) => s.step.replace(/-/g, ' ')).join(', ')}.`
+      : '';
+    throw new BrandResearchError(
+      `${formatBrandResearchError(new Error(res.error || 'Brand research did not complete'))}${stepHint}`,
+      { detail: res.error, steps: res.steps },
+    );
+  }
+
+  const failed = failedResearchSteps(res.steps);
+  if (res.steps?.length && failed.length === res.steps.length) {
+    throw new BrandResearchError(
+      `Brand research could not pull live data for ${domain}.${failed.map((s) => ` ${s.step.replace(/-/g, ' ')}: ${s.error || 'failed'}`).join(';')}`,
+      { detail: failed.map((s) => s.error).filter(Boolean).join('; '), steps: res.steps },
+    );
+  }
+
+  return res;
 }
 
 export async function fetchOnboardingContext(): Promise<OnboardingContext | null> {

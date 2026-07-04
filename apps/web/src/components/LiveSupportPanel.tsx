@@ -60,6 +60,7 @@ import {
 import {
   researchBrandWithTheeMichael,
   fetchOnboardingContext,
+  formatBrandResearchError,
 } from '@/lib/onboardingIntelligence';
 import {
   buildOnboardingAugmentedContext,
@@ -328,9 +329,9 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
         setLoading(false);
         return;
       }
-      const result = await researchBrandWithTheeMichael(domain);
-      completeTrace(tBrand);
-      if (result) {
+      try {
+        const result = await researchBrandWithTheeMichael(domain);
+        completeTrace(tBrand);
         setMessages((prev) => [
           ...prev,
           {
@@ -340,12 +341,13 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
           },
         ]);
         executeLiveSupportAction(searchRouteToAction({ label: 'Setup Wizard', href: '/onboarding' }, true));
-      } else {
+      } catch (e) {
+        completeTrace(tBrand);
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: `Research failed for **${domain}** — open Setup Wizard and try again, or check Integrations for API keys.\n\n[[NAV:/onboarding|Setup Wizard]]`,
+            content: `Research failed for **${domain}** — ${formatBrandResearchError(e)}\n\n[[NAV:/onboarding|Setup Wizard]] · [[NAV:/integrations?tab=connections|Integrations]]`,
             ts: new Date().toISOString(),
           },
         ]);

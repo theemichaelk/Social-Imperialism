@@ -1,5 +1,5 @@
 /**
- * THEE_MICHAEL onboarding intelligence — domain extraction + context for Imperialism Brain
+ * Imperialism Brain onboarding intelligence — domain extraction + setup context
  */
 
 import type { BrandResearchResult, OnboardingContext } from '@/lib/onboardingIntelligence';
