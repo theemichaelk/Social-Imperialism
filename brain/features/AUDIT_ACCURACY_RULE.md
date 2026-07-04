@@ -33,8 +33,8 @@ When reviewing **any** change — including retroactive audits of earlier assist
 | Claim | Verified value | How to verify |
 |-------|----------------|---------------|
 | QA module pages | **29** routes | `apps/api/_test-qa-all-pages.js` `PAGES.length` |
-| QA page features | **210** OK (0 ERROR, 0 WEAK) | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
-| QA section features | **143+** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
+| QA page features | **217** OK (0 ERROR, 0 WEAK) | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
+| QA section features | **144** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
 | `PageShell` + `PageFocusRail` | **29** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
 | SaaS IPC handlers | **405** | `node apps/api/_audit-accuracy-check.js` → handler registry count |
 | Imperial Video Studio | **12** pipelines · **52** tools · **500+** skills | `get-imperial-video-studio-config` |
