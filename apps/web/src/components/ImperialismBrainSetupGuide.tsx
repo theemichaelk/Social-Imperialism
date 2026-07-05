@@ -3,11 +3,7 @@
 import Link from 'next/link';
 import { ImperialismBrainAvatar } from '@/components/ImperialismBrainAvatar';
 import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
-import {
-  groupModuleFlowBySection,
-  type BrandResearchResult,
-  type ModuleFlowItem,
-} from '@/lib/onboardingIntelligence';
+import type { BrandResearchResult } from '@/lib/onboardingIntelligence';
 
 export const WIZARD_STEP_LABELS = [
   'Brand Profile',
@@ -401,9 +397,6 @@ export function ImperialismBrainSetupGuide({
   onFinish,
   summaryBrandName,
 }: Props) {
-  const flow = research?.moduleFlow || [];
-  const grouped = groupModuleFlowBySection(flow);
-  const readyCount = flow.filter((m) => ['ready', 'live', 'wired', 'active'].includes(m.status)).length;
   const wiredModules = research?.propagation?.results?.filter((r) => r.ok).map((r) => r.module) || [];
   const hasResearch = !!research?.brand?.domain;
   const stepLabel = WIZARD_STEP_LABELS[step - 1];
@@ -436,7 +429,7 @@ export function ImperialismBrainSetupGuide({
     ? resolveRepliesPhase({ globalPrompt, monitorCount: monitors.length, loading: !!loading })
     : undefined;
 
-  const subtitle = setupGuideSubtitle(step, flow.length, {
+  const subtitle = setupGuideSubtitle(step, research?.moduleFlow?.length || MODULE_COUNT, {
     brandPhase,
     apiPhase,
     keywordsPhase,
@@ -450,7 +443,6 @@ export function ImperialismBrainSetupGuide({
     monitorCount: monitors.length,
   });
 
-  const showModuleFlow = step === 1 && grouped.length > 0;
   const researchFromBrand = research?.suggestedKeywords?.length;
 
   return (
@@ -882,25 +874,6 @@ export function ImperialismBrainSetupGuide({
         <p className="brain-setup-wired-summary">
           Persisted to: {wiredModules.join(' · ')}
         </p>
-      )}
-
-      {showModuleFlow && (
-        <div className="brain-setup-module-flow">
-          <p className="brain-setup-module-flow-label">Data flowing to modules by relevancy</p>
-          {grouped.map(({ section, items }) => (
-            <div key={section} className="brain-setup-module-section">
-              <p className="brain-setup-module-section-label">{section}</p>
-              <div className="brain-setup-module-flow-grid">
-                {items.map((m: ModuleFlowItem) => (
-                  <Link key={m.module} href={m.href} className={`brain-setup-module-chip status-${m.status}`} title={m.hint}>
-                    <span className="brain-setup-module-name">{m.module}</span>
-                    <span className="brain-setup-module-data">{m.data}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       )}
 
       {step === 1 && research?.recommendations && research.recommendations.length > 0 && (
