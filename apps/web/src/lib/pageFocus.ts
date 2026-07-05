@@ -127,10 +127,10 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     id: 'video-studio',
     title: 'Video Studio',
     outcome: 'Turn Imperialism Brain into a full agentic video production studio — script to render with approval gates.',
-    subtitle: '12 pipelines · 52 tools · 500+ agent skills · reference analysis · living production board.',
+    subtitle: '12 pipelines · 52 tools · 620+ agent skills · reference analysis · living production board.',
     flow: ['Reference or brief', 'Pick pipeline', 'Approve gates', 'Compose & publish'],
     actions: [
-      { label: 'Run pipeline', href: '/video-studio', primary: true },
+      { label: 'Run pipeline', href: '/video-studio#run', primary: true },
       { label: 'Media & Grok', href: '/content-hub?tab=media' },
       { label: 'Design captions', href: '/design-studio' },
     ],

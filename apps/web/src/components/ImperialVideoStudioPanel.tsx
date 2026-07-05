@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
+import { executeLiveSupportAction } from '@/lib/liveSupportActions';
 
 type Pipeline = {
   id: string;
@@ -28,7 +30,8 @@ type StoryboardStage = {
 };
 
 type JobResult = {
-  status: string;
+  status?: string;
+  success?: boolean;
   accepted?: boolean;
   async?: boolean;
   pipelineId?: string;
@@ -39,8 +42,22 @@ type JobResult = {
   error?: string;
 };
 
+function normalizeJobResult(res: JobResult | null | undefined): JobResult | null {
+  if (!res) return null;
+  if (res.status === 'idle') return null;
+  if (res.status) return res;
+  if (res.error) return { ...res, status: 'error' };
+  if (res.accepted) return { ...res, status: 'running' };
+  if (res.success && (res.storyboard?.length || res.deliverable)) {
+    return { ...res, status: 'complete' };
+  }
+  return res;
+}
+
 export function ImperialVideoStudioPanel() {
   const [config, setConfig] = useState<StudioConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [configError, setConfigError] = useState('');
   const [selectedPipeline, setSelectedPipeline] = useState('social-explainer');
   const [brief, setBrief] = useState('');
   const [referenceUrl, setReferenceUrl] = useState('');
@@ -49,32 +66,58 @@ export function ImperialVideoStudioPanel() {
   const [toolSummary, setToolSummary] = useState<string>('');
   const [running, setRunning] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [composeMsg, setComposeMsg] = useState('');
+  const [brandName, setBrandName] = useState('Social Imperialism');
 
   const refresh = useCallback(async () => {
-    const [cfg, tools, result] = await Promise.all([
-      invoke<StudioConfig>('get-imperial-video-studio-config').catch(() => null),
-      invoke<{ toolCount: number; skillCount: number; capabilities: Array<{ name: string; configured: number; total: number }> }>('get-imperial-video-tool-registry').catch(() => null),
-      invoke<JobResult>('get-imperial-video-pipeline-result').catch(() => null),
-    ]);
-    if (cfg) setConfig(cfg);
-    if (tools) {
-      const caps = (tools.capabilities || [])
-        .map((c) => `${c.name}: ${c.configured}/${c.total}`)
-        .join(' · ');
-      setToolSummary(`${tools.toolCount} tools · ${tools.skillCount}+ agent skills · ${caps}`);
+    setConfigLoading(true);
+    setConfigError('');
+    try {
+      const [cfg, tools, result] = await Promise.all([
+        invoke<StudioConfig>('get-imperial-video-studio-config'),
+        invoke<{ toolCount: number; skillCount: number; capabilities: Array<{ name: string; configured: number; total: number }> }>('get-imperial-video-tool-registry').catch(() => null),
+        invoke<JobResult>('get-imperial-video-pipeline-result').catch(() => null),
+      ]);
+      if (cfg?.pipelines?.length) {
+        setConfig(cfg);
+      } else {
+        setConfigError('Studio pipelines did not load — retry or refresh the page.');
+      }
+      if (tools) {
+        const caps = (tools.capabilities || [])
+          .map((c) => `${c.name}: ${c.configured}/${c.total}`)
+          .join(' · ');
+        setToolSummary(`${tools.toolCount} tools · ${tools.skillCount}+ agent skills · ${caps}`);
+      }
+      const normalized = normalizeJobResult(result);
+      if (normalized) setJob(normalized);
+    } catch (e) {
+      setConfigError((e as Error).message || 'Could not load Imperial Video Studio.');
+    } finally {
+      setConfigLoading(false);
     }
-    if (result && result.status !== 'idle') setJob(result);
   }, []);
 
   useEffect(() => {
     refresh();
+    invoke<{ brandName?: string }>('get-active-campaign')
+      .then((c) => { if (c?.brandName?.trim()) setBrandName(c.brandName.trim()); })
+      .catch(() => null);
   }, [refresh]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.location.hash !== '#run') return;
+    document.getElementById('ivs-run-pipeline')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, []);
 
   useEffect(() => {
     if (job?.status !== 'running') return undefined;
     const t = setInterval(() => {
       invoke<JobResult>('get-imperial-video-pipeline-result')
-        .then((r) => { if (r?.status) setJob(r); })
+        .then((r) => {
+          const normalized = normalizeJobResult(r);
+          if (normalized) setJob(normalized);
+        })
         .catch(() => { /* ignore */ });
     }, 2500);
     return () => clearInterval(t);
@@ -96,30 +139,67 @@ export function ImperialVideoStudioPanel() {
       ].filter(Boolean);
       setReferenceAnalysis(lines.join('\n'));
       if (res.recommendedPipeline) setSelectedPipeline(res.recommendedPipeline);
+    } catch (e) {
+      setReferenceAnalysis((e as Error).message || 'Reference analysis failed.');
     } finally {
       setRunning(false);
     }
   };
 
+  const queueComposition = async () => {
+    setComposeMsg('');
+    setRunning(true);
+    try {
+      const res = await invoke<{ message?: string; status?: string }>('run-imperial-video-compose', {
+        pipelineId: job?.pipelineId || selectedPipeline,
+        runtime: 'design-compositor',
+        brief: brief.trim() || undefined,
+      });
+      setComposeMsg(res.message || 'Composition queued — open Create to attach clips and publish.');
+    } catch (e) {
+      setComposeMsg((e as Error).message || 'Could not queue composition.');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const goPublish = (href: string, label: string) => {
+    executeLiveSupportAction({
+      type: 'navigate',
+      label,
+      href,
+      navId: href.includes('calendar') ? 'calendar' : 'content-hub',
+      sectionId: 'create',
+      autoExecute: true,
+      message: `Taking you to ${label}…`,
+    });
+  };
+
   const runPipeline = async (quick = false) => {
     setRunning(true);
+    setShowHistory(true);
     setJob({ status: 'running', pipelineId: selectedPipeline });
+    const topic = brief.trim() || `Agentic video for ${brandName}`;
     try {
       const res = await invoke<JobResult>('run-imperial-video-pipeline', {
         pipelineId: selectedPipeline,
-        brief: brief.trim() || 'Agentic video for Social Imperialism',
-        brandName: 'Social Imperialism',
+        brief: topic,
+        topic,
+        brandName,
         async: !quick,
         quick,
       });
       if (res.accepted) return;
-      setJob(res);
+      const normalized = normalizeJobResult(res);
+      if (normalized) setJob(normalized);
     } catch (err) {
       setJob({ status: 'error', error: err instanceof Error ? err.message : 'Pipeline failed' });
     } finally {
       setRunning(false);
     }
   };
+
+  const pipelineBusy = running || job?.status === 'running';
 
   const pipelines = config?.pipelines || [];
   const stages = config?.stageFlow || [];
@@ -134,8 +214,18 @@ export function ImperialVideoStudioPanel() {
           <p className="muted">
             {config
               ? `${config.pipelineCount} pipelines · ${config.toolCount} tools · ${config.skillCount}+ agent skills`
-              : 'Loading studio config…'}
+              : configLoading
+                ? 'Loading studio config…'
+                : 'Studio config unavailable'}
           </p>
+          {configError && (
+            <p className="error" style={{ marginTop: 6 }}>
+              {configError}{' '}
+              <button type="button" className="btn" style={{ marginLeft: 8 }} onClick={() => refresh()}>
+                Retry
+              </button>
+            </p>
+          )}
           {toolSummary && <p className="imperial-video-studio-tools">{toolSummary}</p>}
         </div>
         <div className="imperial-video-studio-head-actions">
@@ -168,6 +258,9 @@ export function ImperialVideoStudioPanel() {
       <section className="imperial-video-studio-pipelines">
         <h3>Pipeline</h3>
         <div className="imperial-video-studio-pipeline-grid">
+          {pipelines.length === 0 && !configLoading && (
+            <p className="muted">No pipelines loaded yet. Use Retry above or check API connections in Settings.</p>
+          )}
           {pipelines.map((p) => (
             <button
               key={p.id}
@@ -193,20 +286,25 @@ export function ImperialVideoStudioPanel() {
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
         />
-        <div className="imperial-video-studio-run-row">
-          <button type="button" className="btn primary" disabled={running} onClick={() => runPipeline(false)}>
-            {running ? 'Running…' : 'Run full pipeline'}
+        <div id="ivs-run-pipeline" className="imperial-video-studio-run-row">
+          <button type="button" className="btn primary" disabled={pipelineBusy} onClick={() => runPipeline(false)}>
+            {pipelineBusy ? 'Running…' : 'Run full pipeline'}
           </button>
-          <button type="button" className="btn" disabled={running} onClick={() => runPipeline(true)}>
+          <button type="button" className="btn" disabled={pipelineBusy} onClick={() => runPipeline(true)}>
             Quick preview
           </button>
+          {job?.status === 'running' && (
+            <span className="muted" style={{ fontSize: '0.82rem', alignSelf: 'center' }}>
+              Pipeline running — watch Production board below
+            </span>
+          )}
         </div>
       </section>
 
       {(showHistory || storyboard.length > 0) && (
         <section className="imperial-video-studio-board">
           <h3>Production board</h3>
-          <p className="muted">Stages light up as the agent runs — approval gates pause for THEE_MICHAEL review before assets spend.</p>
+          <p className="muted">Stages light up as the agent runs — approval gates pause for your review before any paid asset generation.</p>
           <ol className="imperial-video-studio-stage-flow">
             {stages.map((s) => {
               const live = storyboard.find((b) => b.stage === s.id);
@@ -226,10 +324,23 @@ export function ImperialVideoStudioPanel() {
             <div className="imperial-video-studio-deliverable">
               <h4>Deliverable preview</h4>
               <pre>{job.deliverable.slice(0, 1200)}{job.deliverable.length > 1200 ? '…' : ''}</pre>
+              <div className="imperial-video-studio-publish-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                <button type="button" className="btn primary" disabled={running} onClick={queueComposition}>
+                  Queue composition
+                </button>
+                <button type="button" className="btn" onClick={() => goPublish('/content-hub?tab=media', 'Create · Media')}>
+                  Attach clips (Media)
+                </button>
+                <button type="button" className="btn" onClick={() => goPublish('/content-hub?tab=compose', 'Compose & Publish')}>
+                  Compose &amp; Publish
+                </button>
+                <Link href="/calendar" className="btn">Schedule on Calendar</Link>
+              </div>
+              {composeMsg && <p className="muted" style={{ marginTop: 8, marginBottom: 0 }}>{composeMsg}</p>}
             </div>
           )}
           {job?.status === 'error' && job.error && (
-            <p className="error-text">{job.error}</p>
+            <p className="error">{job.error}</p>
           )}
         </section>
       )}

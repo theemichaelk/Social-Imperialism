@@ -222,7 +222,10 @@ function toolRegistrySummary(keys = {}) {
     if (channel === 'grok-generate-video' || channel === 'grok-imagine') return true;
     if (channel === 'generate-image' || channel === 'search-stock-photo') return !!(keys.falKey || keys.openrouter);
     if (channel === 'deepl-translate') return !!keys.deeplKey;
-    if (channel === 'serp-search') return !!(keys.serpApiKey || keys.serpapi);
+    if (channel === 'serp-search') {
+      const { isSerpConfigured } = require('./serpProvider');
+      return isSerpConfigured(keys);
+    }
     return true;
   };
 
@@ -292,6 +295,7 @@ async function runVideoPipeline(pipelineId, ctx, generateAI) {
 
   return {
     success: true,
+    status: 'complete',
     pipelineId: pipeline.id,
     pipelineLabel: pipeline.label,
     stageCount: STAGE_FLOW.length,
@@ -327,6 +331,7 @@ function runQuickVideoPipeline(pipelineId, ctx) {
   });
   return {
     success: true,
+    status: 'complete',
     quick: true,
     pipelineId: pipeline.id,
     pipelineLabel: pipeline.label,

@@ -8,7 +8,7 @@ export default function VideoStudioPage() {
   return (
     <PageShell
       title="Video Studio"
-      subtitle="12 agentic pipelines · 52 tools · 500+ skills — turn Imperialism Brain into a full video production studio."
+      subtitle="12 agentic pipelines · 52 tools · 620+ skills — turn Imperialism Brain into a full video production studio."
     >
       <GrokToolbar pageId="video-studio" />
       <ImperialVideoStudioPanel />
