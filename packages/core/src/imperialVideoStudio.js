@@ -260,14 +260,19 @@ function buildStagePrompt(stage, pipeline, ctx) {
   const brief = ctx.brief || ctx.topic || 'the video brief';
   const brand = ctx.brandName || 'the brand';
   const prior = ctx.priorOutput ? `\nPrior stage output:\n${ctx.priorOutput.slice(0, 3500)}` : '';
+  const ref = ctx.referenceUrl
+    ? `\nReference URL: ${ctx.referenceUrl}\nReference structure notes:\n${(ctx.referenceNotes || 'Use pacing/structure from reference.').slice(0, 1200)}`
+    : '';
   return `You are Imperial Video Studio — agentic video production for Social Imperialism.
 Pipeline: ${pipeline.label} (${pipeline.id})
 Stage: ${stage.label}
 Brand: ${brand}
 Brief: ${brief}
+${ref}
 ${prior}
 Deliver structured output for this stage only. Include actionable scene/asset notes when relevant.
-Respect THEE_MICHAEL approval gates — flag decisions that need human approval.`;
+Stay on the brief topic — do not invent unrelated news or generic filler.
+Respect approval gates — flag decisions that need human review before paid asset generation.`;
 }
 
 async function runVideoPipeline(pipelineId, ctx, generateAI) {
@@ -306,7 +311,7 @@ async function runVideoPipeline(pipelineId, ctx, generateAI) {
       stage: s.id,
       label: s.label,
       status: s.status,
-      gate: s.approval ? 'awaiting_review' : 'auto',
+      gate: s.approval ? 'review_ready' : 'auto',
     })),
   };
 }

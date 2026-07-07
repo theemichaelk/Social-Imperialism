@@ -28,6 +28,8 @@ type Props = {
   title?: string;
   /** Show Python/nodriver setup hints (off on library/brand unless Grok is in use). */
   showInfraHints?: boolean;
+  /** Parent already showed cloud/desktop limitation (e.g. Video Studio collapsible). */
+  suppressCloudBanner?: boolean;
 };
 
 export function GrokToolbar({
@@ -38,6 +40,7 @@ export function GrokToolbar({
   compact,
   title = 'Grok Engine',
   showInfraHints = false,
+  suppressCloudBanner = false,
 }: Props) {
   const [localPrompt, setLocalPrompt] = useState(prompt);
   const [status, setStatus] = useState('');
@@ -159,7 +162,7 @@ export function GrokToolbar({
             Detected: {installedBrowsers.map((b) => b.label).join(', ')} — select one in Settings → Grok → Native Browser.
           </p>
         )}
-        {!canAutomate && (
+        {!canAutomate && !suppressCloudBanner && (
           <p style={{ margin: '8px 0 0', color: '#f59e0b', fontSize: '0.8rem' }}>
             {requiresWindows
               ? 'Cloud API cannot launch Edge/Chrome. Use localhost:3000 with a local API, or the desktop app.'

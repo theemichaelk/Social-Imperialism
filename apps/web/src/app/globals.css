@@ -2930,6 +2930,21 @@ textarea.input { min-height: 100px; resize: vertical; }
 .overlord-intervention-title { display: block; margin: 0.25rem 0; font-size: 0.92rem; }
 .overlord-intervention-body { margin: 0 0 0.65rem; font-size: 0.78rem; color: var(--muted); line-height: 1.45; }
 .overlord-intervention-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.ivs-grok-collapsible { padding: 0.75rem 1rem; margin-bottom: 1rem; }
+.ivs-grok-collapsible summary {
+  cursor: pointer; font-size: 0.82rem; font-weight: 600; color: var(--accent2);
+  list-style: none; display: flex; align-items: center; gap: 0.35rem;
+}
+.ivs-grok-collapsible summary::-webkit-details-marker { display: none; }
+.ivs-grok-collapsible-note { margin: 0.5rem 0 0.75rem; font-size: 0.78rem; }
+.imperial-video-studio-suggested-brief {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+  margin-bottom: 0.5rem; font-size: 0.78rem;
+}
+.imperial-video-studio-tools-toggle {
+  margin: 0.35rem 0 0; padding: 0; border: none; background: none;
+  color: var(--accent3); font-size: 0.68rem; cursor: pointer; text-decoration: underline;
+}
 .imperial-video-studio { padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 1.25rem; }
 .imperial-video-studio-head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .imperial-video-studio-head h2 { margin: 0.15rem 0 0; font-size: 1.15rem; }
