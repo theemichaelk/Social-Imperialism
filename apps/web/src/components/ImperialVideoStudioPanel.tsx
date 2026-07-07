@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { executeLiveSupportAction } from '@/lib/liveSupportActions';
 
@@ -29,6 +29,27 @@ type StoryboardStage = {
   gate: string;
 };
 
+type PipelineStage = {
+  id: string;
+  label: string;
+  status: string;
+  approval?: boolean;
+  outputPreview?: string;
+  gate?: string;
+};
+
+type ConceptVariant = {
+  id?: string;
+  title: string;
+  angle: string;
+};
+
+type ReferenceMetadata = {
+  title?: string | null;
+  author?: string | null;
+  platform?: string | null;
+};
+
 type JobResult = {
   status?: string;
   success?: boolean;
@@ -38,13 +59,21 @@ type JobResult = {
   pipelineLabel?: string;
   stageCount?: number;
   storyboard?: StoryboardStage[];
+  stages?: PipelineStage[];
   deliverable?: string;
   error?: string;
 };
 
+const IVS_DRAFT_KEY = 'ivs-draft-v1';
+
 function looksLikeReferenceAnalysis(text: string): boolean {
   const t = text.trim();
   return /^Pacing:/m.test(t) && /Structure:/m.test(t);
+}
+
+function isBriefReady(brief: string): boolean {
+  const trimmed = brief.trim();
+  return trimmed.length >= 12 && !looksLikeReferenceAnalysis(trimmed);
 }
 
 function resolvePipelineBrief(brief: string, referenceAnalysis: string | null, brandName: string): string {
@@ -57,6 +86,25 @@ function resolvePipelineBrief(brief: string, referenceAnalysis: string | null, b
     return `60-second video for ${brandName} — use reference pacing and structure`;
   }
   return trimmed;
+}
+
+function buildSuggestedBrief(
+  pipelineLabel: string,
+  brandName: string,
+  concept?: ConceptVariant | null,
+  refTitle?: string | null,
+): string {
+  const pipeline = pipelineLabel.toLowerCase();
+  const topicHint = refTitle
+    ? `inspired by reference pacing (not copying "${refTitle}")`
+    : 'matching reference pacing with your topic';
+  if (concept?.id === 'tone') {
+    return `60-second documentary-style ${pipeline} for ${brandName} — slower pacing, stock montage`;
+  }
+  if (concept?.id === 'burst') {
+    return `30-second vertical ${pipeline} for ${brandName} — fast cuts, Grok motion clips`;
+  }
+  return `60-second ${pipeline} for ${brandName} — ${topicHint}`;
 }
 
 function formatStageGate(gate: string): string {
@@ -93,7 +141,10 @@ export function ImperialVideoStudioPanel() {
   const [selectedPipeline, setSelectedPipeline] = useState('social-explainer');
   const [brief, setBrief] = useState('');
   const [referenceUrl, setReferenceUrl] = useState('');
+  const [referenceTitle, setReferenceTitle] = useState<string | null>(null);
   const [referenceAnalysis, setReferenceAnalysis] = useState<string | null>(null);
+  const [concepts, setConcepts] = useState<ConceptVariant[]>([]);
+  const [selectedConcept, setSelectedConcept] = useState<ConceptVariant | null>(null);
   const [job, setJob] = useState<JobResult | null>(null);
   const [toolSummary, setToolSummary] = useState<string>('');
   const [running, setRunning] = useState(false);
@@ -102,6 +153,10 @@ export function ImperialVideoStudioPanel() {
   const [brandName, setBrandName] = useState('Social Imperialism');
   const [showToolDetail, setShowToolDetail] = useState(false);
   const [suggestedBrief, setSuggestedBrief] = useState('');
+  const [expandedStage, setExpandedStage] = useState<string | null>(null);
+  const [reviewedGates, setReviewedGates] = useState<Record<string, boolean>>({});
+
+  const briefReady = useMemo(() => isBriefReady(brief), [brief]);
 
   const refresh = useCallback(async () => {
     setConfigLoading(true);
@@ -140,6 +195,38 @@ export function ImperialVideoStudioPanel() {
   }, [refresh]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem(IVS_DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as {
+        brief?: string;
+        referenceUrl?: string;
+        referenceTitle?: string | null;
+        selectedPipeline?: string;
+      };
+      if (draft.referenceUrl) setReferenceUrl(draft.referenceUrl);
+      if (draft.referenceTitle) setReferenceTitle(draft.referenceTitle);
+      if (draft.selectedPipeline) setSelectedPipeline(draft.selectedPipeline);
+      if (draft.brief && !looksLikeReferenceAnalysis(draft.brief)) setBrief(draft.brief);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (looksLikeReferenceAnalysis(brief)) {
+      setBrief('');
+      return;
+    }
+    sessionStorage.setItem(IVS_DRAFT_KEY, JSON.stringify({
+      brief,
+      referenceUrl,
+      referenceTitle,
+      selectedPipeline,
+    }));
+  }, [brief, referenceUrl, referenceTitle, selectedPipeline]);
+
+  useEffect(() => {
     if (typeof window === 'undefined' || window.location.hash !== '#run') return;
     document.getElementById('ivs-run-pipeline')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, []);
@@ -157,31 +244,65 @@ export function ImperialVideoStudioPanel() {
     return () => clearInterval(t);
   }, [job?.status]);
 
+  const applyConcept = (concept: ConceptVariant) => {
+    setSelectedConcept(concept);
+    const pipelineLabel = config?.pipelines?.find((p) => p.id === selectedPipeline)?.label || 'social video';
+    const next = buildSuggestedBrief(pipelineLabel, brandName, concept, referenceTitle);
+    setSuggestedBrief(next);
+    setBrief(next);
+  };
+
   const analyzeReference = async () => {
     if (!referenceUrl.trim()) return;
     setRunning(true);
     try {
-      const res = await invoke<{ analysis?: { pacing?: string; structure?: string }; concepts?: Array<{ title: string; angle: string }>; recommendedPipeline?: string }>(
+      const res = await invoke<{
+        analysis?: { pacing?: string; structure?: string; style?: string };
+        concepts?: ConceptVariant[];
+        recommendedPipeline?: string;
+        metadata?: ReferenceMetadata;
+      }>(
         'analyze-reference-video',
         { url: referenceUrl.trim(), topic: brief.trim() || 'social growth' },
       );
+      const meta = res.metadata || {};
+      if (meta.title) setReferenceTitle(meta.title);
       const lines = [
+        meta.title && `Reference: ${meta.title}${meta.author ? ` · ${meta.author}` : ''}`,
         res.analysis?.pacing && `Pacing: ${res.analysis.pacing}`,
         res.analysis?.structure && `Structure: ${res.analysis.structure}`,
-        ...(res.concepts || []).map((c) => `• ${c.title}: ${c.angle}`),
+        res.analysis?.style && `Style: ${res.analysis.style}`,
         res.recommendedPipeline && `Recommended pipeline: ${res.recommendedPipeline}`,
       ].filter(Boolean);
       const analysisText = lines.join('\n');
       setReferenceAnalysis(analysisText);
+      setConcepts(res.concepts || []);
+      setSelectedConcept(null);
       if (res.recommendedPipeline) setSelectedPipeline(res.recommendedPipeline);
       const pipelineLabel = config?.pipelines?.find((p) => p.id === (res.recommendedPipeline || selectedPipeline))?.label
         || 'social video';
-      setSuggestedBrief(`60-second ${pipelineLabel.toLowerCase()} for ${brandName} — match reference pacing, new topic`);
-      if (!brief.trim() || looksLikeReferenceAnalysis(brief) || brief.trim() === analysisText.trim()) {
+      const suggested = buildSuggestedBrief(pipelineLabel, brandName, null, meta.title);
+      setSuggestedBrief(suggested);
+      if (!brief.trim() || looksLikeReferenceAnalysis(brief)) {
         setBrief('');
       }
     } catch (e) {
       setReferenceAnalysis((e as Error).message || 'Reference analysis failed.');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const clearBoard = async () => {
+    setRunning(true);
+    try {
+      await invoke('clear-imperial-video-pipeline-result');
+      setJob(null);
+      setComposeMsg('');
+      setExpandedStage(null);
+      setReviewedGates({});
+    } catch (e) {
+      setComposeMsg((e as Error).message || 'Could not clear production board.');
     } finally {
       setRunning(false);
     }
@@ -217,8 +338,10 @@ export function ImperialVideoStudioPanel() {
   };
 
   const runPipeline = async (quick = false) => {
+    if (!quick && !briefReady) return;
     setRunning(true);
     setShowHistory(true);
+    setReviewedGates({});
     setJob({ status: 'running', pipelineId: selectedPipeline });
     const topic = resolvePipelineBrief(brief, referenceAnalysis, brandName);
     try {
@@ -228,6 +351,7 @@ export function ImperialVideoStudioPanel() {
         topic,
         brandName,
         referenceUrl: referenceUrl.trim() || undefined,
+        referenceTitle: referenceTitle || undefined,
         referenceNotes: referenceAnalysis || undefined,
         async: !quick,
         quick,
@@ -247,6 +371,13 @@ export function ImperialVideoStudioPanel() {
   const pipelines = config?.pipelines || [];
   const stages = config?.stageFlow || [];
   const storyboard = job?.storyboard || [];
+  const stageOutputs = job?.stages || [];
+
+  const stagePreview = (stageId: string) => {
+    const fromStages = stageOutputs.find((s) => s.id === stageId)?.outputPreview;
+    if (fromStages) return fromStages;
+    return null;
+  };
 
   return (
     <div className="imperial-video-studio card">
@@ -286,6 +417,11 @@ export function ImperialVideoStudioPanel() {
           <button type="button" className="btn" onClick={() => setShowHistory((s) => !s)}>
             {showHistory ? 'Hide board' : 'Production board'}
           </button>
+          {(job?.status === 'complete' || job?.status === 'error') && (
+            <button type="button" className="btn" disabled={running} onClick={clearBoard}>
+              Clear board
+            </button>
+          )}
         </div>
       </header>
 
@@ -307,8 +443,29 @@ export function ImperialVideoStudioPanel() {
             Analyze
           </button>
         </div>
+        {referenceTitle && (
+          <p className="imperial-video-studio-ref-title muted">Detected: {referenceTitle}</p>
+        )}
         {referenceAnalysis && (
           <pre className="imperial-video-studio-analysis">{referenceAnalysis}</pre>
+        )}
+        {concepts.length > 0 && (
+          <div className="imperial-video-studio-concepts">
+            <p className="muted" style={{ margin: '0 0 0.35rem', fontSize: '0.75rem' }}>Pick a concept to seed your brief:</p>
+            <div className="imperial-video-studio-concept-grid">
+              {concepts.map((c) => (
+                <button
+                  key={c.id || c.title}
+                  type="button"
+                  className={`imperial-video-studio-concept-card ${selectedConcept?.title === c.title ? 'is-selected' : ''}`}
+                  onClick={() => applyConcept(c)}
+                >
+                  <strong>{c.title}</strong>
+                  <span className="muted">{c.angle}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </section>
 
@@ -335,7 +492,7 @@ export function ImperialVideoStudioPanel() {
 
       <section className="imperial-video-studio-brief">
         <label htmlFor="ivs-brief">Brief — your video topic (not the reference analysis)</label>
-        {suggestedBrief && (
+        {suggestedBrief && !briefReady && (
           <div className="imperial-video-studio-suggested-brief">
             <span className="muted">Suggested: {suggestedBrief}</span>
             <button type="button" className="btn" onClick={() => setBrief(suggestedBrief)}>
@@ -348,6 +505,11 @@ export function ImperialVideoStudioPanel() {
             Brief looks like reference analysis. Describe your topic (product, audience, message) before running the pipeline.
           </p>
         )}
+        {!briefReady && !looksLikeReferenceAnalysis(brief) && brief.trim().length > 0 && (
+          <p className="error" style={{ marginBottom: 8 }}>
+            Brief is too short — add at least a sentence about your topic and audience.
+          </p>
+        )}
         <textarea
           id="ivs-brief"
           className="input"
@@ -357,12 +519,23 @@ export function ImperialVideoStudioPanel() {
           onChange={(e) => setBrief(e.target.value)}
         />
         <div id="ivs-run-pipeline" className="imperial-video-studio-run-row">
-          <button type="button" className="btn primary" disabled={pipelineBusy} onClick={() => runPipeline(false)}>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={pipelineBusy || !briefReady}
+            title={!briefReady ? 'Enter a topic brief (or use suggested brief) before running' : undefined}
+            onClick={() => runPipeline(false)}
+          >
             {pipelineBusy ? 'Running…' : 'Run full pipeline'}
           </button>
           <button type="button" className="btn" disabled={pipelineBusy} onClick={() => runPipeline(true)}>
             Quick preview
           </button>
+          {!briefReady && (
+            <span className="muted" style={{ fontSize: '0.82rem', alignSelf: 'center' }}>
+              Add a topic brief before full pipeline run
+            </span>
+          )}
           {job?.status === 'running' && (
             <span className="muted" style={{ fontSize: '0.82rem', alignSelf: 'center' }}>
               Pipeline running — watch Production board below
@@ -374,17 +547,48 @@ export function ImperialVideoStudioPanel() {
       {(showHistory || storyboard.length > 0) && (
         <section className="imperial-video-studio-board">
           <h3>Production board</h3>
-          <p className="muted">Stages light up as the agent runs — approval gates pause for your review before any paid asset generation.</p>
+          <p className="muted">
+            Stages light up as the agent runs. Approval gates are ready for your review before paid asset generation — expand a stage to preview output.
+          </p>
           <ol className="imperial-video-studio-stage-flow">
             {stages.map((s) => {
               const live = storyboard.find((b) => b.stage === s.id);
+              const preview = stagePreview(s.id);
+              const gate = live?.gate || (s.approval ? 'review_ready' : 'auto');
+              const needsReview = s.approval && live?.status === 'done' && !reviewedGates[s.id];
               return (
                 <li key={s.id} className={`imperial-video-studio-stage is-${live?.status || 'pending'} ${s.approval ? 'needs-approval' : ''}`}>
                   <span className="stage-dot" aria-hidden />
-                  <div>
-                    <strong>{s.label}</strong>
-                    {live && <span className="stage-gate">{formatStageGate(live.gate)}</span>}
-                    {s.approval && <span className="stage-approval-badge">Approval gate</span>}
+                  <div className="imperial-video-studio-stage-body">
+                    <div className="imperial-video-studio-stage-head">
+                      <strong>{s.label}</strong>
+                      {live && <span className="stage-gate">{formatStageGate(reviewedGates[s.id] && s.approval ? 'approved' : gate)}</span>}
+                      {s.approval && <span className="stage-approval-badge">Approval gate</span>}
+                    </div>
+                    {preview && (
+                      <>
+                        <button
+                          type="button"
+                          className="imperial-video-studio-stage-toggle"
+                          onClick={() => setExpandedStage((id) => (id === s.id ? null : s.id))}
+                        >
+                          {expandedStage === s.id ? 'Hide stage output' : 'View stage output'}
+                        </button>
+                        {expandedStage === s.id && (
+                          <pre className="imperial-video-studio-stage-preview">{preview}</pre>
+                        )}
+                      </>
+                    )}
+                    {needsReview && (
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ marginTop: 6 }}
+                        onClick={() => setReviewedGates((g) => ({ ...g, [s.id]: true }))}
+                      >
+                        Mark reviewed
+                      </button>
+                    )}
                   </div>
                 </li>
               );

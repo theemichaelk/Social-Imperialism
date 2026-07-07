@@ -260,8 +260,9 @@ function buildStagePrompt(stage, pipeline, ctx) {
   const brief = ctx.brief || ctx.topic || 'the video brief';
   const brand = ctx.brandName || 'the brand';
   const prior = ctx.priorOutput ? `\nPrior stage output:\n${ctx.priorOutput.slice(0, 3500)}` : '';
+  const refTitle = ctx.referenceTitle ? `\nReference title: ${ctx.referenceTitle}` : '';
   const ref = ctx.referenceUrl
-    ? `\nReference URL: ${ctx.referenceUrl}\nReference structure notes:\n${(ctx.referenceNotes || 'Use pacing/structure from reference.').slice(0, 1200)}`
+    ? `\nReference URL: ${ctx.referenceUrl}${refTitle}\nReference structure notes:\n${(ctx.referenceNotes || 'Use pacing/structure from reference.').slice(0, 1200)}`
     : '';
   return `You are Imperial Video Studio — agentic video production for Social Imperialism.
 Pipeline: ${pipeline.label} (${pipeline.id})
@@ -353,23 +354,61 @@ function runQuickVideoPipeline(pipelineId, ctx) {
   };
 }
 
-function analyzeReferenceVideoQuick(payload = {}) {
+function extractYouTubeId(url = '') {
+  const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([\w-]{11})/i);
+  return m?.[1] || null;
+}
+
+async function fetchReferenceMetadata(url = '') {
+  const ref = String(url || '').trim();
+  if (!ref) return { title: null, author: null, platform: null };
+  const ytId = extractYouTubeId(ref);
+  if (ytId) {
+    try {
+      const axios = require('axios');
+      const oembed = await axios.get('https://www.youtube.com/oembed', {
+        params: { url: `https://www.youtube.com/watch?v=${ytId}`, format: 'json' },
+        timeout: 8000,
+      });
+      return {
+        title: oembed.data?.title || null,
+        author: oembed.data?.author_name || null,
+        platform: 'youtube',
+      };
+    } catch { /* fall through */ }
+  }
+  if (/tiktok\.com|instagram\.com|vimeo\.com/i.test(ref)) {
+    return { title: null, author: null, platform: ref.includes('tiktok') ? 'tiktok' : ref.includes('vimeo') ? 'vimeo' : 'instagram' };
+  }
+  return { title: null, author: null, platform: 'url' };
+}
+
+function analyzeReferenceVideoQuick(payload = {}, metadata = {}) {
   const ref = payload.url || payload.reference || 'reference media';
   const topic = payload.topic || 'your topic';
+  const refTitle = metadata.title || null;
+  const styleNote = metadata.platform === 'youtube' && refTitle
+    ? `Reference style cue: "${refTitle}" — adapt structure, not the exact topic unless brief says so.`
+    : 'High contrast captions, kinetic typography, platform-native 9:16';
   return {
     success: true,
     reference: ref,
+    metadata: {
+      title: refTitle,
+      author: metadata.author || null,
+      platform: metadata.platform || null,
+    },
     analysis: {
       pacing: 'Hook in first 3s, beat every 8–12s, CTA in final 5s',
       structure: 'Cold open → problem → proof → payoff → CTA',
-      style: 'High contrast captions, kinetic typography, platform-native 9:16',
+      style: styleNote,
       keeps: ['pacing', 'hook cadence', 'caption style'],
       changes: [`topic: ${topic}`, 'brand visuals', 'narration voice', 'music bed'],
     },
     concepts: [
-      { title: 'Direct adaptation', angle: 'Same structure, new topic and visuals' },
-      { title: 'Tone shift', angle: 'Slower, documentary pacing with stock montage' },
-      { title: 'Short-form burst', angle: '30s vertical with Grok motion clips' },
+      { id: 'direct', title: 'Direct adaptation', angle: 'Same structure, new topic and visuals' },
+      { id: 'tone', title: 'Tone shift', angle: 'Slower, documentary pacing with stock montage' },
+      { id: 'burst', title: 'Short-form burst', angle: '30s vertical with Grok motion clips' },
     ],
     estimatedCostUsd: { low: 0.15, high: 1.5 },
     recommendedPipeline: 'social-explainer',
@@ -429,16 +468,24 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
     return { success: true, ...job };
   });
 
+  ipcMain.handle('clear-imperial-video-pipeline-result', () => {
+    if (store?.removeItem) store.removeItem(VIDEO_JOB_KEY);
+    else if (store?.setItem) store.setItem(VIDEO_JOB_KEY, 'null');
+    return { success: true, status: 'idle' };
+  });
+
   ipcMain.handle('analyze-reference-video', async (_event, payload = {}) => {
+    const metadata = await fetchReferenceMetadata(payload.url || payload.reference);
     if (payload.deep && generateAI) {
       const prompt = `Analyze this reference video concept for Imperial Video Studio.
 Reference: ${payload.url || payload.reference || 'local clip'}
+Reference title: ${metadata.title || 'unknown'}
 Desired topic: ${payload.topic || 'general'}
 Return JSON-like sections: pacing, structure, style, keeps, changes, 3 concept variants, recommended pipeline id.`;
       const text = await generateAI(prompt);
-      return { success: true, deep: true, analysis: text, recommendedPipeline: 'social-explainer' };
+      return { success: true, deep: true, analysis: text, metadata, recommendedPipeline: 'social-explainer' };
     }
-    return analyzeReferenceVideoQuick(payload);
+    return analyzeReferenceVideoQuick(payload, metadata);
   });
 
   ipcMain.handle('run-imperial-video-compose', async (_event, payload = {}) => ({
