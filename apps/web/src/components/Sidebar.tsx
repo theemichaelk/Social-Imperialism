@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NAV_SECTIONS } from '@/lib/nav';
-import { getNavPageFeatures } from '@/lib/navPageFeatures';
 import { executeLiveSupportAction, resolveNavigationIntent } from '@/lib/liveSupportActions';
 import { SI_GUIDE_EXPAND_SIDEBAR } from '@/lib/guide_executor';
 import { Logo } from '@/components/Logo';
@@ -13,7 +12,6 @@ import { checkPlatformAdmin } from '@/lib/adminAccess';
 
 const COLLAPSE_KEY = 'siWebNavCollapsed';
 const SECTION_COLLAPSE_KEY = 'siWebSectionCollapsed';
-const FEATURE_GUIDE_KEY = 'siWebNavFeatureGuide';
 
 type SidebarProps = {
   mobileOpen?: boolean;
@@ -27,15 +25,12 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
   const [health, setHealth] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showFeatureGuide, setShowFeatureGuide] = useState(true);
 
   useEffect(() => {
     try {
       setCollapsed(localStorage.getItem(COLLAPSE_KEY) === '1');
       const raw = localStorage.getItem(SECTION_COLLAPSE_KEY);
       if (raw) setSectionCollapsed(JSON.parse(raw));
-      const fg = localStorage.getItem(FEATURE_GUIDE_KEY);
-      if (fg === '0') setShowFeatureGuide(false);
     } catch { /* ignore */ }
   }, []);
 
@@ -103,14 +98,6 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
     })).filter((s) => s.items.length > 0);
   }, [isAdmin]);
 
-  const toggleFeatureGuide = useCallback(() => {
-    setShowFeatureGuide((on) => {
-      const next = !on;
-      try { localStorage.setItem(FEATURE_GUIDE_KEY, next ? '1' : '0'); } catch { /* ignore */ }
-      return next;
-    });
-  }, []);
-
   const filteredSections = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return visibleSections;
@@ -120,15 +107,11 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
       || (q.includes('help') && label.toLowerCase().includes('support'));
     return visibleSections.map((section) => ({
       ...section,
-      items: section.items.filter((item) => {
-        const guide = getNavPageFeatures(item.href);
-        const featureHit = guide?.features.some((f) => f.toLowerCase().includes(q))
-          || guide?.summary.toLowerCase().includes(q);
-        return item.label.toLowerCase().includes(q)
-          || section.label.toLowerCase().includes(q)
-          || extraMatch(item.label)
-          || !!featureHit;
-      }),
+      items: section.items.filter((item) =>
+        item.label.toLowerCase().includes(q)
+        || section.label.toLowerCase().includes(q)
+        || extraMatch(item.label),
+      ),
     })).filter((s) => s.items.length > 0);
   }, [search, visibleSections]);
 
@@ -197,14 +180,6 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
             <button type="button" className="sidebar-section-ctrl" onClick={collapseAllSections} title="Collapse all sections">
               Collapse all
             </button>
-            <button
-              type="button"
-              className={`sidebar-section-ctrl ${showFeatureGuide ? 'is-active' : ''}`}
-              onClick={toggleFeatureGuide}
-              title="Show what each page does"
-            >
-              {showFeatureGuide ? 'Hide features' : 'Show features'}
-            </button>
           </div>
         </div>
       )}
@@ -230,35 +205,18 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
                   {section.items.map((item) => {
                     const isActive = pathname === item.href
                       || (item.href === '/campaign-manager' && pathname === '/verified-nodes');
-                    const guide = getNavPageFeatures(item.href);
                     return (
-                      <div key={item.id} className={`nav-link-wrap ${isActive ? 'is-active' : ''}`}>
-                        <Link
-                          href={item.href}
-                          data-nav-id={item.id}
-                          className={`nav-link ${isActive ? 'active' : ''}`}
-                          title={collapsed ? `${item.label}${item.hint ? ` — ${item.hint}` : ''}` : item.hint}
-                          onClick={() => onMobileClose?.()}
-                        >
-                          <span className="nav-link-icon">{item.icon}</span>
-                          {!collapsed && (
-                            <span className="nav-link-text">
-                              <span className="nav-link-label">{item.label}</span>
-                              {item.hint && <span className="nav-link-hint">{item.hint}</span>}
-                            </span>
-                          )}
-                        </Link>
-                        {!collapsed && showFeatureGuide && guide && (
-                          <div className={`nav-link-features ${isActive ? 'is-expanded' : ''}`}>
-                            <p className="nav-link-features-summary">{guide.summary}</p>
-                            <ul className="nav-link-features-list">
-                              {guide.features.map((f) => (
-                                <li key={f}>{f}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        data-nav-id={item.id}
+                        className={`nav-link ${isActive ? 'active' : ''}`}
+                        title={item.label}
+                        onClick={() => onMobileClose?.()}
+                      >
+                        <span className="nav-link-icon">{item.icon}</span>
+                        {!collapsed && <span className="nav-link-label">{item.label}</span>}
+                      </Link>
                     );
                   })}
                 </div>
