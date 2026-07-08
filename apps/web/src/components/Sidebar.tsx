@@ -39,6 +39,15 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
   }, []);
 
   useEffect(() => {
+    const stripLegacyGuide = () => {
+      document.querySelectorAll('.nav-link-features, .nav-link-hint').forEach((el) => el.remove());
+    };
+    stripLegacyGuide();
+    const t = window.setTimeout(stripLegacyGuide, 0);
+    return () => window.clearTimeout(t);
+  }, [pathname, filteredSections]);
+
+  useEffect(() => {
     invoke<{ summary?: { ok?: number; warn?: number; broken?: number }; ok?: boolean }>('get-page-health')
       .then((h) => {
         const s = h?.summary;

@@ -18,6 +18,13 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: '.nav-link-hint,.nav-link-features,.nav-link-features-summary,.nav-link-features-list{display:none!important}',
+          }}
+        />
+      </head>
       <body>
         <AppShell>{children}</AppShell>
       </body>
