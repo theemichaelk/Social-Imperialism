@@ -27,6 +27,7 @@ import {
   resolveLegacyTab,
 } from '@/lib/smartTabs';
 import { decodeHtmlEntities } from '@/lib/textUtils';
+import { SI_CAMPAIGN_CHANGED } from '@/lib/campaignContext';
 
 type Post = {
   platform: string;
@@ -266,6 +267,12 @@ function DashboardPageInner() {
     if (tab !== 'feed') return;
     loadFeed({ refresh: false, quick: true }).catch(console.error);
   }, [tab, feedPlatform, feedSort, feedLanguage, feedLocation, feedTime, feedMinEngage, loadFeed]);
+
+  useEffect(() => {
+    const onCampaignSwitch = () => { refresh(false).catch(console.error); };
+    window.addEventListener(SI_CAMPAIGN_CHANGED, onCampaignSwitch);
+    return () => window.removeEventListener(SI_CAMPAIGN_CHANGED, onCampaignSwitch);
+  }, [refresh]);
 
   useSiEvents({
     onEvent: (evt) => {

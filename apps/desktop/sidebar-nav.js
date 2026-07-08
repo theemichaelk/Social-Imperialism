@@ -30,7 +30,7 @@ const NAV_ITEMS = [
   { id: 'integrations', href: 'integrations.html', icon: 'fa-plug', label: 'Integrations' },
   { id: 'settings', href: 'settings.html', icon: 'fa-sliders-h', label: 'Settings' },
   { id: 'support', href: '#', icon: 'fa-comments', label: 'Imperialism Brain', saasPath: '/support' },
-  { id: 'campaign-manager', href: '#', icon: 'fa-clipboard-list', label: 'Campaign Command', saasPath: '/campaign-manager' },
+  { id: 'campaign-manager', href: '#', icon: 'fa-clipboard-list', label: 'Campaign Manager', saasPath: '/campaign-manager' },
 ];
 
 const NAV_SECTIONS = [

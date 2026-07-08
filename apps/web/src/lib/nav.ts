@@ -87,7 +87,7 @@ export const NAV_SECTIONS: NavSection[] = [
     { id: 'dashboard-users', href: '/dashboard/users', icon: '👤', label: 'My Account' },
     { id: 'dashboard-admin', href: '/dashboard/admin', icon: '🛡️', label: 'Admin', adminOnly: true },
     { id: 'dashboard-issues', href: '/dashboard/issues', icon: '🛠️', label: 'Issue Control', adminOnly: true },
-    { id: 'campaign-manager', href: '/campaign-manager', icon: '📋', label: 'Campaign Command' },
+    { id: 'campaign-manager', href: '/campaign-manager', icon: '📋', label: 'Campaign Manager' },
     { id: 'support', href: '/support', icon: '💬', label: 'Imperialism Brain' },
     { id: 'dns', href: '/dns', icon: '🌐', label: 'DNS' },
     { id: 'integrations', href: '/integrations', icon: '🔌', label: 'Integrations' },

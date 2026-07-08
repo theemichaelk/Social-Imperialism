@@ -39,7 +39,7 @@ const DESKTOP_COMMAND_SECTIONS = [
     { id: 'integrations', href: 'integrations.html', icon: '🔌', label: 'Integrations', desc: 'Live probes, email, webhooks' },
     { id: 'settings', href: 'settings.html', icon: '🎛️', label: 'Settings', desc: 'Campaigns, billing, Grok, health' },
     { id: 'support', saasPath: '/support', icon: '💬', label: 'Imperialism Brain', desc: 'Live support & THEE_MICHAEL guide' },
-    { id: 'campaign-manager', saasPath: '/campaign-manager', icon: '📋', label: 'Campaign Command', desc: 'Verified nodes & campaign ops (SaaS)' },
+    { id: 'campaign-manager', saasPath: '/campaign-manager', icon: '📋', label: 'Campaign Manager', desc: 'Verified nodes & campaign ops (SaaS)' },
   ]},
 ];
 

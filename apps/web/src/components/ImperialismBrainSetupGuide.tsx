@@ -47,7 +47,7 @@ const REPLIES_FLOW = [
   { id: 'voice', label: 'Voice', hint: 'Global prompt' },
   { id: 'schedule', label: 'Schedule', hint: 'Scan frequency' },
   { id: 'monitors', label: 'Monitors', hint: 'Be-First watches' },
-  { id: 'finish', label: 'Finish', hint: 'Campaign Command' },
+  { id: 'finish', label: 'Finish', hint: 'Campaign Manager' },
 ] as const;
 
 export type BrandProfileFields = {
@@ -846,7 +846,7 @@ export function ImperialismBrainSetupGuide({
           </div>
           <div className="brain-setup-step-actions">
             <button type="button" className="btn primary" onClick={onFinish} disabled={loading}>
-              {loading ? 'Finishing…' : 'Finish Setup → Campaign Command'}
+              {loading ? 'Finishing…' : 'Finish Setup → Campaign Manager'}
             </button>
             <Link href="/campaign-manager?tab=nodes" className="btn">Open Verified Nodes →</Link>
             <Link href="/support" className="btn">Ask Imperialism Brain</Link>

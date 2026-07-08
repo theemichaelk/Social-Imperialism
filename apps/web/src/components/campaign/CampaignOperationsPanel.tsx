@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
+import { dispatchCampaignChanged } from '@/lib/campaignContext';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { DataPanel, focusBrandLabel, LivePulse, MetricTile, SparkRow } from '@/components/DashboardViz';
 import { isQaCampaign, isQaScheduledPost } from '@/lib/qaFilters';
@@ -81,7 +82,6 @@ type Props = {
 export function CampaignOperationsPanel({ onStatsChange }: Props) {
   const [summaries, setSummaries] = useState<CampaignSummary[]>([]);
   const [activeId, setActiveId] = useState('');
-  const [selectedId, setSelectedId] = useState('');
   const [details, setDetails] = useState<CampaignDetails | null>(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Campaign>>({});
@@ -100,7 +100,6 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
     setSummaries(list);
     const aid = status.activeCampaignId || active?.id || list[0]?.id || '';
     setActiveId(aid);
-    setSelectedId((prev) => prev || aid);
   }, []);
 
   const loadDetails = useCallback(async (campaignId: string) => {
@@ -119,19 +118,19 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
     setLoading(true);
     try {
       await loadList();
-      if (selectedId) await loadDetails(selectedId);
+      if (activeId) await loadDetails(activeId);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [loadList, loadDetails, selectedId]);
+  }, [loadList, loadDetails, activeId]);
 
   useEffect(() => { loadList().catch(console.error); }, [loadList]);
 
   useEffect(() => {
-    if (selectedId) loadDetails(selectedId).catch(console.error);
-  }, [selectedId, loadDetails]);
+    if (activeId) loadDetails(activeId).catch(console.error);
+  }, [activeId, loadDetails]);
 
   const visibleSummaries = hideQa ? summaries.filter((s) => !isQaCampaign(s)) : summaries;
   const qaCampaignCount = summaries.filter((s) => isQaCampaign(s)).length;
@@ -148,10 +147,11 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
   }, [visibleSummaries.length, activeBrand, details, onStatsChange]);
 
   async function activate(id: string) {
+    if (!id || id === activeId) return;
     await invoke('set-active-campaign', id);
     setActiveId(id);
-    setSelectedId(id);
-    setMsg('Campaign activated');
+    dispatchCampaignChanged(id);
+    setMsg('Switched workspace to this campaign — all modules now use it');
     await refresh();
   }
 
@@ -176,21 +176,21 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
     if (!res.success) { setMsg(res.error || 'Delete failed'); return; }
     setSummaries(res.campaigns || []);
     const next = res.campaigns?.[0]?.id || '';
-    setSelectedId(next);
     setActiveId(next);
+    if (next) dispatchCampaignChanged(next);
     setMsg('Campaign deleted');
     if (next) await loadDetails(next);
     else setDetails(null);
   }
 
   async function saveEdit() {
-    if (!selectedId) return;
+    if (!activeId) return;
     if (!editForm.brandName?.trim() || !editForm.domain?.trim()) {
       setMsg('Brand name and domain are required');
       return;
     }
     const res = await invoke<{ success?: boolean; error?: string }>('update-campaign', {
-      campaignId: selectedId,
+      campaignId: activeId,
       updates: editForm,
     });
     if (!res.success) { setMsg(res.error || 'Save failed'); return; }
@@ -204,14 +204,14 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
     if (!time) { setMsg('Pick a new date and time first'); return; }
     await invoke('update-scheduled-post', { id: postId, updates: { scheduleTime: new Date(time).toISOString() } });
     setMsg('Post rescheduled');
-    await loadDetails(selectedId);
+    await loadDetails(activeId);
   }
 
   async function deletePost(postId: string) {
     if (!window.confirm('Remove this scheduled post?')) return;
     await invoke('delete-scheduled-post', postId);
     setMsg('Scheduled post removed');
-    await loadDetails(selectedId);
+    await loadDetails(activeId);
   }
 
   async function publishNow(postId: string) {
@@ -219,7 +219,7 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
     const res = await invoke<{ success?: boolean; error?: string }>('publish-scheduled-post-now', postId);
     if (!res.success) { setMsg(res.error || 'Publish failed'); return; }
     setMsg('Post published');
-    await loadDetails(selectedId);
+    await loadDetails(activeId);
   }
 
   async function clearQaCampaigns() {
@@ -228,34 +228,34 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
     if (!res.success) { setMsg(res.error || 'Clear failed'); return; }
     setSummaries(res.campaigns || []);
     const next = res.campaigns?.[0]?.id || '';
-    setSelectedId(next);
     setActiveId(next);
+    if (next) dispatchCampaignChanged(next);
     setMsg(`Removed ${res.removed ?? 0} QA campaign(s)`);
     if (next) await loadDetails(next);
     else setDetails(null);
   }
 
   async function clearFailedPosts() {
-    if (!selectedId || !failedPosts.length) return;
+    if (!activeId || !failedPosts.length) return;
     if (!window.confirm(`Remove ${failedPosts.length} failed scheduled post(s)?`)) return;
-    const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('clear-failed-scheduled-posts', selectedId);
+    const res = await invoke<{ success?: boolean; removed?: number; error?: string }>('clear-failed-scheduled-posts', activeId);
     if (!res.success) { setMsg(res.error || 'Clear failed'); return; }
     setMsg(`Cleared ${res.removed ?? 0} failed post(s)`);
-    await loadDetails(selectedId);
+    await loadDetails(activeId);
   }
 
   async function scheduleNewPost() {
     if (!newPost.content.trim()) { setMsg('Post content is required'); return; }
     if (!newPost.scheduleTime) { setMsg('Pick a schedule time'); return; }
     await invoke('schedule-post', {
-      campaignId: selectedId,
+      campaignId: activeId,
       content: newPost.content,
       platform: newPost.platform,
       scheduleTime: new Date(newPost.scheduleTime).toISOString(),
     });
     setNewPost({ content: '', platform: 'Twitter', scheduleTime: '' });
     setMsg('Post scheduled');
-    await loadDetails(selectedId);
+    await loadDetails(activeId);
   }
 
   const camp = details?.campaign;
@@ -276,7 +276,7 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
       )}
 
       <div className="grid grid-2" style={{ alignItems: 'start', gap: 16 }}>
-        <DataPanel title={`All Campaigns (${visibleSummaries.length})`} live>
+        <DataPanel title={`Switch Campaign (${visibleSummaries.length})`} live>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
             <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: '0.82rem' }}>
               <input type="checkbox" checked={hideQa} onChange={(e) => setHideQa(e.target.checked)} />
@@ -289,17 +289,19 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
           {visibleSummaries.length === 0 && (
             <p className="settings-panel-desc">No campaigns yet. <Link href="/onboarding">Run Setup Wizard</Link> or create one in Settings.</p>
           )}
+          <p className="settings-panel-desc" style={{ marginBottom: 10 }}>
+            Click a campaign to switch your workspace. Keywords, feeds, and schedules follow the active campaign only.
+          </p>
           {visibleSummaries.map((s) => {
-            const isSel = s.id === selectedId;
             const isAct = s.id === activeId;
-            const st = s.status === 'Paused' ? 'Paused' : isAct ? 'Active' : (s.status || 'Draft');
+            const st = s.status === 'Paused' ? 'Paused' : isAct ? 'Working on' : (s.status || 'Draft');
             return (
               <button
                 key={s.id}
                 type="button"
-                className={`post-card ${isSel ? 'campaign-active' : ''}`}
+                className={`post-card ${isAct ? 'campaign-active' : ''}`}
                 style={{ width: '100%', textAlign: 'left', cursor: 'pointer', marginBottom: 8 }}
-                onClick={() => setSelectedId(s.id)}
+                onClick={() => activate(s.id)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div>
@@ -307,7 +309,7 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
                     {isAct && <span className="badge" style={{ marginLeft: 8 }}>Active</span>}
                     <div className="post-meta">{st} · {s.keywords ?? 0} keywords · {s.linkedAccounts ?? 0} accounts</div>
                   </div>
-                  {isSel && <LivePulse label="VIEWING" />}
+                  {isAct && <LivePulse label="ACTIVE" />}
                 </div>
               </button>
             );
@@ -337,9 +339,6 @@ export function CampaignOperationsPanel({ onStatsChange }: Props) {
               ]} />
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                {!details.isActive && (
-                  <button type="button" className="btn primary" onClick={() => activate(camp.id)}>Set Active</button>
-                )}
                 {details.isPaused || camp.status === 'Paused' ? (
                   <button type="button" className="btn primary" onClick={() => resume(camp.id)}>Resume</button>
                 ) : (

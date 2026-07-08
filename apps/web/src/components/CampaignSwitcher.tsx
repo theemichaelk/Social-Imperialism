@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { invoke, setProjectId } from '@/lib/api';
+import { dispatchCampaignChanged, SI_CAMPAIGN_CHANGED } from '@/lib/campaignContext';
 
 type Campaign = { id: string; brandName?: string; domain?: string; status?: string };
 
@@ -22,6 +23,15 @@ export function CampaignSwitcher({ onSwitch }: { onSwitch?: (id: string) => void
 
   useEffect(() => { load().catch(console.error); }, [load]);
 
+  useEffect(() => {
+    const onChanged = (ev: Event) => {
+      const id = (ev as CustomEvent<{ campaignId?: string }>).detail?.campaignId;
+      if (id) setActiveId(id);
+    };
+    window.addEventListener(SI_CAMPAIGN_CHANGED, onChanged);
+    return () => window.removeEventListener(SI_CAMPAIGN_CHANGED, onChanged);
+  }, []);
+
   async function switchTo(id: string) {
     if (!id || id === activeId) return;
     setSwitching(true);
@@ -29,6 +39,7 @@ export function CampaignSwitcher({ onSwitch }: { onSwitch?: (id: string) => void
       await invoke('set-active-campaign', id);
       setActiveId(id);
       if (!id.startsWith('camp_')) setProjectId(id);
+      dispatchCampaignChanged(id);
       onSwitch?.(id);
     } finally {
       setSwitching(false);
@@ -39,7 +50,7 @@ export function CampaignSwitcher({ onSwitch }: { onSwitch?: (id: string) => void
 
   return (
     <div className="campaign-switcher">
-      <span className="campaign-switcher-label">Campaign</span>
+      <span className="campaign-switcher-label">Working on</span>
       <select
         className="input campaign-switcher-select"
         value={activeId}

@@ -302,7 +302,7 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
   },
   '/campaign-manager': {
     id: 'campaign-manager',
-    title: 'Campaign Command',
+    title: 'Campaign Manager',
     outcome: 'Manage campaigns, schedules, verified nodes, and kill-switch controls in one place.',
     subtitle: 'Campaigns tab for brand ops — Verified Nodes tab for 15-platform proof tree.',
     flow: ['Select Campaign', 'Edit / Pause', 'Bind Verified Nodes', 'Schedule'],

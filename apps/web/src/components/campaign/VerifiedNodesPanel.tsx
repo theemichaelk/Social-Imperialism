@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
+import { dispatchCampaignChanged, SI_CAMPAIGN_CHANGED } from '@/lib/campaignContext';
 
 type VerificationRun = {
   tier: number;
@@ -117,13 +118,13 @@ export function VerifiedNodesPanel() {
     setLoading(true);
     setMsg('');
     try {
-      const [treeRes, campRes, activeBrand] = await Promise.all([
+      const [treeRes, campRes, activeCamp] = await Promise.all([
         invoke<{ nodes: VerifiedNode[]; verifiedCount: number; awaitingAction: number }>('get-verified-node-tree'),
         invoke<{ campaigns: Campaign[] }>('list-verified-campaigns'),
-        invoke<{ domain?: string; brandName?: string } | null>('get-active-campaign').catch(() => null),
+        invoke<{ id?: string; domain?: string; brandName?: string } | null>('get-active-campaign').catch(() => null),
       ]);
-      if (activeBrand?.domain) {
-        const d = activeBrand.domain.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+      if (activeCamp?.domain) {
+        const d = activeCamp.domain.replace(/^https?:\/\//i, '').replace(/\/$/, '');
         setBrandTargetUrl(`https://${d}`);
       }
       setNodes(treeRes?.nodes || []);
@@ -133,7 +134,9 @@ export function VerifiedNodesPanel() {
         total: treeRes?.nodes?.length || 0,
       });
       setCampaigns(campRes?.campaigns || []);
-      if (!selectedCampaign && campRes?.campaigns?.[0]) {
+      if (activeCamp?.id) {
+        setSelectedCampaign(activeCamp.id);
+      } else if (!selectedCampaign && campRes?.campaigns?.[0]) {
         setSelectedCampaign(campRes.campaigns[0].id);
       }
     } catch (e) {
@@ -144,6 +147,22 @@ export function VerifiedNodesPanel() {
   }, [selectedCampaign]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    const onChanged = (ev: Event) => {
+      const id = (ev as CustomEvent<{ campaignId?: string }>).detail?.campaignId;
+      if (id) setSelectedCampaign(id);
+    };
+    window.addEventListener(SI_CAMPAIGN_CHANGED, onChanged);
+    return () => window.removeEventListener(SI_CAMPAIGN_CHANGED, onChanged);
+  }, []);
+
+  async function switchWorkspaceCampaign(id: string) {
+    if (!id) return;
+    await invoke('set-active-campaign', id);
+    setSelectedCampaign(id);
+    dispatchCampaignChanged(id);
+  }
 
   async function discoverAndVerify() {
     setLoading(true);
@@ -359,11 +378,11 @@ export function VerifiedNodesPanel() {
           </p>
 
           <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Active campaign</label>
+            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Working on campaign</label>
             <select
               className="input"
               value={selectedCampaign}
-              onChange={(e) => setSelectedCampaign(e.target.value)}
+              onChange={(e) => switchWorkspaceCampaign(e.target.value)}
               style={{ width: '100%', marginTop: 4 }}
             >
               <option value="">— Select —</option>

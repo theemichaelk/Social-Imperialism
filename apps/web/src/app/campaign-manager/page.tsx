@@ -37,9 +37,9 @@ function CampaignManagerPageInner() {
 
   return (
     <PageShell
-      title="Campaign Command Center"
-      subtitle="Manage brand campaigns, schedules, and verified platform nodes in one place"
-      eyebrow="Operations"
+      title="Campaign Manager"
+      subtitle="Your active campaign controls keywords, accounts, schedules, and verified nodes across the app"
+      eyebrow="Campaign Manager"
       focusStats={tab === 'campaigns' ? {
         Campaigns: focusStats.campaigns,
         Active: focusStats.active,
@@ -84,7 +84,7 @@ export default function CampaignManagerPage() {
   return (
     <Suspense fallback={
       <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
-        Loading Campaign Command Center…
+        Loading Campaign Manager…
       </div>
     }>
       <CampaignManagerPageInner />

@@ -12,7 +12,7 @@ export default function VerifiedNodesRedirectPage() {
 
   return (
     <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
-      Redirecting to Campaign Command Center…
+      Redirecting to Campaign Manager…
     </div>
   );
 }

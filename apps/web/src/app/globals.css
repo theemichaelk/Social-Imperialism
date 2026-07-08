@@ -800,6 +800,18 @@ textarea.input { min-height: 100px; resize: vertical; }
 .status-partial { color: var(--warn); }
 
 /* Futuristic dashboard */
+.app-campaign-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 1.25rem 10px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+  background: rgba(4, 10, 22, 0.55);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.app-campaign-bar .campaign-switcher { margin: 0; }
 .campaign-switcher {
   display: flex; align-items: center; gap: 8px;
   background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px);

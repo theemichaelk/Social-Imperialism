@@ -1,6 +1,6 @@
 'use client';
 import { Suspense, useLayoutEffect, useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
 import { LiveSupportPanel } from './LiveSupportPanel';
@@ -13,6 +13,7 @@ import { SovereignThreatBanner } from './SovereignThreatBanner';
 import { OverlordInterventionBanner } from './OverlordInterventionBanner';
 import { LeadCaptureModal } from './LeadCaptureModal';
 import { CampaignMasteryBanner } from './CampaignMasteryBanner';
+import { CampaignSwitcher } from './CampaignSwitcher';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
@@ -29,6 +30,7 @@ function isPublicPath(pathname: string) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [checked, setChecked] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -125,6 +127,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ☰
           </button>
           <span className="mobile-top-title">Social Imperialism</span>
+        </div>
+        <div className="app-campaign-bar">
+          <CampaignSwitcher onSwitch={() => router.refresh()} />
         </div>
         {!isSupportWorkspace && <ImperialismBrainPromptBar />}
         <CampaignMasteryBanner />

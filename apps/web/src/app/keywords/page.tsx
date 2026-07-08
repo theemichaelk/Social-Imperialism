@@ -10,6 +10,7 @@ import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { PromptVaultPicker } from '@/components/PromptVaultPicker';
 import Link from 'next/link';
 import { parseGenerateKeywordsResponse } from '@/lib/keywordSuggestions';
+import { SI_CAMPAIGN_CHANGED } from '@/lib/campaignContext';
 
 type Keyword = {
   id: string;
@@ -44,6 +45,12 @@ export default function KeywordsPage() {
   }, []);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
+
+  useEffect(() => {
+    const onCampaignSwitch = () => { refresh().catch(console.error); };
+    window.addEventListener(SI_CAMPAIGN_CHANGED, onCampaignSwitch);
+    return () => window.removeEventListener(SI_CAMPAIGN_CHANGED, onCampaignSwitch);
+  }, [refresh]);
 
   useEffect(() => {
     try {
