@@ -3,6 +3,8 @@ export type NavItem = {
   href: string;
   icon: string;
   label: string;
+  /** Short module description for RSS / discovery feeds */
+  hint?: string;
   /** Visible only to platform administrators (THEE_MICHAEL) */
   adminOnly?: boolean;
 };
