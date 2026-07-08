@@ -106,24 +106,29 @@ async function loadRecords() {
 
 async function saveRecord() {
   if (!selectedId) return;
-  await ipcRenderer.invoke('save-dns-record', selectedId, {
-    type: document.getElementById('recType').value,
-    name: document.getElementById('recName').value,
-    value: document.getElementById('recValue').value,
-    ttl: parseInt(document.getElementById('recTtl').value, 10) || 300,
+  await ipcRenderer.invoke('save-dns-record', {
+    siteId: selectedId,
+    record: {
+      type: document.getElementById('recType').value,
+      name: document.getElementById('recName').value,
+      value: document.getElementById('recValue').value,
+      ttl: parseInt(document.getElementById('recTtl').value, 10) || 300,
+    },
   });
   showToast('Record saved');
   loadRecords();
 }
 
 async function deleteRecord(id) {
-  await ipcRenderer.invoke('delete-dns-record', selectedId, id);
+  await ipcRenderer.invoke('delete-dns-record', { siteId: selectedId, recordId: id });
   showToast('Record deleted');
   loadRecords();
 }
 
 async function verifyRecord() {
-  const res = await ipcRenderer.invoke('verify-dns-record', selectedId);
+  const first = records[0];
+  if (!first) return showToast('No records to verify');
+  const res = await ipcRenderer.invoke('verify-dns-record', { siteId: selectedId, recordId: first.id });
   showToast(res.ok ? 'Propagation verified' : (res.error || 'Verification pending'));
 }
 

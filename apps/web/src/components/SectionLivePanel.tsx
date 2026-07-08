@@ -74,6 +74,7 @@ const SECTION_WIDGETS: Record<string, WidgetConfig> = {
   history: { ...COMPACT, replyStats: true, breakdown: true },
   keywords: { ...COMPACT, breakdown: true },
   'seo-tools': { ...COMPACT },
+  dns: { ...COMPACT },
   'reddit-ai': { ...COMPACT, accounts: true },
   'quora-traffic': { ...COMPACT, accounts: true },
   automations: { ...COMPACT },
@@ -150,6 +151,11 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
     { key: 'keywords', label: 'Keywords', sub: 'tracked', accent: '#38bdf8' },
     { key: 'apiConnected', label: 'APIs', sub: 'live' },
     { key: 'accounts', label: 'Accounts', sub: 'platforms' },
+  ],
+  dns: [
+    { key: 'sites', label: 'Sites', sub: 'registered' },
+    { key: 'records', label: 'Records', sub: 'total' },
+    { key: 'route53Ready', label: 'Route53', sub: 'AWS', accent: '#22c55e' },
   ],
   'seo-tools': [
     { key: 'keywords', label: 'Keywords', sub: 'research' },

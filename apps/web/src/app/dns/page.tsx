@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
+import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { DataPanel, MetricTile } from '@/components/DashboardViz';
-import { GrokToolbar } from '@/components/GrokToolbar';
 import { isPlaceholderDnsValue, isQaDnsSite } from '@/lib/qaFilters';
 
 type DnsSite = {
@@ -45,6 +45,8 @@ export default function DnsPage() {
   const [config, setConfig] = useState<DnsConfig>({});
   const [newSiteDomain, setNewSiteDomain] = useState('');
   const [newSiteName, setNewSiteName] = useState('');
+  const [siteEdit, setSiteEdit] = useState({ name: '', domain: '', hostedZoneId: '' });
+  const [editingSite, setEditingSite] = useState(false);
   const [draft, setDraft] = useState({ ...EMPTY_RECORD });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
@@ -68,16 +70,17 @@ export default function DnsPage() {
       setSites(list);
       setIsAdmin(!!siteRes.isAdmin);
       setConfig(cfg);
-      if (!selectedId && list.length) setSelectedId(list[0].id);
-      else if (selectedId && !list.find((s) => s.id === selectedId) && list.length) {
-        setSelectedId(list[0].id);
-      }
+      setSelectedId((prev) => {
+        if (!prev && list.length) return list[0].id;
+        if (prev && !list.find((s) => s.id === prev) && list.length) return list[0].id;
+        return prev;
+      });
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [selectedId]);
+  }, []);
 
   const loadRecords = useCallback(async (siteId: string) => {
     if (!siteId) return;
@@ -90,6 +93,17 @@ export default function DnsPage() {
   useEffect(() => {
     if (selectedId) loadRecords(selectedId).catch(console.error);
   }, [selectedId, loadRecords]);
+
+  useEffect(() => {
+    if (selected) {
+      setSiteEdit({
+        name: selected.name || '',
+        domain: selected.domain || '',
+        hostedZoneId: selected.hostedZoneId || '',
+      });
+      setEditingSite(false);
+    }
+  }, [selected?.id, selected?.name, selected?.domain, selected?.hostedZoneId]);
 
   async function syncSites() {
     setBusy('sync');
@@ -126,6 +140,46 @@ export default function DnsPage() {
     }
   }
 
+  async function updateSite() {
+    if (!selectedId) return;
+    setBusy('update-site');
+    try {
+      const res = await invoke<{ success?: boolean; site?: DnsSite; error?: string }>('update-dns-site', {
+        siteId: selectedId,
+        name: siteEdit.name.trim(),
+        domain: siteEdit.domain.trim(),
+        hostedZoneId: siteEdit.hostedZoneId.trim() || null,
+      });
+      if (!res.success) { setMsg(res.error || 'Update failed'); return; }
+      setMsg(`Updated ${res.site?.domain || siteEdit.domain}`);
+      setEditingSite(false);
+      await refresh();
+      if (res.site?.id) setSelectedId(res.site.id);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function deleteSite() {
+    if (!selectedId || !selected) return;
+    if (!confirm(`Delete DNS site "${selected.domain}" and all its records?`)) return;
+    setBusy('delete-site');
+    try {
+      const res = await invoke<{ success?: boolean; error?: string }>('delete-dns-site', { siteId: selectedId });
+      if (res.success === false && res.error) { setMsg(res.error); return; }
+      setMsg(`Deleted ${selected.domain}`);
+      setSelectedId('');
+      setRecords([]);
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function saveRecord() {
     if (!selectedId) return;
     setBusy('save');
@@ -148,9 +202,14 @@ export default function DnsPage() {
 
   async function deleteRecord(recordId: string) {
     if (!selectedId || !confirm('Delete this DNS record?')) return;
-    await invoke('delete-dns-record', { siteId: selectedId, recordId });
-    await loadRecords(selectedId);
-    setMsg('Record deleted');
+    try {
+      const res = await invoke<{ success?: boolean; error?: string }>('delete-dns-record', { siteId: selectedId, recordId });
+      if (res.success === false && res.error) { setMsg(res.error); return; }
+      await loadRecords(selectedId);
+      setMsg('Record deleted');
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
   }
 
   async function verifyRecord(recordId: string) {
@@ -186,6 +245,10 @@ export default function DnsPage() {
   async function exportRecords() {
     if (!selectedId) return;
     const data = await invoke<Record<string, unknown>>('export-dns-records', selectedId);
+    if ((data as { error?: string }).error) {
+      setMsg((data as { error: string }).error);
+      return;
+    }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -215,7 +278,8 @@ export default function DnsPage() {
           ? 'Admin view — all platform sites, Quantum Pages, and every client campaign domain'
           : 'Manage DNS records for your sites'}
       />
-      <GrokToolbar pageId="dns" compact />
+
+      <SectionLivePanel section="dns" showAccounts={false} />
 
       {msg && (
         <div className="card" style={{ borderColor: 'rgba(56,189,248,0.4)', marginBottom: 12 }}>
@@ -256,6 +320,37 @@ export default function DnsPage() {
             )}
           </div>
 
+          {selected && (
+            <div className="dns-site-edit-panel">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>Site settings</p>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {!editingSite ? (
+                    <button type="button" className="btn btn-sm" onClick={() => setEditingSite(true)}>Edit</button>
+                  ) : (
+                    <>
+                      <button type="button" className="btn btn-sm" onClick={updateSite} disabled={busy === 'update-site'}>Save</button>
+                      <button type="button" className="btn btn-sm" onClick={() => setEditingSite(false)}>Cancel</button>
+                    </>
+                  )}
+                  <button type="button" className="btn btn-sm" onClick={deleteSite} disabled={busy === 'delete-site'}>Delete</button>
+                </div>
+              </div>
+              {editingSite ? (
+                <div className="grid grid-2" style={{ gap: 8 }}>
+                  <input className="input" placeholder="Site name" value={siteEdit.name} onChange={(e) => setSiteEdit({ ...siteEdit, name: e.target.value })} />
+                  <input className="input" placeholder="domain.com" value={siteEdit.domain} onChange={(e) => setSiteEdit({ ...siteEdit, domain: e.target.value })} />
+                  <input className="input" placeholder="Route53 hosted zone ID (optional)" value={siteEdit.hostedZoneId} onChange={(e) => setSiteEdit({ ...siteEdit, hostedZoneId: e.target.value })} style={{ gridColumn: '1 / -1' }} />
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                  <p style={{ margin: '0 0 4px' }}><strong style={{ color: '#e2e8f0' }}>{selected.name}</strong> · {scopeLabel(selected)}</p>
+                  {selected.hostedZoneId && <p style={{ margin: 0 }}>Hosted zone: {selected.hostedZoneId}</p>}
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(148,163,184,0.2)' }}>
             <p className="settings-panel-desc">Add any domain — it gets its own DNS section automatically.</p>
             <input className="input" placeholder="domain.com" value={newSiteDomain} onChange={(e) => setNewSiteDomain(e.target.value)} style={{ marginBottom: 8 }} />
@@ -292,6 +387,7 @@ export default function DnsPage() {
                       <th style={{ padding: '6px 8px' }}>Name</th>
                       <th style={{ padding: '6px 8px' }}>Value</th>
                       <th style={{ padding: '6px 8px' }}>TTL</th>
+                      <th style={{ padding: '6px 8px' }}>Pri</th>
                       <th style={{ padding: '6px 8px' }}>Status</th>
                       <th style={{ padding: '6px 8px' }} />
                     </tr>
@@ -303,6 +399,7 @@ export default function DnsPage() {
                         <td style={{ padding: '6px 8px' }}>{r.name}</td>
                         <td style={{ padding: '6px 8px', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.value}>{r.value}</td>
                         <td style={{ padding: '6px 8px' }}>{r.ttl}</td>
+                        <td style={{ padding: '6px 8px' }}>{r.type === 'MX' ? (r.priority ?? '—') : '—'}</td>
                         <td style={{ padding: '6px 8px', color: isPlaceholderDnsValue(r.value) ? '#f59e0b' : undefined }}>
                           {isPlaceholderDnsValue(r.value) ? 'placeholder' : (r.status || 'draft')}
                         </td>
@@ -329,6 +426,15 @@ export default function DnsPage() {
                   <input className="input" placeholder="Name (@ or www)" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
                   <input className="input" placeholder="Value" value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} style={{ gridColumn: '1 / -1' }} />
                   <input className="input" type="number" placeholder="TTL" value={draft.ttl} onChange={(e) => setDraft({ ...draft, ttl: parseInt(e.target.value, 10) || 300 })} />
+                  {draft.type === 'MX' && (
+                    <input
+                      className="input"
+                      type="number"
+                      placeholder="Priority (e.g. 10)"
+                      value={draft.priority ?? ''}
+                      onChange={(e) => setDraft({ ...draft, priority: e.target.value ? parseInt(e.target.value, 10) : undefined })}
+                    />
+                  )}
                 </div>
                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                   <button className="btn" onClick={saveRecord} disabled={busy === 'save'}>{editingId ? 'Update' : 'Add'} Record</button>

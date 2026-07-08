@@ -186,6 +186,60 @@ function canAccessSite(store, site, ctx) {
   return true;
 }
 
+function getSiteById(store, siteId) {
+  const data = loadDnsStore(store);
+  return data.sites.find((s) => s.id === siteId) || null;
+}
+
+function assertSiteAccess(store, siteId, ctx = {}) {
+  const invokeCtx = { ...getInvokeContext(store), ...ctx };
+  const site = getSiteById(store, siteId);
+  if (!site) throw new Error('Site not found');
+  if (!canAccessSite(store, site, invokeCtx)) throw new Error('You do not have access to this domain');
+  return site;
+}
+
+function updateSite(store, siteId, patch = {}, ctx = {}) {
+  assertSiteAccess(store, siteId, ctx);
+  const data = loadDnsStore(store);
+  const idx = data.sites.findIndex((s) => s.id === siteId);
+  if (idx < 0) throw new Error('Site not found');
+  const site = data.sites[idx];
+  const next = {
+    ...site,
+    name: patch.name != null ? String(patch.name).trim() || site.domain : site.name,
+    hostedZoneId: patch.hostedZoneId != null ? (patch.hostedZoneId || null) : site.hostedZoneId,
+    status: patch.status || site.status || 'active',
+    updatedAt: new Date().toISOString(),
+  };
+  if (patch.domain && normalizeDomain(patch.domain) !== site.domain) {
+    const newDomain = normalizeDomain(patch.domain);
+    if (!newDomain) throw new Error('Invalid domain');
+    const conflict = data.sites.find((s) => s.id !== siteId && normalizeDomain(s.domain) === newDomain);
+    if (conflict) throw new Error(`Domain ${newDomain} is already registered`);
+    const newId = siteIdFor(newDomain);
+    data.records[newId] = data.records[site.id] || defaultRecordsForSite({ ...site, domain: newDomain });
+    delete data.records[site.id];
+    next.id = newId;
+    next.domain = newDomain;
+  }
+  data.sites[idx] = next;
+  saveDnsStore(store, data);
+  return next;
+}
+
+function deleteSite(store, siteId, ctx = {}) {
+  assertSiteAccess(store, siteId, ctx);
+  const data = loadDnsStore(store);
+  const idx = data.sites.findIndex((s) => s.id === siteId);
+  if (idx < 0) throw new Error('Site not found');
+  const [removed] = data.sites.splice(idx, 1);
+  delete data.records[siteId];
+  if (removed?.id && removed.id !== siteId) delete data.records[removed.id];
+  saveDnsStore(store, data);
+  return { success: true, deleted: removed };
+}
+
 async function listSites(store, ctx = {}) {
   const invokeCtx = { ...getInvokeContext(store), ...ctx };
   const isAdmin = isPlatformAdmin(invokeCtx.email) || ['owner', 'admin'].includes(await getUserRole(invokeCtx.email, invokeCtx.orgId));
@@ -225,19 +279,18 @@ async function listSites(store, ctx = {}) {
   return { sites, isAdmin, total: sites.length };
 }
 
-function getRecords(store, siteId) {
+function getRecords(store, siteId, ctx = {}) {
+  const site = assertSiteAccess(store, siteId, ctx);
   const data = loadDnsStore(store);
   if (!data.records[siteId]?.length) {
-    const site = data.sites.find((s) => s.id === siteId);
-    if (site) {
-      data.records[siteId] = defaultRecordsForSite(site);
-      saveDnsStore(store, data);
-    }
+    data.records[siteId] = defaultRecordsForSite(site);
+    saveDnsStore(store, data);
   }
   return data.records[siteId] || [];
 }
 
-function saveRecord(store, siteId, record) {
+function saveRecord(store, siteId, record, ctx = {}) {
+  assertSiteAccess(store, siteId, ctx);
   const data = loadDnsStore(store);
   const site = data.sites.find((s) => s.id === siteId);
   if (!site) throw new Error('Site not found');
@@ -267,7 +320,8 @@ function saveRecord(store, siteId, record) {
   return next;
 }
 
-function deleteRecord(store, siteId, recordId) {
+function deleteRecord(store, siteId, recordId, ctx = {}) {
+  assertSiteAccess(store, siteId, ctx);
   const data = loadDnsStore(store);
   const records = data.records[siteId] || [];
   data.records[siteId] = records.filter((r) => r.id !== recordId);
@@ -334,13 +388,12 @@ async function findHostedZone(domain) {
   return match ? { id: match.Id.replace('/hostedzone/', ''), name: normalizeDomain(match.Name) } : null;
 }
 
-async function applyRecordsToRoute53(store, siteId) {
+async function applyRecordsToRoute53(store, siteId, ctx = {}) {
   const client = getRoute53Client();
   if (!client) throw new Error('AWS credentials not configured for Route53');
 
+  const site = assertSiteAccess(store, siteId, ctx);
   const data = loadDnsStore(store);
-  const site = data.sites.find((s) => s.id === siteId);
-  if (!site) throw new Error('Site not found');
 
   const records = data.records[siteId] || [];
   if (!records.length) throw new Error('No DNS records to apply');
@@ -371,12 +424,17 @@ async function applyRecordsToRoute53(store, siteId) {
         },
       };
     }
-    const rr = { Value: rec.type === 'TXT' && !rec.value.startsWith('"') ? `"${rec.value}"` : rec.value };
+    let value = rec.value;
+    if (rec.type === 'TXT' && !value.startsWith('"')) value = `"${value}"`;
+    if (rec.type === 'MX') {
+      const pri = rec.priority != null ? rec.priority : 10;
+      value = `${pri} ${rec.value.replace(/^\d+\s+/, '')}`;
+    }
     const set = {
       Name: name.endsWith('.') ? name : `${name}.`,
       Type: rec.type,
       TTL: rec.ttl || 300,
-      ResourceRecords: [rr],
+      ResourceRecords: [{ Value: value }],
     };
     return { Action: 'UPSERT', ResourceRecordSet: set };
   });
@@ -431,6 +489,11 @@ module.exports = {
   listSites,
   syncAllSites,
   upsertSite,
+  updateSite,
+  deleteSite,
+  getSiteById,
+  assertSiteAccess,
+  canAccessSite,
   getRecords,
   saveRecord,
   deleteRecord,

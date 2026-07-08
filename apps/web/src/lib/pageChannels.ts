@@ -35,7 +35,6 @@ export const PAGE_CHANNELS = {
     'run-auto-rules-now', 'get-post-history', 'get-dashboard-stats',
     'get-content-studio-live', 'get-content-library', 'get-brand-guidelines',
     'seed-brand-from-website', 'get-design-templates', 'render-design-post',
-    'get-dns-sites', 'get-dns-records', 'save-dns-record', 'apply-dns-records', 'sync-dns-sites',
     'generate-from-library-assets', 'schedule-content-batch', 'get-section-live',
     'get-format-templates', 'recreate-from-format-template',
     'get-active-campaign', 'get-keywords', 'grok-build-prompt-preview',
@@ -128,6 +127,11 @@ export const PAGE_CHANNELS = {
     'get-active-issues', 'get-issues-ledger', 'run-guardian-scan',
     'approve-issue-patch', 'deny-issue-patch', 'edit-issue-patch',
     'delete-issue', 'dispatch-issue-diagnostic-email', 'get-section-live',
+  ],
+  dns: [
+    'get-dns-sites', 'get-dns-config', 'sync-dns-sites', 'add-dns-site', 'update-dns-site', 'delete-dns-site',
+    'get-dns-records', 'save-dns-record', 'delete-dns-record', 'verify-dns-record',
+    'apply-dns-records', 'export-dns-records', 'get-section-live',
   ],
   campaignManager: [
     'get-settings-status', 'get-active-campaign', 'get-settings', 'get-campaign-details',

@@ -238,6 +238,22 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
         stats: { ...base.stats, proxies: proxies.length, kits: kits.length, kitsTotal: allKits.length },
       };
     }
+    case 'dns': {
+      const dnsService = require('./dnsService');
+      const dnsData = dnsService.loadDnsStore(store);
+      const sites = dnsData.sites || [];
+      const recordCount = sites.reduce((n, s) => n + (dnsData.records?.[s.id]?.length || 0), 0);
+      const route53Ready = !!(process.env.AWS_S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID);
+      return {
+        ...base,
+        stats: {
+          ...base.stats,
+          sites: sites.length,
+          records: recordCount,
+          route53Ready,
+        },
+      };
+    }
     case 'integrations':
     case 'settings':
       return {
