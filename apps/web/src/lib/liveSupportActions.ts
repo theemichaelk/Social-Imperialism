@@ -110,6 +110,8 @@ const TAB_ALIASES: Record<string, { path: string; tab: string; label: string }> 
   campaigns: { path: '/settings', tab: 'campaigns', label: 'Campaigns' },
   overview: { path: '/dashboard', tab: 'overview', label: 'Overview' },
   feed: { path: '/dashboard', tab: 'feed', label: 'Live Feed' },
+  growth: { path: '/dashboard', tab: 'growth', label: 'Growth & Q&A' },
+  leads: { path: '/dashboard', tab: 'growth', label: 'Leads' },
 };
 
 function buildNavCatalog(): NavEntry[] {

@@ -273,7 +273,7 @@ export default function RedditAiPage() {
         title="Growth Lab"
         actions={
           <>
-            <Link href="/dashboard" className="btn primary">Leads →</Link>
+            <Link href="/dashboard?tab=growth" className="btn primary">Leads →</Link>
             <Link href="/keywords" className="btn">Keywords</Link>
             <Link href="/automations" className="btn">Automations</Link>
           </>

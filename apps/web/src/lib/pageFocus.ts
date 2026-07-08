@@ -247,7 +247,7 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     subtitle: 'Configure modules, review queue, approve actions.',
     flow: ['Configure', 'Enable', 'Run', 'Approve'],
     actions: [
-      { label: 'Leads', href: '/dashboard', primary: true },
+      { label: 'Leads', href: '/dashboard?tab=growth', tab: 'growth', primary: true },
       { label: 'Keywords', href: '/keywords' },
     ],
     related: [{ label: 'Automations', href: '/automations' }],

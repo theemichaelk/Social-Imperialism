@@ -15,6 +15,40 @@ export type NavSection = {
   items: NavItem[];
 };
 
+export type NavActiveContext = {
+  pathname: string;
+  tab?: string | null;
+};
+
+/** Legacy paths that map to a canonical sidebar item id */
+const NAV_PATH_ALIASES: Record<string, string> = {
+  '/verified-nodes': 'campaign-manager',
+};
+
+const DASHBOARD_SILOED_TABS = new Set(['users', 'admin']);
+
+export function isNavItemActive(item: NavItem, ctx: NavActiveContext): boolean {
+  const { pathname, tab } = ctx;
+  const aliasId = NAV_PATH_ALIASES[pathname];
+  if (aliasId && item.id === aliasId) return true;
+
+  if (item.id === 'dashboard-users' && pathname === '/dashboard/users') return true;
+  if (item.id === 'dashboard-admin' && pathname === '/dashboard/admin') return true;
+  if (item.id === 'dashboard-issues' && pathname === '/dashboard/issues') return true;
+
+  if (item.href !== pathname) return false;
+
+  if (pathname === '/dashboard' && item.id === 'dashboard') {
+    return !tab || !DASHBOARD_SILOED_TABS.has(tab);
+  }
+
+  return true;
+}
+
+export function findActiveNavSectionId(ctx: NavActiveContext): string | undefined {
+  return NAV_SECTIONS.find((section) => section.items.some((item) => isNavItemActive(item, ctx)))?.id;
+}
+
 export const NAV_SECTIONS: NavSection[] = [
   { id: 'mission', label: 'Mission Control', items: [
     { id: 'dashboard', href: '/dashboard', icon: '🏠', label: 'Dashboard' },

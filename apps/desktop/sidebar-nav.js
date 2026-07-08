@@ -8,9 +8,10 @@ const NAV_ITEMS = [
   { id: 'content-hub', href: 'content-hub.html', icon: 'fa-edit', label: 'Create' },
   { id: 'content-library', href: 'content-library.html', icon: 'fa-folder-open', label: 'Library' },
   { id: 'design-studio', href: 'design-studio.html', icon: 'fa-palette', label: 'Design Studio' },
+  { id: 'video-studio', href: '#', icon: 'fa-film', label: 'Video Studio', saasPath: '/video-studio' },
   { id: 'brand', href: 'brand.html', icon: 'fa-bullseye', label: 'Brand' },
   { id: 'calendar', href: 'calendar.html', icon: 'fa-calendar-alt', label: 'Calendar' },
-  { id: 'scheduler', href: 'calendar.html#scheduler', icon: 'fa-clock', label: 'Scheduler' },
+  { id: 'scheduler', href: 'scheduler.html', icon: 'fa-clock', label: 'Scheduler' },
   { id: 'prompt-vault', href: '#', icon: 'fa-archive', label: 'Prompt Vault', saasPath: '/prompt-vault' },
   { id: 'engagement', href: 'engagement.html', icon: 'fa-users', label: 'Engagement' },
   { id: 'history', href: 'history.html', icon: 'fa-history', label: 'AI Replies' },
@@ -22,6 +23,9 @@ const NAV_ITEMS = [
   { id: 'rules', href: 'rules.html', icon: 'fa-cogs', label: 'Auto-Rules' },
   { id: 'account-hub', href: 'account-hub.html', icon: 'fa-link', label: 'Accounts' },
   { id: 'account-creator', href: 'account-creator.html', icon: 'fa-user-plus', label: 'Acct Creator' },
+  { id: 'dashboard-users', href: '#', icon: 'fa-user', label: 'My Account', saasPath: '/dashboard/users' },
+  { id: 'dashboard-admin', href: '#', icon: 'fa-shield-alt', label: 'Admin', saasPath: '/dashboard/admin' },
+  { id: 'dashboard-issues', href: '#', icon: 'fa-tools', label: 'Issue Control', saasPath: '/dashboard/issues' },
   { id: 'dns', href: 'dns.html', icon: 'fa-globe', label: 'DNS' },
   { id: 'integrations', href: 'integrations.html', icon: 'fa-plug', label: 'Integrations' },
   { id: 'settings', href: 'settings.html', icon: 'fa-sliders-h', label: 'Settings' },
@@ -31,12 +35,12 @@ const NAV_ITEMS = [
 
 const NAV_SECTIONS = [
   { id: 'mission', label: 'Mission Control', ids: ['dashboard', 'browse-posts'] },
-  { id: 'create', label: 'Create & Publish', ids: ['onboarding', 'content-hub', 'content-library', 'design-studio', 'brand', 'calendar', 'scheduler'] },
+  { id: 'create', label: 'Create & Publish', ids: ['onboarding', 'content-hub', 'content-library', 'design-studio', 'video-studio', 'brand', 'calendar', 'scheduler'] },
   { id: 'discovery', label: 'Discovery & Replies', ids: ['prompt-vault', 'engagement', 'history', 'keywords', 'seo-tools'] },
   { id: 'labs', label: 'Growth Labs', ids: ['reddit-ai', 'quora-traffic'] },
   { id: 'automation', label: 'Automation', ids: ['automations', 'rules'] },
   { id: 'accounts', label: 'Accounts', ids: ['account-hub', 'account-creator'] },
-  { id: 'system', label: 'System', ids: ['dns', 'integrations', 'settings', 'support', 'campaign-manager'] },
+  { id: 'system', label: 'System', ids: ['dashboard-users', 'dashboard-admin', 'dashboard-issues', 'campaign-manager', 'support', 'dns', 'integrations', 'settings'] },
 ];
 
 const NAV_BY_ID = Object.fromEntries(NAV_ITEMS.map((item) => [item.id, item]));
@@ -73,7 +77,6 @@ let _hashListenerBound = false;
 function detectActivePageId() {
   if (typeof window !== 'undefined') {
     if (window.location?.hash === '#browse-posts') return 'browse-posts';
-    if (window.location?.hash === '#scheduler') return 'scheduler';
   }
   const path = (typeof window !== 'undefined' && window.location?.pathname) || '';
   const file = path.split('/').pop() || 'dashboard.html';
@@ -298,6 +301,18 @@ function bindSidebarNavLinks() {
   nav.dataset.bound = '1';
 }
 
+function bindSidebarFooterLinks() {
+  const health = document.getElementById('siHealthLink');
+  if (!health || health.dataset.bound === '1') return;
+  health.addEventListener('click', (e) => {
+    const saasPath = health.dataset.saasPath;
+    if (!saasPath) return;
+    e.preventDefault();
+    openSaasModule(saasPath);
+  });
+  health.dataset.bound = '1';
+}
+
 function bindHashActiveSync() {
   if (typeof window === 'undefined' || _hashListenerBound) return;
   window.addEventListener('hashchange', () => {
@@ -346,7 +361,7 @@ function renderAppSidebar(activeId) {
       <button type="button" class="si-sign-out-btn" id="siSignOutBtn" title="Sign out">
         <i class="fas fa-sign-out-alt"></i><span>Sign Out</span>
       </button>
-      <a href="settings.html#system-health" class="sidebar-footer-link" id="siHealthLink" data-nav-id="settings" title="System health — open Campaign Manager">
+      <a href="#" class="sidebar-footer-link" id="siHealthLink" data-saas-path="/settings?tab=system" title="System health">
         <i class="fas fa-circle si-health-dot" id="siHealthDot" style="font-size:0.45rem;color:#10b981;"></i>
         <span id="siHealthLabel">Checking…</span>
       </a>
@@ -360,6 +375,7 @@ function renderAppSidebar(activeId) {
   } catch (e) { /* ignore */ }
 
   bindSidebarNavLinks();
+  bindSidebarFooterLinks();
   bindHashActiveSync();
   bindSectionToggles();
   bindSectionBulkControls();

@@ -97,15 +97,23 @@ export const DASHBOARD_TABS = [
   { id: 'overview', label: 'Overview', group: "Today's Focus", locked: true },
   { id: 'feed', label: 'Live Feed', group: "Today's Focus" },
   { id: 'growth', label: 'Growth & Q&A', group: "Today's Focus" },
-  { id: 'users', label: 'My Account', group: 'Account' },
-  { id: 'admin', label: 'Admin', group: 'Account' },
   { id: 'worker', label: 'Worker', group: 'Advanced' },
   { id: 'analytics', label: 'Analytics', group: 'Advanced' },
 ] as const;
 
-export const DASHBOARD_LEGACY_TAB_MAP: Record<string, string> = { qa: 'growth' };
+export const DASHBOARD_LEGACY_TAB_MAP: Record<string, string> = {
+  qa: 'growth',
+  users: 'users',
+  admin: 'admin',
+};
 export const DASHBOARD_FOCUS_TABS = ['overview', 'feed', 'growth'];
-export const DASHBOARD_COLLAPSE_GROUPS = ['Advanced', 'Account'];
+export const DASHBOARD_COLLAPSE_GROUPS = ['Advanced'];
+
+/** Tabs that live on dedicated routes — not rendered inside /dashboard */
+export const DASHBOARD_SILOED_TAB_ROUTES: Record<string, string> = {
+  users: '/dashboard/users',
+  admin: '/dashboard/admin',
+};
 
 /** Browse Posts — drop redundant Intelligence tab (lives in Discover) */
 export const BROWSE_VIEW_TABS = [

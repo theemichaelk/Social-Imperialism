@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NAV_SECTIONS } from '@/lib/nav';
+import { findActiveNavSectionId, isNavItemActive, NAV_SECTIONS } from '@/lib/nav';
 import { executeLiveSupportAction, resolveNavigationIntent } from '@/lib/liveSupportActions';
 import { SI_GUIDE_EXPAND_SIDEBAR } from '@/lib/guide_executor';
 import { Logo } from '@/components/Logo';
@@ -20,6 +20,12 @@ type SidebarProps = {
 
 export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab');
+  const navActiveCtx = useMemo(
+    () => ({ pathname, tab: activeTab }),
+    [pathname, activeTab],
+  );
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
@@ -74,8 +80,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
   const searchNav = useMemo(() => resolveNavigationIntent(search, { pathname, preferExecute: true }), [search, pathname]);
 
   const activeSection = useMemo(
-    () => NAV_SECTIONS.find((s) => s.items.some((i) => i.href === pathname))?.id,
-    [pathname],
+    () => findActiveNavSectionId(navActiveCtx),
+    [navActiveCtx],
   );
 
   const collapseAllSections = useCallback(() => {
@@ -212,8 +218,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
               )}
               <div className={`nav-section-items ${isSecCollapsed && !collapsed ? 'is-collapsed' : ''}`}>
                   {section.items.map((item) => {
-                    const isActive = pathname === item.href
-                      || (item.href === '/campaign-manager' && pathname === '/verified-nodes');
+                    const isActive = isNavItemActive(item, navActiveCtx);
                     return (
                       <Link
                         key={item.id}

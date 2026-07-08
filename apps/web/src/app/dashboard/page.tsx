@@ -1,9 +1,8 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@/lib/api';
-import { checkPlatformAdmin } from '@/lib/adminAccess';
-import { UserAccountPanel } from '@/components/UserAccountPanel';
-import { AdminDirectoryPanel } from '@/components/AdminDirectoryPanel';
+
 import { PageShell } from '@/components/PageShell';
 import { InvokePanel } from '@/components/InvokePanel';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
@@ -23,6 +22,7 @@ import {
   DASHBOARD_COLLAPSE_GROUPS,
   DASHBOARD_FOCUS_TABS,
   DASHBOARD_LEGACY_TAB_MAP,
+  DASHBOARD_SILOED_TAB_ROUTES,
   DASHBOARD_TABS,
   resolveLegacyTab,
 } from '@/lib/smartTabs';
@@ -102,7 +102,11 @@ function isEngageablePost(post: Post): boolean {
   return !id.includes('_');
 }
 
+type DashboardTabId = (typeof DASHBOARD_TABS)[number]['id'];
+
 export default function DashboardPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { settings, accounts, isSurfaceEnabled } = useIntelligence();
   const [stats, setStats] = useState<DashboardStats>({});
   const [setup, setSetup] = useState<Record<string, unknown>>({});
@@ -115,7 +119,9 @@ export default function DashboardPage() {
   const [domain, setDomain] = useState<Record<string, unknown>>({});
   const [projectMetrics, setProjectMetrics] = useState<Record<string, unknown>>({});
   const [fanpage, setFanpage] = useState<Record<string, unknown>>({});
-  const [tab, setTab] = useState('overview');
+  const rawTab = searchParams.get('tab');
+  const initialTab = resolveLegacyTab(rawTab, DASHBOARD_TABS, DASHBOARD_LEGACY_TAB_MAP, 'overview');
+  const [tab, setTab] = useState<DashboardTabId>(initialTab as DashboardTabId);
   const [draft, setDraft] = useState('');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [topicAnalysis, setTopicAnalysis] = useState('');
@@ -133,16 +139,36 @@ export default function DashboardPage() {
   const [feedTime, setFeedTime] = useState('all');
   const [feedMinEngage, setFeedMinEngage] = useState('0');
   const [loadError, setLoadError] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const dashboardTabs = useMemo(() => [...DASHBOARD_TABS], []);
+
+  const setTabAndUrl = useCallback((id: string) => {
+    const siloed = DASHBOARD_SILOED_TAB_ROUTES[id];
+    if (siloed) {
+      router.replace(siloed);
+      return;
+    }
+    const resolved = resolveLegacyTab(id, DASHBOARD_TABS, DASHBOARD_LEGACY_TAB_MAP, 'overview') as DashboardTabId;
+    setTab(resolved);
+    const params = new URLSearchParams(searchParams.toString());
+    if (resolved === 'overview') params.delete('tab');
+    else params.set('tab', resolved);
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard?${qs}` : '/dashboard', { scroll: false });
+  }, [router, searchParams]);
 
   useEffect(() => {
-    checkPlatformAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
-  }, []);
-
-  const dashboardTabs = useMemo(
-    () => DASHBOARD_TABS.filter((t) => t.id !== 'admin' || isAdmin),
-    [isAdmin],
-  );
+    const q = searchParams.get('tab');
+    if (!q) {
+      setTab('overview');
+      return;
+    }
+    const siloed = DASHBOARD_SILOED_TAB_ROUTES[q];
+    if (siloed) {
+      router.replace(siloed);
+      return;
+    }
+    setTab(resolveLegacyTab(q, DASHBOARD_TABS, DASHBOARD_LEGACY_TAB_MAP, 'overview') as DashboardTabId);
+  }, [searchParams, router]);
 
   const loadFeed = useCallback(async (opts?: { refresh?: boolean; quick?: boolean }) => {
     setFeedLoading(true);
@@ -339,7 +365,7 @@ export default function DashboardPage() {
   }
 
   const onDashboardTab = (id: string) => {
-    setTab(resolveLegacyTab(id, DASHBOARD_TABS, DASHBOARD_LEGACY_TAB_MAP, 'overview'));
+    setTabAndUrl(id);
   };
   const apiEntries = Object.entries(stats.apiMetrics || setup.apiMetrics as Record<string, string> || {});
   const connectedApis = apiEntries.filter(([, v]) => v === 'Connected').length;
@@ -425,7 +451,7 @@ export default function DashboardPage() {
         onFocusAction={(a) => {
           if (a.label === 'Full Scan') refresh(true);
         }}
-        onFocusTab={setTab}
+        onFocusTab={setTabAndUrl}
       />
 
       <PredictiveMotivationPanel status={setup as Record<string, unknown>} />
@@ -748,14 +774,6 @@ export default function DashboardPage() {
           }} />
           <InvokePanel title="Serp Research" channel="serp-search" args={['social media automation']} buttonLabel="Search" />
         </div>
-      )}
-
-      {tab === 'users' && (
-        <UserAccountPanel compact />
-      )}
-
-      {tab === 'admin' && isAdmin && (
-        <AdminDirectoryPanel />
       )}
 
       <PostExplorerModal
