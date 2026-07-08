@@ -10,6 +10,14 @@ const LOG_KEY = 'redditAiSuiteLog';
 
 const MODULES = [
   {
+    id: 'growth-strategist',
+    name: 'Reddit Growth Strategist',
+    icon: 'fa-chess',
+    color: '#22c55e',
+    tagline: 'Expert Reddit growth strategist & community manager — 90/10 manual engagement playbook tailored to your brand.',
+    benefits: ['Subreddit map', '30-day roadmap', 'Compliance checklist', 'Comment frameworks'],
+  },
+  {
     id: 'subreddit-ascent',
     name: 'Subreddit Ascent',
     icon: 'fa-rocket',
@@ -99,7 +107,62 @@ const DEFAULT_SETTINGS = {
     productFocus: 'digital tools',
     scanDepth: 'headlines',
   },
+  growthStrategist: {
+    productName: '',
+    nicheKeywords: 'social media automation, agency growth, lead generation',
+    valueProposition: '',
+    warmupWeeks: 3,
+    includeMockScenarios: true,
+  },
 };
+
+function buildGrowthStrategistPrompt(cfg, campaign) {
+  const productName = cfg.productName || campaign?.brandName || 'Social Imperialism';
+  const keywords = cfg.nicheKeywords || campaign?.domain || 'social media automation, agency growth';
+  const valueProp = cfg.valueProposition || campaign?.description || 'AI social growth platform for discovery, replies, and publishing.';
+  const warmupWeeks = cfg.warmupWeeks || 3;
+
+  return `Role: You are an expert Reddit Growth Strategist and Community Manager. You specialize in organic, high-value, manual engagement that builds trust, avoids spam filters, and signals authority to search engines and AI models.
+
+Context: Reddit's API restricts automated posting. Therefore, we must use a meticulous, manual engagement strategy. Reddit is highly sensitive to self-promotion, meaning our presence must be 90% pure value and 10% highly contextual product mentions.
+
+Objective: Build a complete, customized Reddit & Community Strategy for this business.
+
+My Business Details:
+- Name of Product/Site: ${productName}
+- Core Niche / Keywords: ${keywords}
+- Main Value Proposition: ${valueProp}
+
+---
+STRATEGY GUIDELINES TO IMPLEMENT:
+
+1. TARGET SUBREDDIT IDENTIFICATION
+- Brainstorm and list 10-15 specific subreddits fitting our niche.
+- Filter these into categories (e.g., General Business, Tech-Specific, Niche/Pain-Point specific).
+- Ensure targets fit the "sweet spot" of 5k–500k subscribers for maximum visibility and indexation.
+
+2. THE 90/10 VALUE FRAMEWORK
+- Map out exactly what a ${warmupWeeks}-4 week "Warm-Up Phase" looks like (pure helper mode).
+- Create 3 distinct frameworks or template structures for how we will answer user questions using real experience, not a homepage pitch.
+- Provide examples of how to subtly mention our product as "one option among several" without sounding like an ad.
+
+3. THREAD TRIAGE & SELECTION
+- Define the exact operational criteria for a "high-worth thread" (Age under 48 hours, specific title structures, low-quality existing answers).
+- Explain step-by-step how to daily audit these subreddits by sorting by "New".
+
+4. COMPLIANCE & RISK MITIGATION
+- Detail a checklist of "Red Flags" our team must never cross (link-bombing, alt-account manipulation, lack of affiliate disclosure).
+- Explain how to review and adapt to individual subreddit rules.
+
+---
+OUTPUT REQUIRED:
+Output a highly structured, operational playbook in Markdown. Include:
+1. A List of Recommended Subreddits to audit immediately (with category, estimated size band, and why each fits).
+2. A 30-Day Content & Engagement Roadmap (Phase 1: Trust Building, Phase 2: Contextual Mentioning — week-by-week actions).
+${cfg.includeMockScenarios !== false ? `3. Three Mock Comment Scenarios showing a "Bad/Spammy" response versus an "Intelligent/High-Value" response using our business details (${productName}, keywords: ${keywords}).` : '3. (Skip mock comment scenarios — operator requested playbook only.)'}
+
+Be specific, operational, and ready for a human operator to execute tomorrow. No generic filler.`;
+}
 
 function loadJson(store, key, fallback) {
   try {
@@ -126,6 +189,7 @@ function getSettings(store) {
     inboxEcho: { ...DEFAULT_SETTINGS.inboxEcho, ...(saved.inboxEcho || {}) },
     headlineBridge: { ...DEFAULT_SETTINGS.headlineBridge, ...(saved.headlineBridge || {}) },
     momentumLens: { ...DEFAULT_SETTINGS.momentumLens, ...(saved.momentumLens || {}) },
+    growthStrategist: { ...DEFAULT_SETTINGS.growthStrategist, ...(saved.growthStrategist || {}) },
   };
 }
 
@@ -391,6 +455,53 @@ Return: title, subtitle, intro (3 paragraphs), cta`;
   return { success: true, articles, count: articles.length };
 }
 
+async function runGrowthStrategist(store, { generateAI, campaign }) {
+  const cfg = getSettings(store).growthStrategist;
+  const productName = cfg.productName || campaign?.brandName || '';
+  const keywords = String(cfg.nicheKeywords || '').trim();
+  const valueProp = cfg.valueProposition || campaign?.description || '';
+
+  if (!productName && !campaign?.brandName) {
+    const msg = 'Add your product/site name (or set brand in Campaign Command) before running.';
+    appendLog(store, 'growth-strategist', msg);
+    return { success: false, error: msg, actionsQueued: 0 };
+  }
+  if (!keywords) {
+    const msg = 'Add 3–5 core niche keywords before running.';
+    appendLog(store, 'growth-strategist', msg);
+    return { success: false, error: msg, actionsQueued: 0 };
+  }
+  if (!valueProp) {
+    const msg = 'Add a one-sentence value proposition before running.';
+    appendLog(store, 'growth-strategist', msg);
+    return { success: false, error: msg, actionsQueued: 0 };
+  }
+
+  const prompt = buildGrowthStrategistPrompt(cfg, campaign);
+  const playbook = generateAI
+    ? await generateAI(prompt)
+    : `# Reddit Growth Playbook\n\nPending AI — configure OpenRouter/Gemini keys in Settings.\n\nProduct: ${productName}\nKeywords: ${keywords}`;
+
+  const item = enqueueAction(store, {
+    moduleId: 'growth-strategist',
+    type: 'strategy_playbook',
+    postTitle: `Reddit Growth Playbook — ${productName || campaign?.brandName}`,
+    draft: playbook,
+    subreddit: 'strategy',
+  });
+
+  saveSettings(store, {
+    growthStrategist: {
+      ...cfg,
+      lastPlaybookAt: new Date().toISOString(),
+      lastPlaybookId: item.id,
+    },
+  });
+
+  appendLog(store, 'growth-strategist', `Generated Reddit growth playbook for ${productName || campaign?.brandName}`);
+  return { success: true, playbook, queued: item, actionsQueued: 1 };
+}
+
 async function runMomentumLens(store, { generateAI, campaign, fetchNews }) {
   const cfg = getSettings(store).momentumLens;
   let topics = [];
@@ -421,6 +532,7 @@ Return: top 5 trends with momentum score 1-10, why rising, and 2 product ideas e
 }
 
 const RUNNERS = {
+  'growth-strategist': runGrowthStrategist,
   'subreddit-ascent': runSubredditAscent,
   'thread-weaver': runThreadWeaver,
   'front-page-forge': runFrontPageForge,
@@ -480,6 +592,7 @@ function getStatus(store) {
 module.exports = {
   MODULES,
   DEFAULT_SETTINGS,
+  buildGrowthStrategistPrompt,
   getSettings,
   saveSettings,
   runModule,

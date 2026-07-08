@@ -62,7 +62,7 @@ textarea { min-height: 70px; resize: vertical; }
   <div class="container">
     <div class="hero">
       <h1><i class="fas fa-brain" style="color:#a78bfa;"></i> Powered by the Latest in AI</h1>
-      <p>Seven intelligent growth modules for Reddit, Quora, and content marketing — organic presence, thread outreach, viral posts, inbox replies, Medium articles, trend-driven product ideas, and Quora traffic ops. Actions queue for your approval before posting.</p>
+      <p>Eight intelligent growth modules for Reddit, Quora, and content marketing — strategy playbooks, organic presence, thread outreach, viral posts, inbox replies, Medium articles, trend-driven product ideas, and Quora traffic ops. Actions queue for your approval before posting.</p>
     </div>
 
     <div class="lab-bridge">
@@ -91,6 +91,16 @@ const { ipcRenderer, shell } = require('electron');
 window.openExternal = (url) => { if (url) shell.openExternal(url); };
 
 const MODULE_UI = {
+  'growth-strategist': {
+    fields: [
+      { id: 'productName', label: 'Product / site name', type: 'text', full: true },
+      { id: 'nicheKeywords', label: 'Core niche keywords (3–5)', type: 'textarea', full: true },
+      { id: 'valueProposition', label: 'Main value proposition (one sentence)', type: 'textarea', full: true },
+      { id: 'warmupWeeks', label: 'Warm-up phase length (weeks)', type: 'number' },
+    ],
+    checks: [{ id: 'includeMockScenarios', label: 'Include bad vs. good comment mock scenarios' }],
+    how: ['Subreddit identification (5k–500k sweet spot)', '90/10 value framework + 30-day roadmap', 'Thread triage & compliance checklist', 'Full playbook queued for approval'],
+  },
   'subreddit-ascent': {
     fields: [
       { id: 'targetSubreddits', label: 'Target subreddits', type: 'textarea', full: true },
@@ -144,7 +154,7 @@ const MODULE_UI = {
   },
 };
 
-let activeModule = 'subreddit-ascent';
+let activeModule = 'growth-strategist';
 let suiteSettings = {};
 
 function showToast(msg) {
@@ -193,6 +203,7 @@ function settingsKey(moduleId) {
     'inbox-echo': 'inboxEcho',
     'headline-bridge': 'headlineBridge',
     'momentum-lens': 'momentumLens',
+    'growth-strategist': 'growthStrategist',
   };
   return map[moduleId];
 }

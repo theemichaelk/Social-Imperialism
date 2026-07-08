@@ -7,6 +7,7 @@ import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 
 const MODULES = [
+  { id: 'growth-strategist', name: 'Reddit Growth Strategist', color: '#22c55e', icon: '🎯', tagline: 'Expert Reddit growth strategist & community manager — 90/10 manual engagement playbook for your brand.', benefits: ['Subreddit map', '30-day roadmap', 'Compliance checklist', 'Comment frameworks'] },
   { id: 'subreddit-ascent', name: 'Subreddit Ascent', color: '#f97316', icon: '🚀', tagline: 'Organic Reddit presence — browse, vote, comment on autopilot.', benefits: ['Effortless growth', 'Genuine engagement', 'Increased visibility'] },
   { id: 'thread-weaver', name: 'Thread Weaver', color: '#38bdf8', icon: '💬', tagline: 'Turn Reddit threads into targeted traffic with AI-crafted comments.', benefits: ['Targeted traffic', 'Real discussions', 'Brand visibility'] },
   { id: 'front-page-forge', name: 'Front Page Forge', color: '#ef4444', icon: '🔥', tagline: 'Forge scroll-stopping titles engineered for Reddit visibility.', benefits: ['More traffic', 'Thought leadership', 'Faster creation'] },
@@ -21,6 +22,22 @@ const MODULE_UI: Record<string, {
   checks?: Array<{ id: string; label: string }>;
   how: string[];
 }> = {
+  'growth-strategist': {
+    settingsKey: 'growthStrategist',
+    fields: [
+      { id: 'productName', label: 'Product / site name', type: 'text', full: true },
+      { id: 'nicheKeywords', label: 'Core niche keywords (3–5, comma or line separated)', type: 'textarea', full: true },
+      { id: 'valueProposition', label: 'Main value proposition (one sentence)', type: 'textarea', full: true },
+      { id: 'warmupWeeks', label: 'Warm-up phase length (weeks)', type: 'number' },
+    ],
+    checks: [{ id: 'includeMockScenarios', label: 'Include bad vs. good comment mock scenarios' }],
+    how: [
+      'AI builds subreddit targets in the 5k–500k sweet spot',
+      '90/10 value framework + 30-day engagement roadmap',
+      'Thread triage criteria and compliance red-flag checklist',
+      'Playbook queues for approval — copy into your manual workflow',
+    ],
+  },
   'subreddit-ascent': {
     settingsKey: 'subredditAscent',
     fields: [
@@ -365,7 +382,10 @@ export default function RedditAiPage() {
               {item.subreddit && <span className="badge">{item.subreddit}</span>}
             </div>
             {item.postTitle && <div className="post-meta" style={{ marginBottom: 4 }}>{item.postTitle.slice(0, 140)}</div>}
-            <div>{queuePreview(item).slice(0, 220)}</div>
+            <div style={{ whiteSpace: 'pre-wrap', maxHeight: item.type === 'strategy_playbook' ? 320 : undefined, overflow: item.type === 'strategy_playbook' ? 'auto' : undefined }}>
+              {queuePreview(item).slice(0, item.type === 'strategy_playbook' ? 2000 : 220)}
+              {item.type === 'strategy_playbook' && queuePreview(item).length > 2000 ? '…' : ''}
+            </div>
             {item.postUrl && (
               <a href={item.postUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', marginTop: 4, display: 'inline-block' }}>View post →</a>
             )}

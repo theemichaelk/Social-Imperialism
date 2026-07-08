@@ -155,7 +155,7 @@ function buildNavCatalog(): NavEntry[] {
     { match: ['connect platform', 'connect a platform', 'oauth', 'link account', 'account hub'], entry: { id: 'account-hub', label: 'Account Hub', href: '/account-hub', sectionId: 'accounts' } },
     { match: ['ai replies', 'reply engine', 'engagement queue', 'pending replies'], entry: { id: 'history', label: 'AI Replies', href: '/history', sectionId: 'discovery' } },
     { match: ['setup wizard', 'onboarding', 'go live checklist', 'research my brand', 'auto-fill brand', 'intelligent setup'], entry: { id: 'onboarding', label: 'Setup Wizard', href: '/onboarding', sectionId: 'create' } },
-    { match: ['growth lab', 'reddit lab', 'reddit ai'], entry: { id: 'reddit-ai', label: 'Growth Lab', href: '/reddit-ai', sectionId: 'labs' } },
+    { match: ['growth lab', 'reddit lab', 'reddit ai', 'reddit growth strategist', 'reddit strategist'], entry: { id: 'reddit-ai', label: 'Growth Lab', href: '/reddit-ai', sectionId: 'labs' } },
     { match: ['auto rules', 'auto-rules', 'keyword triggers'], entry: { id: 'rules', label: 'Auto-Rules', href: '/rules', sectionId: 'automation' } },
     { match: ['campaign command', 'verified nodes', 'campaign manager'], entry: { id: 'campaign-manager', label: 'Campaign Command', href: '/campaign-manager', sectionId: 'system' } },
     { match: ['imperialism brain', 'live support', 'help chat'], entry: { id: 'support', label: 'Imperialism Brain', href: '/support', sectionId: 'system' } },
