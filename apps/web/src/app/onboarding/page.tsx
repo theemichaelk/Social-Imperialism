@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { invoke, getProjectId } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { LivePulse, RingChart, BarChart, DataPanel, chartShortLabel } from '@/components/DashboardViz';
@@ -13,7 +13,7 @@ import {
   fetchOnboardingContext,
   type BrandResearchResult,
 } from '@/lib/onboardingIntelligence';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
 
@@ -25,8 +25,9 @@ type Monitor = { id?: string; term?: string; platform?: string; type?: string; t
 type Keyword = { id?: string; term: string; platforms?: string[] };
 type Post = { platform: string; content: string; url?: string; matchScore?: number };
 
-export default function OnboardingPage() {
+function OnboardingPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [status, setStatus] = useState<Record<string, unknown>>({});
   const [apiMetrics, setApiMetrics] = useState<Record<string, string>>({});
@@ -84,7 +85,15 @@ export default function OnboardingPage() {
     };
   }, []);
 
-  useEffect(() => { refreshStatus({ applyStep: true }).catch(console.error); }, [refreshStatus]);
+  useEffect(() => {
+    const urlStep = Number(searchParams.get('step'));
+    const hasUrlStep = urlStep >= 1 && urlStep <= 5;
+    refreshStatus({ applyStep: !hasUrlStep })
+      .then(() => {
+        if (hasUrlStep) setStep(urlStep);
+      })
+      .catch(console.error);
+  }, [refreshStatus, searchParams]);
 
   useEffect(() => {
     fetchOnboardingContext().then((ctx) => {
@@ -494,5 +503,17 @@ export default function OnboardingPage() {
 
 
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+        Loading Setup Wizard…
+      </div>
+    }>
+      <OnboardingPageInner />
+    </Suspense>
   );
 }

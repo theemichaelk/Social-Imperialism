@@ -1,5 +1,5 @@
 'use client';
-import { useLayoutEffect, useState, useEffect } from 'react';
+import { Suspense, useLayoutEffect, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { FooterCredit } from './FooterCredit';
@@ -111,7 +111,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onClick={() => setMobileNavOpen(false)}
         />
       )}
-      <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
+      <Suspense fallback={<aside className="sidebar sidebar-suspense-fallback" aria-hidden />}>
+        <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
+      </Suspense>
       <main className="main">
         <div className="mobile-top-bar">
           <button

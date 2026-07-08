@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
 import { CampaignOperationsPanel } from '@/components/campaign/CampaignOperationsPanel';
@@ -14,7 +14,7 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: 'nodes', label: 'Verified Nodes', hint: '15-platform proof tree' },
 ];
 
-export default function CampaignManagerPage() {
+function CampaignManagerPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('campaigns');
@@ -77,5 +77,17 @@ export default function CampaignManagerPage() {
         <VerifiedNodesPanel />
       )}
     </PageShell>
+  );
+}
+
+export default function CampaignManagerPage() {
+  return (
+    <Suspense fallback={
+      <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+        Loading Campaign Command Center…
+      </div>
+    }>
+      <CampaignManagerPageInner />
+    </Suspense>
   );
 }

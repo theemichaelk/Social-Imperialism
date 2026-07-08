@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@/lib/api';
 
@@ -104,7 +104,7 @@ function isEngageablePost(post: Post): boolean {
 
 type DashboardTabId = (typeof DASHBOARD_TABS)[number]['id'];
 
-export default function DashboardPage() {
+function DashboardPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings, accounts, isSurfaceEnabled } = useIntelligence();
@@ -785,5 +785,17 @@ export default function DashboardPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="dash-loading" style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Loading Mission Control…</p>
+      </div>
+    }>
+      <DashboardPageInner />
+    </Suspense>
   );
 }
