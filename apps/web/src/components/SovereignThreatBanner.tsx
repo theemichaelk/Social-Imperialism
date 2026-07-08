@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { invoke } from '@/lib/api';
+import { auth, invoke } from '@/lib/api';
 import {
   THEE_MICHAEL,
   THEE_MICHAEL_BANNER,
@@ -12,6 +12,7 @@ import { SI_NOTIFICATION_CHANGED } from '@/lib/theeMichaelNotificationLedger';
 
 export function SovereignThreatBanner() {
   const [status, setStatus] = useState<SovereignStatus | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const loadStatus = () => {
     invoke<SovereignStatus>('get-sovereign-threat-status')
@@ -20,6 +21,13 @@ export function SovereignThreatBanner() {
   };
 
   useEffect(() => {
+    auth.me()
+      .then((me) => setIsAdmin(!!me.user?.isAdmin))
+      .catch(() => setIsAdmin(false));
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin) return;
     loadStatus();
     const id = setInterval(loadStatus, 120000);
     const onChanged = () => loadStatus();
@@ -28,7 +36,9 @@ export function SovereignThreatBanner() {
       clearInterval(id);
       window.removeEventListener(SI_NOTIFICATION_CHANGED, onChanged);
     };
-  }, []);
+  }, [isAdmin]);
+
+  if (isAdmin) return null;
 
   const pending = status?.pendingReviewCount ?? 0;
   const frozen = !!status?.liveFrozen;

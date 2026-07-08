@@ -5,6 +5,7 @@
 const crypto = require('crypto');
 const axios = require('axios');
 const { readContainment, assertKineticSession } = require('./sovereignThreatCapture');
+const { isPlatformAdminEmail } = require('./platformAdmin');
 
 const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
@@ -292,8 +293,10 @@ function registerGuardianGatekeeperHandlers({ ipcMain, store, handlers = {} }) {
   });
 
   ipcMain.handle('release-guardian-fix', async (event, payload = {}) => {
+    const ctx = store._invokeContext || {};
+    const adminBypass = isPlatformAdminEmail(ctx.email);
     const containment = readContainment(store);
-    if (containment.liveFrozen) {
+    if (containment.liveFrozen && !adminBypass) {
       const gate = assertKineticSession(store, payload.sessionToken);
       if (!gate.ok) {
         return {

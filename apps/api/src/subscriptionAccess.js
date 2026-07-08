@@ -5,15 +5,14 @@ const { ensureDefaultProject } = require('./projectEnsure');
 
 const { PLAN_CATALOG } = require('../../desktop/services/settingsIpc');
 
+const { getPlatformAdminEmails, isPlatformAdminEmail } = require('@si/core/src/platformAdmin');
+
 function adminEmails() {
-  return (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+  return getPlatformAdminEmails();
 }
 
 function isAdminEmail(email) {
-  return adminEmails().includes(String(email || '').trim().toLowerCase());
+  return isPlatformAdminEmail(email);
 }
 
 function parseBilling(raw) {

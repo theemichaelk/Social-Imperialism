@@ -6,6 +6,7 @@
 const crypto = require('crypto');
 const path = require('path');
 const axios = require('axios');
+const { isPlatformAdminEmail } = require('./platformAdmin');
 
 const ADMIN_IDENTITY = 'THEE_MICHAEL';
 const SITE_DOMAIN = 'socialimperialism.com';
@@ -507,6 +508,9 @@ function captureThreatEvent(store, {
   userContext = {},
   autoContain = true,
 }) {
+  const adminActor = isPlatformAdminEmail(userContext.email);
+  if (adminActor) autoContain = false;
+
   const projectId = store.projectId || store.getItem('activeCampaignId') || 'default';
   const eventId = `sov_threat_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 
@@ -607,6 +611,11 @@ function captureThreatEvent(store, {
     writeContainment(store, c);
   }
 
+  if (adminActor) {
+    theeMichaelDecideThreat(store, { eventId, decision: 'approve', email: userContext.email });
+    return readEvents(store).find((e) => e.eventId === eventId) || event;
+  }
+
   return event;
 }
 
@@ -660,12 +669,35 @@ function getActionHistoryRedacted(store, limit = 100) {
 }
 
 function isAuthorizedAdmin(email) {
-  const admins = [
-    process.env.SEED_EMAIL,
-    process.env.ADMIN_EMAIL,
-    process.env.SOVEREIGN_ADMIN_EMAIL,
-  ].filter(Boolean).map((e) => e.toLowerCase());
-  return email && admins.includes(String(email).toLowerCase());
+  return isPlatformAdminEmail(email);
+}
+
+/** Auto-approve all pending sovereign events when THEE_MICHAEL is signed in. */
+function releasePendingThreatsForPlatformAdmin(store, email) {
+  if (!isPlatformAdminEmail(email)) return { released: 0 };
+  const events = readEvents(store);
+  const now = new Date().toISOString();
+  let released = 0;
+  for (const ev of events) {
+    const decision = ev.adminDecision || 'pending';
+    if (decision !== 'pending' || ev.releasedAt || ev.deniedAt) continue;
+    ev.adminDecision = 'approved';
+    ev.status = 'released';
+    ev.releasedAt = now;
+    ev.releasedBy = ADMIN_IDENTITY;
+    ev.approvedAt = now;
+    ev.autoApprovedBy = String(email).toLowerCase();
+    ev.sandboxLog = {
+      ...ev.sandboxLog,
+      containmentStatus: 'resolved',
+      liveFrozen: false,
+    };
+    releaseEventContainment(store, ev);
+    released += 1;
+  }
+  if (released) writeEvents(store, events);
+  reconcileContainment(store);
+  return { released };
 }
 
 async function deliverKineticChallenge(store, { email, challengeId, code }, handlers = {}) {
@@ -808,6 +840,10 @@ function assertKineticSession(store, sessionToken) {
 
 function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
   ipcMain.handle('get-sovereign-threat-status', () => {
+    const ctx = store._invokeContext || {};
+    if (isPlatformAdminEmail(ctx.email)) {
+      releasePendingThreatsForPlatformAdmin(store, ctx.email);
+    }
     reconcileContainment(store);
     const containment = readContainment(store);
     const events = readEvents(store);
@@ -869,8 +905,12 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
   });
 
   ipcMain.handle('decrypt-sovereign-threat-telemetry', (event, payload = {}) => {
-    const gate = assertKineticSession(store, payload.sessionToken);
-    if (!gate.ok) return { success: false, error: gate.error };
+    const ctx = store._invokeContext || {};
+    const email = payload.adminEmail || ctx.email;
+    if (!isPlatformAdminEmail(email)) {
+      const gate = assertKineticSession(store, payload.sessionToken);
+      if (!gate.ok) return { success: false, error: gate.error };
+    }
     const events = readEvents(store);
     const ev = events.find((e) => e.eventId === payload.eventId);
     if (!ev) return { success: false, error: 'Event not found' };
@@ -889,11 +929,16 @@ function registerSovereignThreatHandlers({ ipcMain, store, handlers = {} }) {
   });
 
   ipcMain.handle('approve-sovereign-threat-release', async (event, payload = {}) => {
-    const gate = assertKineticSession(store, payload.sessionToken);
-    if (!gate.ok) return { success: false, error: gate.error };
+    const ctx = store._invokeContext || {};
+    const email = payload.adminEmail || ctx.email;
+    const adminBypass = isPlatformAdminEmail(email);
+    if (!adminBypass) {
+      const gate = assertKineticSession(store, payload.sessionToken);
+      if (!gate.ok) return { success: false, error: gate.error };
+    }
 
     const cfg = handlers['get-guardian-config'] ? await handlers['get-guardian-config'](null).catch(() => ({})) : {};
-    if (cfg.approvalGateEnabled !== false) {
+    if (!adminBypass && cfg.approvalGateEnabled !== false) {
       const ticket = await handlers['create-guardian-approval']?.(null, {
         module: 'THEE_MICHAEL Security Control',
         component: 'production_release',
@@ -996,6 +1041,7 @@ module.exports = {
   scanTextForThreats,
   redactSensitiveFields,
   reconcileContainment,
+  releasePendingThreatsForPlatformAdmin,
   releaseRoutineFalsePositives,
   clearFalsePositiveContainment,
   theeMichaelDecideThreat,

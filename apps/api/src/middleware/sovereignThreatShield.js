@@ -1,14 +1,17 @@
 /**
  * API-edge Sovereign Threat Capture — scan, contain, block before invoke reaches handlers.
+ * THEE_MICHAEL (platform admin emails) bypass all holds and auto-release pending review.
  */
 const {
   scanRequestSurface,
   captureThreatEvent,
   readContainment,
   reconcileContainment,
+  releasePendingThreatsForPlatformAdmin,
   PROTECTED_CHANNELS,
   SITE_DOMAIN,
 } = require('@si/core/src/sovereignThreatCapture');
+const { isPlatformAdminEmail } = require('@si/core/src/platformAdmin');
 const { createPrismaStore } = require('@si/core');
 
 const rateMap = new Map();
@@ -49,26 +52,40 @@ async function getProjectStore(req) {
 }
 
 function requestActor(req) {
-  if (req.user) return req.user;
+  if (req.user) {
+    return {
+      userId: req.user.userId,
+      orgId: req.user.orgId,
+      email: req.user.email,
+    };
+  }
   if (req.partner) {
     return { userId: `partner:${req.partner.projectId}`, orgId: req.partner.organizationId };
   }
   return {};
 }
 
+function isTheeMichael(req) {
+  return isPlatformAdminEmail(req.user?.email);
+}
+
 async function sovereignThreatShield(req, res, next) {
   try {
-    const rate = checkRate(req);
-    if (rate.exceeded) {
-      return res.status(429).json({
-        error: 'Rate limit exceeded — request held for THEE_MICHAEL review',
-        code: 'SOVEREIGN_CONTAINED',
-        domain: SITE_DOMAIN,
-      });
+    const adminBypass = isTheeMichael(req);
+
+    if (!adminBypass) {
+      const rate = checkRate(req);
+      if (rate.exceeded) {
+        return res.status(429).json({
+          error: 'Rate limit exceeded — request held for THEE_MICHAEL review',
+          code: 'SOVEREIGN_CONTAINED',
+          domain: SITE_DOMAIN,
+        });
+      }
     }
 
     const hits = scanRequestSurface(req);
-    if (hits.length > 0) {
+    if (hits.length > 0 && !adminBypass) {
       const worst = hits.sort((a, b) => (a.severity === 'critical' ? -1 : 1))[0];
       const store = await getProjectStore(req);
       if (store) {
@@ -84,6 +101,7 @@ async function sovereignThreatShield(req, res, next) {
           userContext: requestActor(req),
           autoContain: worst.severity === 'critical' || worst.severity === 'high',
         });
+        await store.flush?.().catch(() => {});
       }
       return res.status(403).json({
         error: 'Request held — THEE_MICHAEL must approve or deny before this action is final',
@@ -95,21 +113,26 @@ async function sovereignThreatShield(req, res, next) {
     if (req.params?.channel) {
       const store = await getProjectStore(req);
       if (store) {
+        if (adminBypass) {
+          releasePendingThreatsForPlatformAdmin(store, req.user.email);
+        }
         reconcileContainment(store);
         await store.flush?.().catch(() => {});
-        const containment = readContainment(store);
-        if (containment.liveFrozen && PROTECTED_CHANNELS.has(req.params.channel)) {
-          return res.status(423).json({
-            error: 'Live paths frozen — administrator kinetic verification required before this channel',
-            code: 'SOVEREIGN_LIVE_FROZEN',
-            adminIdentity: 'THEE_MICHAEL',
-          });
-        }
-        if (containment.blockedChannels?.includes(req.params.channel)) {
-          return res.status(423).json({
-            error: 'Channel contained — threat isolation active',
-            code: 'SOVEREIGN_CHANNEL_BLOCKED',
-          });
+        if (!adminBypass) {
+          const containment = readContainment(store);
+          if (containment.liveFrozen && PROTECTED_CHANNELS.has(req.params.channel)) {
+            return res.status(423).json({
+              error: 'Live paths frozen — administrator kinetic verification required before this channel',
+              code: 'SOVEREIGN_LIVE_FROZEN',
+              adminIdentity: 'THEE_MICHAEL',
+            });
+          }
+          if (containment.blockedChannels?.includes(req.params.channel)) {
+            return res.status(423).json({
+              error: 'Channel contained — threat isolation active',
+              code: 'SOVEREIGN_CHANNEL_BLOCKED',
+            });
+          }
         }
       }
     }
@@ -122,6 +145,7 @@ async function sovereignThreatShield(req, res, next) {
 }
 
 async function sovereignAuthFailureCapture(req, reason) {
+  if (isPlatformAdminEmail(req.body?.email)) return;
   const hits = scanRequestSurface(req);
   if (!hits.length && reason !== 'brute_force') return;
   console.warn(`[sovereign] auth failure captured: ${reason} ${req.path}`);
@@ -146,7 +170,7 @@ async function sovereignAuthFailureCapture(req, reason) {
       vector: reason === 'brute_force' ? 'auth_brute_force' : 'auth_anomaly',
       summary: `Auth failure (${reason}) on ${req.path}`,
       requestMeta: { path: req.path, method: req.method, ip: req.ip, userAgent: req.headers['user-agent'] },
-      userContext: { userId: user.id, orgId: membership.organizationId },
+      userContext: { userId: user.id, orgId: membership.organizationId, email: user.email },
       autoContain: false,
     });
   } catch (e) {
