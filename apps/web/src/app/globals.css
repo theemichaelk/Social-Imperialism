@@ -196,6 +196,11 @@ a:hover { text-decoration: underline; }
 .nav-section { margin-bottom: 0.5rem; }
 .nav-section-label { padding: 0.5rem 1.25rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .nav-link-label { line-height: 1.2; min-width: 0; }
+/* Legacy sidebar guide — hidden even if an old JS bundle still injects markup */
+.nav-link-hint,
+.nav-link-features,
+.nav-link-features-summary,
+.nav-link-features-list { display: none !important; }
 .nav-link {
   display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 1.25rem;
   color: var(--muted); font-size: 0.9rem; border-left: 2px solid transparent;
