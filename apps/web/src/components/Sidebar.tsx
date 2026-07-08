@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { findActiveNavSectionId, isNavItemActive, NAV_SECTIONS } from '@/lib/nav';
 import { executeLiveSupportAction, resolveNavigationIntent } from '@/lib/liveSupportActions';
 import { SI_GUIDE_EXPAND_SIDEBAR } from '@/lib/guide_executor';
@@ -12,6 +12,15 @@ import { checkPlatformAdmin } from '@/lib/adminAccess';
 
 const COLLAPSE_KEY = 'siWebNavCollapsed';
 const SECTION_COLLAPSE_KEY = 'siWebSectionCollapsed';
+
+/** Browser autofill often drops login emails into the nav filter — never treat as a module search. */
+function isNavFilterNoise(q: string): boolean {
+  const t = q.trim();
+  if (!t) return false;
+  if (t.includes('@')) return true;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return true;
+  return false;
+}
 
 type SidebarProps = {
   mobileOpen?: boolean;
@@ -26,7 +35,9 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
     () => ({ pathname, tab: activeTab }),
     [pathname, activeTab],
   );
+  const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
+  const [searchReady, setSearchReady] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
   const [health, setHealth] = useState('');
@@ -104,9 +115,23 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
     })).filter((s) => s.items.length > 0);
   }, [isAdmin]);
 
+  useEffect(() => {
+    const el = searchRef.current;
+    if (!el) return;
+    const autofilled = el.value.trim();
+    if (autofilled && isNavFilterNoise(autofilled)) {
+      el.value = '';
+      setSearch('');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isNavFilterNoise(search)) setSearch('');
+  }, [search]);
+
   const filteredSections = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return visibleSections;
+    if (!q || isNavFilterNoise(q)) return visibleSections;
     const extraMatch = (label: string) =>
       (q.includes('thee') && label.toLowerCase().includes('support'))
       || (q.includes('admin') && label.toLowerCase().includes('support'))
@@ -172,13 +197,48 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps = {}
 
       {!collapsed && (
         <div className="sidebar-search">
-          <input
-            type="search"
-            placeholder="Search modules, Imperialism Brain, admin…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="sidebar-search-input"
-          />
+          <div className="sidebar-search-row">
+            <input
+              ref={searchRef}
+              type="text"
+              name="si-module-filter"
+              role="searchbox"
+              aria-label="Filter sidebar modules"
+              placeholder="Search modules, Imperialism Brain, admin…"
+              value={search}
+              readOnly={!searchReady}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              data-1p-ignore
+              data-lpignore="true"
+              data-form-type="other"
+              onFocus={() => setSearchReady(true)}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (isNavFilterNoise(next)) {
+                  setSearch('');
+                  return;
+                }
+                setSearch(next);
+              }}
+              className="sidebar-search-input"
+            />
+            {search && (
+              <button
+                type="button"
+                className="sidebar-search-clear"
+                onClick={() => {
+                  setSearch('');
+                  searchRef.current?.focus();
+                }}
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
           {searchNav && (
             <button
               type="button"
