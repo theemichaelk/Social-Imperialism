@@ -152,6 +152,7 @@ app.get('/api/oauth/callback', async (req, res) => {
 
 const leadsRoutes = require('./routes/leads');
 app.use('/api/leads', leadsRoutes);
+app.use('/api/public', require('./routes/publicSite'));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/billing', billingRoutes);

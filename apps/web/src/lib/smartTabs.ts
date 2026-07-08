@@ -54,6 +54,7 @@ export const SETTINGS_TABS = [
   { id: 'guardian-api', label: 'Guardian & API', group: "Today's Focus" },
   { id: 'billing', label: 'Billing', group: 'Account' },
   { id: 'strategy', label: 'Strategy & Traffic', group: 'Advanced' },
+  { id: 'site-tracking', label: 'Site & Tracking', group: 'Advanced' },
   { id: 'connect', label: 'Probes & Browser', group: 'Advanced' },
   { id: 'system', label: 'System', group: 'Advanced' },
 ] as const;

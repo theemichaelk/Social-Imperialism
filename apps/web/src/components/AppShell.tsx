@@ -14,6 +14,7 @@ import { OverlordInterventionBanner } from './OverlordInterventionBanner';
 import { LeadCaptureModal } from './LeadCaptureModal';
 import { CampaignMasteryBanner } from './CampaignMasteryBanner';
 import { CampaignSwitcher } from './CampaignSwitcher';
+import { SiteTrackingInjector } from './SiteTrackingInjector';
 
 const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
@@ -75,6 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (isPublic) {
     return (
       <>
+        <SiteTrackingInjector />
         {children}
         {showLeadModal && <LeadCaptureModal />}
       </>

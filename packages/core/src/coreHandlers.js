@@ -726,6 +726,23 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   });
   ipcMain.handle('get-watched-monitors', () => JSON.parse(store.getItem('watchedMonitors') || '[]'));
 
+  ipcMain.handle('get-site-tracking-settings', () => {
+    const { getSiteTrackingSettings, getSitePagesCatalog } = require(path.join(desktopServicesPath, 'siteTrackingSettings'));
+    const settings = getSiteTrackingSettings(store);
+    return { success: true, settings, catalog: getSitePagesCatalog() };
+  });
+
+  ipcMain.handle('save-site-tracking-settings', (_event, payload) => {
+    const { saveSiteTrackingSettings } = require(path.join(desktopServicesPath, 'siteTrackingSettings'));
+    return saveSiteTrackingSettings(store, payload || {});
+  });
+
+  ipcMain.handle('get-public-site-tracking-preview', (_event, pathname = '/') => {
+    const { getSiteTrackingSettings, getPublicSiteTrackingPayload } = require(path.join(desktopServicesPath, 'siteTrackingSettings'));
+    const settings = getSiteTrackingSettings(store);
+    return { success: true, preview: getPublicSiteTrackingPayload(settings, pathname) };
+  });
+
   ipcMain.handle('discover-keyword-targets', async (_event, payload = {}) => {
     const { discoverKeywordTargets } = require(path.join(desktopServicesPath, 'keywordTargetDiscovery'));
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));

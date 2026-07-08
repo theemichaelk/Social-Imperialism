@@ -27,6 +27,7 @@ import {
 } from '@/lib/smartTabs';
 import { GuardianGatekeeperPanel } from '@/components/GuardianGatekeeperPanel';
 import { SovereignThreatPanel } from '@/components/SovereignThreatPanel';
+import { SitePagesTrackingPanel } from '@/components/SitePagesTrackingPanel';
 import { THEE_MICHAEL } from '@/lib/sovereignThreatCapture';
 
 type Campaign = {
@@ -367,6 +368,7 @@ function SettingsContent() {
           <Link href="/integrations" className="btn">Integrations Hub</Link>
           <button type="button" className="btn" onClick={() => setTabAndUrl('connect')}>Grok & Browser</button>
           <button type="button" className="btn" onClick={() => setTabAndUrl('strategy')}>Strategy & Traffic</button>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('site-tracking')}>Site & Tracking</button>
           <Link href="/account-hub" className="btn">Account Hub</Link>
         </div>
         <div className="grid grid-2">
@@ -424,6 +426,10 @@ function SettingsContent() {
           {strategySection === 'site-health' && <SiteTrafficHealthPanel campaigns={campaigns} />}
           {strategySection === 'account-intelligence' && <IntelligenceSettingsPanel />}
         </>
+      )}
+
+      {tab === 'site-tracking' && (
+        <SitePagesTrackingPanel onMessage={setMsg} />
       )}
 
       {tab === 'connect' && (
