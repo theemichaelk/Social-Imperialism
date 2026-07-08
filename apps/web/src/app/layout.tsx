@@ -21,12 +21,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <style
           dangerouslySetInnerHTML={{
-            __html: '.nav-link-hint,.nav-link-features,.nav-link-features-summary,.nav-link-features-list,.nav-link-wrap .nav-link-features,.nav-link-text>:not(.nav-link-label){display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important}',
+            __html: '.nav-link-hint,.nav-link-features,.nav-link-features-summary,.nav-link-features-list,.nav-link-wrap>:not(.nav-link),.nav-link-wrap .nav-link-features,.nav-link-text>:not(.nav-link-label){display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important}',
           }}
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){function s(){document.querySelectorAll(".nav-link-features,.nav-link-hint,.nav-link-features-summary,.nav-link-features-list").forEach(function(e){e.remove()});document.querySelectorAll(".nav-link-text").forEach(function(w){w.querySelectorAll(":scope > *:not(.nav-link-label)").forEach(function(e){e.remove()});});}s();document.addEventListener("DOMContentLoaded",s);if(typeof MutationObserver!=="undefined"){new MutationObserver(s).observe(document.documentElement,{childList:true,subtree:true});}})();`,
+            __html: `(function(){function s(){document.querySelectorAll(".nav-link-features,.nav-link-hint,.nav-link-features-summary,.nav-link-features-list").forEach(function(e){e.remove()});document.querySelectorAll(".nav-link-wrap > *:not(.nav-link)").forEach(function(e){e.remove()});document.querySelectorAll(".nav-link-text").forEach(function(w){w.querySelectorAll(":scope > *:not(.nav-link-label)").forEach(function(e){e.remove()});});}s();document.addEventListener("DOMContentLoaded",s);if(typeof MutationObserver!=="undefined"){new MutationObserver(s).observe(document.documentElement,{childList:true,subtree:true});}})();`,
           }}
         />
       </head>

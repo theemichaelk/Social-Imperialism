@@ -201,6 +201,7 @@ a:hover { text-decoration: underline; }
 .nav-link-features,
 .nav-link-features-summary,
 .nav-link-features-list,
+.nav-link-wrap > :not(.nav-link),
 .nav-link-text > :not(.nav-link-label) { display: none !important; }
 .nav-link {
   display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 1.25rem;
