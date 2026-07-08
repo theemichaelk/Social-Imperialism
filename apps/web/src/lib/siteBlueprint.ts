@@ -32,7 +32,7 @@ export const SITE_FOOTER = {
 
 /** Verified marketing constants — align with brain/FEATURES.md */
 export const BLUEPRINT_METRICS = {
-  ipcChannels: '382',
+  ipcChannels: '407',
   platformLabel: '14+',
   aiModels: '100+',
   apiIntegrations: '50+',
@@ -82,11 +82,19 @@ export function getPublicNavActions(loggedIn = false): PublicNavAction[] {
 }
 
 /** Default footer links — Sign In, Dashboard, Integrations, Settings, Founder */
+export const FOOTER_LEGAL_LINKS = [
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
+] as const;
+
 export const FOOTER_LINKS = [
   { href: '/subscribe', label: 'Get Started' },
   { href: '/login', label: 'Sign In' },
   { href: '/download', label: 'Download Desktop' },
   { href: '/founder', label: 'Founder' },
+  ...FOOTER_LEGAL_LINKS,
 ] as const;
 
 export function getSiteCapabilities() {

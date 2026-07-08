@@ -1970,12 +1970,51 @@ textarea.input { min-height: 100px; resize: vertical; }
 }
 .home-footer-links { display: flex; gap: 1.25rem; flex-wrap: wrap; justify-content: center; }
 .home-footer-links a { color: var(--muted); font-size: 0.88rem; }
+.home-footer-legal {
+  display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+  padding-top: 0.35rem; border-top: 1px solid rgba(51, 65, 85, 0.45);
+}
+.home-footer-legal a {
+  color: #94a3b8; font-size: 0.8rem; text-decoration: none;
+}
+.home-footer-legal a:hover { color: var(--accent); }
+.home-page .home-footer-legal a { text-decoration: none; }
 .home-footer-copy { color: #64748b; font-size: 0.78rem; margin: 0; }
 .home-footer .home-footer-copy + .home-footer-copy { margin-top: 0.35rem; }
 .home-footer-copy a, .app-footer-credit a, .login-footer-credit a { color: var(--accent); text-decoration: none; }
 .home-footer-copy a:hover, .app-footer-credit a:hover, .login-footer-credit a:hover { text-decoration: underline; }
 .app-footer-credit { margin: 2rem 0 1rem; padding-top: 1rem; border-top: 1px solid #334155; color: #64748b; font-size: 0.78rem; text-align: center; }
 .login-footer-credit { margin: 1.25rem 0 0; text-align: center; color: #64748b; font-size: 0.78rem; }
+
+.public-static-page .public-static-hero {
+  padding: 3rem 0 2.5rem; position: relative; z-index: 1;
+}
+.public-static-container { max-width: 820px; text-align: left; }
+.public-static-container h1 {
+  font-size: clamp(2rem, 4vw, 2.75rem); margin: 0.5rem 0 1rem;
+  background: linear-gradient(135deg, #38bdf8, #a855f7);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.public-static-lead {
+  color: var(--muted); font-size: 1.05rem; line-height: 1.65; margin: 0 0 2rem; max-width: 62ch;
+}
+.public-static-sections { display: flex; flex-direction: column; gap: 1rem; }
+.public-static-block { padding: 1.35rem 1.5rem; text-align: left; }
+.public-static-block h2 {
+  margin: 0 0 0.85rem; font-size: 1.05rem; color: var(--accent);
+}
+.public-static-para {
+  color: var(--muted); line-height: 1.7; margin: 0 0 0.85rem; font-size: 0.94rem;
+}
+.public-static-para:last-child { margin-bottom: 0; }
+.public-static-list {
+  margin: 0.5rem 0 0; padding-left: 1.25rem; color: var(--muted);
+  font-size: 0.92rem; line-height: 1.65;
+}
+.public-static-list li { margin-bottom: 0.35rem; }
+.public-static-actions {
+  display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 2rem;
+}
 
 .home-nav-toggle {
   display: none;

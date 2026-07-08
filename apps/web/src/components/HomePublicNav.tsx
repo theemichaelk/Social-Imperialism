@@ -77,6 +77,8 @@ export function HomePublicNav({ loggedIn = false, variant = 'home' }: Props) {
             <NavAnchor href="/" onClick={closeMobile}>Home</NavAnchor>
             <a href="/#showcase" onClick={closeMobile}>Demo</a>
             <NavAnchor href="/integrations" onClick={closeMobile}>Integrations</NavAnchor>
+            <NavAnchor href="/about" onClick={closeMobile}>About</NavAnchor>
+            <NavAnchor href="/contact" onClick={closeMobile}>Contact</NavAnchor>
             <NavAnchor href="/founder" onClick={closeMobile}>Founder</NavAnchor>
           </>
         )}
