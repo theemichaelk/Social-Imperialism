@@ -16,6 +16,7 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
+import { normalizeKeywordTerms, parseGenerateKeywordsResponse } from '@/lib/keywordSuggestions';
 
 const PLATFORMS = ALL_PLATFORMS;
 const STEPS = ['Brand Profile', 'API Connections', 'Keywords & Platforms', 'Feed Preview', 'AI Replies & Be First'];
@@ -211,9 +212,24 @@ function OnboardingPageInner() {
     setLoading(true);
     setMsg('AI researching keywords…');
     try {
-      const result = await invoke<string[] | { keywords?: string[]; error?: string }>('generate-keywords', brand);
-      const terms = Array.isArray(result) ? result : (result.keywords || []);
-      if (!terms.length) throw new Error((result as { error?: string }).error || 'No keywords returned');
+      const camp = await invoke<{
+        brandName?: string;
+        domain?: string;
+        description?: string;
+        audience?: string;
+      }>('get-active-campaign').catch(() => null);
+      const payload = {
+        brandName: brand.brandName || camp?.brandName || '',
+        domain: brand.domain || camp?.domain || '',
+        description: brand.description || camp?.description || '',
+        audience: brand.audience || camp?.audience || '',
+      };
+      if (!payload.brandName && !payload.domain) {
+        throw new Error('Enter your brand name or domain in Step 1 first.');
+      }
+      const result = await invoke<unknown>('generate-keywords', payload);
+      const { terms, error } = parseGenerateKeywordsResponse(result);
+      if (!terms.length) throw new Error(error || 'No keywords returned');
       setSuggested(terms);
       setMsg(`${terms.length} keyword suggestions ready — click to add or save all`);
     } catch (e) {
@@ -224,8 +240,9 @@ function OnboardingPageInner() {
   }
 
   function addKeywords(terms: string[]) {
+    const normalized = normalizeKeywordTerms(terms);
     const existing = new Set(keywords.map((k) => k.term.toLowerCase()));
-    const added = terms.filter((t) => t.trim() && !existing.has(t.trim().toLowerCase()));
+    const added = normalized.filter((t) => t && !existing.has(t.toLowerCase()));
     setKeywords((prev) => [...prev, ...added.map((term) => ({ term, platforms }))]);
   }
 

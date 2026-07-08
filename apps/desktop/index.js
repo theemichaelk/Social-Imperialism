@@ -944,11 +944,27 @@ ipcMain.handle('get-simulated-feed', async (event, filters = {}) => {
 ipcMain.handle('generate-keywords', async (event, brandData) => {
   try {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const result = await integrations.researchBrandKeywords(brandData, keys, generateAI);
-    if (result.error && (!result.keywords || result.keywords.length === 0)) {
-      return { error: result.error, keywords: [] };
+    const camps = JSON.parse(store.getItem('campaigns') || '[]');
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const campaign = camps.find((c) => c.id === activeId) || {};
+    const brand = {
+      brandName: brandData?.brandName || campaign.brandName || '',
+      domain: brandData?.domain || campaign.domain || '',
+      description: brandData?.description || campaign.description || '',
+      audience: brandData?.audience || campaign.audience || '',
+    };
+    const keywordResearch = require('./services/keywordResearch');
+    const result = await integrations.researchBrandKeywords(brand, keys, generateAI);
+    let terms = keywordResearch.normalizeKeywordTerms(result?.keywords || []);
+    if (!terms.length) {
+      terms = keywordResearch.normalizeKeywordTerms(
+        await keywordResearch.aiSuggestKeywords(brand, generateAI),
+      );
     }
-    return result.keywords;
+    if (!terms.length) {
+      return { error: result?.error || 'No keywords generated. Configure AI or SERP keys in Integrations.', keywords: [] };
+    }
+    return terms;
   } catch (error) {
     console.error('Keyword research error:', error.message);
     return { error: error.message, keywords: [] };
@@ -1958,13 +1974,12 @@ ipcMain.handle('shorten-url', async (event, longUrl) => {
 });
 
 ipcMain.handle('serp-search', async (event, q) => {
-  const key = getGlobalKey('serpApiKey') || 'd7dc8ad714606a255cc581b522b40fa80370615757f1622cd008389fcb7065bc';
-  try {
-    const res = await axios.get(`https://serpapi.com/search.json?q=${encodeURIComponent(q)}&api_key=${key}`);
-    return { success: true, data: res.data.organic_results || [] };
-  } catch(e) {
-    return { success: false, error: e.message };
+  const { serpSearch, getSerpProviderStatus } = require('../../packages/core/src/serpProvider');
+  const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+  if (!getSerpProviderStatus(keys).configured) {
+    return { success: false, error: 'No SERP provider — Social Imperialism SERP base URL or SerpAPI key in Integrations' };
   }
+  return serpSearch(keys, q);
 });
 
 ipcMain.handle('play-tts', async (event, text) => {

@@ -9,6 +9,7 @@ import { QuantumPagesPanel } from '@/components/QuantumPagesPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { PromptVaultPicker } from '@/components/PromptVaultPicker';
 import Link from 'next/link';
+import { parseGenerateKeywordsResponse } from '@/lib/keywordSuggestions';
 
 type Keyword = {
   id: string;
@@ -125,11 +126,15 @@ export default function KeywordsPage() {
     setLoading(true);
     setMsg('AI researching keywords…');
     try {
-      const camp = await invoke<{ brandName?: string; domain?: string; description?: string }>('get-active-campaign');
-      const terms = await invoke<Array<string | { term?: string }>>('generate-keywords', camp || {});
-      if (!Array.isArray(terms) || !terms.length) throw new Error('No keywords generated');
+      const camp = await invoke<{ brandName?: string; domain?: string; description?: string; audience?: string }>('get-active-campaign');
+      if (!camp?.brandName && !camp?.domain) {
+        throw new Error('Set brand name or domain in Setup Wizard first.');
+      }
+      const result = await invoke<unknown>('generate-keywords', camp || {});
+      const { terms, error } = parseGenerateKeywordsResponse(result);
+      if (!terms.length) throw new Error(error || 'No keywords generated');
       const entries = terms.map((t) => ({
-        term: typeof t === 'string' ? t : (t.term || ''),
+        term: t,
         platforms: defaultPlatforms,
         intentTags: ['brand'],
         intent: 'mentions',

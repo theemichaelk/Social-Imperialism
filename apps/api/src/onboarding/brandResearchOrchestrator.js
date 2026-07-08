@@ -402,7 +402,9 @@ async function researchBrandFromDomain(projectId, organizationId, input = {}) {
       channel: 'generate-keywords',
       args: [brand],
     });
-    keywordTerms = Array.isArray(kw) ? kw : (kw?.keywords || []);
+    const rawKw = Array.isArray(kw) ? kw : (kw?.keywords || []);
+    const { normalizeKeywordTerms } = require('../../../apps/desktop/services/keywordResearch');
+    keywordTerms = normalizeKeywordTerms(rawKw);
     steps.push({ step: 'generate-keywords', ok: keywordTerms.length > 0, count: keywordTerms.length });
   } catch (e) {
     steps.push({ step: 'generate-keywords', ok: false, error: e.message });

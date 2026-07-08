@@ -5,17 +5,98 @@ const { hasTwitterKeys } = require('./keys');
 
 const UA = 'SocialImperialism/1.0 by SocialImperialismApp';
 
+function extractKeywordTerm(item) {
+  if (item == null) return '';
+  if (typeof item === 'string') return item.trim();
+  if (typeof item === 'object') {
+    const raw = item.term ?? item.keyword ?? item.query ?? item.value ?? item.label ?? '';
+    return String(raw).trim();
+  }
+  return String(item).trim();
+}
+
+function normalizeKeywordTerms(items) {
+  const seen = new Set();
+  const out = [];
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    const term = extractKeywordTerm(item);
+    const key = term.toLowerCase();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(term);
+  });
+  return out;
+}
+
 function uniqueTerms(terms) {
   const seen = new Set();
   return terms.filter((t) => {
-    const key = String(t.term || t).toLowerCase().trim();
+    const key = extractKeywordTerm(t).toLowerCase();
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 }
 
+function parseAiKeywordList(text) {
+  let clean = String(text || '').trim();
+  if (!clean) return [];
+  if (clean.startsWith('```json')) clean = clean.slice(7);
+  if (clean.startsWith('```')) clean = clean.slice(3);
+  if (clean.endsWith('```')) clean = clean.slice(0, -3);
+  clean = clean.trim();
+
+  try {
+    const parsed = JSON.parse(clean);
+    if (Array.isArray(parsed)) {
+      return normalizeKeywordTerms(parsed);
+    }
+    if (parsed && Array.isArray(parsed.keywords)) {
+      return normalizeKeywordTerms(parsed.keywords);
+    }
+  } catch (e) { /* fall through */ }
+
+  const lineItems = clean
+    .split(/\n+/)
+    .map((line) => line.replace(/^[\s\-*•\d.)]+/, '').trim())
+    .filter(Boolean);
+  if (lineItems.length > 1) return normalizeKeywordTerms(lineItems);
+
+  return normalizeKeywordTerms(clean.split(/[,;|]/));
+}
+
+async function aiSuggestKeywords(brandData, generateAI) {
+  if (!generateAI) return [];
+  const prompt = `Brand: ${brandData.brandName || 'brand'}. Domain: ${brandData.domain || 'n/a'}. Audience: ${brandData.audience || 'professionals'}. Description: ${brandData.description || ''}.
+Return ONLY a JSON array of 8 short social listening keywords/phrases (strings) to track on Twitter, Reddit, and LinkedIn. No markdown.`;
+  try {
+    const text = await generateAI(prompt);
+    const terms = parseAiKeywordList(text);
+    if (terms.length) return terms;
+  } catch (e) {
+    console.error('AI keyword assist error:', e.message);
+  }
+
+  try {
+    const fallbackPrompt = `Suggest 8 high-intent social media keywords for brand "${brandData.brandName || 'brand'}" (${brandData.domain || 'no domain'}). Return comma-separated only.`;
+    const text = await generateAI(fallbackPrompt);
+    return parseAiKeywordList(text);
+  } catch (e) {
+    console.error('AI keyword fallback error:', e.message);
+    return [];
+  }
+}
+
 async function fetchSerpRelated(seed, keys, limit = 8) {
+  try {
+    const { serpRelatedTerms, isSerpConfigured } = require('../../../packages/core/src/serpProvider');
+    if (isSerpConfigured(keys)) {
+      const fromProvider = await serpRelatedTerms(keys, seed, limit);
+      if (fromProvider.length) return fromProvider;
+    }
+  } catch (e) {
+    console.error('SERP provider related terms:', e.message);
+  }
   if (!keys.serpApiKey) return [];
   const terms = [];
 
@@ -113,51 +194,45 @@ async function enrichKeyword(term, keys, meta = {}) {
 }
 
 async function researchBrandKeywords(brandData, keys, generateAI) {
+  const brand = brandData || {};
   const seeds = [
-    brandData.brandName,
-    `${brandData.brandName} ${brandData.audience || ''}`.trim(),
-    `${brandData.description || ''}`.split(' ').slice(0, 4).join(' '),
+    brand.brandName,
+    brand.domain,
+    `${brand.brandName || ''} ${brand.audience || ''}`.trim(),
+    `${brand.description || ''}`.split(/\s+/).slice(0, 5).join(' '),
   ].filter(Boolean);
 
   let candidates = [];
-  for (const seed of seeds.slice(0, 2)) {
+  for (const seed of seeds.slice(0, 3)) {
     const related = await fetchSerpRelated(seed, keys, 6);
     candidates.push(...related);
   }
 
-  if (candidates.length < 3 && generateAI) {
-    const prompt = `Brand: ${brandData.brandName}. Audience: ${brandData.audience || 'professionals'}. Description: ${brandData.description || ''}.
-Return ONLY a JSON array of 5 short social listening keywords/phrases (strings) to track. No markdown.`;
-    try {
-      const text = await generateAI(prompt);
-      let clean = text.trim();
-      if (clean.startsWith('```json')) clean = clean.substring(7);
-      if (clean.endsWith('```')) clean = clean.substring(0, clean.length - 3);
-      const aiTerms = JSON.parse(clean.trim());
-      if (Array.isArray(aiTerms)) {
-        aiTerms.forEach((t) => candidates.push({ term: String(t), source: 'AI + Brand Profile' }));
-      }
-    } catch (e) {
-      console.error('AI keyword assist error:', e.message);
-    }
+  if (candidates.length < 3) {
+    const aiTerms = await aiSuggestKeywords(brand, generateAI);
+    aiTerms.forEach((term) => candidates.push({ term, source: 'AI + Brand Profile' }));
   }
 
-  candidates = uniqueTerms(candidates).slice(0, 8);
+  candidates = uniqueTerms(candidates).slice(0, 10);
+  const keywordStrings = normalizeKeywordTerms(candidates);
 
-  if (candidates.length === 0) {
+  if (keywordStrings.length === 0) {
     return {
       keywords: [],
-      error: 'No keywords found. Add SERP_API_KEY to .env for Google research, or configure Gemini/OpenRouter for AI suggestions.',
+      enriched: [],
+      error: 'No keywords found. Add a brand name in Setup Wizard, or configure Gemini/OpenRouter (AI) or SerpAPI/SI SERP for live research.',
     };
   }
 
   const enriched = [];
-  for (const c of candidates.slice(0, 6)) {
-    enriched.push(await enrichKeyword(c.term, keys, { source: c.source }));
+  for (const term of keywordStrings.slice(0, 6)) {
+    const meta = candidates.find((c) => extractKeywordTerm(c).toLowerCase() === term.toLowerCase());
+    enriched.push(await enrichKeyword(term, keys, { source: meta?.source || 'Research' }));
   }
 
   enriched.sort((a, b) => (b.liveSignals || 0) - (a.liveSignals || 0));
-  return { keywords: enriched, error: null };
+  const sortedTerms = normalizeKeywordTerms(enriched);
+  return { keywords: sortedTerms, enriched, error: null };
 }
 
 async function researchSingleKeyword(term, keys) {
@@ -184,4 +259,8 @@ module.exports = {
   researchSingleKeyword,
   enrichKeyword,
   getApiStatus,
+  extractKeywordTerm,
+  normalizeKeywordTerms,
+  parseAiKeywordList,
+  aiSuggestKeywords,
 };

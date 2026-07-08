@@ -27,6 +27,7 @@ function registerCoreHandlers(deps) {
   const qaDiscoveryCache = { data: null, ts: 0 };
   const QA_DISCOVERY_CACHE_TTL_MS = 10 * 60 * 1000;
   const { withTimeout } = require(path.join(desktopServicesPath, 'asyncUtils'));
+  const { normalizeKeywordTerms, aiSuggestKeywords } = require(path.join(desktopServicesPath, 'keywordResearch'));
   const brandGuidelines = require(path.join(__dirname, '../../../apps/desktop/services/brandGuidelines'));
   const { buildGlobalCustomPromptRequest } = require(path.join(__dirname, '../../../apps/desktop/services/customPromptGenerator'));
   const aiReplyStore = require(path.join(__dirname, '../../../apps/desktop/services/aiReplyStore'));
@@ -209,21 +210,31 @@ function registerCoreHandlers(deps) {
 
   ipcMain.handle('generate-keywords', async (event, brandData) => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-    const fastKeywords = async () => {
-      const prompt = `Suggest 8 high-intent social media keywords for brand "${brandData?.brandName || 'brand'}" domain ${brandData?.domain || ''}. Return comma-separated only.`;
-      const text = await withTimeout(generateAI(prompt), 22000, '');
-      return String(text || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 10);
+    const campaign = getCampaign();
+    const brand = {
+      brandName: brandData?.brandName || campaign.brandName || '',
+      domain: brandData?.domain || campaign.domain || '',
+      description: brandData?.description || campaign.description || '',
+      audience: brandData?.audience || campaign.audience || '',
     };
+    const fastKeywords = async () => normalizeKeywordTerms(
+      await withTimeout(aiSuggestKeywords(brand, generateAI), 22000, []),
+    );
     try {
       const result = await withTimeout(
-        integrations.researchBrandKeywords(brandData, keys, generateAI),
+        integrations.researchBrandKeywords(brand, keys, generateAI),
         28000,
         null,
       );
-      if (result && Array.isArray(result.keywords) && result.keywords.length) return result.keywords;
-      return await fastKeywords();
+      const terms = normalizeKeywordTerms(result?.keywords || []);
+      if (terms.length) return terms;
+      const fallback = await fastKeywords();
+      if (fallback.length) return fallback;
+      return { error: result?.error || 'No keywords generated. Configure AI or SERP keys in Integrations.', keywords: [] };
     } catch (e) {
-      return await fastKeywords();
+      const fallback = await fastKeywords();
+      if (fallback.length) return fallback;
+      return { error: e.message || 'Keyword generation failed', keywords: [] };
     }
   });
 
@@ -840,7 +851,14 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
       campaignName: campaign.brandName || 'Active campaign',
       accounts: accounts.map((a) => ({ id: a.id, platform: a.platform, handle: a.handle || a.username || a.id })),
       keywords,
-      apiStatus: { twitter: hasTwitterKeys(keys), linkedin: hasLinkedInKeys(keys), reddit: hasRedditKeys(keys), serp: !!keys.serpApiKey, gemini: !!keys.gemini },
+      apiStatus: {
+        twitter: hasTwitterKeys(keys),
+        linkedin: hasLinkedInKeys(keys),
+        reddit: hasRedditKeys(keys),
+        serp: !!(keys.serpApiKey || keys.siSerpBaseUrl || keys.siSerpApiKey || keys.openSerpBaseUrl || keys.openSerpApiKey),
+        socialImperialismSerp: !!(keys.siSerpBaseUrl || keys.siSerpApiKey || keys.openSerpBaseUrl || keys.openSerpApiKey),
+        gemini: !!keys.gemini,
+      },
     };
   });
 
