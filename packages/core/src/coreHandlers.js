@@ -726,6 +726,22 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
   });
   ipcMain.handle('get-watched-monitors', () => JSON.parse(store.getItem('watchedMonitors') || '[]'));
 
+  ipcMain.handle('discover-keyword-targets', async (_event, payload = {}) => {
+    const { discoverKeywordTargets } = require(path.join(desktopServicesPath, 'keywordTargetDiscovery'));
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    return withTimeout(
+      discoverKeywordTargets({
+        keywords: payload.keywords,
+        platform: payload.platform || 'All',
+        keys,
+        limit: payload.limit || 50,
+        limitPerPlatform: payload.limitPerPlatform || 4,
+      }),
+      60000,
+      { success: false, error: 'Discovery timed out — try fewer keywords or one platform', targets: [] },
+    );
+  });
+
   ipcMain.handle('get-worker-status', () => {
     const tasks = JSON.parse(store.getItem('workerTasks') || '[]');
     const running = store.getItem('workerRunningFlag') === 'true';

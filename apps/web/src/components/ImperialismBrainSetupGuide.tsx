@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { ImperialismBrainAvatar } from '@/components/ImperialismBrainAvatar';
 import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
+import { BeFirstTargetDiscovery } from '@/components/BeFirstTargetDiscovery';
+import type { DiscoveredTarget } from '@/lib/beFirstTargets';
 import type { BrandResearchResult } from '@/lib/onboardingIntelligence';
 
 export const WIZARD_STEP_LABELS = [
@@ -340,6 +342,9 @@ type Props = {
   monitors?: WizardMonitor[];
   onAddMonitor?: () => void;
   onRemoveMonitor?: (index: number) => void;
+  onAddDiscoveredTarget?: (target: DiscoveredTarget) => void;
+  discoverKeywords?: string;
+  onDiscoverKeywordsChange?: (value: string) => void;
   onAutoFillPrompt?: () => void;
   onFinish?: () => void;
   summaryBrandName?: string;
@@ -393,6 +398,9 @@ export function ImperialismBrainSetupGuide({
   monitors = [],
   onAddMonitor,
   onRemoveMonitor,
+  onAddDiscoveredTarget,
+  discoverKeywords = '',
+  onDiscoverKeywordsChange,
   onAutoFillPrompt,
   onFinish,
   summaryBrandName,
@@ -809,6 +817,19 @@ export function ImperialismBrainSetupGuide({
               + Watch
             </button>
           </div>
+
+          <BeFirstTargetDiscovery
+            keywordInput={discoverKeywords || watchTerm}
+            onKeywordInputChange={onDiscoverKeywordsChange}
+            platformFilter={watchPlatform}
+            onPlatformFilterChange={onWatchPlatformChange}
+            platformOptions={platformOptions}
+            platformLabel={platformLabel}
+            monitors={monitors}
+            onAddToWatchList={(target) => onAddDiscoveredTarget?.(target)}
+            disabled={loading}
+          />
+
           {monitors.length === 0 && (
             <p className="brain-setup-step-note">No monitors yet — add a keyword or account for Be-First replies.</p>
           )}

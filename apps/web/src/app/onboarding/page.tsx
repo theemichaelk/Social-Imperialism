@@ -17,6 +17,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
 import { normalizeKeywordTerms, parseGenerateKeywordsResponse } from '@/lib/keywordSuggestions';
+import { type DiscoveredTarget, targetToMonitor } from '@/lib/beFirstTargets';
 
 const PLATFORMS = ALL_PLATFORMS;
 const STEPS = ['Brand Profile', 'API Connections', 'Keywords & Platforms', 'Feed Preview', 'AI Replies & Be First'];
@@ -51,6 +52,7 @@ function OnboardingPageInner() {
   const [watchTerm, setWatchTerm] = useState('');
   const [watchType, setWatchType] = useState('keyword');
   const [watchPlatform, setWatchPlatform] = useState('All');
+  const [discoverKeywords, setDiscoverKeywords] = useState('');
   const [research, setResearch] = useState<BrandResearchResult | null>(null);
 
   const refreshStatus = useCallback(async (opts?: { applyStep?: boolean }) => {
@@ -95,6 +97,12 @@ function OnboardingPageInner() {
       })
       .catch(console.error);
   }, [refreshStatus, searchParams]);
+
+  useEffect(() => {
+    if (step === 5 && !discoverKeywords && keywords.length) {
+      setDiscoverKeywords(keywords.map((k) => k.term).slice(0, 5).join(', '));
+    }
+  }, [step, keywords, discoverKeywords]);
 
   useEffect(() => {
     fetchOnboardingContext().then((ctx) => {
@@ -323,11 +331,27 @@ function OnboardingPageInner() {
       target: term,
       added: new Date().toISOString(),
     };
-    const next = [entry, ...monitors].slice(0, 20);
+    const next = [entry, ...monitors].slice(0, 50);
     await invoke('save-watched-monitors', next);
     setMonitors(next);
     setWatchTerm('');
     setMsg('Monitor added');
+  }
+
+  async function addDiscoveredTarget(target: DiscoveredTarget) {
+    const entry = targetToMonitor(target) as Monitor;
+    const exists = monitors.some(
+      (m) => String(m.term || '').toLowerCase() === entry.term?.toLowerCase()
+        && (m.platform || 'All') === (entry.platform || 'All'),
+    );
+    if (exists) {
+      setMsg('Already on your watch list');
+      return;
+    }
+    const next = [entry, ...monitors].slice(0, 50);
+    await invoke('save-watched-monitors', next);
+    setMonitors(next);
+    setMsg(`Watching ${entry.term} on ${entry.platform}`);
   }
 
   async function removeMonitor(idx: number) {
@@ -484,6 +508,9 @@ function OnboardingPageInner() {
         monitors={monitors}
         onAddMonitor={addMonitor}
         onRemoveMonitor={removeMonitor}
+        onAddDiscoveredTarget={addDiscoveredTarget}
+        discoverKeywords={discoverKeywords}
+        onDiscoverKeywordsChange={setDiscoverKeywords}
         onAutoFillPrompt={autoFillPrompt}
         onFinish={finish}
         summaryBrandName={brand.brandName}

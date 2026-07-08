@@ -1982,6 +1982,12 @@ ipcMain.handle('serp-search', async (event, q) => {
   return serpSearch(keys, q);
 });
 
+ipcMain.handle('get-serp-provider-status', async () => {
+  const { getSerpProviderStatusAsync } = require('../../packages/core/src/serpProvider');
+  const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+  return { success: true, ...(await getSerpProviderStatusAsync(keys)) };
+});
+
 ipcMain.handle('play-tts', async (event, text) => {
   const userId = getGlobalKey('playhtUserId') || 'XDuQKo0qcObM7j4xn7KM7UHktJQ2';
   const secret = getGlobalKey('playhtSecretKey') || 'e0281223651d4ca3bc478cfa4e9ba517';
@@ -2647,6 +2653,18 @@ ipcMain.handle('get-watched-monitors', (event) => {
   return [];
 });
 
+ipcMain.handle('discover-keyword-targets', async (_event, payload = {}) => {
+  const { discoverKeywordTargets } = require('./services/keywordTargetDiscovery');
+  const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+  return discoverKeywordTargets({
+    keywords: payload.keywords,
+    platform: payload.platform || 'All',
+    keys,
+    limit: payload.limit || 50,
+    limitPerPlatform: payload.limitPerPlatform || 4,
+  });
+});
+
 // Trigger curate for UI (used by new marketing channel UI)
 ipcMain.handle('trigger-curate-rss', async (event, payload) => {
   return await (async () => {
@@ -3256,6 +3274,15 @@ function startBrowserBatchPoller() {
 
 app.whenReady().then(() => {
   const readyDataPath = app.getPath('userData');
+  try {
+    const { ensureSiSerpSidecar } = require('../../packages/core/src/siSerpSidecar');
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    ensureSiSerpSidecar(keys).catch((err) => {
+      console.warn('OpenSERP sidecar warmup:', err.message);
+    });
+  } catch (err) {
+    console.warn('OpenSERP sidecar module unavailable:', err.message);
+  }
   registerGrokHandlers({ ipcMain, store, userDataPath: readyDataPath });
   registerNativeBrowserHandlers({ ipcMain, store, userDataPath: readyDataPath });
   registerRssCategoryHandlers({

@@ -9,6 +9,8 @@ import { RulesEngineStatus } from '@/components/RulesEngineStatus';
 import { BackgroundRunPanel } from '@/components/BackgroundRunPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
+import { BeFirstTargetDiscovery } from '@/components/BeFirstTargetDiscovery';
+import { type DiscoveredTarget, targetToMonitor } from '@/lib/beFirstTargets';
 
 type Monitor = {
   id?: string;
@@ -98,6 +100,7 @@ export default function RulesPage() {
   const [autoSearch, setAutoSearch] = useState<AutoSearchSettings>({});
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>({});
   const [newMonitor, setNewMonitor] = useState({ term: '', type: 'keyword', platform: 'All' });
+  const [discoverKeywords, setDiscoverKeywords] = useState('');
   const [msg, setMsg] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -163,11 +166,28 @@ export default function RulesPage() {
       platform: newMonitor.platform,
       enabled: true,
     };
-    const updated = [...monitors, entry];
+    const updated = [...monitors, entry].slice(0, 50);
     await invoke('save-watched-monitors', updated);
     setMonitors(updated);
     setNewMonitor({ term: '', type: 'keyword', platform: 'All' });
     setMsg('Be-First monitor added');
+    setRefreshKey((k) => k + 1);
+  }
+
+  async function addDiscoveredTarget(target: DiscoveredTarget) {
+    const entry = targetToMonitor(target) as Monitor;
+    const exists = monitors.some(
+      (m) => String(m.term || '').toLowerCase() === String(entry.term || '').toLowerCase()
+        && (m.platform || 'All') === (entry.platform || 'All'),
+    );
+    if (exists) {
+      setMsg('Already on your watch list');
+      return;
+    }
+    const updated = [entry, ...monitors].slice(0, 50);
+    await invoke('save-watched-monitors', updated);
+    setMonitors(updated);
+    setMsg(`Watching ${entry.term} on ${entry.platform}`);
     setRefreshKey((k) => k + 1);
   }
 
@@ -411,6 +431,18 @@ export default function RulesPage() {
           </select>
           <button type="button" className="btn primary" onClick={addMonitor}>+ Add Monitor</button>
         </div>
+
+        <BeFirstTargetDiscovery
+          keywordInput={discoverKeywords || newMonitor.term}
+          onKeywordInputChange={setDiscoverKeywords}
+          platformFilter={newMonitor.platform}
+          onPlatformFilterChange={(p) => setNewMonitor((prev) => ({ ...prev, platform: p }))}
+          platformOptions={[...ALL_PLATFORMS]}
+          platformLabel={platformDisplayName}
+          monitors={monitors}
+          onAddToWatchList={addDiscoveredTarget}
+          compact
+        />
       </DataPanel>
 
       <div className="rules-footer">

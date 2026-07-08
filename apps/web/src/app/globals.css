@@ -3460,6 +3460,45 @@ textarea.input { min-height: 100px; resize: vertical; }
 .brain-setup-monitor-card {
   display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
 }
+
+.be-first-discovery { margin-top: 1rem; }
+.be-first-discovery-hint { margin-bottom: 0.65rem; }
+.be-first-discovery-search {
+  display: grid;
+  grid-template-columns: 1fr 180px auto;
+  gap: 8px;
+  margin-bottom: 0.75rem;
+}
+.be-first-discovery-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 420px; overflow-y: auto; margin-top: 0.5rem;
+}
+.be-first-discovery-card {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+  text-align: left;
+}
+.be-first-discovery-main { flex: 1; min-width: 200px; }
+.be-first-discovery-head {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;
+}
+.be-first-discovery-platform {
+  font-size: 0.78rem; color: var(--muted); margin-left: auto;
+}
+.be-first-discovery-stats {
+  display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.78rem; color: #94a3b8; margin-bottom: 6px;
+}
+.be-first-discovery-sample {
+  margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.5;
+}
+.be-first-discovery-kw {
+  margin: 4px 0 0; font-size: 0.75rem; color: #64748b;
+}
+.be-first-discovery-actions {
+  display: flex; gap: 6px; flex-shrink: 0;
+}
+@media (max-width: 720px) {
+  .be-first-discovery-search { grid-template-columns: 1fr; }
+}
 .brain-setup-worker-toggle {
   display: flex; align-items: center; gap: 8px; margin-top: 0.25rem; cursor: pointer; font-size: 0.85rem;
 }
