@@ -21,7 +21,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <style
           dangerouslySetInnerHTML={{
-            __html: '.nav-link-hint,.nav-link-features,.nav-link-features-summary,.nav-link-features-list{display:none!important}',
+            __html: '.nav-link-hint,.nav-link-features,.nav-link-features-summary,.nav-link-features-list,.nav-link-wrap .nav-link-features{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important}',
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){function s(){document.querySelectorAll(".nav-link-features,.nav-link-hint,.nav-link-features-summary,.nav-link-features-list").forEach(function(e){e.remove()});}s();document.addEventListener("DOMContentLoaded",s);if(typeof MutationObserver!=="undefined"){new MutationObserver(s).observe(document.documentElement,{childList:true,subtree:true});}})();`,
           }}
         />
       </head>
