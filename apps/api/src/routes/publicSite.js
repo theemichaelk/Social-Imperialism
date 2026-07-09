@@ -92,12 +92,12 @@ router.get('/site-tracking/status', async (req, res) => {
   try {
     const { summarizeTrackingPayload } = require(path.join(__dirname, '../../../desktop/services/siteTrackingSettings'));
     const settings = await loadPublicTrackingSettings();
-    const path = req.query.path || '/';
-    const payload = getPublicSiteTrackingPayload(settings, path);
+    const pathname = req.query.path || '/';
+    const payload = getPublicSiteTrackingPayload(settings, pathname);
     const summary = summarizeTrackingPayload(payload);
     res.json({
       success: true,
-      path,
+      path: pathname,
       configured: summary.active,
       fields: summary.fields,
       updatedAt: summary.updatedAt,
