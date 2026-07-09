@@ -551,7 +551,7 @@ export default function AccountHubPage() {
             ) : (
               <p className="ip-empty">No intelligence profile yet — click Refresh Profile to pull live metrics.</p>
             )}
-            <Link href="/settings?tab=account-intelligence" className="btn" style={{ marginTop: 8 }}>Configure Intelligence →</Link>
+            <Link href="/settings" className="btn" style={{ marginTop: 8 }}>Settings →</Link>
 
             <div className="card" style={{ marginTop: 12, padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.45)' }}>
               <h4 style={{ margin: '0 0 8px', fontSize: '0.9rem' }}>Proxy / IP for this account</h4>

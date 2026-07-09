@@ -8,14 +8,10 @@ import { auth, invoke, logout } from '@/lib/api';
 import { PageShell } from '@/components/PageShell';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
-import { SitePlaybooksPanel } from '@/components/SitePlaybooksPanel';
-import { SiteTrafficHealthPanel } from '@/components/SiteTrafficHealthPanel';
 import { SettingsHealthPanel } from '@/components/SettingsHealthPanel';
-import { IntelligenceSettingsPanel } from '@/components/IntelligenceSettingsPanel';
 import { apiStatusToBars, BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { INTEGRATION_GROUPS } from '@/lib/integrationCatalog';
 import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
-import { NativeBrowserPanel } from '@/components/NativeBrowserPanel';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
 import {
   SETTINGS_COLLAPSE_GROUPS,
@@ -57,12 +53,6 @@ function SettingsContent() {
   const rawTab = searchParams.get('tab');
   const initialTab = resolveLegacyTab(rawTab, TABS, SETTINGS_LEGACY_TAB_MAP, 'overview');
   const [tab, setTab] = useState<TabId>(initialTab);
-  const [strategySection, setStrategySection] = useState<'playbooks' | 'site-health' | 'account-intelligence'>(
-    rawTab === 'site-health' ? 'site-health' : rawTab === 'account-intelligence' ? 'account-intelligence' : 'playbooks',
-  );
-  const [connectSection, setConnectSection] = useState<'live-probes' | 'grok'>(
-    rawTab === 'grok' ? 'grok' : 'live-probes',
-  );
   const [systemSection, setSystemSection] = useState<'health' | 'tutorials' | 'status'>(
     rawTab === 'tutorials' ? 'tutorials' : rawTab === 'health' ? 'health' : 'status',
   );
@@ -72,8 +62,6 @@ function SettingsContent() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [activeId, setActiveId] = useState('');
   const [billing, setBilling] = useState<BillingPlan>({});
-  const [grok, setGrok] = useState<{ email?: string; password?: string; autoLogin?: boolean }>({});
-  const [grokStatus, setGrokStatus] = useState<Record<string, unknown>>({});
   const [payment, setPayment] = useState<Record<string, unknown>>({});
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
   const [completedTutorials, setCompletedTutorials] = useState<string[]>([]);
@@ -89,18 +77,6 @@ function SettingsContent() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const setTabAndUrl = (t: string) => {
-    if (t === 'playbooks' || t === 'site-health' || t === 'account-intelligence') {
-      setStrategySection(t);
-      setTab('strategy');
-      router.replace('/settings?tab=strategy', { scroll: false });
-      return;
-    }
-    if (t === 'live-probes' || t === 'grok') {
-      setConnectSection(t);
-      setTab('connect');
-      router.replace('/settings?tab=connect', { scroll: false });
-      return;
-    }
     if (t === 'health' || t === 'tutorials') {
       setSystemSection(t);
       setTab('system');
@@ -113,19 +89,17 @@ function SettingsContent() {
   };
 
   const refresh = useCallback(async () => {
-    const [me, k, ks, a, c, b, g, p, t, ss, active, gs] = await Promise.all([
+    const [me, k, ks, a, c, b, p, t, ss, active] = await Promise.all([
       auth.me().catch(() => ({})),
       invoke<Record<string, string>>('get-global-keys'),
       invoke<KeySources>('get-key-sources'),
       invoke<Record<string, string>>('check-api-status'),
       invoke<Campaign[]>('get-settings'),
       invoke<BillingPlan>('get-billing-plan'),
-      invoke<{ email?: string; password?: string; autoLogin?: boolean }>('get-grok-settings'),
       invoke<Record<string, unknown>>('get-payment-settings'),
       invoke<{ tutorials?: Tutorial[]; completed?: string[] }>('get-setup-tutorials'),
       invoke<Record<string, unknown>>('get-settings-status'),
       invoke<Campaign | null>('get-active-campaign'),
-      invoke<Record<string, unknown>>('grok-get-status').catch(() => ({})),
     ]);
     setIsAdmin(!!(me as { user?: { isAdmin?: boolean } })?.user?.isAdmin);
     setKeys(k || {});
@@ -133,14 +107,12 @@ function SettingsContent() {
     setApiStatus(a || {});
     setCampaigns(c || []);
     setBilling(b || {});
-    setGrok({ email: g?.email || '', password: g?.password || '', autoLogin: g?.autoLogin !== false });
     setPayment(p || {});
     setTutorials(t?.tutorials || []);
     setCompletedTutorials(t?.completed || []);
     setSettingsStatus(ss || {});
     setActiveId(active?.id || '');
     setBillingEmail(b?.billingEmail || '');
-    setGrokStatus(gs || {});
     const activeCamp = (c || []).find((x) => x.id === (active?.id || '')) || active;
     if (activeCamp) {
       setEditUtm({
@@ -296,15 +268,6 @@ function SettingsContent() {
     setMsg('Billing email saved');
   }
 
-  async function saveGrok() {
-    await invoke('save-grok-settings', {
-      email: grok.email, password: grok.password,
-      autoLogin: grok.autoLogin !== false, enabled: true,
-    });
-    setMsg('Grok credentials saved locally');
-    setGrokStatus(await invoke<Record<string, unknown>>('grok-get-status').catch(() => ({})));
-  }
-
   const apiBars = apiStatusToBars(apiStatus, 12);
 
   const groupBars = INTEGRATION_GROUPS.map((g) => ({
@@ -363,13 +326,10 @@ function SettingsContent() {
       {tab === 'overview' && (
         <>
         <div className="settings-quick-links">
-          <Link href="/content-hub" className="btn">Content Hub</Link>
-          <Link href="/prompt-vault" className="btn">Prompt Vault</Link>
-          <Link href="/integrations" className="btn">Integrations Hub</Link>
-          <button type="button" className="btn" onClick={() => setTabAndUrl('connect')}>Grok & Browser</button>
-          <button type="button" className="btn" onClick={() => setTabAndUrl('strategy')}>Strategy & Traffic</button>
-          <button type="button" className="btn" onClick={() => setTabAndUrl('site-tracking')}>Site & Tracking</button>
-          <Link href="/account-hub" className="btn">Account Hub</Link>
+          <button type="button" className="btn primary" onClick={() => setTabAndUrl('site-tracking')}>Site & Tracking</button>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('api-keys')}>API Keys</button>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Probes</button>
+          <Link href="/campaign-manager" className="btn">Campaign Manager</Link>
         </div>
         <div className="grid grid-2">
           <DataPanel title="Connection Pulse" live>
@@ -383,10 +343,9 @@ function SettingsContent() {
           <DataPanel title="Key Coverage by Group" live>
             <BarChart items={groupBars} maxHeight={90} />
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-              <Link href="/integrations" className="btn primary">Integrations Hub →</Link>
-              <button className="btn" onClick={() => setTabAndUrl('strategy')}>Strategy & Traffic</button>
               <button className="btn primary" onClick={testConnections} disabled={loading}>Run Live Audit</button>
-              <button className="btn" onClick={() => setTabAndUrl('connect')}>Probes & Browser →</button>
+              <button className="btn" onClick={() => setTabAndUrl('api-keys')}>Configure API Keys</button>
+              <button className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Probes →</button>
             </div>
           </DataPanel>
           <DataPanel title="Credential Mode" live>
@@ -415,78 +374,16 @@ function SettingsContent() {
         </>
       )}
 
-      {tab === 'strategy' && (
-        <>
-          <div className="source-tabs" style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-            <button type="button" className={`tab ${strategySection === 'playbooks' ? 'active' : ''}`} onClick={() => setStrategySection('playbooks')}>Playbooks</button>
-            <button type="button" className={`tab ${strategySection === 'site-health' ? 'active' : ''}`} onClick={() => setStrategySection('site-health')}>Traffic & Rankings</button>
-            <button type="button" className={`tab ${strategySection === 'account-intelligence' ? 'active' : ''}`} onClick={() => setStrategySection('account-intelligence')}>Account Intelligence</button>
-          </div>
-          {strategySection === 'playbooks' && <SitePlaybooksPanel />}
-          {strategySection === 'site-health' && <SiteTrafficHealthPanel campaigns={campaigns} />}
-          {strategySection === 'account-intelligence' && <IntelligenceSettingsPanel />}
-        </>
-      )}
-
       {tab === 'site-tracking' && (
         <SitePagesTrackingPanel onMessage={setMsg} />
       )}
 
-      {tab === 'connect' && (
-        <>
-          <div className="source-tabs">
-            <button type="button" className={`tab ${connectSection === 'live-probes' ? 'active' : ''}`} onClick={() => setConnectSection('live-probes')}>Live Probes</button>
-            <button type="button" className={`tab ${connectSection === 'grok' ? 'active' : ''}`} onClick={() => setConnectSection('grok')}>Grok & Browser</button>
-          </div>
-          {connectSection === 'live-probes' && (
-            <SettingsLiveProbes onMetrics={(m) => setApiStatus(m)} onMessage={setMsg} />
-          )}
-          {connectSection === 'grok' && (
-            <div className="settings-grok-stack">
-              <div className="settings-quick-links">
-                <Link href="/content-hub?tab=media" className="btn">Content Hub → Media</Link>
-                <Link href="/integrations" className="btn">Integrations Hub</Link>
-                <button type="button" className="btn" onClick={() => setTabAndUrl('tutorials')}>Setup Tutorial</button>
-              </div>
-              <NativeBrowserPanel />
-              <DataPanel title="Grok Engine (Browser Session)" live>
-                <p className="settings-panel-desc">
-                  Grok Text, <strong>Grok Imagine</strong>, Video, and Infographics run through a persistent Edge profile at grok.com.
-                </p>
-                <div className="grid grid-2">
-                  <input className="input" type="email" placeholder="x.ai / Grok email" value={grok.email || ''} onChange={(e) => setGrok({ ...grok, email: e.target.value })} />
-                  <input className="input" type="password" placeholder="Grok password" value={grok.password || ''} onChange={(e) => setGrok({ ...grok, password: e.target.value })} />
-                </div>
-                <div className="post-card" style={{ marginTop: 12, fontSize: '0.85rem' }}>
-                  {(grokStatus as { session?: { loggedIn?: boolean } }).session?.loggedIn
-                    ? <span className="status-ok">✓ Grok authorized</span>
-                    : <span className="status-partial">Not authorized — connect below</span>}
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                  <button className="btn primary" onClick={saveGrok}>Save Credentials</button>
-                  <button className="btn" onClick={async () => {
-                    await saveGrok();
-                    setGrokStatus(await invoke<Record<string, unknown>>('grok-connect'));
-                    setMsg('Grok connect initiated');
-                  }}>Connect & Authorize</button>
-                  <button className="btn" onClick={async () => {
-                    setGrokStatus(await invoke<Record<string, unknown>>('grok-get-status'));
-                  }}>Refresh Status</button>
-                </div>
-              </DataPanel>
-            </div>
-          )}
-        </>
+      {tab === 'live-probes' && (
+        <SettingsLiveProbes onMetrics={(m) => setApiStatus(m)} onMessage={setMsg} />
       )}
 
       {tab === 'api-keys' && (
         <>
-          <div className="card" style={{ marginBottom: 12, borderColor: 'var(--accent)' }}>
-            <p style={{ margin: 0, fontSize: '0.88rem' }}>
-              Live probes, Partner REST API, webhooks, and app connectors are in the{' '}
-              <Link href="/integrations">Integrations Hub</Link> — a dedicated page separate from Settings.
-            </p>
-          </div>
           {keySources.isAdminEnv && (
             <div className="card admin-env-banner">
               <p style={{ margin: 0 }}>
@@ -498,7 +395,7 @@ function SettingsContent() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <button className="btn primary" onClick={saveKeys} disabled={loading}>Save All Keys</button>
             <button className="btn" onClick={testConnections} disabled={loading}>Test Connections</button>
-            <Link href="/integrations" className="btn">Open Integrations Hub →</Link>
+            <button className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Probes →</button>
           </div>
           <IntegrationKeyForm
             keys={keys}

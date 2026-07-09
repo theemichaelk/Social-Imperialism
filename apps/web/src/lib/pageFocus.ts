@@ -350,7 +350,7 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
       { label: 'Integrations', href: '/integrations', primary: true },
       { label: 'Settings', href: '/settings' },
     ],
-    related: [{ label: 'Site Health', href: '/settings?tab=site-health' }],
+    related: [{ label: 'Site & Tracking', href: '/settings?tab=site-tracking' }],
   },
   '/integrations': {
     id: 'integrations',
@@ -414,12 +414,12 @@ export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
     id: 'settings',
     title: 'Settings',
     outcome: 'Campaign, billing, keys, and system health — configured once, stable always.',
-    subtitle: 'Start with Overview — drill into keys, Guardian, or billing only when needed.',
-    flow: ['Overview', 'Campaign', 'Keys', 'Health'],
+    subtitle: 'Start with Overview — drill into keys, site tracking, Guardian, or billing when needed.',
+    flow: ['Overview', 'Campaign', 'Keys', 'Site & Tracking'],
     focusTabIds: ['overview', 'campaigns', 'api-keys', 'guardian-api'],
     collapseGroups: ['Advanced'],
     actions: [
-      { label: 'Integrations', href: '/integrations', primary: true },
+      { label: 'Site & Tracking', tab: 'site-tracking', primary: true },
       { label: 'Guardian', tab: 'guardian-api' },
     ],
     related: [

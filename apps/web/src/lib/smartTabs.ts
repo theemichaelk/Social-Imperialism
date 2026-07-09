@@ -46,27 +46,27 @@ export const CONTENT_HUB_LEGACY_TAB_MAP: Record<string, ContentHubTabId> = {
 export const CONTENT_HUB_FOCUS_TABS = ['studio', 'queue', 'compose'];
 export const CONTENT_HUB_COLLAPSE_GROUPS = ['Advanced', 'Pipeline'];
 
-/** Settings — 13 tabs → 8 */
+/** Settings — focused tabs (module hubs live in sidebar nav) */
 export const SETTINGS_TABS = [
   { id: 'overview', label: 'Overview', group: "Today's Focus", locked: true },
   { id: 'campaigns', label: 'Campaigns', group: "Today's Focus" },
   { id: 'api-keys', label: 'API Keys', group: "Today's Focus" },
   { id: 'guardian-api', label: 'Guardian & API', group: "Today's Focus" },
   { id: 'billing', label: 'Billing', group: 'Account' },
-  { id: 'strategy', label: 'Strategy & Traffic', group: 'Advanced' },
   { id: 'site-tracking', label: 'Site & Tracking', group: 'Advanced' },
-  { id: 'connect', label: 'Probes & Browser', group: 'Advanced' },
+  { id: 'live-probes', label: 'Live Probes', group: 'Advanced' },
   { id: 'system', label: 'System', group: 'Advanced' },
 ] as const;
 
 export type SettingsTabId = (typeof SETTINGS_TABS)[number]['id'];
 
 export const SETTINGS_LEGACY_TAB_MAP: Record<string, SettingsTabId> = {
-  playbooks: 'strategy',
-  'site-health': 'strategy',
-  'account-intelligence': 'strategy',
-  'live-probes': 'connect',
-  grok: 'connect',
+  strategy: 'overview',
+  playbooks: 'overview',
+  'site-health': 'overview',
+  'account-intelligence': 'overview',
+  connect: 'live-probes',
+  grok: 'overview',
   tutorials: 'system',
   health: 'system',
 };

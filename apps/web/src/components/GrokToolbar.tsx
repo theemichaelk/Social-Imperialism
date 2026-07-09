@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { DataPanel } from '@/components/DashboardViz';
 import { PromptVaultPicker } from '@/components/PromptVaultPicker';
+import { getGrokToolbarActions } from '@/lib/grokPageActions';
 
 type GrokResult = {
   success?: boolean;
@@ -80,6 +81,7 @@ export function GrokToolbar({
     .nativeBrowser?.selectedBrowser;
   const installedBrowsers = ((grokStatus as { nativeBrowser?: { browsers?: Array<{ label: string; installed?: boolean; automationReady?: boolean }> } })
     .nativeBrowser?.browsers || []).filter((b) => b.installed);
+  const actions = getGrokToolbarActions(pageId);
 
   function formatGrokError(message: string) {
     if (/requires windows|desktop app|localhost:4000/i.test(message)) {
@@ -134,12 +136,31 @@ export function GrokToolbar({
     }
   }
 
+  async function rebuildPrompt() {
+    setStatus('Rebuilding prompt with brand + keywords…');
+    try {
+      const res = await invoke<{ success?: boolean; prompt?: string; error?: string; primaryKeyword?: string | null }>(
+        'grok-build-prompt-preview',
+        { content: localPrompt, pageId },
+      );
+      if (res?.success === false || !res?.prompt) {
+        setStatus(res?.error || 'Could not rebuild prompt — check active campaign and keywords');
+        return;
+      }
+      setLocalPrompt(res.prompt);
+      const kw = res.primaryKeyword ? ` (primary: ${res.primaryKeyword})` : '';
+      setStatus(`Prompt rebuilt with campaign keywords${kw}`);
+    } catch (e) {
+      setStatus((e as Error).message || 'Rebuild prompt failed');
+    }
+  }
+
   const inner = (
     <>
       {!compact && (
         <p className="settings-panel-desc">
           Grok Text, Imagine, Video, and Infographics use a native browser session at grok.com — not an API key.
-          {' '}<Link href="/settings?tab=connect">Configure in Settings → Grok</Link>
+          {' '}Use <strong>Connect &amp; Authorize</strong> below to sign in at grok.com.
         </p>
       )}
       <div className="post-card" style={{ fontSize: '0.85rem', marginBottom: 12 }}>
@@ -148,18 +169,17 @@ export function GrokToolbar({
           : statusMessage && <span className="status-partial">{statusMessage}</span>}
         {!loggedIn && !statusLoadError && (
           <p style={{ margin: '8px 0 0', fontSize: '0.8rem' }}>
-            <Link href="/settings?tab=connect">Settings → Grok</Link>
-            {' '}→ save x.ai credentials → <strong>Connect &amp; Authorize</strong>
+            Save x.ai credentials in the toolbar below, then <strong>Connect &amp; Authorize</strong>
           </p>
         )}
         {showInfraHints && !nodriverReady && (
           <p style={{ margin: '8px 0 0', color: '#f59e0b', fontSize: '0.8rem' }}>
-            nodriver/Python not ready — see Settings → Native Browser for setup.
+            nodriver/Python not ready — install the native browser stack on the desktop app host.
           </p>
         )}
         {installedBrowsers.length > 0 && !selectedBrowser?.installed && (
           <p style={{ margin: '8px 0 0', color: '#94a3b8', fontSize: '0.8rem' }}>
-            Detected: {installedBrowsers.map((b) => b.label).join(', ')} — select one in Settings → Grok → Native Browser.
+            Detected: {installedBrowsers.map((b) => b.label).join(', ')} — select a browser in the toolbar below.
           </p>
         )}
         {!canAutomate && !suppressCloudBanner && (
@@ -187,15 +207,21 @@ export function GrokToolbar({
         placeholder="Topic, post draft, or keyword-aware prompt…"
       />
       <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-        <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-ask-text', { content: localPrompt, pageId })}>Grok Text</button>
-        <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-imagine', { content: localPrompt, pageId })}>Grok Imagine</button>
-        <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-generate-video', { content: localPrompt, pageId })}>Grok Video</button>
-        <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-generate-infographic', { content: localPrompt, pageId })}>Infographic</button>
-        <button type="button" className="btn" onClick={async () => {
-          const p = await invoke<{ prompt?: string }>('grok-build-prompt-preview', { content: localPrompt, pageId });
-          if (p?.prompt) setLocalPrompt(p.prompt);
-          setStatus('Prompt rebuilt with campaign keywords');
-        }}>Rebuild Prompt</button>
+        {actions.text && (
+          <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-ask-text', { content: localPrompt, pageId })}>Grok Text</button>
+        )}
+        {actions.imagine && (
+          <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-imagine', { content: localPrompt, pageId })}>Grok Imagine</button>
+        )}
+        {actions.video && (
+          <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-generate-video', { content: localPrompt, pageId })}>Grok Video</button>
+        )}
+        {actions.infographic && (
+          <button type="button" className="btn" disabled={!canAutomate} onClick={() => run('grok-generate-infographic', { content: localPrompt, pageId })}>Infographic</button>
+        )}
+        {actions.rebuild && (
+          <button type="button" className="btn" onClick={rebuildPrompt} title="Inject brand, keywords, and page task — works without browser session">Rebuild Prompt</button>
+        )}
       </div>
       {status && <p style={{ marginTop: 8, color: '#94a3b8', fontSize: '0.85rem' }}>{status}</p>}
       {preview && (
