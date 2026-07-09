@@ -193,8 +193,21 @@ async function afterInvoke({ entry, channel, args, result }) {
 }
 
 async function invoke({ projectId, organizationId, channel, args = [], userContext = null }) {
-  const { isSiteTrackingChannel, invokeSiteTrackingChannel } = require('./platformOrgStore');
-  const entry = await getHandlersForProject({ projectId, organizationId });
+  const {
+    isPlatformOrgChannel,
+    resolvePlatformInvokeTarget,
+    clearPlatformOrgStoreCache,
+  } = require('./platformOrgStore');
+
+  let targetProjectId = projectId;
+  let targetOrgId = organizationId;
+  if (isPlatformOrgChannel(channel)) {
+    const target = await resolvePlatformInvokeTarget();
+    targetProjectId = target.projectId;
+    targetOrgId = target.organizationId;
+  }
+
+  const entry = await getHandlersForProject({ projectId: targetProjectId, organizationId: targetOrgId });
   const { handlers, store, pendingOAuth } = entry;
   if (userContext) {
     const { isPlatformAdminEmail } = require('./platformAdmin');
@@ -206,16 +219,15 @@ async function invoke({ projectId, organizationId, channel, args = [], userConte
     }
   }
   const handler = handlers[channel];
-  if (!handler && !isSiteTrackingChannel(channel)) {
+  if (!handler) {
     const err = new Error(`Unknown channel: ${channel}`);
     err.code = 'UNKNOWN_CHANNEL';
     throw err;
   }
   try {
-    const result = isSiteTrackingChannel(channel)
-      ? await invokeSiteTrackingChannel(channel, args)
-      : await handler(null, ...args);
-    if (!isSiteTrackingChannel(channel)) await store.flush();
+    const result = await handler(null, ...args);
+    await store.flush();
+    if (isPlatformOrgChannel(channel)) clearPlatformOrgStoreCache();
     await persistEntitiesFromStore(store, projectId, channel);
     await afterInvoke({ entry, channel, args, result });
 

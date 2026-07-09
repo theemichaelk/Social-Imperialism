@@ -2,7 +2,6 @@
  * Platform org store — backs www.socialimperialism.com settings (tracking, DNS, etc.)
  * that must persist on SEED_ORG_SLUG regardless of the user's active campaign org.
  */
-const path = require('path');
 const { prisma } = require('@si/db');
 const { createPrismaStore } = require('./prismaStore');
 
@@ -11,6 +10,23 @@ const SITE_TRACKING_CHANNELS = new Set([
   'save-site-tracking-settings',
   'get-public-site-tracking-preview',
 ]);
+
+const DNS_CHANNELS = new Set([
+  'get-dns-sites',
+  'get-dns-config',
+  'sync-dns-sites',
+  'add-dns-site',
+  'update-dns-site',
+  'delete-dns-site',
+  'get-dns-records',
+  'save-dns-record',
+  'delete-dns-record',
+  'verify-dns-record',
+  'apply-dns-records',
+  'export-dns-records',
+]);
+
+const PLATFORM_ORG_CHANNELS = new Set([...SITE_TRACKING_CHANNELS, ...DNS_CHANNELS]);
 
 let cache = null;
 const CACHE_TTL_MS = 60_000;
@@ -60,53 +76,33 @@ async function getPlatformOrgStore({ forceRefresh = false } = {}) {
   return store;
 }
 
+async function resolvePlatformInvokeTarget() {
+  await getPlatformOrgStore();
+  return { projectId: cache.projectId, organizationId: cache.organizationId };
+}
+
 function clearPlatformOrgStoreCache() {
   cache = null;
 }
 
+function isPlatformOrgChannel(channel) {
+  return PLATFORM_ORG_CHANNELS.has(channel);
+}
+
+/** @deprecated use isPlatformOrgChannel */
 function isSiteTrackingChannel(channel) {
   return SITE_TRACKING_CHANNELS.has(channel);
 }
 
-async function invokeSiteTrackingChannel(channel, args = []) {
-  const desktopServices = path.join(__dirname, '../../../apps/desktop/services/siteTrackingSettings');
-  const {
-    getSiteTrackingSettings,
-    saveSiteTrackingSettings,
-    getPublicSiteTrackingPayload,
-    getSitePagesCatalog,
-  } = require(desktopServices);
-  const store = await getPlatformOrgStore();
-
-  if (channel === 'get-site-tracking-settings') {
-    return {
-      success: true,
-      settings: getSiteTrackingSettings(store),
-      catalog: getSitePagesCatalog(),
-    };
-  }
-  if (channel === 'save-site-tracking-settings') {
-    const result = saveSiteTrackingSettings(store, args[0] || {});
-    await store.flush();
-    clearPlatformOrgStoreCache();
-    return result;
-  }
-  if (channel === 'get-public-site-tracking-preview') {
-    const pathname = args[0] || '/';
-    return {
-      success: true,
-      preview: getPublicSiteTrackingPayload(getSiteTrackingSettings(store), pathname),
-    };
-  }
-  throw new Error(`Unhandled site tracking channel: ${channel}`);
-}
-
 module.exports = {
   SITE_TRACKING_CHANNELS,
+  DNS_CHANNELS,
+  PLATFORM_ORG_CHANNELS,
   platformOrgSlug,
   resolvePlatformOrg,
   getPlatformOrgStore,
+  resolvePlatformInvokeTarget,
   clearPlatformOrgStoreCache,
+  isPlatformOrgChannel,
   isSiteTrackingChannel,
-  invokeSiteTrackingChannel,
 };
