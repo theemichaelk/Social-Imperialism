@@ -85,7 +85,7 @@ export function getContactPageContent(): StaticPageContent {
 }
 
 export function getPrivacyPageContent(): StaticPageContent {
-  const year = SITE_BRAND.year;
+  const year = new Date().getFullYear();
   return {
     eyebrow: 'Legal',
     title: 'Privacy Policy',
@@ -135,7 +135,7 @@ export function getPrivacyPageContent(): StaticPageContent {
 }
 
 export function getTermsPageContent(): StaticPageContent {
-  const year = SITE_BRAND.year;
+  const year = new Date().getFullYear();
   return {
     eyebrow: 'Legal',
     title: 'Terms of Service',

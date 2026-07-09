@@ -1,6 +1,11 @@
-import { getAllModuleFeatures, PUBLIC_NAV_ROUTES, SITE_BRAND } from '@/lib/siteBlueprint';
+import { BLOG_POSTS } from '@/lib/blogPosts';
+import { FOOTER_LEGAL_LINKS, getAllModuleFeatures, PUBLIC_NAV_ROUTES, SITE_BRAND } from '@/lib/siteBlueprint';
 
-const STATIC_DISCOVERY_PATHS = ['/', '/login', '/subscribe', '/founder', '/dashboard', '/sitemap.html', '/feed.xml'] as const;
+const STATIC_DISCOVERY_PATHS = [
+  '/', '/login', '/subscribe', '/founder', '/dashboard', '/blog',
+  '/about', '/contact', '/privacy', '/terms', '/download',
+  '/sitemap.html', '/sitemap.xml', '/feed.xml',
+] as const;
 
 export function getPublicDiscoveryStats() {
   const moduleCount = getAllModuleFeatures().length;
@@ -24,6 +29,11 @@ export function getSiteBaseUrl(): string {
 
 export type SitemapEntry = { loc: string; lastmod: string; label?: string };
 
+function blogLastmod(slug: string): string {
+  const post = BLOG_POSTS.find((p) => p.slug === slug);
+  return post?.updatedAt || new Date().toISOString().split('T')[0];
+}
+
 export function buildSitemapEntries(): SitemapEntry[] {
   const base = getSiteBaseUrl();
   const today = new Date().toISOString().split('T')[0];
@@ -33,41 +43,58 @@ export function buildSitemapEntries(): SitemapEntry[] {
     '/subscribe',
     '/founder',
     '/dashboard',
+    '/blog',
+    '/download',
     '/sitemap.html',
+    '/sitemap.xml',
     '/feed.xml',
+    ...FOOTER_LEGAL_LINKS.map((l) => l.href),
     ...PUBLIC_NAV_ROUTES.map((r) => r.href),
     ...getAllModuleFeatures().map((m) => m.href),
+    ...BLOG_POSTS.map((p) => `/blog/${p.slug}`),
   ]);
-  return [...paths].sort().map((path) => ({
-    loc: `${base}${path}`,
-    lastmod: today,
-    label: path === '/' ? 'Home' : path.replace(/^\//, '').replace(/-/g, ' '),
-  }));
+  return [...paths].sort().map((path) => {
+    const blogSlug = path.startsWith('/blog/') ? path.replace('/blog/', '') : null;
+    return {
+      loc: `${base}${path}`,
+      lastmod: blogSlug ? blogLastmod(blogSlug) : today,
+      label: path === '/' ? 'Home' : path.replace(/^\//, '').replace(/-/g, ' '),
+    };
+  });
 }
 
-export type RssItem = { title: string; link: string; description: string; pubDate: string; guid: string };
+export type RssItem = {
+  title: string;
+  link: string;
+  description: string;
+  pubDate: string;
+  guid: string;
+  category?: string;
+  enclosure?: { url: string; type: string };
+};
 
 export function buildRssItems(): RssItem[] {
   const base = getSiteBaseUrl();
   const now = new Date().toUTCString();
-  const modules = getAllModuleFeatures();
-  const items: RssItem[] = [
+  const blogItems: RssItem[] = BLOG_POSTS.map((p) => ({
+    title: p.title,
+    link: `${base}/blog/${p.slug}`,
+    description: p.excerpt,
+    pubDate: new Date(p.publishedAt).toUTCString(),
+    guid: `${base}/blog/${p.slug}`,
+    category: p.siloLabel,
+    enclosure: { url: `${base}${p.thumbnail}`, type: 'image/jpeg' },
+  }));
+  return [
     {
-      title: `${SITE_BRAND.name} — ${SITE_BRAND.tagline}`,
-      link: `${base}/`,
-      description: 'AI social growth platform — automate discovery, replies, and publishing.',
+      title: `${SITE_BRAND.name} Blog`,
+      link: `${base}/blog`,
+      description: 'SEO guides on AI social automation, multi-platform publishing, and growth intelligence.',
       pubDate: now,
-      guid: `${base}/#home`,
+      guid: `${base}/blog`,
     },
-    ...modules.map((m) => ({
-      title: `${m.label} (${m.section})`,
-      link: `${base}${m.href}`,
-      description: m.hint || `${m.label} module in ${SITE_BRAND.name}`,
-      pubDate: now,
-      guid: `${base}${m.href}`,
-    })),
+    ...blogItems,
   ];
-  return items;
 }
 
 export function renderSitemapHtml(): string {
@@ -96,7 +123,7 @@ export function renderSitemapHtml(): string {
 </head>
 <body>
   <h1>${SITE_BRAND.name} Sitemap</h1>
-  <p>${entries.length} public and authenticated module routes · <a href="/feed.xml">RSS feed</a></p>
+  <p>${entries.length} URLs including blog articles · <a href="/feed.xml">RSS feed</a> · <a href="/sitemap.xml">XML sitemap</a></p>
   <ul>${rows}</ul>
 </body>
 </html>`;
@@ -112,7 +139,7 @@ export function renderFeedXml(): string {
       <link>${it.link}</link>
       <guid isPermaLink="true">${it.guid}</guid>
       <description><![CDATA[${it.description}]]></description>
-      <pubDate>${it.pubDate}</pubDate>
+      <pubDate>${it.pubDate}</pubDate>${it.category ? `\n      <category>${it.category}</category>` : ''}${it.enclosure ? `\n      <enclosure url="${it.enclosure.url}" type="${it.enclosure.type}" />` : ''}
     </item>`,
     )
     .join('\n');
@@ -127,4 +154,22 @@ export function renderFeedXml(): string {
 ${itemXml}
   </channel>
 </rss>`;
+}
+
+export function renderSitemapXml(): string {
+  const entries = buildSitemapEntries();
+  const urls = entries
+    .map(
+      (e) => `  <url>
+    <loc>${e.loc}</loc>
+    <lastmod>${e.lastmod}</lastmod>
+    <changefreq>${e.loc.includes('/blog/') ? 'monthly' : 'weekly'}</changefreq>
+    <priority>${e.loc.endsWith('/') ? '1.0' : e.loc.includes('/blog/') ? '0.8' : '0.6'}</priority>
+  </url>`,
+    )
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>`;
 }

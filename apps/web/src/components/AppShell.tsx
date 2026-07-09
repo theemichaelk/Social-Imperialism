@@ -20,14 +20,16 @@ const BUILD_STAMP = process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
 
 const PUBLIC_PATHS = new Set([
   '/', '/login', '/subscribe', '/setup-account', '/forgot-password', '/reset-password',
-  '/founder', '/about', '/contact', '/privacy', '/terms', '/download',
+  '/founder', '/about', '/contact', '/privacy', '/terms', '/download', '/blog',
   '/oauth/callback', '/billing/success', '/billing/cancel',
-  '/sitemap.html', '/feed.xml',
+  '/sitemap.html', '/sitemap.xml', '/feed.xml',
 ]);
 
 function isPublicPath(pathname: string) {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return PUBLIC_PATHS.has(normalized);
+  if (PUBLIC_PATHS.has(normalized)) return true;
+  if (normalized.startsWith('/blog/')) return true;
+  return false;
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {

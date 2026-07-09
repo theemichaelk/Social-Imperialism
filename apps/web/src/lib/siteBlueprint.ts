@@ -16,15 +16,25 @@ export const BLUEPRINT_SOURCES = [
   'apps/web/src/lib/siteBlueprint.ts',
 ] as const;
 
+/** Year the platform launched — copyright displays © 2026, then © 2026–2027, © 2026–2028, etc. */
+export const SITE_FOUNDING_YEAR = 2026;
+
 export const SITE_BRAND = {
   name: 'Social Imperialism',
   tagline: 'AI Social Growth Platform',
-  year: new Date().getFullYear(),
+  foundingYear: SITE_FOUNDING_YEAR,
 } as const;
 
+/** © 2026 when current year is 2026; © 2026–2027 in 2027; auto-extends each new year. */
+export function formatCopyrightYears(now = new Date()): string {
+  const end = now.getFullYear();
+  const start = SITE_FOUNDING_YEAR;
+  return start >= end ? `© ${end}` : `© ${start}–${end}`;
+}
+
 export const SITE_FOOTER = {
-  copyright: (year = SITE_BRAND.year) =>
-    `© ${year} ${SITE_BRAND.name}. All rights reserved.`,
+  copyright: (now = new Date()) =>
+    `${formatCopyrightYears(now)} ${SITE_BRAND.name}. All rights reserved.`,
   creditOrg: 'The Stone Builders Rejected',
   creditUrl: 'https://tsbrenterprises.com',
   creditPerson: 'Michael K',
@@ -32,7 +42,7 @@ export const SITE_FOOTER = {
 
 /** Verified marketing constants — align with brain/FEATURES.md */
 export const BLUEPRINT_METRICS = {
-  ipcChannels: '407',
+  ipcChannels: '413',
   platformLabel: '14+',
   aiModels: '100+',
   apiIntegrations: '50+',
@@ -58,6 +68,7 @@ export const PUBLIC_NAV_ANCHORS = [
 ] as const;
 
 export const PUBLIC_NAV_ROUTES = [
+  { id: 'blog', label: 'Blog', href: '/blog' },
   { id: 'download', label: 'Download', href: '/download' },
   { id: 'founder', label: 'Founder', href: '/founder' },
 ] as const;
@@ -91,6 +102,7 @@ export const FOOTER_LEGAL_LINKS = [
 
 export const FOOTER_LINKS = [
   { href: '/subscribe', label: 'Get Started' },
+  { href: '/blog', label: 'Blog' },
   { href: '/login', label: 'Sign In' },
   { href: '/download', label: 'Download Desktop' },
   { href: '/founder', label: 'Founder' },

@@ -15,6 +15,9 @@ const DEFAULT_PAGES = [
   { id: 'page_subscribe', path: '/subscribe', title: 'Subscribe', type: 'conversion', enabled: true },
   { id: 'page_login', path: '/login', title: 'Login', type: 'auth', enabled: true },
   { id: 'page_sitemap', path: '/sitemap.html', title: 'Sitemap', type: 'seo', enabled: true },
+  { id: 'page_blog', path: '/blog', title: 'Blog', type: 'seo', enabled: true },
+  { id: 'page_sitemap_xml', path: '/sitemap.xml', title: 'XML Sitemap', type: 'seo', enabled: true },
+  { id: 'page_feed', path: '/feed.xml', title: 'RSS Feed', type: 'seo', enabled: true },
 ];
 
 function emptySettings() {
