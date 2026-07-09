@@ -73,6 +73,13 @@ const FEATURES = [
   { area: 'Integrations', name: 'Keyword research', channel: 'research-keyword', args: ['marketing'],
     validate: (d) => typeof d === 'object' },
   { area: 'System', name: 'Export data', channel: 'export-data', validate: (d) => typeof d === 'object' },
+  { area: 'SiteTracking', name: 'Get site tracking settings', channel: 'get-site-tracking-settings',
+    validate: (d) => Array.isArray(d?.settings?.pages) && d.settings.pages.length > 0 },
+  { area: 'SiteTracking', name: 'Save site tracking round-trip', channel: 'save-site-tracking-settings',
+    validate: (d) => d?.success && d?.settings?.ga4MeasurementId === 'G-SITETRACKQA',
+    dynamicArgs: 'site-tracking-roundtrip' },
+  { area: 'SiteTracking', name: 'Public site tracking preview', channel: 'get-public-site-tracking-preview',
+    args: ['/'], validate: (d) => d?.preview && typeof d.preview === 'object' },
 ];
 
 async function login() {
@@ -114,6 +121,13 @@ async function main() {
       args = [{ ...origKeys, __qa_marker: 'settings_test_ok' }];
     } else if (f.dynamicArgs === 'active-campaign') {
       args = [activeId];
+    } else if (f.dynamicArgs === 'site-tracking-roundtrip') {
+      args = [{
+        ga4MeasurementId: 'G-SITETRACKQA',
+        ga4Enabled: true,
+        googleSearchConsoleVerification: 'qa-gsc-token',
+        globalHeaderHtml: '<!-- si-qa-header -->',
+      }];
     }
     let r = await invoke(token, projectId, f.channel, args);
     let usedFallback = false;
@@ -145,6 +159,22 @@ async function main() {
   // Restore original keys after round-trip test
   const { __qa_marker, ...restore } = origKeys;
   await invoke(token, projectId, 'save-global-keys', [restore]);
+
+  try {
+    const pub = await fetch(`${API}/api/public/site-tracking?path=/`).then((r) => r.json());
+    const ga4 = pub?.data?.ga4MeasurementId;
+    const gsc = pub?.data?.googleSearchConsoleVerification;
+    if (ga4 === 'G-SITETRACKQA' && gsc === 'qa-gsc-token') {
+      console.log('✓ [SiteTracking] Public API reflects saved settings — PASS');
+      pass++;
+    } else {
+      console.log(`✗ [SiteTracking] Public API reflects saved settings — FAIL (ga4=${ga4 || 'empty'})`);
+      fail++;
+    }
+  } catch (e) {
+    console.log(`✗ [SiteTracking] Public API reflects saved settings — FAIL (${e.message})`);
+    fail++;
+  }
 
   console.log(`\nSUMMARY: PASS=${pass} WEAK=${weak} FAIL=${fail}\n`);
   fs.writeFileSync(path.join(__dirname, '.settings-qa-report.json'), JSON.stringify({ summary: { pass, weak, fail } }, null, 2));

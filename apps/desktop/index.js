@@ -2657,9 +2657,11 @@ ipcMain.handle('get-site-tracking-settings', () => {
   const { getSiteTrackingSettings, getSitePagesCatalog } = require('./services/siteTrackingSettings');
   return { success: true, settings: getSiteTrackingSettings(store), catalog: getSitePagesCatalog() };
 });
-ipcMain.handle('save-site-tracking-settings', (_event, payload) => {
+ipcMain.handle('save-site-tracking-settings', async (_event, payload) => {
   const { saveSiteTrackingSettings } = require('./services/siteTrackingSettings');
-  return saveSiteTrackingSettings(store, payload || {});
+  const result = saveSiteTrackingSettings(store, payload || {});
+  await store.flush?.();
+  return result;
 });
 ipcMain.handle('get-public-site-tracking-preview', (_event, pathname = '/') => {
   const { getSiteTrackingSettings, getPublicSiteTrackingPayload } = require('./services/siteTrackingSettings');

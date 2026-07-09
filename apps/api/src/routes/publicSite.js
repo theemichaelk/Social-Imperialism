@@ -88,4 +88,28 @@ router.get('/site-tracking', async (req, res) => {
   }
 });
 
-module.exports = router;
+router.get('/site-tracking/status', async (req, res) => {
+  try {
+    const { summarizeTrackingPayload } = require(path.join(__dirname, '../../../desktop/services/siteTrackingSettings'));
+    const settings = await loadPublicTrackingSettings();
+    const path = req.query.path || '/';
+    const payload = getPublicSiteTrackingPayload(settings, path);
+    const summary = summarizeTrackingPayload(payload);
+    res.json({
+      success: true,
+      path,
+      configured: summary.active,
+      fields: summary.fields,
+      updatedAt: summary.updatedAt,
+      ga4: !!payload.ga4MeasurementId,
+      gtm: !!payload.gtmContainerId,
+      googleSearchConsole: !!payload.googleSearchConsoleVerification,
+      bing: !!payload.bingWebmasterVerification,
+      yahoo: !!payload.yahooSiteVerification,
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+module.exports = { router, loadPublicTrackingSettings, resolvePublicOrg, resolvePublicProject };

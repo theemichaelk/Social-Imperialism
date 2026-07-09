@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { getApiBase } from '@/lib/api';
 import type { PublicSiteTrackingPayload } from '@/lib/siteTracking';
 
 const INJECT_ATTR = 'data-si-tracking';
@@ -134,7 +135,7 @@ export function SiteTrackingInjector() {
     const cacheKey = `${path}`;
     if (cacheRef.current === cacheKey) return;
 
-    fetch(`/api/public/site-tracking?path=${encodeURIComponent(path)}`)
+    fetch(`${getApiBase()}/api/public/site-tracking?path=${encodeURIComponent(path)}`)
       .then((r) => r.json())
       .then((res) => {
         if (res?.data) {
@@ -142,7 +143,7 @@ export function SiteTrackingInjector() {
           cacheRef.current = cacheKey;
         }
       })
-      .catch(() => { /* public tracking optional */ });
+      .catch(() => { /* SSR head/body already injected when configured */ });
   }, [pathname]);
 
   return null;

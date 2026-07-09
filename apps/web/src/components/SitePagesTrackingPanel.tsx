@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { DataPanel, SparkRow } from '@/components/DashboardViz';
+import { SiteTrackingLiveStatus } from '@/components/SiteTrackingLiveStatus';
 import {
   EMPTY_SITE_TRACKING,
   SEARCH_CONSOLE_LINKS,
@@ -99,11 +100,18 @@ export function SitePagesTrackingPanel({ onMessage }: Props) {
 
   const enabledCount = settings.pages.filter((p) => p.enabled).length;
   const trackingOn = [
-    settings.ga4Enabled && settings.ga4MeasurementId,
-    settings.gtmEnabled && settings.gtmContainerId,
-    settings.googleSearchConsoleVerification,
-    settings.bingWebmasterVerification,
-    settings.yahooSiteVerification,
+    settings.ga4MeasurementId?.trim(),
+    settings.gtmContainerId?.trim(),
+    settings.googleSearchConsoleVerification?.trim(),
+    settings.bingWebmasterVerification?.trim(),
+    settings.yahooSiteVerification?.trim(),
+    settings.facebookPixelId?.trim(),
+    settings.microsoftClarityId?.trim(),
+    settings.hotjarSiteId?.trim(),
+    settings.globalHeaderHtml?.trim(),
+    settings.globalFooterHtml?.trim(),
+    settings.customHeadHtml?.trim(),
+    settings.customBodyHtml?.trim(),
   ].filter(Boolean).length;
 
   return (
@@ -133,6 +141,8 @@ export function SitePagesTrackingPanel({ onMessage }: Props) {
           <button type="button" className="btn" onClick={() => refresh()}>Reload</button>
         </div>
       </DataPanel>
+
+      <SiteTrackingLiveStatus previewPath={previewPath} />
 
       {section === 'pages' && (
         <div className="grid grid-2 site-tracking-grid">

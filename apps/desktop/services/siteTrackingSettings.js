@@ -187,6 +187,27 @@ function getSitePagesCatalog() {
   return DEFAULT_PAGES;
 }
 
+function summarizeTrackingPayload(payload) {
+  if (!payload) return { active: false, fields: [] };
+  const fields = [];
+  if (payload.ga4MeasurementId) fields.push('ga4');
+  if (payload.gtmContainerId) fields.push('gtm');
+  if (payload.googleSearchConsoleVerification) fields.push('googleSearchConsole');
+  if (payload.bingWebmasterVerification) fields.push('bing');
+  if (payload.yahooSiteVerification) fields.push('yahoo');
+  if (payload.facebookPixelId) fields.push('facebookPixel');
+  if (payload.microsoftClarityId) fields.push('clarity');
+  if (payload.hotjarSiteId) fields.push('hotjar');
+  if (payload.customHeadHtml?.trim()) fields.push('customHeadHtml');
+  if (payload.customBodyHtml?.trim()) fields.push('customBodyHtml');
+  if (payload.globalHeaderHtml?.trim()) fields.push('globalHeaderHtml');
+  if (payload.globalFooterHtml?.trim()) fields.push('globalFooterHtml');
+  if (payload.page?.headerHtml?.trim()) fields.push('pageHeaderHtml');
+  if (payload.page?.bodyHtml?.trim()) fields.push('pageBodyHtml');
+  if (payload.page?.footerHtml?.trim()) fields.push('pageFooterHtml');
+  return { active: fields.length > 0, fields, updatedAt: payload.updatedAt || null, path: payload.path };
+}
+
 module.exports = {
   STORE_KEY,
   LEGACY_STORE_KEY,
@@ -197,4 +218,5 @@ module.exports = {
   getPublicSiteTrackingPayload,
   getSitePagesCatalog,
   normalizePath,
+  summarizeTrackingPayload,
 };

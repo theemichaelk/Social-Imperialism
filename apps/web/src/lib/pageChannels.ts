@@ -128,6 +128,14 @@ export const PAGE_CHANNELS = {
     'approve-issue-patch', 'deny-issue-patch', 'edit-issue-patch',
     'delete-issue', 'dispatch-issue-diagnostic-email', 'get-section-live',
   ],
+  settings: [
+    'get-site-tracking-settings', 'save-site-tracking-settings', 'get-public-site-tracking-preview',
+    'get-settings', 'save-settings', 'get-settings-status', 'get-global-keys', 'save-global-keys',
+    'get-key-sources', 'check-api-status', 'test-all-connections', 'run-live-connection-audit',
+    'get-site-playbook-config', 'save-site-playbook-config', 'get-site-traffic-health',
+    'get-billing-plan', 'save-billing-plan', 'get-grok-settings', 'save-grok-settings',
+    'get-section-live',
+  ],
   dns: [
     'get-dns-sites', 'get-dns-config', 'sync-dns-sites', 'add-dns-site', 'update-dns-site', 'delete-dns-site',
     'get-dns-records', 'save-dns-record', 'delete-dns-record', 'verify-dns-record',

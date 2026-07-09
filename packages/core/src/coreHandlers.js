@@ -732,9 +732,11 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     return { success: true, settings, catalog: getSitePagesCatalog() };
   });
 
-  ipcMain.handle('save-site-tracking-settings', (_event, payload) => {
+  ipcMain.handle('save-site-tracking-settings', async (_event, payload) => {
     const { saveSiteTrackingSettings } = require(path.join(desktopServicesPath, 'siteTrackingSettings'));
-    return saveSiteTrackingSettings(store, payload || {});
+    const result = saveSiteTrackingSettings(store, payload || {});
+    await store.flush?.();
+    return result;
   });
 
   ipcMain.handle('get-public-site-tracking-preview', (_event, pathname = '/') => {
