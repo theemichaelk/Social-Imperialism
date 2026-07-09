@@ -4,9 +4,17 @@ const path = require('path');
 const {
   getSiteTrackingSettings,
   getPublicSiteTrackingPayload,
+  emptySettings,
+  STORE_KEY,
+  LEGACY_STORE_KEY,
 } = require(path.join(__dirname, '../../../desktop/services/siteTrackingSettings'));
 
 const router = express.Router();
+
+async function resolvePublicOrg() {
+  const orgSlug = process.env.SEED_ORG_SLUG || 'social-imperialism';
+  return prisma.organization.findUnique({ where: { slug: orgSlug } });
+}
 
 async function resolvePublicProject() {
   const projectId = process.env.PUBLIC_SITE_PROJECT_ID;
@@ -14,8 +22,7 @@ async function resolvePublicProject() {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (project) return project;
   }
-  const orgSlug = process.env.SEED_ORG_SLUG || 'social-imperialism';
-  const org = await prisma.organization.findUnique({ where: { slug: orgSlug } });
+  const org = await resolvePublicOrg();
   if (!org) return null;
   return prisma.project.findFirst({
     where: { organizationId: org.id, isActive: true },
@@ -23,35 +30,57 @@ async function resolvePublicProject() {
   });
 }
 
-/** Minimal prisma-backed store for one project setting key. */
-function createReadStore(projectId, organizationId) {
-  return {
-    projectId,
-    organizationId,
-    getItem(key) {
-      return this._cache?.[key] ?? null;
-    },
-    async load() {
-      const row = await prisma.projectSetting.findUnique({
-        where: { projectId_key: { projectId, key: 'siteTrackingSettings' } },
+function parseSettingsJson(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function loadPublicTrackingSettings() {
+  const org = await resolvePublicOrg();
+  if (org) {
+    const orgRow = await prisma.orgSetting.findUnique({
+      where: { organizationId_key: { organizationId: org.id, key: STORE_KEY } },
+    });
+    const parsed = parseSettingsJson(orgRow?.value);
+    if (parsed) {
+      return getSiteTrackingSettings({
+        getItem: (key) => (key === STORE_KEY ? orgRow.value : null),
       });
-      this._cache = { siteTrackingSettings: row?.value || null };
-    },
-  };
+    }
+  }
+
+  const project = await resolvePublicProject();
+  if (!project) return emptySettings();
+
+  const [orgRow, projectRow] = await Promise.all([
+    org
+      ? prisma.orgSetting.findUnique({
+        where: { organizationId_key: { organizationId: org.id, key: STORE_KEY } },
+      })
+      : null,
+    prisma.projectSetting.findUnique({
+      where: { projectId_key: { projectId: project.id, key: LEGACY_STORE_KEY } },
+    }),
+  ]);
+
+  const cache = {};
+  if (orgRow?.value) cache[STORE_KEY] = orgRow.value;
+  if (projectRow?.value) cache[LEGACY_STORE_KEY] = projectRow.value;
+
+  return getSiteTrackingSettings({
+    getItem: (key) => cache[key] ?? null,
+  });
 }
 
 router.get('/site-tracking', async (req, res) => {
   try {
-    const project = await resolvePublicProject();
-    if (!project) {
-      const { emptySettings } = require(path.join(__dirname, '../../../desktop/services/siteTrackingSettings'));
-      return res.json({ success: true, data: getPublicSiteTrackingPayload(emptySettings(), req.query.path || '/') });
-    }
-    const store = createReadStore(project.id, project.organizationId);
-    await store.load();
-    const settings = getSiteTrackingSettings(store);
+    const settings = await loadPublicTrackingSettings();
     const payload = getPublicSiteTrackingPayload(settings, req.query.path || '/');
-    res.set('Cache-Control', 'public, max-age=120');
+    res.set('Cache-Control', 'public, max-age=60');
     res.json({ success: true, data: payload });
   } catch (e) {
     console.error('public/site-tracking:', e.message);

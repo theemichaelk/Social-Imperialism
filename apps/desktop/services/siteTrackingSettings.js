@@ -1,7 +1,8 @@
 /**
  * Site pages, header/footer HTML snippets, GA4, and search-console verification.
  */
-const STORE_KEY = 'siteTrackingSettings';
+const STORE_KEY = 'org_siteTrackingSettings';
+const LEGACY_STORE_KEY = 'siteTrackingSettings';
 
 const DEFAULT_PAGES = [
   { id: 'page_home', path: '/', title: 'Homepage', type: 'marketing', enabled: true },
@@ -87,8 +88,14 @@ function mergePages(savedPages) {
   return merged;
 }
 
+function loadRawSettings(store) {
+  const org = loadJson(store, STORE_KEY, null);
+  if (org) return org;
+  return loadJson(store, LEGACY_STORE_KEY, null);
+}
+
 function getSiteTrackingSettings(store) {
-  const raw = loadJson(store, STORE_KEY, null);
+  const raw = loadRawSettings(store);
   const base = emptySettings();
   if (!raw) return base;
   return {
@@ -100,14 +107,42 @@ function getSiteTrackingSettings(store) {
 
 function saveSiteTrackingSettings(store, payload) {
   const current = getSiteTrackingSettings(store);
+  const merged = { ...current, ...payload };
+  if (merged.ga4MeasurementId?.trim()) merged.ga4Enabled = true;
+  if (merged.gtmContainerId?.trim()) merged.gtmEnabled = true;
   const next = {
-    ...current,
-    ...payload,
+    ...merged,
     pages: mergePages(payload?.pages || current.pages),
     updatedAt: new Date().toISOString(),
   };
-  store.setItem(STORE_KEY, JSON.stringify(next));
+  const serialized = JSON.stringify(next);
+  store.setItem(STORE_KEY, serialized);
+  store.setItem(LEGACY_STORE_KEY, serialized);
   return { success: true, settings: next };
+}
+
+function resolveGa4Id(settings) {
+  const id = String(
+    settings.ga4MeasurementId
+    || process.env.PLATFORM_GA4_MEASUREMENT_ID
+    || process.env.GA4_MEASUREMENT_ID
+    || '',
+  ).trim();
+  if (!id) return '';
+  if (settings.ga4Enabled === false) return '';
+  return id;
+}
+
+function resolveGtmId(settings) {
+  const id = String(
+    settings.gtmContainerId
+    || process.env.PLATFORM_GTM_CONTAINER_ID
+    || process.env.GTM_CONTAINER_ID
+    || '',
+  ).trim();
+  if (!id) return '';
+  if (settings.gtmEnabled === false) return '';
+  return id;
 }
 
 function findPageForPath(settings, pathname) {
@@ -134,8 +169,8 @@ function getPublicSiteTrackingPayload(settings, pathname = '/') {
     } : null,
     globalHeaderHtml: settings.globalHeaderHtml || '',
     globalFooterHtml: settings.globalFooterHtml || '',
-    ga4MeasurementId: settings.ga4Enabled && settings.ga4MeasurementId ? settings.ga4MeasurementId : '',
-    gtmContainerId: settings.gtmEnabled && settings.gtmContainerId ? settings.gtmContainerId : '',
+    ga4MeasurementId: resolveGa4Id(settings),
+    gtmContainerId: resolveGtmId(settings),
     googleSearchConsoleVerification: settings.googleSearchConsoleVerification || '',
     bingWebmasterVerification: settings.bingWebmasterVerification || '',
     yahooSiteVerification: settings.yahooSiteVerification || '',
@@ -154,6 +189,7 @@ function getSitePagesCatalog() {
 
 module.exports = {
   STORE_KEY,
+  LEGACY_STORE_KEY,
   DEFAULT_PAGES,
   emptySettings,
   getSiteTrackingSettings,

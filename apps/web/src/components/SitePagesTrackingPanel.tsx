@@ -250,7 +250,10 @@ export function SitePagesTrackingPanel({ onMessage }: Props) {
               className="input"
               placeholder="G-XXXXXXXXXX"
               value={settings.ga4MeasurementId}
-              onChange={(e) => patchSettings({ ga4MeasurementId: e.target.value.trim() })}
+              onChange={(e) => {
+                const ga4MeasurementId = e.target.value.trim();
+                patchSettings({ ga4MeasurementId, ga4Enabled: !!ga4MeasurementId || settings.ga4Enabled });
+              }}
             />
             <p className="settings-panel-desc">Measurement ID from GA4 Admin → Data Streams.</p>
           </DataPanel>
@@ -268,7 +271,10 @@ export function SitePagesTrackingPanel({ onMessage }: Props) {
               className="input"
               placeholder="GTM-XXXXXXX"
               value={settings.gtmContainerId}
-              onChange={(e) => patchSettings({ gtmContainerId: e.target.value.trim() })}
+              onChange={(e) => {
+                const gtmContainerId = e.target.value.trim();
+                patchSettings({ gtmContainerId, gtmEnabled: !!gtmContainerId || settings.gtmEnabled });
+              }}
             />
           </DataPanel>
 

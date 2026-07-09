@@ -135,6 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <CampaignSwitcher onSwitch={() => router.refresh()} />
         </div>
         {!isSupportWorkspace && <ImperialismBrainPromptBar />}
+        <SiteTrackingInjector />
         <CampaignMasteryBanner />
         <SovereignThreatBanner />
         <OverlordInterventionBanner />
