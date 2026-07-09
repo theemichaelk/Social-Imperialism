@@ -193,6 +193,7 @@ async function afterInvoke({ entry, channel, args, result }) {
 }
 
 async function invoke({ projectId, organizationId, channel, args = [], userContext = null }) {
+  const { isSiteTrackingChannel, invokeSiteTrackingChannel } = require('./platformOrgStore');
   const entry = await getHandlersForProject({ projectId, organizationId });
   const { handlers, store, pendingOAuth } = entry;
   if (userContext) {
@@ -205,14 +206,16 @@ async function invoke({ projectId, organizationId, channel, args = [], userConte
     }
   }
   const handler = handlers[channel];
-  if (!handler) {
+  if (!handler && !isSiteTrackingChannel(channel)) {
     const err = new Error(`Unknown channel: ${channel}`);
     err.code = 'UNKNOWN_CHANNEL';
     throw err;
   }
   try {
-    const result = await handler(null, ...args);
-    await store.flush();
+    const result = isSiteTrackingChannel(channel)
+      ? await invokeSiteTrackingChannel(channel, args)
+      : await handler(null, ...args);
+    if (!isSiteTrackingChannel(channel)) await store.flush();
     await persistEntitiesFromStore(store, projectId, channel);
     await afterInvoke({ entry, channel, args, result });
 
@@ -244,4 +247,5 @@ module.exports = {
   persistEntitiesFromStore,
   clearHandlerCache,
   eventBus,
+  ...require('./platformOrgStore'),
 };

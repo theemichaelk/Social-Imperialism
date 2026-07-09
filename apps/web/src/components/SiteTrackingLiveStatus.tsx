@@ -65,8 +65,8 @@ export function SiteTrackingLiveStatus({ previewPath = '/' }: { previewPath?: st
   return (
     <DataPanel title="Live site detection (www.socialimperialism.com)" live>
       <p className="settings-panel-desc">
-        Shows what the public API serves to visitors. Google Tag Assistant and Search Console read the initial HTML —
-        save settings here, then confirm fields appear below. DNS for your domain is managed separately on the{' '}
+        Shows what the public API serves to www.socialimperialism.com (platform org). Google Tag Assistant and
+        Search Console read the initial HTML — save settings here, then confirm fields appear below. DNS is managed separately on the{' '}
         <a href="/dns">DNS page</a>.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
