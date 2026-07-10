@@ -20,6 +20,8 @@ const FEATURES = [
     validate: (d) => Array.isArray(d) && (d.length === 0 || d[0].platform) },
   { area: 'Overview', name: 'Trending topics (topic field)', channel: 'get-trending-topics',
     validate: (d) => Array.isArray(d) && d.length > 0 && (d[0].topic || d[0].title) },
+  { area: 'Overview', name: 'Daily social trends (platform + topic)', channel: 'get-daily-social-trends',
+    validate: (d) => Array.isArray(d) && (d.length === 0 || (d[0].topic && d[0].platform)) },
   { area: 'Feed', name: 'Engagement queue', channel: 'get-engagement-queue',
     validate: (d) => Array.isArray(d) },
   { area: 'Overview', name: 'Live news (array)', channel: 'get-live-news', args: ['technology'],

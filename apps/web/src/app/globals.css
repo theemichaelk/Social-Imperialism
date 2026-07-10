@@ -2197,6 +2197,40 @@ textarea.input { min-height: 100px; resize: vertical; }
 .history-reply-actions a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .fetch-profiles-panel { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
+/* Dashboard — daily social trends (replaces Feed Platform Mix) */
+.dash-social-trends-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.dash-social-trends-col {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px;
+}
+.dash-social-trends-platform {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+}
+.dash-social-trend-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+}
+.dash-social-trend-tag { color: #e2e8f0; font-weight: 500; word-break: break-word; }
+.dash-social-trend-tag.is-hashtag { color: #a855f7; }
+.dash-social-trend-meta { grid-column: 1; font-size: 0.68rem; color: #64748b; }
+.dash-social-trend-link,
+.dash-social-trend-item .btn { grid-column: 2; grid-row: 1 / span 2; font-size: 0.68rem; }
+
 @media (max-width: 768px) {
   .history-reply-row { grid-template-columns: 1fr; }
   .calendar-grid { min-height: 300px; }

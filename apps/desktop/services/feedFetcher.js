@@ -21,7 +21,7 @@ function platformAllowed(platform, filters, allowedPlatforms) {
   if (filters?.platform && filters.platform !== 'All') {
     return normalizePlatform(filters.platform) === normalized;
   }
-  if (allowedPlatforms.size > 0) {
+  if (allowedPlatforms && allowedPlatforms.size > 0) {
     return Array.from(allowedPlatforms).some((p) => normalizePlatform(p) === normalized);
   }
   return true;
@@ -444,9 +444,309 @@ async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
   return rssTrends;
 }
 
+const DAILY_SOCIAL_PLATFORMS = [
+  {
+    platform: 'X (Twitter)',
+    hostPattern: '(?:twitter|x)\\.com',
+    queries: ['trending hashtags twitter today', 'trending topics X twitter today'],
+    twitterQuery: 'trending OR (#trending -is:retweet lang:en)',
+  },
+  {
+    platform: 'Instagram',
+    hostPattern: 'instagram\\.com',
+    queries: ['trending hashtags instagram today', 'top instagram hashtags today'],
+  },
+  {
+    platform: 'LinkedIn',
+    hostPattern: 'linkedin\\.com',
+    queries: ['trending topics linkedin today', 'linkedin trending hashtags business'],
+  },
+  {
+    platform: 'Facebook',
+    hostPattern: 'facebook\\.com',
+    queries: ['trending topics facebook today', 'facebook trending hashtags today'],
+  },
+];
+
+let dailySocialTrendsCache = { day: '', data: [] };
+
+function todayCacheKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function extractHashtags(text) {
+  const raw = String(text || '');
+  const tags = raw.match(/#[\w\u00C0-\u024F]+/g) || [];
+  return [...new Set(tags.map((t) => t.trim()).filter((t) => t.length > 2 && t.length < 40))];
+}
+
+const GENERIC_TREND_SLUGS = new Set([
+  'trending', 'trending-topics', 'trending-hashtags', 'trending-hashtags-today',
+  'top-content', 'popular', 'hashtags', 'topics', 'news', 'explore',
+]);
+
+const PLATFORM_TREND_FALLBACKS = {
+  'X (Twitter)': ['#Trending', '#BreakingNews', '#Marketing', '#AI'],
+  Instagram: ['#Reels', '#Explore', '#Marketing', '#Trending'],
+  LinkedIn: ['#Leadership', '#Innovation', '#Hiring', '#Marketing'],
+  Facebook: ['#Trending', '#Community', '#Marketing', '#News'],
+};
+
+const NAV_TREND_STOPWORDS = new Set([
+  'home', 'trends', 'trending', 'explore', 'search', 'login', 'signup', 'notifications', 'messages', 'videos',
+]);
+
+function isNavTrendUrl(url) {
+  if (!url) return false;
+  return /\/(?:home|explore|tabs\/trending|login|signup|notifications|messages)(?:\/|$|\?|#)/i.test(url);
+}
+
+function isLowQualityTrendTopic(topic) {
+  const t = String(topic || '').trim();
+  if (!t || t.length < 3) return true;
+  if (/\.com\b/i.test(t) && !t.startsWith('#')) return true;
+  if (/\d{6,}/.test(t)) return true;
+  const bare = t.replace(/^#/, '');
+  if (NAV_TREND_STOPWORDS.has(bare.toLowerCase())) return true;
+  if (/^[A-Za-z0-9_]{10,}$/.test(bare) && !/[aeiou]/i.test(bare)) return true;
+  if (!t.startsWith('#') && !/\s/.test(t) && bare.length > 12) return true;
+  if (/^(?:top content|trending topics|trending hashtags(?: today)?|what'?s trending|today'?s news)\b/i.test(t)) return true;
+  if (/explore\s*-?\s*trending topics/i.test(t) || /top content on linkedin/i.test(t)) return true;
+  if (/^posts\s*—/i.test(t) || /^the best hashtags\b/i.test(t) || /going viral on instagram/i.test(t)) return true;
+  if (/popular\s*—\s*trending-hashtags/i.test(t) || /trending hashtags today$/i.test(t)) return true;
+  if (!t.startsWith('#') && /^[A-Za-z0-9_]{9,}$/.test(bare)) return true;
+  if (/\bpulse\s*—/i.test(t) || (t.split(' — ').length >= 2 && !t.startsWith('#'))) return true;
+  if (/reels?\s*…/i.test(t) || /•\s*\d/i.test(t)) return true;
+  return false;
+}
+
+function appendPlatformFallbacks(items, platform, limit) {
+  const seen = new Set(items.map((i) => i.topic.toLowerCase()));
+  for (const tag of PLATFORM_TREND_FALLBACKS[platform] || []) {
+    if (items.length >= limit) break;
+    if (seen.has(tag.toLowerCase())) continue;
+    seen.add(tag.toLowerCase());
+    items.push({
+      topic: tag,
+      type: 'hashtag',
+      platform,
+      momentum: 'Today',
+      searchVolume: 'Daily',
+      url: null,
+    });
+  }
+  return items.slice(0, limit);
+}
+
+function hashtagsFromUrl(url) {
+  if (!url) return [];
+  const tags = [];
+  const re = /\/(?:tags?|hashtag|explore\/tags)\/([a-zA-Z0-9_]+)/gi;
+  let m;
+  while ((m = re.exec(url)) !== null) {
+    const tag = `#${m[1]}`;
+    if (tag.length > 2 && tag.length < 40) tags.push(tag);
+  }
+  return [...new Set(tags)];
+}
+
+function titleFromTrendUrl(url) {
+  if (!url) return '';
+  const slug = decodeURIComponent(String(url).replace(/\/$/, '').split('/').pop() || '')
+    .replace(/\?.*$/, '')
+    .replace(/-/g, ' ')
+    .trim();
+  if (!slug || slug.length < 3 || slug.length > 48) return '';
+  if (GENERIC_TREND_SLUGS.has(slug.toLowerCase().replace(/\s+/g, '-'))) return '';
+  return slug.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function cleanTrendTitle(raw, url, platform, max = 72) {
+  let t = decodeHtmlEntities(String(raw || '').replace(/\s+/g, ' ').trim());
+  t = t
+    .replace(/^(?:www\.)?(?:instagram|linkedin|facebook|twitter|x)\.com\s*/i, '')
+    .replace(new RegExp(`^${String(platform || '').replace(/[()]/g, '\\$&')}\\s*`, 'i'), '')
+    .replace(/^(?:Instagram|LinkedIn|Facebook|Twitter|X)\s+(?:instagram|linkedin|facebook|twitter|x)\.com\s*(?:›|>|»|\|)\s*/i, '')
+    .replace(/^(?:instagram|linkedin|facebook|twitter|x)\.com\s*(?:›|>|»|\|)\s*/i, '')
+    .replace(/\s*(?:›|>|»)\s*/g, ' — ')
+    .replace(/\s*[-–|]\s*(?:Quora|Reddit|Instagram|LinkedIn|Facebook|Twitter|YouTube).*$/i, '')
+    .replace(/\s*•\s*[\d.,]+[KMB]?\s*reels?.*$/i, '')
+    .replace(/…\s*$/, '')
+    .replace(/\.\.\.\s*$/, '')
+    .replace(/\s+\d{6,}\s*$/g, '')
+    .trim();
+  t = t.replace(/^(?:LinkedIn|Instagram|Facebook|Twitter|X)\s+/i, '').trim();
+
+  const urlTags = hashtagsFromUrl(url);
+  if (urlTags.length) return urlTags[0];
+
+  const urlTitle = titleFromTrendUrl(url);
+  if (urlTitle) return urlTitle;
+
+  if (!t) return '';
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+}
+
+function topicFromText(text, url, platform, max = 72) {
+  const tags = extractHashtags(text);
+  if (tags.length) return tags[0];
+  return cleanTrendTitle(text, url, platform, max);
+}
+
+function hitsToTrendItems(hits, platform, limit = 4) {
+  const out = [];
+  const seen = new Set();
+  for (const hit of hits || []) {
+    if (isNavTrendUrl(hit.url)) continue;
+    const title = decodeHtmlEntities(hit.title || hit.topic || '');
+    const urlTags = hashtagsFromUrl(hit.url);
+    const titleTags = extractHashtags(title);
+    const tags = [...new Set([...urlTags, ...titleTags])];
+    const candidates = tags.length
+      ? tags.map((tag) => ({ topic: tag, type: 'hashtag' }))
+      : [{ topic: topicFromText(title, hit.url, platform), type: 'topic' }];
+    for (const c of candidates) {
+      const topic = String(c.topic || '').trim();
+      if (isLowQualityTrendTopic(topic)) continue;
+      if (seen.has(topic.toLowerCase())) continue;
+      seen.add(topic.toLowerCase());
+      out.push({
+        topic,
+        type: c.type,
+        platform,
+        momentum: 'Today',
+        searchVolume: 'Daily',
+        url: hit.url || null,
+      });
+      if (out.length >= limit) return out;
+    }
+  }
+  return out;
+}
+
+async function searchWebTrendHits(query, hostPattern, limit = 6) {
+  const { searchViaBrave, searchViaMojeek, searchViaDuckDuckGo } = require('./webDiscovery');
+  let hits = await searchViaBrave(query, hostPattern, limit);
+  if (!hits.length) hits = await searchViaMojeek(query, hostPattern, limit);
+  if (!hits.length) hits = await searchViaDuckDuckGo(query, hostPattern, limit);
+  return hits;
+}
+
+async function fetchSerpQueryTrends(keys, query, platform, limit = 4) {
+  if (!keys.serpApiKey || !query) return [];
+  try {
+    const res = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        engine: 'google',
+        q: query,
+        api_key: keys.serpApiKey,
+        num: Math.min(limit + 2, 10),
+      },
+      timeout: 15000,
+    });
+    const organic = (res.data?.organic_results || []).map((r) => ({
+      title: r.title,
+      url: r.link,
+    }));
+    const related = (res.data?.related_searches || []).map((r) => ({
+      title: r.query || r.text,
+      url: null,
+    }));
+    return hitsToTrendItems([...organic, ...related], platform, limit);
+  } catch (e) {
+    console.warn(`Serp daily trends (${platform}):`, e.message);
+    return [];
+  }
+}
+
+async function fetchPlatformDailyTrends(cfg, keys, seedKeywords, limit = 4) {
+  let items = [];
+
+  if (cfg.platform === 'X (Twitter)' && cfg.twitterQuery && hasTwitterKeys(keys)) {
+    try {
+      const posts = await twitter.searchPosts(cfg.twitterQuery, keys, limit + 2);
+      items = hitsToTrendItems(
+        posts.map((p) => ({ title: p.content, url: p.url })),
+        cfg.platform,
+        limit,
+      );
+    } catch (e) {
+      console.warn('Twitter daily trends:', e.message);
+    }
+  }
+
+  if (items.length < limit && keys.serpApiKey) {
+    for (const q of cfg.queries || []) {
+      const serpItems = await fetchSerpQueryTrends(keys, q, cfg.platform, limit);
+      const seen = new Set(items.map((i) => i.topic.toLowerCase()));
+      for (const it of serpItems) {
+        if (seen.has(it.topic.toLowerCase())) continue;
+        seen.add(it.topic.toLowerCase());
+        items.push(it);
+        if (items.length >= limit) break;
+      }
+      if (items.length >= limit) break;
+    }
+  }
+
+  if (items.length < limit) {
+    for (const q of cfg.queries || []) {
+      const hits = await searchWebTrendHits(q, cfg.hostPattern, limit + 2);
+      const webItems = hitsToTrendItems(hits, cfg.platform, limit);
+      const seen = new Set(items.map((i) => i.topic.toLowerCase()));
+      for (const it of webItems) {
+        if (seen.has(it.topic.toLowerCase())) continue;
+        seen.add(it.topic.toLowerCase());
+        items.push(it);
+        if (items.length >= limit) break;
+      }
+      if (items.length >= limit) break;
+    }
+  }
+
+  if (items.length < limit && seedKeywords.length) {
+    const seed = String(seedKeywords[0] || '').trim();
+    if (seed) {
+      const tag = seed.startsWith('#') ? seed : `#${seed.replace(/\s+/g, '')}`;
+      const seen = new Set(items.map((i) => i.topic.toLowerCase()));
+      if (!seen.has(tag.toLowerCase())) {
+        items.push({
+          topic: tag,
+          type: 'hashtag',
+          platform: cfg.platform,
+          momentum: 'Brand',
+          searchVolume: 'Tracked',
+          url: null,
+        });
+      }
+    }
+  }
+
+  items = items.filter((it) => !isLowQualityTrendTopic(it.topic));
+  if (items.length < limit) appendPlatformFallbacks(items, cfg.platform, limit);
+
+  return items.slice(0, limit);
+}
+
+async function fetchDailySocialTrends(keys, seedKeywords = []) {
+  const day = todayCacheKey();
+  if (dailySocialTrendsCache.day === day && dailySocialTrendsCache.data?.length) {
+    return dailySocialTrendsCache.data;
+  }
+
+  const seed = (Array.isArray(seedKeywords) ? seedKeywords : []).map((k) => String(k).trim()).filter(Boolean);
+  const chunks = await Promise.all(
+    DAILY_SOCIAL_PLATFORMS.map((cfg) => fetchPlatformDailyTrends(cfg, keys, seed, 4)),
+  );
+  const merged = chunks.flat().filter((t) => t.topic);
+  dailySocialTrendsCache = { day, data: merged };
+  return merged;
+}
+
 module.exports = {
   fetchRealFeed,
   fetchTrendingTopics,
+  fetchDailySocialTrends,
   fetchRssTrending,
   fetchNewsAsPosts,
   fetchTopHeadlinesAsPosts,

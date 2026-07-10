@@ -20,7 +20,7 @@ function registerCoreHandlers(deps) {
   deps.generateAI = generateAI;
 
   const desktopServicesPath = deps.DESKTOP_SERVICES || path.join(__dirname, '../../../apps/desktop/services');
-  const { fetchRealFeed, fetchTrendingTopics } = require(path.join(desktopServicesPath, 'feedFetcher'));
+  const { fetchRealFeed, fetchTrendingTopics, fetchDailySocialTrends } = require(path.join(desktopServicesPath, 'feedFetcher'));
   const { fetchLinkedAccountFeed } = require(path.join(desktopServicesPath, 'accountFeedFetcher'));
   const feedCache = new Map();
   const FEED_CACHE_TTL_MS = 3 * 60 * 1000;
@@ -483,6 +483,13 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     const seedKeywords = JSON.parse(store.getItem('keywords') || '[]')
       .filter((k) => k.campaignId === activeId).map((k) => k.term);
     return fetchTrendingTopics('All', keys, seedKeywords);
+  });
+  ipcMain.handle('get-daily-social-trends', async () => {
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const activeId = store.getItem('activeCampaignId') || 'default';
+    const seedKeywords = JSON.parse(store.getItem('keywords') || '[]')
+      .filter((k) => k.campaignId === activeId).map((k) => k.term);
+    return fetchDailySocialTrends(keys, seedKeywords);
   });
 
   async function fetchRssHeadlines(limit = 4) {

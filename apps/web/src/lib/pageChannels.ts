@@ -1,7 +1,7 @@
 /** Desktop IPC channels per page — used for parity checks and feature panels */
 export const PAGE_CHANNELS = {
   dashboard: [
-    'get-dashboard-stats', 'get-live-feed', 'get-trending-topics', 'get-live-news', 'get-setup-status',
+    'get-dashboard-stats', 'get-live-feed', 'get-trending-topics', 'get-daily-social-trends', 'get-live-news', 'get-setup-status',
     'get-campaign-mastery-status', 'mark-campaign-mastery-step',
     'get-active-campaign', 'get-domain-metrics', 'get-domdetailer-metrics', 'get-project-metrics', 'analyze-topic',
     'discover-best-questions', 'get-unanswered-questions', 'get-qa-settings', 'get-qa-sources', 'get-qa-ad-suggestions',

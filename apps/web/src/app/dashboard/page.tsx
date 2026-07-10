@@ -49,7 +49,17 @@ type EngagementQueueItem = {
   queuedAt?: string;
 };
 type Question = { content?: string; platform?: string; url?: string; externalId?: string };
-type TrendItem = { topic?: string; title?: string; momentum?: string; platform?: string };
+type TrendItem = {
+  topic?: string;
+  title?: string;
+  momentum?: string;
+  platform?: string;
+  type?: 'topic' | 'hashtag';
+  url?: string;
+  searchVolume?: string | number;
+};
+
+const DAILY_SOCIAL_PLATFORMS = ['X (Twitter)', 'Instagram', 'LinkedIn', 'Facebook'] as const;
 type NewsItem = { title: string; url?: string; source?: string };
 type DashboardStats = {
   totalPosts?: number;
@@ -89,7 +99,8 @@ function asNews(data: unknown): NewsItem[] {
 function asTrending(data: unknown): TrendItem[] {
   return asArray<TrendItem>(data).map((t) => ({
     ...t,
-    topic: decodeHtmlEntities(t.topic || t.title || 'Trending'),
+    topic: decodeHtmlEntities(String(t.topic || t.title || 'Trending')),
+    platform: t.platform ? decodeHtmlEntities(String(t.platform)) : t.platform,
   }));
 }
 
@@ -114,6 +125,7 @@ function DashboardPageInner() {
   const [feed, setFeed] = useState<Post[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [trending, setTrending] = useState<TrendItem[]>([]);
+  const [socialTrends, setSocialTrends] = useState<TrendItem[]>([]);
   const [leads, setLeads] = useState<unknown[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [worker, setWorker] = useState<WorkerStatus>({});
@@ -216,10 +228,11 @@ function DashboardPageInner() {
     setActionMsg('');
     setLoadError('');
     try {
-      const [s, n, t, c, w, st, ld, fp, eq] = await Promise.all([
+      const [s, n, t, social, c, w, st, ld, fp, eq] = await Promise.all([
         invoke<DashboardStats>('get-dashboard-stats'),
         invoke<unknown>('get-live-news', 'technology'),
         invoke<unknown>('get-trending-topics'),
+        invoke<unknown>('get-daily-social-trends').catch(() => []),
         invoke<Record<string, string>>('get-active-campaign'),
         invoke<WorkerStatus>('get-worker-status'),
         invoke<Record<string, unknown>>('get-setup-status'),
@@ -229,7 +242,9 @@ function DashboardPageInner() {
       ]);
       setStats(s || {});
       setNews(asNews(n));
-      setTrending(asTrending(t));
+      const socialItems = asTrending(social);
+      setSocialTrends(socialItems);
+      setTrending(socialItems.length ? socialItems : asTrending(t));
       setCampaign(c || {});
       setWorker(w || {});
       setSetup(st || {});
@@ -330,11 +345,11 @@ function DashboardPageInner() {
     }
   }
 
-  async function analyzeTopic(topic: string) {
+  async function analyzeTopic(topic: string, platform = 'Twitter') {
     setTopicAnalysis('Analyzing…');
     try {
       const res = await invoke<{ analysis?: { textAnalysis?: string }; textAnalysis?: string }>('analyze-topic', {
-        topic, platform: 'Twitter', brandName: campaign.brandName || 'Brand', audience: campaign.description || 'professionals',
+        topic, platform, brandName: campaign.brandName || 'Brand', audience: campaign.description || 'professionals',
       });
       setTopicAnalysis(res.analysis?.textAnalysis || res.textAnalysis || JSON.stringify(res));
     } catch (e) {
@@ -413,12 +428,15 @@ function DashboardPageInner() {
           </DataPanel>
           <DataPanel title="Topic analysis" live>
             {trending.slice(0, 4).map((t, i) => (
-              <div key={i} style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem' }}>{t.topic}</span>
-                <button className="btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => analyzeTopic(t.topic || '')}>Analyze</button>
+              <div key={`${t.platform || 'trend'}-${t.topic}-${i}`} style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem' }}>
+                  {t.platform && <span className="badge" style={{ marginRight: 6 }}>{t.platform}</span>}
+                  {t.topic}
+                </span>
+                <button className="btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => analyzeTopic(t.topic || '', t.platform || 'Twitter')}>Analyze</button>
               </div>
             ))}
-            {!trending.length && <p className="settings-panel-desc">Trending topics appear in the live strip above.</p>}
+            {!trending.length && <p className="settings-panel-desc">Daily social trends load from Instagram, X, LinkedIn, and Facebook.</p>}
             {topicAnalysis && <div className="post-card" style={{ marginTop: 8, fontSize: '0.85rem' }}>{topicAnalysis}</div>}
           </DataPanel>
           <DataPanel title="Live Headlines" live>
@@ -429,11 +447,48 @@ function DashboardPageInner() {
               </div>
             ))}
           </DataPanel>
-          {feedPlatforms.length > 0 && (
-            <DataPanel title="Feed Platform Mix" live>
-              <BarChart items={feedPlatforms} />
-            </DataPanel>
-          )}
+          <DataPanel title="Daily Social Trends" live>
+            <p className="settings-panel-desc" style={{ marginTop: 0 }}>
+              Today&apos;s topics and hashtags — Instagram, X (Twitter), LinkedIn, Facebook
+            </p>
+            <div className="dash-social-trends-grid">
+              {DAILY_SOCIAL_PLATFORMS.map((platform) => {
+                const items = socialTrends.filter((t) => t.platform === platform);
+                return (
+                  <div key={platform} className="dash-social-trends-col">
+                    <h4 className="dash-social-trends-platform">{platform}</h4>
+                    {items.length ? items.map((t, i) => (
+                      <div key={`${platform}-${t.topic}-${i}`} className="dash-social-trend-item">
+                        <span className={`dash-social-trend-tag ${t.type === 'hashtag' ? 'is-hashtag' : ''}`}>
+                          {t.topic}
+                        </span>
+                        <span className="dash-social-trend-meta">{t.momentum || 'Today'}</span>
+                        {t.url ? (
+                          <a href={t.url} target="_blank" rel="noopener noreferrer" className="dash-social-trend-link">Open</a>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                            onClick={() => analyzeTopic(t.topic || '', platform)}
+                          >
+                            Analyze
+                          </button>
+                        )}
+                      </div>
+                    )) : (
+                      <p className="settings-panel-desc" style={{ margin: 0, fontSize: '0.78rem' }}>Scanning…</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {!socialTrends.length && (
+              <p className="settings-panel-desc" style={{ marginBottom: 0 }}>
+                Add SerpAPI or X API keys in Settings for live daily trends, or run Full Scan after adding keywords.
+              </p>
+            )}
+          </DataPanel>
         </div>
       )}
 

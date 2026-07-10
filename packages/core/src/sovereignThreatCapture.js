@@ -52,7 +52,7 @@ const SAAS_ROUTINE_CHANNELS = new Set([
   'generate-ai', 'draft-post-reply', 'compose-qa-answer', 'grok-ask-text',
   'publish-post', 'schedule-post', 'save-ai-reply', 'engage-post',
   // Mission Control read paths — auto-release pending review noise
-  'get-dashboard-stats', 'get-live-feed', 'get-trending-topics', 'get-live-news',
+  'get-dashboard-stats', 'get-live-feed', 'get-trending-topics', 'get-daily-social-trends', 'get-live-news',
   'get-setup-status', 'get-section-live', 'get-worker-status', 'get-worker-tasks',
   'get-engagement-queue', 'get-leads', 'get-linked-accounts', 'get-active-campaign',
   'get-domain-metrics', 'get-project-metrics', 'get-fanpage-settings', 'get-watched-monitors',
