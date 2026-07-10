@@ -19,14 +19,18 @@ export function useIntelligence() {
       invoke<IntelligenceSettings>('get-intelligence-settings').catch(() => DEFAULT_INTELLIGENCE_SETTINGS),
       invoke<LinkedAccountIntel[]>('get-linked-accounts'),
     ]);
-    setSettings({ ...DEFAULT_INTELLIGENCE_SETTINGS, ...s });
-    setAccounts(a || []);
+    setSettings({
+      ...DEFAULT_INTELLIGENCE_SETTINGS,
+      ...(s && typeof s === 'object' ? s : {}),
+      surfaces: Array.isArray(s?.surfaces) ? s.surfaces : DEFAULT_INTELLIGENCE_SETTINGS.surfaces,
+    });
+    setAccounts(Array.isArray(a) ? a : []);
   }, []);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
 
   const isSurfaceEnabled = useCallback((surface: string) => {
-    return settings.enabled && settings.surfaces.includes(surface);
+    return !!settings.enabled && Array.isArray(settings.surfaces) && settings.surfaces.includes(surface);
   }, [settings]);
 
   const getProfile = useCallback((accountId?: string | null) => {

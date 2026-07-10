@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { invoke } from '@/lib/api';
+import { toDisplayText } from '@/lib/textUtils';
 
 type Post = {
   platform: string;
@@ -107,7 +108,7 @@ export function PostExplorerModal({ post, onClose, onDraft }: Props) {
     const mons = await invoke<Array<Record<string, unknown>>>('get-watched-monitors').catch(() => []);
     const entry = {
       id: `mon_${Date.now()}`,
-      label: (post.content || '').slice(0, 40),
+      label: toDisplayText(post.content).slice(0, 40),
       type: 'post',
       target: post.url || post.externalId,
       platform: post.platform,
@@ -123,7 +124,7 @@ export function PostExplorerModal({ post, onClose, onDraft }: Props) {
           <h3 className="modal-title">Post Explorer — {post.platform}</h3>
           <button type="button" className="close-btn" onClick={onClose}>×</button>
         </div>
-        <div className="post-details-box">{post.content}</div>
+        <div className="post-details-box">{toDisplayText(post.content)}</div>
         {post.author && <p style={{ fontSize: '0.8rem', color: '#64748b' }}>By {post.author}</p>}
         <input className="input" placeholder="Custom prompt override (optional)" value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} />
         <textarea className="input" rows={6} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="AI draft reply…" />

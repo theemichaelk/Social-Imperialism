@@ -7,7 +7,7 @@ export type EngageablePost = {
 
 export function isEngageablePost(post: EngageablePost): boolean {
   if (post.isWebDiscovery || post.isHubPost) return false;
-  const id = post.externalId || '';
+  const id = String(post.externalId ?? '').trim();
   if (!id) return false;
   if (/^(reddit|quora|twitter)_/i.test(id)) return false;
   if (/^t3_[a-z0-9]+$/i.test(id)) return true;

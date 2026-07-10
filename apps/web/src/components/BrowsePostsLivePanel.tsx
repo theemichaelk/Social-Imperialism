@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { invoke } from '@/lib/api';
 import { BarChart, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { summarizeEngageability, type EngageablePost } from '@/lib/postEngageability';
+import { toDisplayText } from '@/lib/textUtils';
 
 type LiveData = {
   updatedAt?: string;
@@ -60,13 +61,13 @@ export function BrowsePostsLivePanel({
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
     .map(([label, value], i) => ({
-      label: label.slice(0, 8),
+      label: toDisplayText(label).slice(0, 8),
       value,
       color: ['#38bdf8', '#a855f7', '#22c55e', '#f59e0b', '#f472b6', '#94a3b8'][i % 6],
     }));
 
   const queueBars = Object.entries(data.queueByAction || {}).map(([label, value], i) => ({
-    label: label.slice(0, 6),
+    label: toDisplayText(label).slice(0, 6),
     value,
     color: ['#6366f1', '#22c55e', '#f59e0b'][i % 3],
   }));
@@ -129,7 +130,7 @@ export function BrowsePostsLivePanel({
         <DataPanel title="Active monitors" live>
           <SparkRow items={(data.monitors || []).slice(0, 6).map((m) => ({
             label: m.platform || 'Watch',
-            value: m.label.slice(0, 12),
+            value: toDisplayText(m.label).slice(0, 12),
             status: 'ok' as const,
           }))} />
         </DataPanel>

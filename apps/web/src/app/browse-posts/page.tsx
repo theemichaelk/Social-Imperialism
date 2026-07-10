@@ -12,7 +12,7 @@ import { PostExplorerModal } from '@/components/PostExplorerModal';
 import { BrowsePostsLivePanel } from '@/components/BrowsePostsLivePanel';
 import { AccountSelectField } from '@/components/AccountSelectField';
 import { FetchProfileFilters, LANGUAGE_OPTIONS, LOCATION_OPTIONS } from '@/lib/fetchProfiles';
-import { decodeHtmlEntities } from '@/lib/textUtils';
+import { decodeHtmlEntities, toDisplayText } from '@/lib/textUtils';
 import { isEngageablePost } from '@/lib/postEngageability';
 
 type Post = {
@@ -42,6 +42,33 @@ const PAGE_SIZE = 8;
 
 function asArray<T>(data: unknown): T[] {
   return Array.isArray(data) ? data : [];
+}
+
+function normalizePost(raw: Partial<Post> & Record<string, unknown>): Post {
+  const stats = raw.stats && typeof raw.stats === 'object'
+    ? {
+        likes: typeof (raw.stats as Post['stats'])?.likes === 'number' ? (raw.stats as Post['stats'])!.likes : undefined,
+        comments: typeof (raw.stats as Post['stats'])?.comments === 'number' ? (raw.stats as Post['stats'])!.comments : undefined,
+        views: typeof (raw.stats as Post['stats'])?.views === 'number' ? (raw.stats as Post['stats'])!.views : undefined,
+      }
+    : undefined;
+  return {
+    platform: toDisplayText(raw.platform) || 'Unknown',
+    content: toDisplayText(raw.content),
+    url: typeof raw.url === 'string' ? raw.url : undefined,
+    author: raw.author != null ? toDisplayText(raw.author) : undefined,
+    externalId: raw.externalId != null ? toDisplayText(raw.externalId) : undefined,
+    isWebDiscovery: !!raw.isWebDiscovery,
+    isHubPost: !!raw.isHubPost,
+    matchedKeyword: raw.matchedKeyword != null ? toDisplayText(raw.matchedKeyword) : undefined,
+    matchedAccountId: typeof raw.matchedAccountId === 'string' ? raw.matchedAccountId : undefined,
+    matchScore: typeof raw.matchScore === 'number' ? raw.matchScore : undefined,
+    postType: typeof raw.postType === 'string' ? raw.postType : undefined,
+    createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : undefined,
+    hasMedia: !!raw.hasMedia,
+    authorFollowers: typeof raw.authorFollowers === 'number' ? raw.authorFollowers : undefined,
+    stats,
+  };
 }
 
 function platformMatch(postPlatform: string, filter: string): boolean {
@@ -77,14 +104,15 @@ function applyFilters(posts: Post[], opts: {
     if (maxAge && p.createdAt && Date.now() - p.createdAt > maxAge) return false;
     const likes = (p.stats?.likes || 0) || (p.isWebDiscovery ? Math.round((p.matchScore || 0) * 0.6) : 0);
     if (opts.minEngage > 0 && likes < opts.minEngage) return false;
-    if (excludeWords.length && excludeWords.some((w) => (p.content || '').toLowerCase().includes(w))) return false;
+    const content = toDisplayText(p.content);
+    if (excludeWords.length && excludeWords.some((w) => content.toLowerCase().includes(w))) return false;
     if (opts.postType === 'question') {
-      const isQ = p.postType === 'question' || p.platform === 'Quora' || (p.content || '').includes('?')
-        || /\b(how|what|why|when|should|can)\b/i.test(p.content || '');
+      const isQ = p.postType === 'question' || p.platform === 'Quora' || content.includes('?')
+        || /\b(how|what|why|when|should|can)\b/i.test(content);
       if (!isQ) return false;
     }
     if (opts.mediaOnly) {
-      const hasMedia = p.hasMedia || /\.(jpg|jpeg|png|gif|webp|mp4)/i.test(p.url || '') || /\[media\]/i.test(p.content || '');
+      const hasMedia = p.hasMedia || /\.(jpg|jpeg|png|gif|webp|mp4)/i.test(p.url || '') || /\[media\]/i.test(content);
       if (!hasMedia) return false;
     }
     if ((opts.minFollowers || 0) > 0 && p.authorFollowers != null && p.authorFollowers < (opts.minFollowers || 0)) return false;
@@ -98,11 +126,12 @@ function mergeWithHistory(live: Post[], history: Array<{
 }>, accounts: LinkedAccount[]): Post[] {
   const hubPosts: Post[] = history.map((post) => {
     const acc = accounts.find((a) => a.id === post.accountId);
+    const text = toDisplayText(post.content);
     return {
-      platform: acc?.platform || post.platform || 'Hub',
+      platform: acc?.platform || toDisplayText(post.platform) || 'Hub',
       author: 'Your Account',
-      content: post.hasMedia ? `[Media] ${post.content}` : (post.content || ''),
-      externalId: post.id,
+      content: post.hasMedia ? `[Media] ${text}` : text,
+      externalId: post.id != null ? toDisplayText(post.id) : undefined,
       isHubPost: true,
       matchScore: 100,
       createdAt: post.timestamp ? new Date(post.timestamp).getTime() : Date.now(),
@@ -205,25 +234,34 @@ export default function BrowsePostsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
   const loadMeta = useCallback(async () => {
-    const [k, a, n, m, s] = await Promise.all([
-      invoke<Keyword[]>('get-keywords'),
-      invoke<LinkedAccount[]>('get-linked-accounts'),
-      invoke<unknown>('get-live-news', 'technology'),
-      invoke<Monitor[]>('get-watched-monitors'),
-      invoke<Record<string, number>>('get-dashboard-stats'),
-    ]);
-    setKeywords(asArray(k));
-    const accList = asArray<LinkedAccount>(a);
-    setAccounts(accList);
-    setPublishAccountId((prev) => prev || accList[0]?.id || '');
-    setNews(asArray<NewsItem>(n).map((item) => ({ ...item, title: decodeHtmlEntities(item.title) })));
-    setMonitors(asArray(m));
-    setStats({
-      posts: s?.totalPosts ?? 0,
-      keywords: s?.activeKeywords ?? 0,
-      drafts: s?.aiDrafts ?? 0,
-      accounts: s?.linkedAccounts ?? 0,
-    });
+    try {
+      const [k, a, n, m, s] = await Promise.all([
+        invoke<Keyword[]>('get-keywords'),
+        invoke<LinkedAccount[]>('get-linked-accounts'),
+        invoke<unknown>('get-live-news', 'technology'),
+        invoke<Monitor[]>('get-watched-monitors'),
+        invoke<Record<string, number>>('get-dashboard-stats'),
+      ]);
+      setKeywords(asArray(k));
+      const accList = asArray<LinkedAccount>(a);
+      setAccounts(accList);
+      setPublishAccountId((prev) => prev || accList[0]?.id || '');
+      setNews(asArray<NewsItem>(n).map((item) => ({ ...item, title: decodeHtmlEntities(item.title) })));
+      setMonitors(asArray<Monitor>(m).map((mon) => ({
+        ...mon,
+        label: toDisplayText(mon.label),
+        platform: mon.platform ? toDisplayText(mon.platform) : mon.platform,
+      })));
+      setStats({
+        posts: s?.totalPosts ?? 0,
+        keywords: s?.activeKeywords ?? 0,
+        drafts: s?.aiDrafts ?? 0,
+        accounts: s?.linkedAccounts ?? 0,
+      });
+    } catch (e) {
+      setMsg((e as Error).message || 'Failed to load browse metadata');
+      console.error(e);
+    }
   }, []);
 
   const loadFeed = useCallback(async (full = false) => {
@@ -245,7 +283,11 @@ export default function BrowsePostsPage() {
         invoke<unknown[]>('get-all-post-history'),
       ]);
       const accs = accounts.length ? accounts : asArray<LinkedAccount>(await invoke<LinkedAccount[]>('get-linked-accounts'));
-      setRawPosts(mergeWithHistory(asArray<Post>(live), asArray(history), accs));
+      setRawPosts(mergeWithHistory(
+        asArray<Post>(live).map((p) => normalizePost(p as Partial<Post> & Record<string, unknown>)),
+        asArray(history),
+        accs,
+      ));
       setPage(0);
       if (full) await loadMeta();
     } catch (e) {
@@ -374,7 +416,7 @@ export default function BrowsePostsPage() {
   async function watchPost(post: Post) {
     const entry: Monitor = {
       id: `mon_${Date.now()}`,
-      label: (post.content || '').slice(0, 40),
+      label: toDisplayText(post.content).slice(0, 40),
       type: 'post',
       target: post.url || post.externalId || post.content,
       platform: post.platform,
@@ -386,7 +428,7 @@ export default function BrowsePostsPage() {
   }
 
   async function attachStockPhoto() {
-    const q = (selected?.content || 'social media').split(' ').slice(0, 4).join(' ');
+    const q = toDisplayText(selected?.content || 'social media').split(' ').slice(0, 4).join(' ');
     const res = await invoke<{ imageUrl?: string }>('search-stock-photo', q);
     if (res?.imageUrl) {
       setStockUrl(res.imageUrl);
@@ -563,7 +605,7 @@ export default function BrowsePostsPage() {
                   {p.author && <span>{p.author}</span>}
                   {p.matchedKeyword && <span style={{ color: '#64748b' }}>#{p.matchedKeyword}</span>}
                 </div>
-                <div>{(p.content || '').slice(0, 280)}</div>
+                <div>{toDisplayText(p.content).slice(0, 280)}</div>
                 {(p.stats?.likes || p.stats?.comments) ? (
                   <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>
                     ♥ {p.stats.likes ?? 0} · 💬 {p.stats.comments ?? 0}
