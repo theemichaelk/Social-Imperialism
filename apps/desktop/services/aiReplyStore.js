@@ -40,12 +40,19 @@ function deriveSourceFromLegacy(reply) {
   return 'manual';
 }
 
+function asText(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try { return JSON.stringify(value); } catch (e) { return String(value); }
+}
+
 function normalizeReply(replyData, fallbackCampaignId) {
   const source = replyData.source || deriveSourceFromLegacy(replyData);
   return {
     id: replyData.id || `reply_${Date.now()}`,
-    originalPost: replyData.originalPost || '',
-    replyContent: replyData.replyContent || '',
+    originalPost: asText(replyData.originalPost),
+    replyContent: asText(replyData.replyContent || replyData.content),
     platform: replyData.platform || 'Unknown',
     timestamp: replyData.timestamp || new Date().toISOString(),
     status: normalizeStatus(replyData.status),

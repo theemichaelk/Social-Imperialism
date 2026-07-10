@@ -93,19 +93,24 @@ export default function HistoryPage() {
   }), [filter, sourceFilter, intentFilter, platformFilter, replyModeFilter, keywordFilter, search]);
 
   const refresh = useCallback(async () => {
-    const [data, stats, worker, rules] = await Promise.all([
-      invoke<HubData>('get-ai-replies-hub', filterPayload),
-      invoke<DashStats>('get-dashboard-stats'),
-      invoke<Record<string, unknown>>('get-worker-status'),
-      invoke<Record<string, unknown>>('get-auto-rules'),
-    ]);
-    setHub(data);
-    setDashStats(stats);
-    setWorkerStatus(worker);
-    setAutoRules(rules);
+    try {
+      const [data, stats, worker, rules] = await Promise.all([
+        invoke<HubData>('get-ai-replies-hub', filterPayload),
+        invoke<DashStats>('get-dashboard-stats'),
+        invoke<Record<string, unknown>>('get-worker-status'),
+        invoke<Record<string, unknown>>('get-auto-rules'),
+      ]);
+      setHub(data && typeof data === 'object' ? data : {});
+      setDashStats(stats && typeof stats === 'object' ? stats : {});
+      setWorkerStatus(worker && typeof worker === 'object' ? worker : {});
+      setAutoRules(rules && typeof rules === 'object' ? rules : {});
+    } catch (e) {
+      setMsg((e as Error).message || 'Failed to load replies');
+      console.error(e);
+    }
   }, [filterPayload]);
 
-  useEffect(() => { refresh().catch(console.error); }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
     try {
@@ -155,9 +160,10 @@ export default function HistoryPage() {
   }
 
   function openEdit(reply: Reply) {
+    const text = reply.replyContent ?? reply.content ?? '';
     setEditing({
       ...reply,
-      replyContent: reply.replyContent || reply.content || '',
+      replyContent: typeof text === 'string' ? text : String(text ?? ''),
     });
   }
 
@@ -203,8 +209,8 @@ export default function HistoryPage() {
     downloadCsv(buildCsvExport(replies), `agency_report_${brand}_${new Date().toISOString().slice(0, 10)}.csv`);
   }
 
-  const replies = hub.replies || [];
-  const stats = hub.stats || {};
+  const replies = Array.isArray(hub?.replies) ? hub.replies : [];
+  const stats = hub?.stats && typeof hub.stats === 'object' ? hub.stats : {};
 
   const statusChart = [
     { label: 'Draft', value: stats.byStatus?.draft ?? 0, color: '#f59e0b' },
@@ -265,8 +271,8 @@ export default function HistoryPage() {
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem' }}>
-          <span>Auto-Rules: <strong>{autoRules.enabled ? 'On' : 'Off'}</strong></span>
-          <span>Worker: <strong>{String(workerStatus.status || workerStatus.state || 'Idle')}</strong></span>
+          <span>Auto-Rules: <strong>{autoRules?.enabled ? 'On' : 'Off'}</strong></span>
+          <span>Worker: <strong>{String(workerStatus?.status || workerStatus?.state || 'Idle')}</strong></span>
           <span>Published: <strong className="status-ok">{stats.byStatus?.published ?? 0}</strong></span>
           <span>Pending: <strong style={{ color: '#f59e0b' }}>{stats.byStatus?.draft ?? 0}</strong></span>
         </div>
@@ -328,8 +334,8 @@ export default function HistoryPage() {
 
       <div className="card">
         <h3>Reply Inbox ({replies.length})</h3>
-        {replies.map((r) => (
-          <div key={r.id} className="post-card history-reply-row">
+        {replies.map((r, idx) => (
+          <div key={r.id || `reply-${idx}`} className="post-card history-reply-row">
             <div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                 <span className="badge">{r.status}</span>
