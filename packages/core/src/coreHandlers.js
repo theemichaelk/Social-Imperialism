@@ -543,22 +543,44 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
     const replies = aiReplyStore.loadAllReplies(store);
     const reply = replies.find((r) => r.id === id);
     if (!reply) return { success: false, error: 'Reply not found' };
+    const content = String(reply.replyContent || reply.content || '').trim();
+    if (!content) return { success: false, error: 'Reply is empty — edit the draft before publishing.' };
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
     const activeId = store.getItem('activeCampaignId') || 'default';
     const linkedAccounts = JSON.parse(store.getItem(`linkedAccounts_${activeId}`) || '[]');
+    let livePosted = false;
     if (reply.externalId) {
       try {
         await integrations.engagePost({
-          action: 'reply', platform: reply.platform, content: reply.replyContent,
-          externalId: reply.externalId, postId: reply.externalId, url: reply.url,
-          author: reply.author, postContent: reply.originalPost,
+          action: 'reply',
+          platform: reply.platform,
+          content,
+          externalId: reply.externalId,
+          postId: reply.externalId,
+          urn: reply.externalId,
+          url: reply.url,
+          author: reply.author,
+          postContent: reply.originalPost,
         }, keys, linkedAccounts);
+        livePosted = true;
       } catch (e) { return { success: false, error: e.message }; }
     }
     const idx = replies.findIndex((r) => r.id === id);
-    replies[idx] = { ...reply, status: 'published', publishedAt: new Date().toISOString() };
+    replies[idx] = aiReplyStore.normalizeReply({
+      ...reply,
+      replyContent: content,
+      status: 'published',
+      publishedAt: new Date().toISOString(),
+    }, reply.campaignId || activeId);
     aiReplyStore.saveAllReplies(store, replies);
-    return { success: true, reply: replies[idx] };
+    return {
+      success: true,
+      reply: replies[idx],
+      livePosted,
+      message: livePosted
+        ? 'Reply published to the platform API.'
+        : 'Marked published locally — no post ID was stored. Draft from Browse Posts or link an account to post live.',
+    };
   });
 
   ipcMain.handle('discover-best-questions', async () => {

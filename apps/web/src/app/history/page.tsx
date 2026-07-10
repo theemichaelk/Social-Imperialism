@@ -71,6 +71,8 @@ export default function HistoryPage() {
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Reply | null>(null);
   const [viewTab, setViewTab] = useState('pending');
+  const [msg, setMsg] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const setViewAndFilter = useCallback((id: string) => {
     const resolved = resolveLegacyTab(id, HISTORY_VIEW_TABS, HISTORY_LEGACY_TAB_MAP, 'pending');
@@ -115,20 +117,76 @@ export default function HistoryPage() {
   }, []);
 
   async function publish(id: string) {
-    await invoke('publish-ai-reply', id);
-    refresh();
+    setBusyId(id);
+    setMsg('');
+    try {
+      const res = await invoke<{ success?: boolean; error?: string; message?: string; livePosted?: boolean }>('publish-ai-reply', id);
+      if (res?.success === false) {
+        setMsg(res.error || 'Publish failed');
+        return;
+      }
+      setMsg(res?.message || (res?.livePosted ? 'Published to platform.' : 'Marked published.'));
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function remove(id: string) {
-    await invoke('delete-ai-reply', id);
-    refresh();
+    if (!window.confirm('Delete this reply draft?')) return;
+    setBusyId(id);
+    setMsg('');
+    try {
+      const res = await invoke<{ success?: boolean; error?: string }>('delete-ai-reply', id);
+      if (res?.success === false) {
+        setMsg(res.error || 'Delete failed');
+        return;
+      }
+      if (editing?.id === id) setEditing(null);
+      setMsg('Reply deleted.');
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function openEdit(reply: Reply) {
+    setEditing({
+      ...reply,
+      replyContent: reply.replyContent || reply.content || '',
+    });
   }
 
   async function saveEdit() {
     if (!editing) return;
-    await invoke('update-ai-reply', { id: editing.id, updates: { replyContent: editing.replyContent } });
-    setEditing(null);
-    refresh();
+    const text = editing.replyContent?.trim();
+    if (!text) {
+      setMsg('Reply cannot be empty.');
+      return;
+    }
+    setBusyId(editing.id);
+    setMsg('');
+    try {
+      const res = await invoke<{ success?: boolean; error?: string }>('update-ai-reply', {
+        id: editing.id,
+        updates: { replyContent: text },
+      });
+      if (res?.success === false) {
+        setMsg(res.error || 'Save failed');
+        return;
+      }
+      setEditing(null);
+      setMsg('Reply saved.');
+      await refresh();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function exportAll() {
@@ -198,6 +256,12 @@ export default function HistoryPage() {
       />
 
       <SectionLivePanel section="history" />
+
+      {msg && (
+        <div className="card settings-msg-card" style={{ marginBottom: '1rem', borderColor: msg.includes('failed') || msg.includes('empty') ? '#f59e0b' : '#10b981' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg}</p>
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.85rem' }}>
@@ -281,11 +345,38 @@ export default function HistoryPage() {
               )}
             </div>
             <div>{stripHtmlForDisplay(r.replyContent || r.content || '', 400)}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {r.status !== 'published' && <button className="btn primary" onClick={() => publish(r.id)}>Publish</button>}
-              <button className="btn" onClick={() => setEditing(r)}>Edit</button>
-              <button className="btn" onClick={() => remove(r.id)}>Delete</button>
-              {r.url && <a href={r.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem' }}>View →</a>}
+            <div className="history-reply-actions">
+              {r.status !== 'published' && (
+                <button
+                  type="button"
+                  className="btn btn-sm primary"
+                  onClick={() => publish(r.id)}
+                  disabled={busyId === r.id}
+                >
+                  {busyId === r.id ? 'Publishing…' : 'Publish'}
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => openEdit(r)}
+                disabled={busyId === r.id}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => remove(r.id)}
+                disabled={busyId === r.id}
+              >
+                Delete
+              </button>
+              {r.url && (
+                <a href={r.url} target="_blank" rel="noopener noreferrer" className="btn btn-sm">
+                  View →
+                </a>
+              )}
             </div>
           </div>
         ))}
@@ -294,12 +385,29 @@ export default function HistoryPage() {
       </>
 
       {editing && (
-        <div className="card">
-          <h3>Edit Reply</h3>
-          <textarea className="input" rows={6} value={editing.replyContent || ''} onChange={(e) => setEditing({ ...editing, replyContent: e.target.value })} />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button className="btn primary" onClick={saveEdit}>Save</button>
-            <button className="btn" onClick={() => setEditing(null)}>Cancel</button>
+        <div className="modal-overlay" onClick={() => setEditing(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Reply</h3>
+              <button type="button" className="close-btn" onClick={() => setEditing(null)} aria-label="Close">×</button>
+            </div>
+            {editing.originalPost && (
+              <div className="post-details-box">
+                <strong>Re:</strong> {sanitizeDiscoverySnippet(editing.originalPost, 200)}
+              </div>
+            )}
+            <textarea
+              className="input"
+              rows={8}
+              value={editing.replyContent || ''}
+              onChange={(e) => setEditing({ ...editing, replyContent: e.target.value })}
+            />
+            <div className="modal-actions">
+              <button type="button" className="btn" onClick={() => setEditing(null)}>Cancel</button>
+              <button type="button" className="btn primary" onClick={saveEdit} disabled={busyId === editing.id}>
+                {busyId === editing.id ? 'Saving…' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       )}

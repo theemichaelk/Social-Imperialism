@@ -2189,6 +2189,12 @@ textarea.input { min-height: 100px; resize: vertical; }
 
 /* History */
 .history-reply-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 12px; align-items: start; }
+.history-reply-actions {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end;
+  min-width: 200px;
+}
+.history-reply-actions .btn-sm { font-size: 0.78rem; padding: 0.35rem 0.65rem; }
+.history-reply-actions a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .fetch-profiles-panel { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
 @media (max-width: 768px) {
