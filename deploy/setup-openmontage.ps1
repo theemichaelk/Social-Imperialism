@@ -35,8 +35,24 @@ if (Test-Path "remotion-composer\package.json") {
 
 if (-not (Test-Path ".env") -and (Test-Path ".env.example")) {
   Copy-Item ".env.example" ".env"
+  Write-Host "Created .env from .env.example — add API keys for cloud providers."
+} elseif (Test-Path ".env") {
+  Write-Host ".env already exists — skipping."
+}
+
+Write-Host "Installing Piper TTS (optional offline narration)..."
+& $venvPy -m pip install piper-tts 2>$null
+if ($LASTEXITCODE -ne 0) { Write-Host "  [skip] piper-tts — cloud TTS providers will be used instead" }
+
+if (Get-Command npx -ErrorAction SilentlyContinue) {
+  Write-Host "Warming HyperFrames npx cache..."
+  npx --yes hyperframes --version 2>$null
+  if ($LASTEXITCODE -ne 0) { Write-Host "  [skip] HyperFrames cache-warm failed — first render may fetch on demand" }
 }
 
 Pop-Location
-Write-Host "OpenMontage ready at $vendor"
-Write-Host "Set OPENMONTAGE_ROOT=$vendor for custom paths"
+Write-Host ""
+Write-Host "Done! OpenMontage ready at $vendor"
+Write-Host "  Social Imperialism: vendor/OpenMontage (or OPENMONTAGE_ROOT)"
+Write-Host "  Standalone clone:   git clone https://github.com/calesthio/OpenMontage.git && cd OpenMontage && make setup"
+Write-Host "  Optional: add API keys to .env / Settings -> Integrations"

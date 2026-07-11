@@ -3181,6 +3181,15 @@ textarea.input { min-height: 100px; resize: vertical; }
 .ivs-backlot-replay code { font-size: 0.68rem; }
 .ivs-backlot-stage.is-gated { border-color: var(--accent2); }
 .ivs-backlot-stage.is-awaiting_human { background: rgba(251, 191, 36, 0.08); }
+.ivs-prereqs { padding: 0.65rem 0.9rem; }
+.ivs-prereqs-toggle {
+  padding: 0; border: none; background: none; color: var(--accent3); font-size: 0.82rem;
+  cursor: pointer; text-decoration: underline;
+}
+.ivs-prereqs-body { margin-top: 0.65rem; }
+.ivs-prereqs-body h4 { margin: 0.5rem 0 0.35rem; font-size: 0.85rem; }
+.ivs-prereqs-list { margin: 0 0 0.5rem; padding-left: 1.2rem; font-size: 0.78rem; line-height: 1.5; }
+.ivs-example-briefs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .ivs-backlot-rail {
   list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem;
 }

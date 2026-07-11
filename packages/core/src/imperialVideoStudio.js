@@ -390,7 +390,7 @@ function writeVideoJob(store, job) {
 }
 
 function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
-  const { getOpenMontageStatus, syncOpenMontageEnv, runOpenMontagePreflight, OM_REPO } = require('./openMontageBridge');
+  const { getOpenMontageStatus, syncOpenMontageEnv, runOpenMontagePreflight, runOpenMontageSetup, OM_REPO } = require('./openMontageBridge');
   const { composeImperialVideo } = require('./imperialVideoComposer');
   const { analyzeReferenceVideo } = require('./referenceVideoAnalyst');
   const { getBacklotStatus, getBacklotBoardState, openBacklotBoard, runBacklotSimulate } = require('./backlotBridge');
@@ -444,6 +444,14 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
     try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
     if (keys && Object.keys(keys).length) syncOpenMontageEnv(keys);
     return runOpenMontagePreflight();
+  });
+
+  ipcMain.handle('run-openmontage-setup', async () => {
+    let keys = {};
+    try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
+    const result = runOpenMontageSetup();
+    if (result.success && keys && Object.keys(keys).length) syncOpenMontageEnv(keys);
+    return result;
   });
 
   ipcMain.handle('get-imperial-video-tool-registry', () => {

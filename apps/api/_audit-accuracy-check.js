@@ -393,7 +393,7 @@ else if (!read(compositorPanel).includes('compose-social-layout')) {
 const designCompositorCore = path.join(ROOT, 'packages/core/src/designCompositor.js');
 if (!exists(designCompositorCore)) fail('Missing packages/core/src/designCompositor.js');
 
-const EXPECTED_HANDLERS = 422;
+const EXPECTED_HANDLERS = 423;
 
 // --- Report (async handler count) ---
 (async () => {

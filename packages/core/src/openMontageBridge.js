@@ -167,6 +167,55 @@ function getOpenMontageStatus(keys = {}) {
   };
 }
 
+function runOpenMontageSetup(opts = {}) {
+  const path = require('path');
+  const fs = require('fs');
+  const repoRoot = path.join(__dirname, '../../../');
+  const isWin = process.platform === 'win32';
+
+  if (isWin) {
+    const script = path.join(repoRoot, 'deploy/setup-openmontage.ps1');
+    if (!fs.existsSync(script)) return { success: false, error: 'deploy/setup-openmontage.ps1 not found' };
+    const res = spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script], {
+      encoding: 'utf8',
+      timeout: opts.timeoutMs || 600000,
+      cwd: repoRoot,
+    });
+    return {
+      success: res.status === 0,
+      method: 'setup-openmontage.ps1',
+      stdout: (res.stdout || '').slice(-2000),
+      error: res.status !== 0 ? (res.stderr || res.stdout || 'Setup failed').slice(0, 800) : null,
+      status: getOpenMontageStatus(),
+    };
+  }
+
+  let root = resolveOpenMontageRoot();
+  if (!root && opts.clone !== false) {
+    const vendor = path.join(repoRoot, 'vendor/OpenMontage');
+    fs.mkdirSync(path.dirname(vendor), { recursive: true });
+    const clone = spawnSync('git', ['clone', '--depth', '1', OM_REPO, vendor], {
+      encoding: 'utf8',
+      timeout: 300000,
+    });
+    if (clone.status !== 0) {
+      return { success: false, error: clone.stderr || 'git clone failed' };
+    }
+    root = vendor;
+  }
+  if (!root) return { success: false, error: 'OpenMontage not found — set OPENMONTAGE_ROOT or clone vendor/OpenMontage' };
+
+  const make = spawnSync('make', ['setup'], { cwd: root, encoding: 'utf8', timeout: opts.timeoutMs || 600000 });
+  return {
+    success: make.status === 0,
+    method: 'make setup',
+    root,
+    stdout: (make.stdout || '').slice(-2000),
+    error: make.status !== 0 ? (make.stderr || make.stdout || 'make setup failed').slice(0, 800) : null,
+    status: getOpenMontageStatus(),
+  };
+}
+
 function runOpenMontagePreflight() {
   const root = resolveOpenMontageRoot();
   if (!root) return { success: false, error: 'OpenMontage root not found' };
@@ -196,5 +245,6 @@ module.exports = {
   mapSiKeysToOpenMontageEnv,
   syncOpenMontageEnv,
   getOpenMontageStatus,
+  runOpenMontageSetup,
   runOpenMontagePreflight,
 };

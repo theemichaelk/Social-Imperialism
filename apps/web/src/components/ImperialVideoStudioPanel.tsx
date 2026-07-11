@@ -246,6 +246,8 @@ export function ImperialVideoStudioPanel() {
   const [backlotBoard, setBacklotBoard] = useState<BacklotBoardState | null>(null);
   const [backlotProjectId, setBacklotProjectId] = useState<string | null>(null);
   const [backlotSimMsg, setBacklotSimMsg] = useState('');
+  const [setupMsg, setSetupMsg] = useState('');
+  const [showPrereqs, setShowPrereqs] = useState(false);
 
   const briefReady = useMemo(() => isBriefReady(brief), [brief]);
 
@@ -516,6 +518,29 @@ export function ImperialVideoStudioPanel() {
     }
   };
 
+  const runOpenMontageSetup = async () => {
+    setSetupMsg('');
+    setRunning(true);
+    try {
+      const res = await invoke<{ success?: boolean; error?: string; stdout?: string; method?: string }>('run-openmontage-setup');
+      if (res.error) {
+        setSetupMsg(res.error);
+        return;
+      }
+      setSetupMsg(res.success ? `Setup complete (${res.method || 'make setup'}). Refresh status below.` : 'Setup finished with warnings.');
+      await refresh();
+    } catch (e) {
+      setSetupMsg((e as Error).message || 'OpenMontage setup failed — run deploy/setup-openmontage.ps1 locally.');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const applyExampleBrief = (text: string, pipeline?: string) => {
+    setBrief(text);
+    if (pipeline) setSelectedPipeline(pipeline);
+  };
+
   const renderMonkeyKing = async () => {
     setBrief('The Last Monkey King — why Sun Wukong was cast out of Heaven');
     setSelectedPipeline('character-short');
@@ -622,6 +647,55 @@ export function ImperialVideoStudioPanel() {
           <div style={{ marginTop: 12 }}>
             <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.78rem' }}>Latest render</p>
             <video controls style={{ width: '100%', maxWidth: 720, borderRadius: 8 }} src={renderedVideoUrl} />
+          </div>
+        )}
+      </section>
+
+      <section className="ivs-prereqs card">
+        <button type="button" className="ivs-prereqs-toggle" onClick={() => setShowPrereqs((s) => !s)}>
+          {showPrereqs ? 'Hide' : 'Show'} Prerequisites &amp; Install (OpenMontage)
+        </button>
+        {showPrereqs && (
+          <div className="ivs-prereqs-body">
+            <h4>Prerequisites</h4>
+            <ul className="muted ivs-prereqs-list">
+              <li><strong>Python 3.10+</strong> — <a href="https://www.python.org/" target="_blank" rel="noopener noreferrer">python.org</a></li>
+              <li><strong>FFmpeg</strong> — <code>brew install ffmpeg</code> / <code>sudo apt install ffmpeg</code> / <a href="https://ffmpeg.org/" target="_blank" rel="noopener noreferrer">ffmpeg.org</a> / <code>winget install Gyan.FFmpeg</code></li>
+              <li><strong>Node.js 18+</strong> — <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">nodejs.org</a></li>
+              <li><strong>AI coding assistant</strong> — Claude Code, Cursor, Copilot, Windsurf, or Codex (reads <code>brain/skills/video-studio/</code>)</li>
+            </ul>
+            <h4>Install &amp; run</h4>
+            <p className="muted" style={{ fontSize: '0.8rem', margin: '0 0 8px' }}>
+              Standalone OpenMontage (official):
+            </p>
+            <pre className="ivs-backlot-cli">{`git clone https://github.com/calesthio/OpenMontage.git
+cd OpenMontage
+make setup`}</pre>
+            <p className="muted" style={{ fontSize: '0.8rem', margin: '0 0 8px' }}>
+              Inside Social Imperialism (Windows — equivalent to <code>make setup</code>):
+            </p>
+            <pre className="ivs-backlot-cli">{`powershell -File deploy/setup-openmontage.ps1`}</pre>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '8px 0' }}>
+              <button type="button" className="btn" disabled={running} onClick={runOpenMontageSetup}>
+                Run setup (local API / desktop)
+              </button>
+            </div>
+            {setupMsg && <p className="muted" style={{ fontSize: '0.78rem', margin: '0 0 8px' }}>{setupMsg}</p>}
+            <h4>Tell the agent what you want</h4>
+            <p className="muted" style={{ fontSize: '0.8rem' }}>
+              Open the project in your assistant and paste a brief — the agent researches with live search,
+              generates images, writes narration with voice direction, finds royalty-free music, burns word-level
+              subtitles, and renders. Multi-point self-review (ffprobe, frames, audio, delivery promise) runs
+              before you see output. Every provider choice is scored; every creative gate needs your approval.
+            </p>
+            <div className="ivs-example-briefs">
+              <button type="button" className="btn" onClick={() => applyExampleBrief('Make a 60-second animated explainer about how neural networks learn', 'social-explainer')}>
+                Neural networks explainer
+              </button>
+              <button type="button" className="btn" onClick={() => applyExampleBrief('Make a 75-second documentary montage about city life in the rain. Use real footage only, no narration, elegiac tone, with music.', 'stock-montage')}>
+                Rain city documentary
+              </button>
+            </div>
           </div>
         )}
       </section>

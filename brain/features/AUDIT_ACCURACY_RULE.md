@@ -36,7 +36,7 @@ When reviewing **any** change — including retroactive audits of earlier assist
 | QA page features | **217** OK (0 ERROR, 0 WEAK) | Production `_test-qa-all-pages.js` summary (re-count after test changes) |
 | QA section features | **144** OK | Production `_test-qa-all-sections.js` summary (re-count after test changes) |
 | `PageShell` + `PageFocusRail` | **29** module routes | `pageFocus.ts` keys + `apps/web/src/app/**/page.tsx` |
-| SaaS IPC handlers | **422** | `node apps/api/_audit-accuracy-check.js` → handler registry count |
+| SaaS IPC handlers | **423** | `node apps/api/_audit-accuracy-check.js` → handler registry count |
 | Imperial Video Studio | **12** pipelines · **52** tools · **620** skills | `get-imperial-video-studio-config` |
 | Social Imperialism SERP | **2** integration keys · **1** status IPC · same `serp-search` | `packages/core/src/siSerpClient.js` |
 | Imperial pipeline A / B | **18** / **8** steps | `get-imperial-pipeline-config` |
