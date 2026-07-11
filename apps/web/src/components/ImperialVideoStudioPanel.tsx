@@ -106,12 +106,27 @@ type BacklotStatus = {
   baseUrl?: string | null;
   projectCount?: number;
   note?: string;
+  chatVsBacklot?: string;
+  features?: string[];
+  cli?: string[];
+  readme?: string;
+  projects?: Array<{ project_id?: string; title?: string; live?: boolean }>;
 };
 
 type BacklotBoardState = {
-  stages?: Array<{ name: string; status?: string; gated?: boolean }>;
-  activity?: { status?: string };
+  project_id?: string;
   title?: string;
+  live?: boolean;
+  stages?: Array<{
+    name: string;
+    status?: string;
+    gated?: boolean;
+    review?: { summary?: string };
+    cost_snapshot?: { total_spent_usd?: number };
+  }>;
+  storyboard?: Array<{ scene_id?: string; status?: string }>;
+  cost?: { total_spent_usd?: number };
+  events?: Array<{ tool?: string; event?: string; scene_id?: string }>;
 };
 
 type JobResult = {
@@ -230,6 +245,7 @@ export function ImperialVideoStudioPanel() {
   const [backlotStatus, setBacklotStatus] = useState<BacklotStatus | null>(null);
   const [backlotBoard, setBacklotBoard] = useState<BacklotBoardState | null>(null);
   const [backlotProjectId, setBacklotProjectId] = useState<string | null>(null);
+  const [backlotSimMsg, setBacklotSimMsg] = useState('');
 
   const briefReady = useMemo(() => isBriefReady(brief), [brief]);
 
@@ -413,6 +429,43 @@ export function ImperialVideoStudioPanel() {
       if (res.error) setComposeMsg(res.error);
     } catch (e) {
       setComposeMsg((e as Error).message || 'Could not open Backlot.');
+    }
+  };
+
+  const runBacklotSimulate = async () => {
+    setBacklotSimMsg('');
+    setRunning(true);
+    try {
+      const res = await invoke<{ success?: boolean; projectId?: string; boardUrl?: string; message?: string; error?: string }>(
+        'run-backlot-simulate',
+        { projectId: 'backlot-demo-run', openBoard: true },
+      );
+      if (res.error) {
+        setBacklotSimMsg(res.error);
+        return;
+      }
+      if (res.projectId) setBacklotProjectId(res.projectId);
+      setBacklotSimMsg(res.message || 'Simulated run started — Backlot should open in your browser.');
+      if (res.boardUrl && typeof window !== 'undefined') {
+        window.open(res.boardUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (e) {
+      setBacklotSimMsg((e as Error).message || 'Simulate run failed.');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const approveBacklotGate = async (stageId: string) => {
+    try {
+      await invoke('approve-imperial-video-gate', {
+        stage: stageId,
+        projectId: backlotProjectId || undefined,
+      });
+      setReviewedGates((g) => ({ ...g, [stageId]: true }));
+      if (backlotProjectId) refreshBacklotBoard(backlotProjectId);
+    } catch (e) {
+      setComposeMsg((e as Error).message || 'Could not approve gate.');
     }
   };
 
@@ -753,39 +806,94 @@ export function ImperialVideoStudioPanel() {
 
       <section className="imperial-video-studio-backlot card ivs-backlot">
         <h3>Watch It Happen — The Backlot Living Storyboard</h3>
-        <p className="muted">
-          OpenMontage&apos;s Backlot is a browser board that shows pipeline stages, script, scene plan,
-          and generated assets live as production runs — derived from disk, not manual UI updates.
+        <p className="ivs-backlot-lead">
+          {backlotStatus?.chatVsBacklot || 'Chat tells you what the agent said. Backlot shows you what the production is actually doing.'}
         </p>
+        <p className="muted" style={{ fontSize: '0.82rem', margin: '0 0 10px' }}>
+          A local board that fills itself in as the pipeline runs — stages light up, the script lands as a screenplay page,
+          scene cards shimmer while assets generate, and every provider decision and dollar spent is on the wall.
+          When a production starts, the agent opens Backlot for you automatically. No setup, no reporting — the board
+          derives everything from the project files the pipeline already writes.
+        </p>
+        {backlotStatus?.features?.length ? (
+          <ul className="ivs-backlot-features muted">
+            {backlotStatus.features.map((f) => <li key={f}>{f}</li>)}
+          </ul>
+        ) : null}
         {backlotStatus && (
           <p className="muted" style={{ fontSize: '0.78rem', margin: '0 0 8px' }}>
             {backlotStatus.note}
-            {backlotStatus.running ? ` · ${backlotStatus.projectCount ?? 0} project(s) on board` : ''}
+            {backlotStatus.running ? ` · ${backlotStatus.projectCount ?? 0} production(s) in library` : ''}
+            {backlotBoard?.live ? (
+              <span className="badge is-ok" style={{ marginLeft: 8 }}>LIVE</span>
+            ) : null}
           </p>
         )}
+        <pre className="ivs-backlot-cli muted">
+{(backlotStatus?.cli || [
+  'python -m backlot open',
+  'python -m backlot open <project-id>',
+  'python scripts/backlot_simulate_run.py',
+]).join('\n')}
+        </pre>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
           <button type="button" className="btn primary" onClick={() => openBacklot(backlotProjectId)}>
-            Open Backlot {backlotProjectId ? `(${backlotProjectId})` : ''}
+            Open live board {backlotProjectId ? `(${backlotProjectId})` : ''}
           </button>
           <button type="button" className="btn" onClick={() => openBacklot(null)}>
-            All projects
+            Library — all projects
+          </button>
+          <button type="button" className="btn" disabled={running} onClick={runBacklotSimulate}>
+            Watch simulated run
           </button>
         </div>
+        {backlotSimMsg && <p className="muted" style={{ fontSize: '0.78rem', margin: '0 0 8px' }}>{backlotSimMsg}</p>}
+        {backlotBoard?.cost?.total_spent_usd != null && (
+          <p className="muted" style={{ fontSize: '0.78rem', margin: '0 0 8px' }}>
+            Spend on wall: <strong>${backlotBoard.cost.total_spent_usd.toFixed(2)}</strong>
+            {backlotBoard.storyboard?.length ? ` · ${backlotBoard.storyboard.length} scene card(s)` : ''}
+          </p>
+        )}
+        {backlotBoard?.stages?.filter((s) => s.status === 'awaiting_human').length ? (
+          <div className="ivs-backlot-gates">
+            <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.78rem' }}>
+              <strong>Creative gates</strong> — approve in chat or mark reviewed here before render:
+            </p>
+            {backlotBoard.stages.filter((s) => s.status === 'awaiting_human').map((s) => (
+              <div key={s.name} className="ivs-backlot-gate-row">
+                <span>{s.name.replace(/_/g, ' ')}</span>
+                <span className="muted">{s.review?.summary || 'Awaiting approval'}</span>
+                <button type="button" className="btn" onClick={() => approveBacklotGate(s.name)}>
+                  Approve gate
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
         {backlotBoard?.stages?.length ? (
           <ol className="ivs-backlot-rail">
             {backlotBoard.stages.map((s) => (
-              <li key={s.name} className={`ivs-backlot-stage is-${s.status || 'pending'}`}>
+              <li
+                key={s.name}
+                className={`ivs-backlot-stage is-${s.status || 'pending'}${s.gated ? ' is-gated' : ''}`}
+                title={s.review?.summary}
+              >
                 <span className="stage-dot" aria-hidden />
                 <span>{s.name.replace(/_/g, ' ')}</span>
-                <span className="muted">{s.status || 'pending'}</span>
+                <span className="muted">{s.status?.replace(/_/g, ' ') || 'pending'}</span>
               </li>
             ))}
           </ol>
         ) : (
           <p className="muted" style={{ fontSize: '0.78rem', margin: 0 }}>
-            Run a pipeline to create a Backlot project, or open the board to watch existing OpenMontage productions.
+            No production yet? Click <strong>Watch simulated run</strong> to see Backlot live (~1 min demo).
+            Or run a full pipeline — Backlot opens automatically.
           </p>
         )}
+        <p className="muted ivs-backlot-replay" style={{ fontSize: '0.72rem', margin: '10px 0 0' }}>
+          When a run completes, hit <strong>▶ REPLAY RUN</strong> on the board — scrub the whole production end-to-end from timestamps.
+          See <code>vendor/OpenMontage/backlot/README.md</code> for how it works.
+        </p>
       </section>
 
       <section className="imperial-video-studio-pipelines">
@@ -903,9 +1011,12 @@ export function ImperialVideoStudioPanel() {
                         type="button"
                         className="btn"
                         style={{ marginTop: 6 }}
-                        onClick={() => setReviewedGates((g) => ({ ...g, [s.id]: true }))}
+                        onClick={() => {
+                          approveBacklotGate(s.id);
+                          setReviewedGates((g) => ({ ...g, [s.id]: true }));
+                        }}
                       >
-                        Mark reviewed
+                        Approve gate (Backlot + chat)
                       </button>
                     )}
                   </div>

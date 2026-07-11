@@ -281,7 +281,7 @@ async function runVideoPipeline(pipelineId, ctx, generateAI, backlotCtx = null) 
   const pipeline = VIDEO_PIPELINES.find((p) => p.id === pipelineId);
   if (!pipeline) return { success: false, error: `Unknown pipeline: ${pipelineId}` };
 
-  const { writeSiCheckpoint, appendSiEvent } = require('./siBacklotProject');
+  const { appendSiEvent, syncSiStageToBacklot } = require('./siBacklotProject');
   const projectDir = backlotCtx?.projectDir || null;
   const projectId = backlotCtx?.projectId || null;
 
@@ -297,20 +297,23 @@ async function runVideoPipeline(pipelineId, ctx, generateAI, backlotCtx = null) 
     const text = await generateAI(prompt);
     artifacts[stage.id] = text;
     priorOutput = text;
+    const gateStatus = stage.approval ? 'awaiting_human' : 'done';
     stages.push({
       id: stage.id,
       label: stage.label,
-      status: 'done',
+      status: gateStatus === 'awaiting_human' ? 'review_ready' : 'done',
       approval: stage.approval,
       outputPreview: text.slice(0, 280),
       completedAt: new Date().toISOString(),
+      gate: stage.approval ? 'awaiting_human' : 'auto',
     });
     if (projectDir) {
-      writeSiCheckpoint(projectDir, stage.id, {
-        status: stage.approval ? 'awaiting_human' : 'completed',
-        preview: text,
+      syncSiStageToBacklot(projectDir, stage.id, text, {
+        ...ctx,
+        pipelineId: pipeline.id,
+        approval: stage.approval,
       });
-      appendSiEvent(projectDir, { type: 'stage_done', stage: stage.id });
+      appendSiEvent(projectDir, { type: 'stage_done', stage: stage.id, gated: stage.approval });
     }
   }
 
@@ -328,7 +331,7 @@ async function runVideoPipeline(pipelineId, ctx, generateAI, backlotCtx = null) 
       stage: s.id,
       label: s.label,
       status: s.status,
-      gate: s.approval ? 'review_ready' : 'auto',
+      gate: s.gate || (s.approval ? 'review_ready' : 'auto'),
     })),
   };
 }
@@ -390,8 +393,8 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
   const { getOpenMontageStatus, syncOpenMontageEnv, runOpenMontagePreflight, OM_REPO } = require('./openMontageBridge');
   const { composeImperialVideo } = require('./imperialVideoComposer');
   const { analyzeReferenceVideo } = require('./referenceVideoAnalyst');
-  const { getBacklotStatus, getBacklotBoardState, openBacklotBoard } = require('./backlotBridge');
-  const { createSiBacklotProject } = require('./siBacklotProject');
+  const { getBacklotStatus, getBacklotBoardState, openBacklotBoard, runBacklotSimulate } = require('./backlotBridge');
+  const { createSiBacklotProject, approveSiGate } = require('./siBacklotProject');
 
   ipcMain.handle('get-imperial-video-studio-config', () => {
     let keys = {};
@@ -496,6 +499,44 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
     const projectId = payload.projectId || payload.project;
     if (!projectId) return { success: false, error: 'projectId required' };
     return getBacklotBoardState(projectId);
+  });
+
+  ipcMain.handle('run-backlot-simulate', async (_event, payload = {}) => {
+    const result = await runBacklotSimulate({
+      projectId: payload.projectId || 'backlot-demo-run',
+      fast: !!payload.fast,
+      openBoard: payload.openBoard !== false,
+    });
+    if (result.success && result.projectId) {
+      const prev = readVideoJob(store) || {};
+      writeVideoJob(store, {
+        ...prev,
+        backlotProjectId: result.projectId,
+        backlotSimulated: true,
+      });
+    }
+    return result;
+  });
+
+  ipcMain.handle('approve-imperial-video-gate', async (_event, payload = {}) => {
+    const stage = payload.stage || payload.stageId;
+    const projectId = payload.projectId || payload.backlotProjectId;
+    if (!stage) return { success: false, error: 'stage required' };
+    const job = readVideoJob(store) || {};
+    const pid = projectId || job.backlotProjectId;
+    if (!pid) return { success: false, error: 'No Backlot project — run pipeline first' };
+    const { resolveOpenMontageRoot } = require('./openMontageBridge');
+    const omRoot = resolveOpenMontageRoot();
+    if (!omRoot) return { success: false, error: 'OpenMontage not available' };
+    const projectDir = require('path').join(omRoot, 'projects', pid);
+    const approved = approveSiGate(projectDir, stage);
+    if (approved.success) {
+      writeVideoJob(store, {
+        ...job,
+        gateApprovals: { ...(job.gateApprovals || {}), [stage]: new Date().toISOString() },
+      });
+    }
+    return { ...approved, projectId: pid };
   });
 
   ipcMain.handle('run-imperial-video-compose', async (_event, payload = {}) => {

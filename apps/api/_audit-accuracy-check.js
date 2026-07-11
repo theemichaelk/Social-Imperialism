@@ -300,6 +300,7 @@ else {
   if (!ivs.includes('analyze-reference-video')) fail('ImperialVideoStudioPanel.tsx must wire analyze-reference-video');
   if (!ivs.includes('get-backlot-status')) fail('ImperialVideoStudioPanel.tsx must wire get-backlot-status');
   if (!ivs.includes('open-backlot-board')) fail('ImperialVideoStudioPanel.tsx must wire open-backlot-board');
+  if (!ivs.includes('run-backlot-simulate')) fail('ImperialVideoStudioPanel.tsx must wire run-backlot-simulate');
   if (!ivs.includes('Start From A Video You Already Love')) fail('ImperialVideoStudioPanel.tsx must show reference-video hero');
 }
 
@@ -392,7 +393,7 @@ else if (!read(compositorPanel).includes('compose-social-layout')) {
 const designCompositorCore = path.join(ROOT, 'packages/core/src/designCompositor.js');
 if (!exists(designCompositorCore)) fail('Missing packages/core/src/designCompositor.js');
 
-const EXPECTED_HANDLERS = 420;
+const EXPECTED_HANDLERS = 422;
 
 // --- Report (async handler count) ---
 (async () => {

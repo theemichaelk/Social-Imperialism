@@ -101,6 +101,43 @@ async function getBacklotBoardState(projectId, port = backlotPort()) {
   }
 }
 
+async function runBacklotSimulate(opts = {}) {
+  const omRoot = resolveOpenMontageRoot();
+  if (!omRoot) return { success: false, error: 'OpenMontage not cloned — run deploy/setup-openmontage.ps1' };
+
+  const py = resolvePythonBin();
+  const projectId = opts.projectId || 'backlot-demo-run';
+  const args = [path.join(omRoot, 'scripts', 'backlot_simulate_run.py'), '--project', projectId];
+  if (opts.fast) args.push('--fast');
+
+  const { spawnSync } = require('child_process');
+  const res = spawnSync(py, args, {
+    cwd: omRoot,
+    encoding: 'utf8',
+    timeout: opts.timeoutMs || 180000,
+  });
+
+  if (res.status !== 0) {
+    return {
+      success: false,
+      error: (res.stderr || res.stdout || 'backlot_simulate_run failed').slice(0, 600),
+    };
+  }
+
+  let board = null;
+  if (opts.openBoard !== false) {
+    board = await openBacklotBoard(projectId);
+  }
+
+  return {
+    success: true,
+    projectId,
+    message: `Simulated production "${projectId}" written to disk — open Backlot to watch live or replay.`,
+    boardUrl: board?.boardUrl || `http://127.0.0.1:${backlotPort()}/p/${projectId}`,
+    output: (res.stdout || '').trim().split('\n').slice(-3).join('\n'),
+  };
+}
+
 async function getBacklotStatus() {
   const omRoot = resolveOpenMontageRoot();
   const port = backlotPort();
@@ -115,10 +152,25 @@ async function getBacklotStatus() {
     openMontageRoot: omRoot,
     projectCount: projects.length,
     projects: projects.slice(0, 12),
+    readme: 'vendor/OpenMontage/backlot/README.md',
+    cli: [
+      'python -m backlot open',
+      'python -m backlot open <project-id>',
+      'python scripts/backlot_simulate_run.py',
+    ],
+    features: [
+      'Stages light up as the pipeline runs',
+      'Script lands as a screenplay page',
+      'Scene filmstrip shimmers while assets generate',
+      'Storyboard contact sheet — takes, prompts, cost, quality scores',
+      'Creative gates hold until you approve',
+      '▶ REPLAY RUN when production completes',
+    ],
+    chatVsBacklot: 'Chat tells you what the agent said. Backlot shows you what the production is actually doing.',
     note: omRoot
       ? (running
-        ? 'Backlot observes projects/ on disk — pipeline checkpoints update the board live.'
-        : 'Start Backlot to watch pipeline stages, script, scene plan, and assets as production runs.')
+        ? 'Backlot derives everything from project files — no agent reporting, no manual UI updates.'
+        : 'When a production starts, Backlot opens automatically. Start the server to watch live.')
       : 'Clone OpenMontage to enable the Backlot living storyboard.',
   };
 }
@@ -155,6 +207,7 @@ module.exports = {
   getBacklotStatus,
   getBacklotBoardState,
   openBacklotBoard,
+  runBacklotSimulate,
   listBacklotProjects,
   resolveSiProjectDir,
 };

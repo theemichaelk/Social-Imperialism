@@ -3169,6 +3169,18 @@ textarea.input { min-height: 100px; resize: vertical; }
 .ivs-sample-preview { margin-top: 0.5rem; }
 .ivs-backlot { padding: 0.75rem 0.9rem; }
 .ivs-backlot h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
+.ivs-backlot-lead { margin: 0 0 0.5rem; font-size: 0.88rem; font-weight: 600; color: var(--text); }
+.ivs-backlot-features { margin: 0 0 10px; padding-left: 1.2rem; font-size: 0.78rem; line-height: 1.45; }
+.ivs-backlot-cli {
+  margin: 0 0 10px; padding: 0.5rem 0.65rem; font-size: 0.68rem; line-height: 1.4;
+  background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border); border-radius: 8px;
+}
+.ivs-backlot-gates { margin: 0 0 10px; padding: 0.55rem 0.65rem; border: 1px solid var(--accent2); border-radius: 8px; background: rgba(251, 191, 36, 0.06); }
+.ivs-backlot-gate-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.78rem; }
+.ivs-backlot-gate-row:last-child { margin-bottom: 0; }
+.ivs-backlot-replay code { font-size: 0.68rem; }
+.ivs-backlot-stage.is-gated { border-color: var(--accent2); }
+.ivs-backlot-stage.is-awaiting_human { background: rgba(251, 191, 36, 0.08); }
 .ivs-backlot-rail {
   list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem;
 }
