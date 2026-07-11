@@ -671,10 +671,18 @@ export function ImperialVideoStudioPanel() {
             <pre className="ivs-backlot-cli">{`git clone https://github.com/calesthio/OpenMontage.git
 cd OpenMontage
 make setup`}</pre>
-            <p className="muted" style={{ fontSize: '0.8rem', margin: '0 0 8px' }}>
-              Inside Social Imperialism (Windows — equivalent to <code>make setup</code>):
+            <p className="muted" style={{ fontSize: '0.8rem', margin: '0 0 4px' }}>
+              <strong>No make?</strong> macOS / Linux (inside <code>OpenMontage</code> or <code>vendor/OpenMontage</code>):
             </p>
-            <pre className="ivs-backlot-cli">{`powershell -File deploy/setup-openmontage.ps1`}</pre>
+            <pre className="ivs-backlot-cli">{`python3 -m venv .venv && source .venv/bin/activate && python -m pip install -r requirements.txt && cd remotion-composer && npm install && cd .. && python -m pip install piper-tts && cp .env.example .env`}</pre>
+            <p className="muted" style={{ fontSize: '0.8rem', margin: '0 0 8px' }}>
+              Social Imperialism wrappers (same result):
+            </p>
+            <pre className="ivs-backlot-cli">{`# macOS / Linux
+bash deploy/setup-openmontage.sh
+
+# Windows
+powershell -File deploy/setup-openmontage.ps1`}</pre>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '8px 0' }}>
               <button type="button" className="btn" disabled={running} onClick={runOpenMontageSetup}>
                 Run setup (local API / desktop)

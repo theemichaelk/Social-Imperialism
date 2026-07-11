@@ -205,13 +205,50 @@ function runOpenMontageSetup(opts = {}) {
   }
   if (!root) return { success: false, error: 'OpenMontage not found — set OPENMONTAGE_ROOT or clone vendor/OpenMontage' };
 
-  const make = spawnSync('make', ['setup'], { cwd: root, encoding: 'utf8', timeout: opts.timeoutMs || 600000 });
+  const hasMake = spawnSync('make', ['--version'], { encoding: 'utf8', timeout: 5000 }).status === 0;
+  if (hasMake && opts.preferMake !== false) {
+    const make = spawnSync('make', ['setup'], { cwd: root, encoding: 'utf8', timeout: opts.timeoutMs || 600000 });
+    if (make.status === 0) {
+      return {
+        success: true,
+        method: 'make setup',
+        root,
+        stdout: (make.stdout || '').slice(-2000),
+        status: getOpenMontageStatus(),
+      };
+    }
+  }
+
+  const shellScript = path.join(repoRoot, 'deploy/setup-openmontage.sh');
+  if (fs.existsSync(shellScript)) {
+    const sh = spawnSync('bash', [shellScript], {
+      encoding: 'utf8',
+      timeout: opts.timeoutMs || 600000,
+      cwd: repoRoot,
+      env: { ...process.env, OPENMONTAGE_ROOT: root },
+    });
+    return {
+      success: sh.status === 0,
+      method: 'setup-openmontage.sh (no make)',
+      root,
+      stdout: (sh.stdout || '').slice(-2000),
+      error: sh.status !== 0 ? (sh.stderr || sh.stdout || 'setup-openmontage.sh failed').slice(0, 800) : null,
+      status: getOpenMontageStatus(),
+    };
+  }
+
+  const py = path.join(root, '.venv/bin/python');
+  const pyBin = fs.existsSync(py) ? py : 'python3';
+  const steps = [
+    spawnSync(pyBin, ['-m', 'venv', '.venv'], { cwd: root, encoding: 'utf8', timeout: 120000 }),
+    spawnSync(path.join(root, '.venv/bin/pip'), ['install', '-r', 'requirements.txt'], { cwd: root, shell: true, encoding: 'utf8', timeout: 300000 }),
+  ];
+  const failed = steps.find((s) => s.status !== 0);
   return {
-    success: make.status === 0,
-    method: 'make setup',
+    success: !failed,
+    method: 'manual venv/pip (no make)',
     root,
-    stdout: (make.stdout || '').slice(-2000),
-    error: make.status !== 0 ? (make.stderr || make.stdout || 'make setup failed').slice(0, 800) : null,
+    error: failed ? (failed.stderr || 'manual setup failed').slice(0, 800) : null,
     status: getOpenMontageStatus(),
   };
 }
