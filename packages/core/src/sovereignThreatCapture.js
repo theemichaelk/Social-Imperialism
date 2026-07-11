@@ -58,6 +58,7 @@ const SAAS_ROUTINE_CHANNELS = new Set([
   'get-domain-metrics', 'get-project-metrics', 'get-fanpage-settings', 'get-watched-monitors',
   'get-auto-search-settings', 'check-api-status', 'get-brand-guidelines',
   'get-sovereign-threat-status', 'get-thee-michael-action-history',
+  'get-openmontage-status', 'run-openmontage-preflight',
   'analyze-topic', 'discover-best-questions', 'get-unanswered-questions',
   'get-post-history', 'get-all-post-history', 'get-keywords', 'get-content-library',
   'get-design-templates', 'get-format-templates', 'get-design-compositor-config',

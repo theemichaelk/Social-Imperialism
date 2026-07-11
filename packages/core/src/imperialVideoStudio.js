@@ -432,16 +432,40 @@ function writeVideoJob(store, job) {
 }
 
 function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
-  ipcMain.handle('get-imperial-video-studio-config', () => ({
-    version: '1.0.0',
-    tagline: 'Agentic video production studio for Social Imperialism',
-    pipelineCount: VIDEO_PIPELINES.length,
-    toolCount: VIDEO_TOOLS.length,
-    skillCount: SKILLS_CATALOG.length,
-    stageFlow: STAGE_FLOW,
-    pipelines: VIDEO_PIPELINES,
-    compositionRuntimes: ['ffmpeg', 'design-compositor', 'grok-motion'],
-  }));
+  const { getOpenMontageStatus, syncOpenMontageEnv, runOpenMontagePreflight, OM_REPO } = require('./openMontageBridge');
+  const { composeImperialVideo } = require('./imperialVideoComposer');
+
+  ipcMain.handle('get-imperial-video-studio-config', () => {
+    const om = getOpenMontageStatus();
+    return {
+      version: '1.1.0',
+      tagline: 'Agentic video production — powered by OpenMontage + Imperial Video Studio',
+      openMontage: { repo: OM_REPO, ...om },
+      pipelineCount: VIDEO_PIPELINES.length,
+      toolCount: VIDEO_TOOLS.length,
+      skillCount: SKILLS_CATALOG.length,
+      stageFlow: STAGE_FLOW,
+      pipelines: VIDEO_PIPELINES,
+      compositionRuntimes: om.ready
+        ? ['openmontage-remotion', 'openmontage-hyperframes', 'ffmpeg', 'design-compositor', 'grok-motion']
+        : ['ffmpeg', 'design-compositor', 'grok-motion'],
+    };
+  });
+
+  ipcMain.handle('get-openmontage-status', () => {
+    let keys = {};
+    try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
+    const status = getOpenMontageStatus();
+    const sync = status.root ? syncOpenMontageEnv(keys) : null;
+    return { success: true, ...status, envSync: sync };
+  });
+
+  ipcMain.handle('run-openmontage-preflight', () => {
+    let keys = {};
+    try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
+    if (keys && Object.keys(keys).length) syncOpenMontageEnv(keys);
+    return runOpenMontagePreflight();
+  });
 
   ipcMain.handle('get-imperial-video-tool-registry', () => {
     let keys = {};
@@ -488,13 +512,37 @@ Return JSON-like sections: pacing, structure, style, keeps, changes, 3 concept v
     return analyzeReferenceVideoQuick(payload, metadata);
   });
 
-  ipcMain.handle('run-imperial-video-compose', async (_event, payload = {}) => ({
-    success: true,
-    status: 'queued',
-    runtime: payload.runtime || 'design-compositor',
-    message: 'Composition queued — attach Grok clips or library media in Content Hub Media tab.',
-    outputPath: payload.outputPath || null,
-  }));
+  ipcMain.handle('run-imperial-video-compose', async (_event, payload = {}) => {
+    let keys = {};
+    try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
+    const fs = require('fs');
+    const path = require('path');
+    const defaultPublic = path.join(__dirname, '../../../apps/web/public/videos');
+    let publicCopyDir = payload.publicCopyDir || null;
+    const template = payload.template || (/monkey\s*king/i.test(payload.brief || '') ? 'last-monkey-king' : undefined);
+    if (!publicCopyDir && template === 'last-monkey-king') {
+      try {
+        fs.mkdirSync(defaultPublic, { recursive: true });
+        publicCopyDir = defaultPublic;
+      } catch { /* cloud EB may be read-only */ }
+    }
+    const result = await composeImperialVideo(
+      { ...payload, template },
+      { keys, publicCopyDir, generateAI },
+    );
+    if (result.success && result.outputPath) {
+      const prev = readVideoJob(store) || {};
+      writeVideoJob(store, {
+        ...prev,
+        status: 'complete',
+        compose: result,
+        deliverable: result.message,
+        publicVideoUrl: result.publicUrl || null,
+        finishedAt: new Date().toISOString(),
+      });
+    }
+    return result;
+  });
 
   ipcMain.handle('run-imperial-video-pipeline', async (event, payload = {}) => {
     const pipelineId = payload.pipelineId || payload.pipeline || 'social-explainer';

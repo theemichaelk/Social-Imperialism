@@ -8,7 +8,7 @@ export default function VideoStudioPage() {
   return (
     <PageShell
       title="Video Studio"
-      subtitle="12 agentic pipelines · 52 tools · 620+ skills — turn Imperialism Brain into a full video production studio."
+      subtitle="OpenMontage-powered · 12 pipelines · 52 tools · 620+ skills — agentic video from brief to final.mp4."
     >
       <details className="ivs-grok-collapsible card">
         <summary>Grok clips — desktop app or localhost only</summary>

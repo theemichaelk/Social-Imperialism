@@ -33,6 +33,10 @@ apps/desktop/storage/
 apps/desktop/prisma/dev.db
 apps/desktop/prisma/dev.db-journal
 
+# OpenMontage vendor clone (run deploy/setup-openmontage.ps1)
+vendor/OpenMontage/
+data/video-projects/
+
 # Temp / patch artifacts (regenerable)
 tmp/
 patch-*.js

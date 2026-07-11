@@ -14,12 +14,24 @@ type Pipeline = {
 
 type StageFlow = { id: string; label: string; approval: boolean };
 
+type OpenMontageStatus = {
+  connected?: boolean;
+  ready?: boolean;
+  repo?: string;
+  ffmpeg?: boolean;
+  remotionComposer?: boolean;
+  pythonToolRegistry?: boolean;
+  issues?: string[];
+  siGap?: string | null;
+};
+
 type StudioConfig = {
   pipelineCount: number;
   toolCount: number;
   skillCount: number;
   stageFlow: StageFlow[];
   pipelines: Pipeline[];
+  openMontage?: OpenMontageStatus;
 };
 
 type StoryboardStage = {
@@ -62,6 +74,8 @@ type JobResult = {
   stages?: PipelineStage[];
   deliverable?: string;
   error?: string;
+  publicVideoUrl?: string | null;
+  compose?: { publicUrl?: string; outputPath?: string; runtime?: string };
 };
 
 const IVS_DRAFT_KEY = 'ivs-draft-v1';
@@ -155,6 +169,8 @@ export function ImperialVideoStudioPanel() {
   const [suggestedBrief, setSuggestedBrief] = useState('');
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [reviewedGates, setReviewedGates] = useState<Record<string, boolean>>({});
+  const [omStatus, setOmStatus] = useState<OpenMontageStatus | null>(null);
+  const [renderedVideoUrl, setRenderedVideoUrl] = useState<string | null>(null);
 
   const briefReady = useMemo(() => isBriefReady(brief), [brief]);
 
@@ -162,11 +178,13 @@ export function ImperialVideoStudioPanel() {
     setConfigLoading(true);
     setConfigError('');
     try {
-      const [cfg, tools, result] = await Promise.all([
+      const [cfg, tools, result, om] = await Promise.all([
         invoke<StudioConfig>('get-imperial-video-studio-config'),
         invoke<{ toolCount: number; skillCount: number; capabilities: Array<{ name: string; configured: number; total: number }> }>('get-imperial-video-tool-registry').catch(() => null),
         invoke<JobResult>('get-imperial-video-pipeline-result').catch(() => null),
+        invoke<OpenMontageStatus>('get-openmontage-status').catch(() => null),
       ]);
+      if (om) setOmStatus(om);
       if (cfg?.pipelines?.length) {
         setConfig(cfg);
       } else {
@@ -179,7 +197,11 @@ export function ImperialVideoStudioPanel() {
         setToolSummary(`${tools.toolCount} tools · ${tools.skillCount}+ agent skills · ${caps}`);
       }
       const normalized = normalizeJobResult(result);
-      if (normalized) setJob(normalized);
+      if (normalized) {
+        setJob(normalized);
+        const url = normalized.publicVideoUrl || normalized.compose?.publicUrl;
+        if (url) setRenderedVideoUrl(url);
+      }
     } catch (e) {
       setConfigError((e as Error).message || 'Could not load Imperial Video Studio.');
     } finally {
@@ -308,21 +330,45 @@ export function ImperialVideoStudioPanel() {
     }
   };
 
-  const queueComposition = async () => {
+  const queueComposition = async (opts?: { template?: string; briefOverride?: string }) => {
     setComposeMsg('');
     setRunning(true);
     try {
-      const res = await invoke<{ message?: string; status?: string }>('run-imperial-video-compose', {
+      const topic = opts?.briefOverride || brief.trim() || 'Social Imperialism video';
+      const res = await invoke<{
+        message?: string;
+        status?: string;
+        publicUrl?: string;
+        outputPath?: string;
+        runtime?: string;
+        error?: string;
+      }>('run-imperial-video-compose', {
         pipelineId: job?.pipelineId || selectedPipeline,
-        runtime: 'design-compositor',
-        brief: brief.trim() || undefined,
+        runtime: omStatus?.ready ? 'openmontage-remotion' : 'ffmpeg-kenburns',
+        brief: topic,
+        template: opts?.template,
+        publicCopyDir: opts?.template === 'last-monkey-king' ? undefined : undefined,
       });
-      setComposeMsg(res.message || 'Composition queued — open Create to attach clips and publish.');
+      if (res.error) {
+        setComposeMsg(res.error);
+        return;
+      }
+      if (res.publicUrl) setRenderedVideoUrl(res.publicUrl);
+      setComposeMsg(res.message || (res.status === 'complete' ? 'Video rendered.' : 'Composition queued.'));
     } catch (e) {
       setComposeMsg((e as Error).message || 'Could not queue composition.');
     } finally {
       setRunning(false);
     }
+  };
+
+  const renderMonkeyKing = async () => {
+    setBrief('The Last Monkey King — why Sun Wukong was cast out of Heaven');
+    setSelectedPipeline('character-short');
+    await queueComposition({
+      template: 'last-monkey-king',
+      briefOverride: 'The Last Monkey King — why Sun Wukong was cast out of Heaven',
+    });
   };
 
   const goPublish = (href: string, label: string) => {
@@ -381,6 +427,48 @@ export function ImperialVideoStudioPanel() {
 
   return (
     <div className="imperial-video-studio card">
+      <section className="imperial-video-studio-om card" style={{ marginBottom: 12, padding: '12px 14px' }}>
+        <h3 style={{ margin: '0 0 6px', fontSize: '0.95rem' }}>OpenMontage runtime</h3>
+        <p className="muted" style={{ margin: '0 0 8px', fontSize: '0.82rem' }}>
+          Connected to{' '}
+          <a href="https://github.com/calesthio/OpenMontage" target="_blank" rel="noopener noreferrer">
+            OpenMontage
+          </a>
+          {' '}— the open-source agentic video system behind demos like <em>The Last Banana</em>.
+          SI previously mirrored its pipeline UI without a render bridge; compose now outputs real MP4 via FFmpeg + OpenMontage project layout.
+        </p>
+        {omStatus ? (
+          <p style={{ margin: 0, fontSize: '0.8rem' }}>
+            <span className={`badge ${omStatus.ready ? 'is-ok' : 'is-warn'}`}>
+              {omStatus.ready ? 'Runtime ready' : omStatus.connected ? 'Cloned — setup needed' : 'Not cloned'}
+            </span>
+            {' '}
+            FFmpeg {omStatus.ffmpeg ? '✓' : '✗'} · Remotion {omStatus.remotionComposer ? '✓' : '✗'} · Python tools {omStatus.pythonToolRegistry ? '✓' : '✗'}
+            {omStatus.issues?.length ? (
+              <span className="muted" style={{ display: 'block', marginTop: 6 }}>
+                {omStatus.issues[0]}
+              </span>
+            ) : null}
+          </p>
+        ) : (
+          <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>Checking OpenMontage status…</p>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+          <button type="button" className="btn primary" disabled={running} onClick={renderMonkeyKing}>
+            Render: Last Monkey King
+          </button>
+          <button type="button" className="btn" disabled={running} onClick={() => queueComposition()}>
+            Compose current brief
+          </button>
+        </div>
+        {renderedVideoUrl && (
+          <div style={{ marginTop: 12 }}>
+            <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.78rem' }}>Latest render</p>
+            <video controls style={{ width: '100%', maxWidth: 720, borderRadius: 8 }} src={renderedVideoUrl} />
+          </div>
+        )}
+      </section>
+
       <header className="imperial-video-studio-head">
         <div>
           <p className="eyebrow">Imperial Video Studio</p>
@@ -599,7 +687,7 @@ export function ImperialVideoStudioPanel() {
               <h4>Deliverable preview</h4>
               <pre>{formatDeliverablePreview(job.deliverable).slice(0, 1400)}{job.deliverable.length > 1400 ? '…' : ''}</pre>
               <div className="imperial-video-studio-publish-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                <button type="button" className="btn primary" disabled={running} onClick={queueComposition}>
+                <button type="button" className="btn primary" disabled={running} onClick={() => queueComposition()}>
                   Queue composition
                 </button>
                 <button type="button" className="btn" onClick={() => goPublish('/content-hub?tab=media', 'Create · Media')}>
