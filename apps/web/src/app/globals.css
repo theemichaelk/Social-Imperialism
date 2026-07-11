@@ -3148,6 +3148,40 @@ textarea.input { min-height: 100px; resize: vertical; }
   background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
   max-height: 220px; overflow: auto;
 }
+.ivs-ref-hero h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+.ivs-ref-example {
+  margin: 0.5rem 0 0.75rem; padding: 0.55rem 0.75rem; font-size: 0.78rem;
+  border-left: 3px solid var(--accent3); background: rgba(56, 189, 248, 0.05);
+  border-radius: 0 8px 8px 0;
+}
+.ivs-duration-label { display: flex; flex-direction: column; gap: 2px; min-width: 72px; }
+.ivs-duration-input { width: 72px; padding: 0.35rem 0.5rem; }
+.ivs-ref-plan { margin-top: 0.75rem; }
+.ivs-ref-plan-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem;
+}
+.ivs-ref-plan-card {
+  padding: 0.55rem 0.65rem; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); font-size: 0.72rem;
+}
+.ivs-ref-plan-card h4 { margin: 0 0 0.35rem; font-size: 0.72rem; color: var(--accent3); }
+.ivs-ref-plan-card ul { margin: 0; padding-left: 1.1rem; line-height: 1.4; }
+.ivs-sample-preview { margin-top: 0.5rem; }
+.ivs-backlot { padding: 0.75rem 0.9rem; }
+.ivs-backlot h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
+.ivs-backlot-rail {
+  list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem;
+}
+.ivs-backlot-stage {
+  display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border); border-radius: 999px; font-size: 0.68rem;
+  background: var(--surface);
+}
+.ivs-backlot-stage .stage-dot { width: 6px; height: 6px; margin: 0; }
+.ivs-backlot-stage.is-completed .stage-dot,
+.ivs-backlot-stage.is-done .stage-dot { background: var(--accent3); }
+.ivs-backlot-stage.is-in_progress .stage-dot { background: var(--accent2); }
+.ivs-backlot-stage.is-pending .stage-dot { background: var(--muted); }
 
 .overlord-notification-stack { display: flex; flex-direction: column; gap: 0.5rem; margin: 0 0 0.75rem; }
 .thee-michael-notification-history-collapsed {

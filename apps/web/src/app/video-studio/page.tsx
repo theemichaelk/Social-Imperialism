@@ -8,7 +8,7 @@ export default function VideoStudioPage() {
   return (
     <PageShell
       title="Video Studio"
-      subtitle="OpenMontage-powered · 12 pipelines · 52 tools · 620+ skills — agentic video from brief to final.mp4."
+      subtitle="Start from a reference video · Backlot living storyboard · 12 pipelines · 52 tools · 620+ skills."
     >
       <details className="ivs-grok-collapsible card">
         <summary>Grok clips — desktop app or localhost only</summary>

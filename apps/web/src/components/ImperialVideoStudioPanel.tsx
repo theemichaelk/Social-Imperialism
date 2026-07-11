@@ -68,6 +68,52 @@ type ReferenceMetadata = {
   platform?: string | null;
 };
 
+type ReferenceAnalysisResult = {
+  success?: boolean;
+  mode?: string;
+  metadata?: ReferenceMetadata;
+  analysis?: {
+    content?: string;
+    style?: string;
+    structure?: string;
+    motion?: string;
+    transcript?: string | null;
+    whatMakesItWork?: string[];
+    sampleHook?: string;
+  };
+  keeps?: string[];
+  changes?: string[];
+  concepts?: ConceptVariant[];
+  toolPath?: string[];
+  costEstimate?: {
+    totalUsd?: { low: number; high: number };
+    sampleBeforeFullProductionUsd?: { low: number; high: number };
+    estimatedScenes?: number;
+    assumptions?: string[];
+    lineItems?: Array<{ category: string; tool: string; units: number; costUsd: number }>;
+  };
+  samplePreview?: string;
+  recommendedPipeline?: string;
+  targetDurationSec?: number;
+  honestNote?: string;
+  agentNote?: string;
+  error?: string;
+};
+
+type BacklotStatus = {
+  available?: boolean;
+  running?: boolean;
+  baseUrl?: string | null;
+  projectCount?: number;
+  note?: string;
+};
+
+type BacklotBoardState = {
+  stages?: Array<{ name: string; status?: string; gated?: boolean }>;
+  activity?: { status?: string };
+  title?: string;
+};
+
 type JobResult = {
   status?: string;
   success?: boolean;
@@ -82,6 +128,7 @@ type JobResult = {
   error?: string;
   publicVideoUrl?: string | null;
   compose?: { publicUrl?: string; outputPath?: string; runtime?: string };
+  backlotProjectId?: string | null;
 };
 
 const IVS_DRAFT_KEY = 'ivs-draft-v1';
@@ -177,6 +224,12 @@ export function ImperialVideoStudioPanel() {
   const [reviewedGates, setReviewedGates] = useState<Record<string, boolean>>({});
   const [omStatus, setOmStatus] = useState<OpenMontageStatus | null>(null);
   const [renderedVideoUrl, setRenderedVideoUrl] = useState<string | null>(null);
+  const [targetDurationSec, setTargetDurationSec] = useState(60);
+  const [localClipPath, setLocalClipPath] = useState('');
+  const [refPlan, setRefPlan] = useState<ReferenceAnalysisResult | null>(null);
+  const [backlotStatus, setBacklotStatus] = useState<BacklotStatus | null>(null);
+  const [backlotBoard, setBacklotBoard] = useState<BacklotBoardState | null>(null);
+  const [backlotProjectId, setBacklotProjectId] = useState<string | null>(null);
 
   const briefReady = useMemo(() => isBriefReady(brief), [brief]);
 
@@ -184,13 +237,15 @@ export function ImperialVideoStudioPanel() {
     setConfigLoading(true);
     setConfigError('');
     try {
-      const [cfg, tools, result, om] = await Promise.all([
+      const [cfg, tools, result, om, bl] = await Promise.all([
         invoke<StudioConfig>('get-imperial-video-studio-config'),
         invoke<{ toolCount: number; skillCount: number; capabilities: Array<{ name: string; configured: number; total: number }> }>('get-imperial-video-tool-registry').catch(() => null),
-        invoke<JobResult>('get-imperial-video-pipeline-result').catch(() => null),
+        invoke<JobResult & { backlotProjectId?: string }>('get-imperial-video-pipeline-result').catch(() => null),
         invoke<OpenMontageStatus>('get-openmontage-status').catch(() => null),
+        invoke<BacklotStatus>('get-backlot-status').catch(() => null),
       ]);
       if (om) setOmStatus(om);
+      if (bl) setBacklotStatus(bl);
       if (cfg?.pipelines?.length) {
         setConfig(cfg);
       } else {
@@ -207,6 +262,7 @@ export function ImperialVideoStudioPanel() {
         setJob(normalized);
         const url = normalized.publicVideoUrl || normalized.compose?.publicUrl;
         if (url) setRenderedVideoUrl(url);
+        if (normalized.backlotProjectId) setBacklotProjectId(normalized.backlotProjectId);
       }
     } catch (e) {
       setConfigError((e as Error).message || 'Could not load Imperial Video Studio.');
@@ -259,18 +315,35 @@ export function ImperialVideoStudioPanel() {
     document.getElementById('ivs-run-pipeline')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, []);
 
+  const refreshBacklotBoard = useCallback(async (projectId: string) => {
+    try {
+      const res = await invoke<{ success?: boolean; state?: BacklotBoardState; error?: string }>('get-backlot-board-state', { projectId });
+      if (res.success && res.state) setBacklotBoard(res.state as BacklotBoardState);
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     if (job?.status !== 'running') return undefined;
     const t = setInterval(() => {
       invoke<JobResult>('get-imperial-video-pipeline-result')
         .then((r) => {
           const normalized = normalizeJobResult(r);
-          if (normalized) setJob(normalized);
+          if (normalized) {
+            setJob(normalized);
+            if (normalized.backlotProjectId) setBacklotProjectId(normalized.backlotProjectId);
+          }
         })
         .catch(() => { /* ignore */ });
     }, 2500);
     return () => clearInterval(t);
   }, [job?.status]);
+
+  useEffect(() => {
+    if (!backlotProjectId) return undefined;
+    refreshBacklotBoard(backlotProjectId);
+    const t = setInterval(() => refreshBacklotBoard(backlotProjectId), 4000);
+    return () => clearInterval(t);
+  }, [backlotProjectId, job?.status, refreshBacklotBoard]);
 
   const applyConcept = (concept: ConceptVariant) => {
     setSelectedConcept(concept);
@@ -280,30 +353,38 @@ export function ImperialVideoStudioPanel() {
     setBrief(next);
   };
 
-  const analyzeReference = async () => {
-    if (!referenceUrl.trim()) return;
+  const analyzeReference = async (topicOverride?: string) => {
+    const source = referenceUrl.trim() || localClipPath.trim();
+    if (!source) return;
     setRunning(true);
+    setRefPlan(null);
     try {
-      const res = await invoke<{
-        analysis?: { pacing?: string; structure?: string; style?: string };
-        concepts?: ConceptVariant[];
-        recommendedPipeline?: string;
-        metadata?: ReferenceMetadata;
-      }>(
-        'analyze-reference-video',
-        { url: referenceUrl.trim(), topic: brief.trim() || 'social growth' },
-      );
+      const topic = topicOverride || brief.trim() || 'your topic';
+      const res = await invoke<ReferenceAnalysisResult>('analyze-reference-video', {
+        url: referenceUrl.trim() || undefined,
+        localPath: localClipPath.trim() || undefined,
+        reference: source,
+        topic,
+        targetDurationSec,
+        deep: true,
+      });
+      if (!res.success) {
+        setReferenceAnalysis(res.error || 'Reference analysis failed.');
+        return;
+      }
+      setRefPlan(res);
       const meta = res.metadata || {};
       if (meta.title) setReferenceTitle(meta.title);
       const lines = [
-        meta.title && `Reference: ${meta.title}${meta.author ? ` · ${meta.author}` : ''}`,
-        res.analysis?.pacing && `Pacing: ${res.analysis.pacing}`,
+        meta.title && `Reference: ${meta.title}${meta.author ? ` · ${meta.author}` : ''}${meta.platform ? ` (${meta.platform})` : ''}`,
+        res.analysis?.content && `Content: ${res.analysis.content}`,
         res.analysis?.structure && `Structure: ${res.analysis.structure}`,
         res.analysis?.style && `Style: ${res.analysis.style}`,
+        res.analysis?.motion && `Motion: ${res.analysis.motion}`,
         res.recommendedPipeline && `Recommended pipeline: ${res.recommendedPipeline}`,
+        res.mode && `Analysis mode: ${res.mode}`,
       ].filter(Boolean);
-      const analysisText = lines.join('\n');
-      setReferenceAnalysis(analysisText);
+      setReferenceAnalysis(lines.join('\n'));
       setConcepts(res.concepts || []);
       setSelectedConcept(null);
       if (res.recommendedPipeline) setSelectedPipeline(res.recommendedPipeline);
@@ -312,12 +393,26 @@ export function ImperialVideoStudioPanel() {
       const suggested = buildSuggestedBrief(pipelineLabel, brandName, null, meta.title);
       setSuggestedBrief(suggested);
       if (!brief.trim() || looksLikeReferenceAnalysis(brief)) {
-        setBrief('');
+        setBrief(topicOverride ? `60-second video like the reference, but about ${topicOverride}` : '');
       }
     } catch (e) {
       setReferenceAnalysis((e as Error).message || 'Reference analysis failed.');
     } finally {
       setRunning(false);
+    }
+  };
+
+  const openBacklot = async (projectId?: string | null) => {
+    try {
+      const res = await invoke<{ success?: boolean; boardUrl?: string; error?: string }>('open-backlot-board', {
+        projectId: projectId || backlotProjectId || undefined,
+      });
+      if (res.boardUrl && typeof window !== 'undefined') {
+        window.open(res.boardUrl, '_blank', 'noopener,noreferrer');
+      }
+      if (res.error) setComposeMsg(res.error);
+    } catch (e) {
+      setComposeMsg((e as Error).message || 'Could not open Backlot.');
     }
   };
 
@@ -522,33 +617,123 @@ export function ImperialVideoStudioPanel() {
         </div>
       </header>
 
-      <section className="imperial-video-studio-ref">
-        <h3>Start from a reference</h3>
+      <section className="imperial-video-studio-ref ivs-ref-hero">
+        <h3>Start From A Video You Already Love</h3>
         <p className="muted">
-          Paste a Short, Reel, TikTok, or YouTube URL — get pacing, structure, and 3 concept variants.
-          Analysis is structural guidance (not a full video download).
+          Starting from a reference video is often faster than starting from a blank prompt.
+          Paste a YouTube video, Short, Reel, TikTok, or local clip path — the agent analyzes
+          transcript, pacing, scenes, keyframes, and style, then returns a grounded production plan
+          (not best-guess prompt spaghetti).
         </p>
+        <blockquote className="ivs-ref-example">
+          &ldquo;Here&apos;s a YouTube Short I love. Make me something like this, but about quantum computing.&rdquo;
+          <button
+            type="button"
+            className="btn"
+            style={{ marginLeft: 8 }}
+            disabled={running}
+            onClick={() => {
+              setBrief('Make me something like this reference, but about quantum computing');
+              if (referenceUrl.trim() || localClipPath.trim()) {
+                analyzeReference('quantum computing');
+              }
+            }}
+          >
+            Try example topic
+          </button>
+        </blockquote>
         <div className="imperial-video-studio-ref-row">
           <input
             type="url"
             className="input"
-            placeholder="https://…"
+            placeholder="YouTube / Shorts / Reel / TikTok URL"
             value={referenceUrl}
             onChange={(e) => setReferenceUrl(e.target.value)}
           />
-          <button type="button" className="btn" disabled={running || !referenceUrl.trim()} onClick={analyzeReference}>
-            Analyze
+          <input
+            type="text"
+            className="input"
+            placeholder="Local clip path (desktop)"
+            value={localClipPath}
+            onChange={(e) => setLocalClipPath(e.target.value)}
+            title="Absolute path to a local .mp4 — desktop / local API only"
+          />
+          <label className="ivs-duration-label">
+            <span className="muted">Target s</span>
+            <input
+              type="number"
+              className="input ivs-duration-input"
+              min={15}
+              max={180}
+              value={targetDurationSec}
+              onChange={(e) => setTargetDurationSec(Math.max(15, Math.min(180, Number(e.target.value) || 60)))}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={running || (!referenceUrl.trim() && !localClipPath.trim())}
+            onClick={() => analyzeReference()}
+          >
+            {running ? 'Analyzing…' : 'Analyze reference'}
           </button>
         </div>
         {referenceTitle && (
           <p className="imperial-video-studio-ref-title muted">Detected: {referenceTitle}</p>
         )}
-        {referenceAnalysis && (
+        {refPlan?.success && (
+          <div className="ivs-ref-plan">
+            <div className="ivs-ref-plan-grid">
+              <div className="ivs-ref-plan-card">
+                <h4>What it keeps</h4>
+                <ul>{(refPlan.keeps || []).map((k) => <li key={k}>{k}</li>)}</ul>
+              </div>
+              <div className="ivs-ref-plan-card">
+                <h4>What it changes</h4>
+                <ul>{(refPlan.changes || []).map((c) => <li key={c}>{c}</li>)}</ul>
+              </div>
+              <div className="ivs-ref-plan-card">
+                <h4>Honest tool path</h4>
+                <ul>{(refPlan.toolPath || []).map((t) => <li key={t}>{t}</li>)}</ul>
+              </div>
+              <div className="ivs-ref-plan-card">
+                <h4>Cost @ {refPlan.targetDurationSec || targetDurationSec}s</h4>
+                {refPlan.costEstimate?.totalUsd ? (
+                  <p>
+                    <strong>${refPlan.costEstimate.totalUsd.low}–${refPlan.costEstimate.totalUsd.high}</strong>
+                    {' '}before asset generation
+                  </p>
+                ) : null}
+                {refPlan.costEstimate?.sampleBeforeFullProductionUsd ? (
+                  <p className="muted">
+                    Sample preview: ${refPlan.costEstimate.sampleBeforeFullProductionUsd.low}–$
+                    {refPlan.costEstimate.sampleBeforeFullProductionUsd.high}
+                  </p>
+                ) : null}
+                {refPlan.costEstimate?.assumptions?.slice(0, 2).map((a) => (
+                  <p key={a} className="muted" style={{ fontSize: '0.72rem', margin: '4px 0 0' }}>{a}</p>
+                ))}
+              </div>
+            </div>
+            {refPlan.samplePreview && (
+              <pre className="imperial-video-studio-analysis ivs-sample-preview">{refPlan.samplePreview}</pre>
+            )}
+            {refPlan.agentNote && (
+              <p className="muted" style={{ fontSize: '0.75rem', margin: '8px 0 0' }}>{refPlan.agentNote}</p>
+            )}
+            {refPlan.honestNote && (
+              <p className="muted" style={{ fontSize: '0.72rem', margin: '4px 0 0' }}>{refPlan.honestNote}</p>
+            )}
+          </div>
+        )}
+        {referenceAnalysis && !refPlan?.success && (
           <pre className="imperial-video-studio-analysis">{referenceAnalysis}</pre>
         )}
         {concepts.length > 0 && (
           <div className="imperial-video-studio-concepts">
-            <p className="muted" style={{ margin: '0 0 0.35rem', fontSize: '0.75rem' }}>Pick a concept to seed your brief:</p>
+            <p className="muted" style={{ margin: '0 0 0.35rem', fontSize: '0.75rem' }}>
+              2–3 differentiated concepts — pick one to seed your brief:
+            </p>
             <div className="imperial-video-studio-concept-grid">
               {concepts.map((c) => (
                 <button
@@ -563,6 +748,43 @@ export function ImperialVideoStudioPanel() {
               ))}
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="imperial-video-studio-backlot card ivs-backlot">
+        <h3>Watch It Happen — The Backlot Living Storyboard</h3>
+        <p className="muted">
+          OpenMontage&apos;s Backlot is a browser board that shows pipeline stages, script, scene plan,
+          and generated assets live as production runs — derived from disk, not manual UI updates.
+        </p>
+        {backlotStatus && (
+          <p className="muted" style={{ fontSize: '0.78rem', margin: '0 0 8px' }}>
+            {backlotStatus.note}
+            {backlotStatus.running ? ` · ${backlotStatus.projectCount ?? 0} project(s) on board` : ''}
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+          <button type="button" className="btn primary" onClick={() => openBacklot(backlotProjectId)}>
+            Open Backlot {backlotProjectId ? `(${backlotProjectId})` : ''}
+          </button>
+          <button type="button" className="btn" onClick={() => openBacklot(null)}>
+            All projects
+          </button>
+        </div>
+        {backlotBoard?.stages?.length ? (
+          <ol className="ivs-backlot-rail">
+            {backlotBoard.stages.map((s) => (
+              <li key={s.name} className={`ivs-backlot-stage is-${s.status || 'pending'}`}>
+                <span className="stage-dot" aria-hidden />
+                <span>{s.name.replace(/_/g, ' ')}</span>
+                <span className="muted">{s.status || 'pending'}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="muted" style={{ fontSize: '0.78rem', margin: 0 }}>
+            Run a pipeline to create a Backlot project, or open the board to watch existing OpenMontage productions.
+          </p>
         )}
       </section>
 

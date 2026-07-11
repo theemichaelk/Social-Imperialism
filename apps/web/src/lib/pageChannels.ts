@@ -15,6 +15,7 @@ export const PAGE_CHANNELS = {
   videoStudio: [
     'get-imperial-video-studio-config', 'get-imperial-video-tool-registry', 'get-imperial-video-skills-index',
     'get-openmontage-status', 'run-openmontage-preflight', 'fal-generate-video',
+    'get-backlot-status', 'open-backlot-board', 'get-backlot-board-state',
     'run-imperial-video-pipeline', 'get-imperial-video-pipeline-result', 'clear-imperial-video-pipeline-result', 'analyze-reference-video',
     'run-imperial-video-compose', 'grok-generate-video', 'grok-imagine', 'grok-ask-text', 'grok-get-status',
     'export-design-subtitles', 'compose-social-layout', 'generate-viral-thumbnail', 'search-stock-photo',

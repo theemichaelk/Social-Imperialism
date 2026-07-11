@@ -277,15 +277,22 @@ Stay on the brief topic — do not invent unrelated news or generic filler.
 Respect approval gates — flag decisions that need human review before paid asset generation.`;
 }
 
-async function runVideoPipeline(pipelineId, ctx, generateAI) {
+async function runVideoPipeline(pipelineId, ctx, generateAI, backlotCtx = null) {
   const pipeline = VIDEO_PIPELINES.find((p) => p.id === pipelineId);
   if (!pipeline) return { success: false, error: `Unknown pipeline: ${pipelineId}` };
+
+  const { writeSiCheckpoint, appendSiEvent } = require('./siBacklotProject');
+  const projectDir = backlotCtx?.projectDir || null;
+  const projectId = backlotCtx?.projectId || null;
 
   const artifacts = {};
   let priorOutput = '';
   const stages = [];
 
   for (const stage of STAGE_FLOW) {
+    if (projectDir) {
+      appendSiEvent(projectDir, { type: 'stage_start', stage: stage.id, pipeline: pipelineId });
+    }
     const prompt = buildStagePrompt(stage, pipeline, { ...ctx, priorOutput });
     const text = await generateAI(prompt);
     artifacts[stage.id] = text;
@@ -298,6 +305,13 @@ async function runVideoPipeline(pipelineId, ctx, generateAI) {
       outputPreview: text.slice(0, 280),
       completedAt: new Date().toISOString(),
     });
+    if (projectDir) {
+      writeSiCheckpoint(projectDir, stage.id, {
+        status: stage.approval ? 'awaiting_human' : 'completed',
+        preview: text,
+      });
+      appendSiEvent(projectDir, { type: 'stage_done', stage: stage.id });
+    }
   }
 
   return {
@@ -309,6 +323,7 @@ async function runVideoPipeline(pipelineId, ctx, generateAI) {
     stages,
     artifacts,
     deliverable: priorOutput,
+    backlotProjectId: projectId,
     storyboard: stages.map((s) => ({
       stage: s.id,
       label: s.label,
@@ -355,67 +370,6 @@ function runQuickVideoPipeline(pipelineId, ctx) {
   };
 }
 
-function extractYouTubeId(url = '') {
-  const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([\w-]{11})/i);
-  return m?.[1] || null;
-}
-
-async function fetchReferenceMetadata(url = '') {
-  const ref = String(url || '').trim();
-  if (!ref) return { title: null, author: null, platform: null };
-  const ytId = extractYouTubeId(ref);
-  if (ytId) {
-    try {
-      const axios = require('axios');
-      const oembed = await axios.get('https://www.youtube.com/oembed', {
-        params: { url: `https://www.youtube.com/watch?v=${ytId}`, format: 'json' },
-        timeout: 8000,
-      });
-      return {
-        title: oembed.data?.title || null,
-        author: oembed.data?.author_name || null,
-        platform: 'youtube',
-      };
-    } catch { /* fall through */ }
-  }
-  if (/tiktok\.com|instagram\.com|vimeo\.com/i.test(ref)) {
-    return { title: null, author: null, platform: ref.includes('tiktok') ? 'tiktok' : ref.includes('vimeo') ? 'vimeo' : 'instagram' };
-  }
-  return { title: null, author: null, platform: 'url' };
-}
-
-function analyzeReferenceVideoQuick(payload = {}, metadata = {}) {
-  const ref = payload.url || payload.reference || 'reference media';
-  const topic = payload.topic || 'your topic';
-  const refTitle = metadata.title || null;
-  const styleNote = metadata.platform === 'youtube' && refTitle
-    ? `Reference style cue: "${refTitle}" — adapt structure, not the exact topic unless brief says so.`
-    : 'High contrast captions, kinetic typography, platform-native 9:16';
-  return {
-    success: true,
-    reference: ref,
-    metadata: {
-      title: refTitle,
-      author: metadata.author || null,
-      platform: metadata.platform || null,
-    },
-    analysis: {
-      pacing: 'Hook in first 3s, beat every 8–12s, CTA in final 5s',
-      structure: 'Cold open → problem → proof → payoff → CTA',
-      style: styleNote,
-      keeps: ['pacing', 'hook cadence', 'caption style'],
-      changes: [`topic: ${topic}`, 'brand visuals', 'narration voice', 'music bed'],
-    },
-    concepts: [
-      { id: 'direct', title: 'Direct adaptation', angle: 'Same structure, new topic and visuals' },
-      { id: 'tone', title: 'Tone shift', angle: 'Slower, documentary pacing with stock montage' },
-      { id: 'burst', title: 'Short-form burst', angle: '30s vertical with Grok motion clips' },
-    ],
-    estimatedCostUsd: { low: 0.15, high: 1.5 },
-    recommendedPipeline: 'social-explainer',
-  };
-}
-
 const VIDEO_JOB_KEY = 'imperialVideoStudioJob';
 
 function readVideoJob(store) {
@@ -435,6 +389,9 @@ function writeVideoJob(store, job) {
 function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
   const { getOpenMontageStatus, syncOpenMontageEnv, runOpenMontagePreflight, OM_REPO } = require('./openMontageBridge');
   const { composeImperialVideo } = require('./imperialVideoComposer');
+  const { analyzeReferenceVideo } = require('./referenceVideoAnalyst');
+  const { getBacklotStatus, getBacklotBoardState, openBacklotBoard } = require('./backlotBridge');
+  const { createSiBacklotProject } = require('./siBacklotProject');
 
   ipcMain.handle('get-imperial-video-studio-config', () => {
     let keys = {};
@@ -518,17 +475,27 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
   });
 
   ipcMain.handle('analyze-reference-video', async (_event, payload = {}) => {
-    const metadata = await fetchReferenceMetadata(payload.url || payload.reference);
-    if (payload.deep && generateAI) {
-      const prompt = `Analyze this reference video concept for Imperial Video Studio.
-Reference: ${payload.url || payload.reference || 'local clip'}
-Reference title: ${metadata.title || 'unknown'}
-Desired topic: ${payload.topic || 'general'}
-Return JSON-like sections: pacing, structure, style, keeps, changes, 3 concept variants, recommended pipeline id.`;
-      const text = await generateAI(prompt);
-      return { success: true, deep: true, analysis: text, metadata, recommendedPipeline: 'social-explainer' };
-    }
-    return analyzeReferenceVideoQuick(payload, metadata);
+    let keys = {};
+    try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
+    const omStatus = getOpenMontageStatus(keys);
+    return analyzeReferenceVideo(payload, {
+      keys,
+      omStatus,
+      generateAI: payload.deep !== false ? generateAI : null,
+    });
+  });
+
+  ipcMain.handle('get-backlot-status', async () => getBacklotStatus());
+
+  ipcMain.handle('open-backlot-board', async (_event, payload = {}) => {
+    const projectId = payload.projectId || payload.project || null;
+    return openBacklotBoard(projectId);
+  });
+
+  ipcMain.handle('get-backlot-board-state', async (_event, payload = {}) => {
+    const projectId = payload.projectId || payload.project;
+    if (!projectId) return { success: false, error: 'projectId required' };
+    return getBacklotBoardState(projectId);
   });
 
   ipcMain.handle('run-imperial-video-compose', async (_event, payload = {}) => {
@@ -567,18 +534,33 @@ Return JSON-like sections: pacing, structure, style, keeps, changes, 3 concept v
     const pipelineId = payload.pipelineId || payload.pipeline || 'social-explainer';
     if (payload.quick) return runQuickVideoPipeline(pipelineId, payload);
 
+    const backlotProject = createSiBacklotProject({
+      pipelineId,
+      brief: payload.brief || payload.topic,
+      brandName: payload.brandName,
+      referenceUrl: payload.referenceUrl,
+    });
+    const backlotCtx = backlotProject.success
+      ? { projectId: backlotProject.projectId, projectDir: backlotProject.projectDir }
+      : null;
+
+    if (backlotCtx) {
+      openBacklotBoard(backlotCtx.projectId).catch(() => { /* non-fatal */ });
+    }
+
     const acceptedAsync = payload.async !== false;
     if (acceptedAsync && generateAI) {
       writeVideoJob(store, {
         status: 'running',
         pipelineId,
+        backlotProjectId: backlotCtx?.projectId || null,
         startedAt: new Date().toISOString(),
         progress: 0,
       });
 
       setImmediate(async () => {
         try {
-          const result = await runVideoPipeline(pipelineId, payload, generateAI);
+          const result = await runVideoPipeline(pipelineId, payload, generateAI, backlotCtx);
           writeVideoJob(store, { status: 'complete', finishedAt: new Date().toISOString(), ...result });
         } catch (err) {
           writeVideoJob(store, {
@@ -589,11 +571,18 @@ Return JSON-like sections: pacing, structure, style, keeps, changes, 3 concept v
         }
       });
 
-      return { success: true, accepted: true, async: true, pipelineId, status: 'running' };
+      return {
+        success: true,
+        accepted: true,
+        async: true,
+        pipelineId,
+        status: 'running',
+        backlotProjectId: backlotCtx?.projectId || null,
+      };
     }
 
     if (!generateAI) return runQuickVideoPipeline(pipelineId, payload);
-    return runVideoPipeline(pipelineId, payload, generateAI);
+    return runVideoPipeline(pipelineId, payload, generateAI, backlotCtx);
   });
 }
 

@@ -288,6 +288,7 @@ else {
   if (!pc.includes('run-imperial-pipeline')) fail('pageChannels.ts missing run-imperial-pipeline');
   if (!pc.includes('clear-imperial-video-pipeline-result')) fail('pageChannels.ts missing clear-imperial-video-pipeline-result');
   if (!pc.includes('get-imperial-video-studio-config')) fail('pageChannels.ts missing get-imperial-video-studio-config');
+  if (!pc.includes('get-backlot-status')) fail('pageChannels.ts missing get-backlot-status');
 }
 
 const imperialVideoPanel = path.join(ROOT, 'apps/web/src/components/ImperialVideoStudioPanel.tsx');
@@ -297,6 +298,9 @@ else {
   if (!ivs.includes('run-imperial-video-pipeline')) fail('ImperialVideoStudioPanel.tsx must wire run-imperial-video-pipeline');
   if (!ivs.includes('clear-imperial-video-pipeline-result')) fail('ImperialVideoStudioPanel.tsx must wire clear-imperial-video-pipeline-result');
   if (!ivs.includes('analyze-reference-video')) fail('ImperialVideoStudioPanel.tsx must wire analyze-reference-video');
+  if (!ivs.includes('get-backlot-status')) fail('ImperialVideoStudioPanel.tsx must wire get-backlot-status');
+  if (!ivs.includes('open-backlot-board')) fail('ImperialVideoStudioPanel.tsx must wire open-backlot-board');
+  if (!ivs.includes('Start From A Video You Already Love')) fail('ImperialVideoStudioPanel.tsx must show reference-video hero');
 }
 
 const scheduleIntervals = path.join(ROOT, 'apps/desktop/services/scheduleIntervals.js');
@@ -388,7 +392,7 @@ else if (!read(compositorPanel).includes('compose-social-layout')) {
 const designCompositorCore = path.join(ROOT, 'packages/core/src/designCompositor.js');
 if (!exists(designCompositorCore)) fail('Missing packages/core/src/designCompositor.js');
 
-const EXPECTED_HANDLERS = 417;
+const EXPECTED_HANDLERS = 420;
 
 // --- Report (async handler count) ---
 (async () => {
