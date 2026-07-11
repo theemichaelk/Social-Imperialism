@@ -159,6 +159,8 @@ const featureIndexes = [
   'ISSUE_CONTROL_PLANE.md',
   'CAMPAIGN_MASTERY.md',
   'ONBOARDING_INTELLIGENCE.md',
+  'IMPERIAL_VIDEO_STUDIO.md',
+  'SOCIAL_IMPERIALISM_SERP.md',
 ];
 for (const f of featureIndexes) {
   const p = path.join(ROOT, 'brain/features', f);
@@ -284,6 +286,85 @@ else {
   const pc = read(pageChannels);
   if (!pc.includes('get-imperial-pipeline-config')) fail('pageChannels.ts missing get-imperial-pipeline-config');
   if (!pc.includes('run-imperial-pipeline')) fail('pageChannels.ts missing run-imperial-pipeline');
+  if (!pc.includes('clear-imperial-video-pipeline-result')) fail('pageChannels.ts missing clear-imperial-video-pipeline-result');
+  if (!pc.includes('get-imperial-video-studio-config')) fail('pageChannels.ts missing get-imperial-video-studio-config');
+}
+
+const imperialVideoPanel = path.join(ROOT, 'apps/web/src/components/ImperialVideoStudioPanel.tsx');
+if (!exists(imperialVideoPanel)) fail('Missing ImperialVideoStudioPanel.tsx');
+else {
+  const ivs = read(imperialVideoPanel);
+  if (!ivs.includes('run-imperial-video-pipeline')) fail('ImperialVideoStudioPanel.tsx must wire run-imperial-video-pipeline');
+  if (!ivs.includes('clear-imperial-video-pipeline-result')) fail('ImperialVideoStudioPanel.tsx must wire clear-imperial-video-pipeline-result');
+  if (!ivs.includes('analyze-reference-video')) fail('ImperialVideoStudioPanel.tsx must wire analyze-reference-video');
+}
+
+const scheduleIntervals = path.join(ROOT, 'apps/desktop/services/scheduleIntervals.js');
+if (!exists(scheduleIntervals)) fail('Missing apps/desktop/services/scheduleIntervals.js');
+else {
+  const { parseFrequencyToMs } = require(scheduleIntervals);
+  if (parseFrequencyToMs('45m') !== 45 * 60 * 1000) fail('scheduleIntervals parseFrequencyToMs failed for 45m');
+  if (parseFrequencyToMs('2h') !== 2 * 60 * 60 * 1000) fail('scheduleIntervals parseFrequencyToMs failed for 2h');
+}
+
+const beFirstDiscovery = path.join(ROOT, 'apps/web/src/components/BeFirstTargetDiscovery.tsx');
+if (!exists(beFirstDiscovery)) fail('Missing BeFirstTargetDiscovery.tsx');
+else if (!read(beFirstDiscovery).includes('discover-keyword-targets')) {
+  fail('BeFirstTargetDiscovery.tsx must invoke discover-keyword-targets');
+}
+
+const beFirstFreqUi = path.join(ROOT, 'apps/web/src/components/BeFirstFrequencySelect.tsx');
+if (!exists(beFirstFreqUi)) fail('Missing BeFirstFrequencySelect.tsx');
+
+const notFoundPage = path.join(ROOT, 'apps/web/src/app/not-found.tsx');
+if (!exists(notFoundPage)) fail('Missing apps/web/src/app/not-found.tsx');
+else {
+  const nf = read(notFoundPage);
+  if (!nf.includes('THEE_MICHAEL')) fail('not-found.tsx must include THEE_MICHAEL guide');
+  if (!nf.includes('LiveSupportPanel')) fail('not-found.tsx must embed LiveSupportPanel');
+  if (!nf.includes('initContext="404"')) fail('not-found.tsx must pass initContext 404 to LiveSupportPanel');
+}
+
+const productKnowledge = path.join(ROOT, 'apps/web/src/lib/productKnowledge.ts');
+if (!exists(productKnowledge)) fail('Missing productKnowledge.ts');
+else if (!read(productKnowledge).includes('buildProductKnowledgeAppend')) {
+  fail('productKnowledge.ts must export buildProductKnowledgeAppend');
+}
+
+const liveSupportAgent = path.join(ROOT, 'apps/web/src/lib/liveSupportAgent.ts');
+if (!exists(liveSupportAgent)) fail('Missing liveSupportAgent.ts');
+else {
+  const lsa = read(liveSupportAgent);
+  if (!lsa.includes('getInitMessage')) fail('liveSupportAgent.ts must export getInitMessage');
+  if (!lsa.includes('buildProductKnowledgeAppend')) fail('liveSupportAgent.ts must wire product knowledge');
+  if (lsa.includes('Welcome to Social Imperialism — I\'m **Imperialism Brain**')) {
+    fail('liveSupportAgent.ts must not use long canned INIT_MESSAGE welcome');
+  }
+  try {
+    const agentPath = path.join(ROOT, 'apps/web/src/lib/liveSupportAgent.ts');
+    // Runtime check via transpile-free regex on getInitMessage bodies only
+    const initBodies = lsa.match(/case '[^']+':\s*return '([^']+)'/g) || [];
+    const longWelcome = initBodies.some((b) => /26 steps|Walk me through A-Z/i.test(b));
+    if (longWelcome) fail('getInitMessage() must not return long A-Z welcome text');
+  } catch { /* optional */ }
+}
+
+const imperialVideoCore = path.join(ROOT, 'packages/core/src/imperialVideoStudio.js');
+if (!exists(imperialVideoCore)) fail('Missing packages/core/src/imperialVideoStudio.js');
+else {
+  const ivc = read(imperialVideoCore);
+  const pipelineMatches = ivc.match(/id:\s*'[a-z-]+',\s*\n\s*label:/g) || [];
+  if (pipelineMatches.length !== 12) fail(`imperialVideoStudio.js pipelines: expected 12, got ${pipelineMatches.length}`);
+  if (!ivc.includes("stability: 'production'")) fail('imperialVideoStudio.js missing production stability badges');
+  if (!ivc.includes("stability: 'beta'")) fail('imperialVideoStudio.js missing beta stability badges');
+  try {
+    const { VIDEO_PIPELINES, VIDEO_TOOLS, SKILLS_CATALOG } = require(imperialVideoCore);
+    if (VIDEO_PIPELINES.length !== 12) fail(`VIDEO_PIPELINES length: expected 12, got ${VIDEO_PIPELINES.length}`);
+    if (VIDEO_TOOLS.length !== 52) fail(`VIDEO_TOOLS length: expected 52, got ${VIDEO_TOOLS.length}`);
+    if (SKILLS_CATALOG.length !== 620) fail(`SKILLS_CATALOG length: expected 620, got ${SKILLS_CATALOG.length}`);
+  } catch (e) {
+    fail(`imperialVideoStudio.js catalog load failed: ${e.message}`);
+  }
 }
 
 const imperialStudio = path.join(ROOT, 'apps/web/src/components/ImperialContentStudio.tsx');
@@ -307,7 +388,7 @@ else if (!read(compositorPanel).includes('compose-social-layout')) {
 const designCompositorCore = path.join(ROOT, 'packages/core/src/designCompositor.js');
 if (!exists(designCompositorCore)) fail('Missing packages/core/src/designCompositor.js');
 
-const EXPECTED_HANDLERS = 405;
+const EXPECTED_HANDLERS = 416;
 
 // --- Report (async handler count) ---
 (async () => {
@@ -326,6 +407,10 @@ const EXPECTED_HANDLERS = 405;
     if (!handlers['get-imperial-video-studio-config']) fail('handler registry missing get-imperial-video-studio-config');
     if (!handlers['run-imperial-video-pipeline']) fail('handler registry missing run-imperial-video-pipeline');
     if (!handlers['get-imperial-video-tool-registry']) fail('handler registry missing get-imperial-video-tool-registry');
+    if (!handlers['clear-imperial-video-pipeline-result']) fail('handler registry missing clear-imperial-video-pipeline-result');
+    if (!handlers['analyze-reference-video']) fail('handler registry missing analyze-reference-video');
+    if (!handlers['run-imperial-video-compose']) fail('handler registry missing run-imperial-video-compose');
+    if (!handlers['discover-keyword-targets']) fail('handler registry missing discover-keyword-targets');
     if (!handlers['get-design-compositor-config']) fail('handler registry missing get-design-compositor-config');
     if (!handlers['compose-social-layout']) fail('handler registry missing compose-social-layout');
   } catch (e) {
