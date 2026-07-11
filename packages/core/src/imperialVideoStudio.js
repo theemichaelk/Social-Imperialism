@@ -164,7 +164,7 @@ const VIDEO_TOOLS = [
   { id: 'scan-design-pii', capability: 'security', channel: 'scan-design-pii', tier: 'studio' },
   { id: 'get-design-compositor-config', capability: 'compose', channel: 'get-design-compositor-config', tier: 'studio' },
   { id: 'save-design-project', capability: 'library', channel: 'save-design-project', tier: 'studio' },
-  { id: 'fal-video', capability: 'video', channel: 'generate-image', tier: 'optional' },
+  { id: 'fal-video', capability: 'video', channel: 'fal-generate-video', tier: 'core' },
 ];
 
 function buildSkillsCatalog() {
@@ -220,6 +220,7 @@ const SKILLS_CATALOG = buildSkillsCatalog();
 function toolRegistrySummary(keys = {}) {
   const configured = (channel) => {
     if (channel === 'grok-generate-video' || channel === 'grok-imagine') return true;
+    if (channel === 'fal-generate-video') return !!keys.falKey;
     if (channel === 'generate-image' || channel === 'search-stock-photo') return !!(keys.falKey || keys.openrouter);
     if (channel === 'deepl-translate') return !!keys.deeplKey;
     if (channel === 'serp-search') {
@@ -436,7 +437,9 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
   const { composeImperialVideo } = require('./imperialVideoComposer');
 
   ipcMain.handle('get-imperial-video-studio-config', () => {
-    const om = getOpenMontageStatus();
+    let keys = {};
+    try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
+    const om = getOpenMontageStatus(keys);
     return {
       version: '1.1.0',
       tagline: 'Agentic video production — powered by OpenMontage + Imperial Video Studio',
@@ -455,9 +458,25 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
   ipcMain.handle('get-openmontage-status', () => {
     let keys = {};
     try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
-    const status = getOpenMontageStatus();
+    const status = getOpenMontageStatus(keys);
     const sync = status.root ? syncOpenMontageEnv(keys) : null;
     return { success: true, ...status, envSync: sync };
+  });
+
+  ipcMain.handle('fal-generate-video', async (_event, payload = {}) => {
+    const path = require('path');
+    const { generateKlingClip } = require('./imperialVideoComposer');
+    let keys = {};
+    try { keys = JSON.parse(store?.getItem?.('globalApiKeys') || '{}'); } catch { /* ignore */ }
+    const prompt = payload.prompt || payload.text || '';
+    if (!prompt) return { success: false, error: 'prompt required' };
+    const omRoot = require('./openMontageBridge').resolveOpenMontageRoot();
+    const outDir = omRoot
+      ? path.join(omRoot, 'projects', payload.projectId || 'si-clip', 'assets/video')
+      : path.join(__dirname, '../../../data/video-projects/clips');
+    require('fs').mkdirSync(outDir, { recursive: true });
+    const out = payload.outputPath || path.join(outDir, `kling-${Date.now()}.mp4`);
+    return generateKlingClip(prompt, keys, out, payload);
   });
 
   ipcMain.handle('run-openmontage-preflight', () => {

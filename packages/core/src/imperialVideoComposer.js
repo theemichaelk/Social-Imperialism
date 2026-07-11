@@ -150,6 +150,53 @@ function ffmpegColorPlate(destPath, caption, color = '0x1e293b') {
   return destPath;
 }
 
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function generateKlingClip(prompt, keys, destPath, opts = {}) {
+  const falKey = keys.falKey || process.env.FAL_KEY;
+  if (!falKey) return { success: false, error: 'FAL_KEY required for Kling v3 motion clips (Last Banana style)' };
+
+  const variant = opts.modelVariant || 'v3/standard';
+  const duration = opts.duration || '5';
+  const operation = opts.operation || 'text_to_video';
+  const operationPath = operation.replace(/_/g, '-');
+  const modelPath = `kling-video/${variant}/${operationPath}`;
+
+  const payload = {
+    prompt,
+    duration,
+    aspect_ratio: opts.aspectRatio || '16:9',
+  };
+  if (operation === 'image_to_video' && opts.imageUrl) payload.image_url = opts.imageUrl;
+
+  const headers = { Authorization: `Key ${falKey}`, 'Content-Type': 'application/json' };
+  const submit = await axios.post(`https://queue.fal.run/fal-ai/${modelPath}`, payload, { headers, timeout: 30000 });
+  const statusUrl = submit.data?.status_url;
+  const responseUrl = submit.data?.response_url;
+  if (!statusUrl || !responseUrl) {
+    return { success: false, error: 'Kling queue did not return status_url/response_url' };
+  }
+
+  const deadline = Date.now() + (opts.timeoutMs || 300000);
+  while (Date.now() < deadline) {
+    await sleep(5000);
+    const st = await axios.get(statusUrl, { headers, timeout: 20000 });
+    const status = st.data?.status;
+    if (status === 'COMPLETED') break;
+    if (status === 'FAILED' || status === 'CANCELLED') {
+      return { success: false, error: `Kling generation ${String(status).toLowerCase()}` };
+    }
+  }
+
+  const result = await axios.get(responseUrl, { headers, timeout: 30000 });
+  const videoUrl = result.data?.video?.url;
+  if (!videoUrl) return { success: false, error: 'Kling result missing video.url' };
+  await downloadFile(videoUrl, destPath);
+  return { success: true, source: 'kling-v3-fal', path: destPath, model: modelPath };
+}
+
 async function generateSceneImage(prompt, keys, destPath, sceneIndex = 0) {
   const errors = [];
   const falKey = keys.falKey;
@@ -234,7 +281,7 @@ const MONKEY_KING_SCENES = [
   },
 ];
 
-async function composeMonkeyKingVideo({ keys = {}, projectId = 'last-monkey-king', publicCopyDir } = {}) {
+async function composeMonkeyKingVideo({ keys = {}, projectId = 'last-monkey-king', publicCopyDir, motionClips } = {}) {
   const omRoot = resolveOpenMontageRoot();
   const base = omRoot
     ? path.join(omRoot, 'projects', projectId)
@@ -251,13 +298,26 @@ async function composeMonkeyKingVideo({ keys = {}, projectId = 'last-monkey-king
   ensureDir(path.dirname(audioPath));
   const tts = windowsTtsToWav(narration, audioPath);
 
+  const useMotion = motionClips !== false && !!(keys.falKey || process.env.FAL_KEY);
+  const clipSources = [];
   const clips = [];
   for (let i = 0; i < MONKEY_KING_SCENES.length; i += 1) {
     const scene = MONKEY_KING_SCENES[i];
+    const clipPath = path.join(clipsDir, `scene-${i + 1}.mp4`);
+    if (useMotion) {
+      const motionPrompt = `${scene.prompt}, Pixar-style 3D animation, fluid character motion, cinematic`;
+      const kling = await generateKlingClip(motionPrompt, keys, clipPath, { duration: '5' });
+      if (kling.success) {
+        clipSources.push('kling-v3');
+        clips.push(clipPath);
+        continue;
+      }
+      clipSources.push(`kling-fallback:${kling.error || 'failed'}`);
+    }
     const imgPath = path.join(assetsDir, `scene-${i + 1}.jpg`);
     await generateSceneImage(scene.prompt, keys, imgPath, i);
-    const clipPath = path.join(clipsDir, `scene-${i + 1}.mp4`);
     kenBurnsClip(imgPath, clipPath, 10, scene.caption);
+    clipSources.push('ken-burns');
     clips.push(clipPath);
   }
 
@@ -280,18 +340,30 @@ async function composeMonkeyKingVideo({ keys = {}, projectId = 'last-monkey-king
     createdAt: new Date().toISOString(),
   }, null, 2), 'utf8');
 
+  const klingCount = clipSources.filter((s) => s === 'kling-v3').length;
+  const runtime = klingCount === MONKEY_KING_SCENES.length
+    ? 'kling-v3+fal (Last Banana motion path)'
+    : klingCount > 0
+      ? `hybrid: ${klingCount} kling + ${MONKEY_KING_SCENES.length - klingCount} ken-burns`
+      : (omRoot ? 'openmontage-layout+ffmpeg-kenburns' : 'si-ffmpeg-kenburns');
+
   return {
     success: true,
     status: 'complete',
-    runtime: omRoot ? 'openmontage-layout+ffmpeg' : 'si-ffmpeg-compose',
+    runtime,
+    qualityTier: klingCount === MONKEY_KING_SCENES.length ? 'motion-clips' : 'slideshow',
     projectId,
     projectPath: base,
     outputPath: finalPath,
     publicUrl,
-    durationSec: MONKEY_KING_SCENES.length * 10,
+    durationSec: useMotion ? MONKEY_KING_SCENES.length * 5 : MONKEY_KING_SCENES.length * 10,
     scenes: MONKEY_KING_SCENES.length,
+    klingClips: klingCount,
+    clipSources,
     narration: tts.success,
-    message: 'Rendered final.mp4 — OpenMontage-compatible project layout',
+    message: klingCount === MONKEY_KING_SCENES.length
+      ? 'Rendered with Kling v3 motion clips (OpenMontage Last Banana stack)'
+      : 'Rendered final.mp4 — add FAL_KEY in Settings for Kling v3 motion like The Last Banana',
   };
 }
 
@@ -310,7 +382,8 @@ async function composeImperialVideo(payload = {}, deps = {}) {
 
   if (template === 'last-monkey-king' || /monkey\s*king/i.test(payload.brief || payload.topic || '')) {
     const publicDir = payload.publicCopyDir || deps.publicCopyDir;
-    return composeMonkeyKingVideo({ keys, publicCopyDir: publicDir });
+    const motionClips = payload.motionClips !== false && payload.quality !== 'slideshow';
+    return composeMonkeyKingVideo({ keys, publicCopyDir: publicDir, motionClips });
   }
 
   const brief = payload.brief || payload.topic || 'Social Imperialism video';
@@ -346,6 +419,7 @@ module.exports = {
   MONKEY_KING_SCENES,
   composeImperialVideo,
   composeMonkeyKingVideo,
+  generateKlingClip,
   kenBurnsClip,
   concatClipsWithAudio,
 };

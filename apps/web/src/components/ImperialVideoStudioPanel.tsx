@@ -17,12 +17,18 @@ type StageFlow = { id: string; label: string; approval: boolean };
 type OpenMontageStatus = {
   connected?: boolean;
   ready?: boolean;
+  composeReady?: boolean;
+  lastBananaReady?: boolean;
+  hasFalKey?: boolean;
+  qualityTiers?: { slideshow?: boolean; motionClips?: boolean; lastBanana?: boolean };
+  whyNotLastBanana?: string[] | null;
   repo?: string;
   ffmpeg?: boolean;
   remotionComposer?: boolean;
   pythonToolRegistry?: boolean;
   issues?: string[];
   siGap?: string | null;
+  referenceDemo?: string;
 };
 
 type StudioConfig = {
@@ -435,21 +441,24 @@ export function ImperialVideoStudioPanel() {
             OpenMontage
           </a>
           {' '}— the open-source agentic video system behind demos like <em>The Last Banana</em>.
-          SI previously mirrored its pipeline UI without a render bridge; compose now outputs real MP4 via FFmpeg + OpenMontage project layout.
+          The Last Banana uses <strong>Kling v3</strong> motion clips (fal.ai), Remotion compose, and Chirp3 narration — not Ken Burns stills.
         </p>
         {omStatus ? (
-          <p style={{ margin: 0, fontSize: '0.8rem' }}>
-            <span className={`badge ${omStatus.ready ? 'is-ok' : 'is-warn'}`}>
-              {omStatus.ready ? 'Runtime ready' : omStatus.connected ? 'Cloned — setup needed' : 'Not cloned'}
-            </span>
-            {' '}
-            FFmpeg {omStatus.ffmpeg ? '✓' : '✗'} · Remotion {omStatus.remotionComposer ? '✓' : '✗'} · Python tools {omStatus.pythonToolRegistry ? '✓' : '✗'}
-            {omStatus.issues?.length ? (
-              <span className="muted" style={{ display: 'block', marginTop: 6 }}>
-                {omStatus.issues[0]}
+          <div style={{ fontSize: '0.8rem' }}>
+            <p style={{ margin: '0 0 6px' }}>
+              <span className={`badge ${omStatus.lastBananaReady ? 'is-ok' : omStatus.composeReady ? 'is-warn' : ''}`}>
+                {omStatus.lastBananaReady ? 'Last Banana ready' : omStatus.qualityTiers?.motionClips ? 'Motion clips (FAL)' : omStatus.composeReady ? 'Slideshow only' : 'Setup needed'}
               </span>
+              {' '}
+              FFmpeg {omStatus.ffmpeg ? '✓' : '✗'} · FAL_KEY {omStatus.hasFalKey ? '✓' : '✗'} · Remotion {omStatus.remotionComposer ? '✓' : '✗'}
+            </p>
+            {omStatus.whyNotLastBanana?.length ? (
+              <ul className="muted" style={{ margin: '0 0 6px', paddingLeft: 18 }}>
+                {omStatus.whyNotLastBanana.map((line) => <li key={line}>{line}</li>)}
+              </ul>
             ) : null}
-          </p>
+            {omStatus.siGap && <p className="muted" style={{ margin: 0 }}>{omStatus.siGap}</p>}
+          </div>
         ) : (
           <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>Checking OpenMontage status…</p>
         )}

@@ -112,7 +112,7 @@ function syncOpenMontageEnv(keys = {}) {
   return { success: true, path: envPath, keysSynced: Object.keys(mapped).length };
 }
 
-function getOpenMontageStatus() {
+function getOpenMontageStatus(keys = {}) {
   const root = resolveOpenMontageRoot();
   const ffmpeg = resolveFfmpegBin();
   const ffmpegOk = spawnSync(ffmpeg, ['-version'], { encoding: 'utf8', timeout: 10000 }).status === 0;
@@ -120,17 +120,31 @@ function getOpenMontageStatus() {
   const pythonOk = spawnSync(python, ['--version'], { encoding: 'utf8', timeout: 10000 }).status === 0;
   const remotion = root ? hasRemotionComposer(root) : false;
   const pythonDeps = root && pythonOk ? hasPythonDeps(root) : false;
-  const ready = !!(root && ffmpegOk && pythonOk && (pythonDeps || remotion));
+  const hasFal = !!(keys.falKey || process.env.FAL_KEY);
+  const composeReady = !!(ffmpegOk);
+  const pipelineReady = !!(root && ffmpegOk && pythonOk && (pythonDeps || remotion));
+  const lastBananaReady = !!(pipelineReady && hasFal && remotion);
   const issues = [];
   if (!root) issues.push('OpenMontage repo not cloned (vendor/OpenMontage or OPENMONTAGE_ROOT)');
   if (!ffmpegOk) issues.push('FFmpeg not installed — required for final.mp4 render (winget install Gyan.FFmpeg)');
   if (!pythonOk) issues.push('Python 3.10+ not found');
-  if (root && !remotion && !pythonDeps) {
-    issues.push('OpenMontage not set up — run: deploy/setup-openmontage.ps1 (pip + remotion-composer npm install)');
+  if (root && !remotion) issues.push('Remotion composer not installed — run: deploy/setup-openmontage.ps1 (npm install in remotion-composer)');
+  if (root && !pythonDeps && !remotion) {
+    issues.push('OpenMontage Python tools not set up — run: deploy/setup-openmontage.ps1');
   }
+  if (!hasFal) issues.push('FAL_KEY missing — Last Banana-style Kling v3 motion clips need fal.ai (Settings → Integrations)');
+  const qualityTiers = {
+    slideshow: composeReady,
+    motionClips: composeReady && hasFal,
+    lastBanana: lastBananaReady,
+  };
   return {
     connected: !!root,
-    ready,
+    ready: pipelineReady,
+    composeReady,
+    lastBananaReady,
+    qualityTiers,
+    hasFalKey: hasFal,
     repo: OM_REPO,
     root: root || null,
     ffmpeg: ffmpegOk,
@@ -140,10 +154,16 @@ function getOpenMontageStatus() {
     remotionComposer: remotion,
     pythonToolRegistry: pythonDeps,
     issues,
-    referenceDemo: 'the_last_banana_v3_github.mp4 — Kling v3 + Remotion (needs FAL_KEY + OpenMontage setup)',
-    siGap: root
-      ? (ready ? null : 'OpenMontage cloned but runtime incomplete — compose was previously a stub')
-      : 'Imperial Video Studio mirrors OpenMontage architecture but had no runtime bridge',
+    referenceDemo: 'the_last_banana_v3_github.mp4 — 6× Kling v3 clips (fal.ai) + Chirp3 narration + Remotion compose + captions',
+    whyNotLastBanana: lastBananaReady ? null : [
+      !hasFal && 'Add FAL_KEY for Kling v3 motion (not Ken Burns stills)',
+      !remotion && 'Install remotion-composer for OpenMontage final compose',
+      !ffmpegOk && 'Install FFmpeg',
+      !root && 'Clone OpenMontage (deploy/setup-openmontage.ps1)',
+    ].filter(Boolean),
+    siGap: pipelineReady
+      ? (lastBananaReady ? null : 'SI can render MP4; Last Banana parity needs FAL_KEY + Remotion + OpenMontage video_compose')
+      : (root ? 'OpenMontage cloned but runtime incomplete' : 'Clone OpenMontage and install FFmpeg'),
   };
 }
 
