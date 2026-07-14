@@ -94,11 +94,21 @@ async function getBacklotBoardState(projectId, port = backlotPort()) {
   // Always ensure the board server is up before reading (SaaS poll path).
   const ensured = await ensureBacklotRunning();
   if (!ensured.success) {
+    const disk = diskBacklotStateFallback(projectId);
+    if (disk.state) {
+      return {
+        success: true,
+        projectId,
+        ...disk,
+        source: 'disk',
+        boardLocalOnly: true,
+        serverError: ensured.error || 'Backlot HTTP server unavailable — using disk checkpoints',
+      };
+    }
     return {
       success: false,
       error: ensured.error || 'Backlot server unavailable',
       projectId,
-      ...diskBacklotStateFallback(projectId),
     };
   }
   const livePort = ensured.port || port;
