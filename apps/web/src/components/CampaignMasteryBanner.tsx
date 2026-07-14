@@ -7,15 +7,18 @@ import {
   dismissMasteryReminderForSession,
   fetchCampaignMasteryStatus,
   isMasteryReminderDismissed,
+  planMasteryWalkthrough,
   startMasteryWalkthrough,
   type CampaignMasteryStatus,
 } from '@/lib/campaignMastery';
+import { executeLiveSupportAction } from '@/lib/liveSupportActions';
 
 export function CampaignMasteryBanner() {
   const pathname = usePathname();
   const [status, setStatus] = useState<CampaignMasteryStatus | null>(null);
   const [hidden, setHidden] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [actionMsg, setActionMsg] = useState('');
   const onDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
 
   useEffect(() => {
@@ -52,8 +55,8 @@ export function CampaignMasteryBanner() {
           Imperialism Brain · Resume A→Z Setup
         </p>
         <p style={{ margin: '4px 0 0', fontSize: '0.9rem' }}>
-          <strong>{status.percent}%</strong> complete — next: <strong>{step?.label}</strong>
-          {' '}({status.doneCount}/{status.totalSteps} modules)
+          Step <strong>{step?.order ?? '?'}</strong> of {status.totalSteps} — <strong>{step?.label}</strong>
+          {' '}· <strong>{status.percent}%</strong> verified ({status.doneCount} done)
         </p>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -63,12 +66,57 @@ export function CampaignMasteryBanner() {
           disabled={loading}
           onClick={async () => {
             setLoading(true);
-            try { await startMasteryWalkthrough(status); } finally { setLoading(false); }
+            setActionMsg('');
+            const snapshot = status;
+            const target = snapshot.currentStep;
+            const href = target?.href || '/onboarding?step=3';
+            const label = target?.label || 'Keywords & Platforms';
+
+            // Navigate immediately — do not wait on API or guide planner
+            executeLiveSupportAction({
+              type: 'navigate',
+              label,
+              href,
+              navId: target?.navId || 'onboarding',
+              sectionId: 'create',
+              tab: target?.tab,
+              autoExecute: true,
+              message: `Taking you to ${label}…`,
+            });
+
+            try {
+              const fresh = await fetchCampaignMasteryStatus();
+              const active = fresh || snapshot;
+              if (fresh) setStatus(fresh);
+              const reply = await startMasteryWalkthrough(active);
+              setActionMsg(reply || planMasteryWalkthrough(active).reply);
+            } catch (e) {
+              setActionMsg(
+                (e as Error).message
+                  || `Opened ${label} — add 5+ keywords, pick platforms, then Save.`,
+              );
+            } finally {
+              setLoading(false);
+            }
           }}
         >
           {loading ? 'Opening…' : 'Continue Setup'}
         </button>
-        <Link href="/dashboard" className="btn">Mission Control</Link>
+        <Link
+          href="/dashboard"
+          className="btn"
+          onClick={() => executeLiveSupportAction({
+            type: 'navigate',
+            label: 'Mission Control',
+            href: '/dashboard',
+            navId: 'dashboard',
+            sectionId: 'mission',
+            autoExecute: true,
+            message: 'Opening Mission Control…',
+          })}
+        >
+          Mission Control
+        </Link>
         <button
           type="button"
           className="btn"
@@ -80,6 +128,11 @@ export function CampaignMasteryBanner() {
           Later
         </button>
       </div>
+      {actionMsg && (
+        <p style={{ margin: '8px 0 0', width: '100%', fontSize: '0.82rem', color: '#c4b5fd' }}>
+          {actionMsg.replace(/\*\*(.+?)\*\*/g, '$1')}
+        </p>
+      )}
     </div>
   );
 }

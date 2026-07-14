@@ -8,6 +8,11 @@ const { fetchRealFeed } = require('./feedFetcher');
 
 const UA = 'SocialImperialism/1.0 (keyword-target-discovery)';
 
+const GENERIC_AUTHORS = new Set([
+  'linkedin', 'quora', 'reddit', 'twitter', 'facebook', 'instagram', 'youtube',
+  'tiktok', 'pinterest', 'threads', 'twitch', 'unknown', 'all',
+]);
+
 const SKIP_HANDLES = new Set([
   'search', 'home', 'explore', 'i', 'intent', 'hashtag', 'login', 'signup',
   'watch', 'playlist', 'channel', 'groups', 'pages', 'events', 'marketplace',
@@ -46,6 +51,115 @@ function targetKey(platform, type, term) {
   return `${platform}:${type}:${String(term || '').toLowerCase()}`;
 }
 
+const PLATFORM_NAMES = new Set([
+  'facebook', 'instagram', 'youtube', 'tiktok', 'twitter', 'x', 'pinterest',
+  'snapchat', 'threads', 'twitch', 'linkedin', 'reddit', 'quora', 'discord', 'telegram',
+]);
+
+function isGenericPlatformTerm(term, platform) {
+  const raw = String(term || '').trim().toLowerCase().replace(/^@/, '');
+  if (!raw) return true;
+  if (PLATFORM_NAMES.has(raw)) return true;
+  const plat = String(platform || '').trim().toLowerCase();
+  if (plat && raw === plat) return true;
+  return false;
+}
+
+function isValidTargetTerm(term, type = 'account') {
+  const t = String(term || '').trim();
+  if (!t) return false;
+  const maxLen = type === 'post' ? 72 : 48;
+  if (t.length > maxLen) return false;
+  if (/https?:\/\//i.test(t) || /\b[a-z0-9-]+\.(com|net|org|io|tv|me)\b/i.test(t)) return false;
+  if (/[›»|]/.test(t)) return false;
+  if (/^(quora|linkedin|reddit|youtube|facebook|instagram|tiktok|twitter|pinterest|threads|twitch)\b/i.test(t)) {
+    return false;
+  }
+  if ((t.match(/\s/g) || []).length >= (type === 'post' ? 4 : 2)) return false;
+  if (type !== 'community' && /^r\//i.test(t) && t.length > 32) return false;
+  return true;
+}
+
+function isRelevantWatchTarget(t) {
+  if (!t?.term || !isValidTargetTerm(t.term, t.type)) return false;
+  if (isGenericPlatformTerm(t.term, t.platform)) return false;
+  if (t.type === 'post' && t.source !== 'reddit_subreddit_search' && !t.subscribers && !t.followers) {
+    if (t.isWebDiscovery || /web_discovery|serp/i.test(String(t.source || ''))) return false;
+  }
+  if (t.type === 'account' && /^@(quora|linkedin|reddit|youtube|facebook|instagram)$/i.test(t.term)) {
+    return false;
+  }
+  return true;
+}
+
+function normalizeTargetTerm(term, platform, type) {
+  let t = String(term || '').trim();
+  if (!t) return t;
+  t = t.replace(/^@\/u\//i, 'u/').replace(/^@\/+/g, '@');
+  if (platform === 'Reddit') {
+    if (type === 'account' && /^@/i.test(t) && !/^u\//i.test(t)) t = `u/${t.replace(/^@/, '')}`;
+    if (type === 'community' && !/^r\//i.test(t)) t = `r/${t.replace(/^@/, '').replace(/^r\//i, '')}`;
+  }
+  if (!isValidTargetTerm(t)) return '';
+  return t;
+}
+
+async function discoverSerpProfileTargets(keyword, keys, platformFilter, limit = 24) {
+  const path = require('path');
+  let serpSearch;
+  let isSerpConfigured;
+  try {
+    ({ serpSearch, isSerpConfigured } = require(path.join(__dirname, '../../../packages/core/src/serpProvider')));
+  } catch {
+    return [];
+  }
+  if (!isSerpConfigured(keys)) return [];
+
+  const queries = [
+    `${keyword} linkedin company page`,
+    `${keyword} youtube channel`,
+    `${keyword} twitter account`,
+    `${keyword} instagram profile`,
+    `${keyword} facebook page`,
+    `${keyword} subreddit community`,
+    `site:reddit.com/r ${keyword}`,
+    `site:linkedin.com/company ${keyword}`,
+    `site:youtube.com/@ ${keyword}`,
+    `site:twitter.com ${keyword}`,
+  ];
+
+  const hits = [];
+  const seen = new Set();
+  for (const query of queries.slice(0, 6)) {
+    try {
+      const res = await serpSearch(keys, { query, limit: 8, engine: 'google' });
+      (res?.data || []).forEach((row) => {
+        const url = row.url || row.link;
+        if (!url || seen.has(url)) return;
+        const inferred = inferFromUrl(url, platformFilter && platformFilter !== 'All' ? platformFilter : null);
+        if (!inferred) return;
+        if (platformFilter && platformFilter !== 'All' && inferred.platform !== platformFilter) return;
+        seen.add(url);
+        hits.push({
+          ...inferred,
+          label: cleanSerpTitle(row.title, inferred.term),
+          samplePost: String(row.snippet || row.description || '').slice(0, 160),
+          source: 'serp_profile_search',
+        });
+      });
+    } catch (e) {
+      console.warn('SERP profile search:', e.message);
+    }
+    if (hits.length >= limit) break;
+  }
+  return hits.slice(0, limit);
+}
+
+function cleanSerpTitle(title, fallback) {
+  const t = String(title || '').replace(/\s*[-|·].*$/, '').trim();
+  return t || fallback;
+}
+
 function engagementFromPost(post) {
   const likes = post.stats?.likes ?? post.ups ?? 0;
   const comments = post.stats?.comments ?? post.num_comments ?? 0;
@@ -75,6 +189,8 @@ function inferFromUrl(url, platformHint) {
 function inferFromAuthor(author, platform) {
   const raw = String(author || '').trim();
   if (!raw || raw === 'Unknown' || raw === 'Reddit') return null;
+  if (isGenericPlatformTerm(raw, platform)) return null;
+  if (GENERIC_AUTHORS.has(raw.toLowerCase().replace(/^@/, ''))) return null;
 
   if (/^r\//i.test(raw)) {
     return { platform: platform || 'Reddit', type: 'community', term: raw.replace(/^r\//i, 'r/'), url: null };
@@ -93,8 +209,8 @@ function inferFromAuthor(author, platform) {
 function upsertTarget(map, seed, post, keyword) {
   const platform = seed.platform || post.platform || 'All';
   const type = seed.type || 'account';
-  const term = seed.term || post.author || '';
-  if (!term) return;
+  const term = normalizeTargetTerm(seed.term || post.author || '', platform, type);
+  if (!term || isGenericPlatformTerm(term, platform)) return;
 
   const key = targetKey(platform, type, term);
   const engagement = engagementFromPost(post);
@@ -133,6 +249,16 @@ function extractTargetsFromPost(post, keyword) {
   const urlHit = inferFromUrl(post.url, post.platform);
   if (urlHit) out.push(urlHit);
 
+  const redditSub = String(post.url || '').match(/reddit\.com\/r\/([A-Za-z0-9_]+)/i);
+  if (redditSub) {
+    out.push({
+      platform: 'Reddit',
+      type: 'community',
+      term: `r/${redditSub[1]}`,
+      url: post.url || null,
+    });
+  }
+
   if (post.subreddit) {
     out.push({
       platform: 'Reddit',
@@ -145,13 +271,16 @@ function extractTargetsFromPost(post, keyword) {
   const authorHit = inferFromAuthor(post.author, post.platform);
   if (authorHit) out.push(authorHit);
 
-  if (post.url && post.externalId) {
-    out.push({
-      platform: post.platform || 'All',
-      type: 'post',
-      term: String(post.content || post.url).slice(0, 120),
-      url: post.url,
-    });
+  if (!post.isWebDiscovery && post.url && post.externalId && post.platform !== 'Quora') {
+    const postTerm = String(post.content || '').slice(0, 72);
+    if (isValidTargetTerm(postTerm, 'post')) {
+      out.push({
+        platform: post.platform || 'All',
+        type: 'post',
+        term: postTerm,
+        url: post.url,
+      });
+    }
   }
 
   return out;
@@ -253,11 +382,13 @@ function computeRankScore(t) {
 }
 
 function finalizeTargets(map, limit = 50) {
-  const list = [...map.values()].map((t) => ({
-    ...t,
-    rankScore: computeRankScore(t),
-    matchedKeywords: t.matchedKeywords || [],
-  }));
+  const list = [...map.values()]
+    .filter(isRelevantWatchTarget)
+    .map((t) => ({
+      ...t,
+      rankScore: computeRankScore(t),
+      matchedKeywords: t.matchedKeywords || [],
+    }));
   list.sort((a, b) => b.rankScore - a.rankScore);
   return list.slice(0, limit);
 }
@@ -275,18 +406,51 @@ async function discoverKeywordTargets({
   }
 
   const platformFilter = platform && platform !== 'All' ? platform : null;
-  const allowedPlatforms = platformFilter ? new Set([platformFilter]) : new Set();
+  const allowedPlatforms = platformFilter ? new Set([platformFilter]) : null;
   const targetMap = new Map();
   let postCount = 0;
   const scannedPlatforms = new Set();
 
   for (const keyword of keywords.slice(0, 5)) {
+    const serpProfiles = await discoverSerpProfileTargets(keyword, keys, platformFilter, 20);
+    serpProfiles.forEach((seed) => {
+      scannedPlatforms.add(seed.platform);
+      const term = normalizeTargetTerm(seed.term, seed.platform, seed.type);
+      if (!term || isGenericPlatformTerm(term, seed.platform)) return;
+      const key = targetKey(seed.platform, seed.type, term);
+      const existing = targetMap.get(key);
+      if (existing) {
+        if (!existing.url && seed.url) existing.url = seed.url;
+        if (!existing.samplePost && seed.samplePost) existing.samplePost = seed.samplePost;
+        if (!existing.matchedKeywords.includes(keyword)) existing.matchedKeywords.push(keyword);
+        existing.activityScore = Math.max(existing.activityScore || 0, 40);
+      } else {
+        targetMap.set(key, {
+          id: key,
+          platform: seed.platform,
+          type: seed.type,
+          term,
+          label: seed.label || term,
+          url: seed.url || null,
+          followers: 0,
+          subscribers: 0,
+          activityScore: 45,
+          postCount: 1,
+          engagementTotal: 45,
+          matchedKeywords: [keyword],
+          samplePost: seed.samplePost || '',
+          rankScore: 0,
+          source: seed.source || 'serp',
+        });
+      }
+    });
+
     const [feedPosts, redditPosts, redditCommunities] = await Promise.all([
       fetchRealFeed({
         keywords: [keyword],
         filters: { platform: platformFilter || 'All', sort: 'relevance' },
         keys,
-        allowedPlatforms,
+        allowedPlatforms: allowedPlatforms || new Set(),
       }).catch(() => []),
       platformFilter && platformFilter !== 'Reddit'
         ? Promise.resolve([])
@@ -297,18 +461,16 @@ async function discoverKeywordTargets({
     ]);
 
     let webPosts = [];
-    if (!process.env.SI_TEST_QUICK) {
-      try {
-        webPosts = await discoverAllPlatformPosts({
-          keyword,
-          keys,
-          allowedPlatforms,
-          limitPerPlatform,
-          platformFilter,
-        });
-      } catch (e) {
-        console.warn('Web discovery:', e.message);
-      }
+    try {
+      webPosts = await discoverAllPlatformPosts({
+        keyword,
+        keys,
+        allowedPlatforms: allowedPlatforms || undefined,
+        limitPerPlatform: keys?.serpApiKey || keys?.siSerpBaseUrl ? Math.max(limitPerPlatform, 5) : limitPerPlatform,
+        platformFilter,
+      });
+    } catch (e) {
+      console.warn('Web discovery:', e.message);
     }
 
     const allPosts = [...feedPosts, ...redditPosts, ...webPosts];

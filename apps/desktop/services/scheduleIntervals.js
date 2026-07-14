@@ -12,11 +12,55 @@ const FREQUENCY_OPTIONS = [
 
 const MS_BY_VALUE = Object.fromEntries(FREQUENCY_OPTIONS.map((o) => [o.value, o.ms]));
 
-function frequencyToMs(freq) {
+const UNIT_MS = {
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+  w: 7 * 24 * 60 * 60 * 1000,
+};
+
+/** Parse preset (10m, hourly) or custom (45m, 2h, 90s, 3d, 1w) */
+function parseFrequencyToMs(freq) {
   if (!freq) return MS_BY_VALUE['15m'];
-  if (MS_BY_VALUE[freq]) return MS_BY_VALUE[freq];
-  if (freq === '1h') return MS_BY_VALUE.hourly;
+  const raw = String(freq).trim().toLowerCase();
+  if (MS_BY_VALUE[raw]) return MS_BY_VALUE[raw];
+  if (raw === '1h') return MS_BY_VALUE.hourly;
+
+  const custom = raw.match(/^(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|week|weeks)$/);
+  if (custom) {
+    const n = parseInt(custom[1], 10);
+    if (!Number.isFinite(n) || n <= 0) return MS_BY_VALUE['15m'];
+    const u = custom[2];
+    // Anchored alternation (avoid /^s|sec/ which is (^s)|sec)
+    if (/^(s|sec|secs|second|seconds)$/.test(u)) return n * UNIT_MS.s;
+    if (/^(m|min|mins|minute|minutes)$/.test(u)) return n * UNIT_MS.m;
+    if (/^(h|hr|hrs|hour|hours)$/.test(u)) return n * UNIT_MS.h;
+    if (/^(d|day|days)$/.test(u)) return n * UNIT_MS.d;
+    if (/^(w|week|weeks)$/.test(u)) return n * UNIT_MS.w;
+  }
+
+  const compact = raw.match(/^(\d+)(s|m|h|d|w)$/);
+  if (compact) {
+    const n = parseInt(compact[1], 10);
+    const unit = compact[2];
+    if (Number.isFinite(n) && n > 0 && UNIT_MS[unit]) return n * UNIT_MS[unit];
+  }
+
   return MS_BY_VALUE['15m'];
+}
+
+function frequencyToMs(freq) {
+  return parseFrequencyToMs(freq);
+}
+
+function formatFrequencyLabel(freq) {
+  const preset = FREQUENCY_OPTIONS.find((o) => o.value === freq);
+  if (preset) return preset.label;
+  const m = String(freq || '').match(/^(\d+)(s|m|h|d|w)$/);
+  if (!m) return String(freq || '15m');
+  const labels = { s: 'seconds', m: 'minutes', h: 'hours', d: 'days', w: 'weeks' };
+  return `Every ${m[1]} ${labels[m[2]] || m[2]}`;
 }
 
 function shouldRunOnSchedule(store, lastRunKey, frequency) {
@@ -39,7 +83,10 @@ function workerSleepMs(frequency, beFirstDelay = true) {
 
 module.exports = {
   FREQUENCY_OPTIONS,
+  UNIT_MS,
+  parseFrequencyToMs,
   frequencyToMs,
+  formatFrequencyLabel,
   shouldRunOnSchedule,
   markScheduleRun,
   workerSleepMs,

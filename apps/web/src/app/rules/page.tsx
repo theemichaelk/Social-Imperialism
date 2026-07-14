@@ -10,6 +10,7 @@ import { BackgroundRunPanel } from '@/components/BackgroundRunPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { ALL_PLATFORMS, platformDisplayName } from '@/lib/platforms';
 import { BeFirstTargetDiscovery } from '@/components/BeFirstTargetDiscovery';
+import { BeFirstFrequencySelect } from '@/components/BeFirstFrequencySelect';
 import { type DiscoveredTarget, targetToMonitor } from '@/lib/beFirstTargets';
 
 type Monitor = {
@@ -347,13 +348,10 @@ export default function RulesPage() {
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
           </select>
-          <label className="ac-label">Be First monitor frequency</label>
-          <select className="input" value={autoSearch.beFirstMonitorFrequency || '10m'} onChange={(e) => setAutoSearch({ ...autoSearch, beFirstMonitorFrequency: e.target.value })}>
-            <option value="5m">Every 5 minutes</option>
-            <option value="10m">Every 10 minutes</option>
-            <option value="30m">Every 30 minutes</option>
-            <option value="hourly">Hourly</option>
-          </select>
+          <BeFirstFrequencySelect
+            value={autoSearch.beFirstMonitorFrequency || '10m'}
+            onChange={(v) => setAutoSearch({ ...autoSearch, beFirstMonitorFrequency: v })}
+          />
           <SparkRow items={[
             { label: 'Last Run', value: autoSearch.lastRun ? new Date(autoSearch.lastRun).toLocaleString() : '—', status: autoSearch.lastRun ? 'ok' : 'off' },
           ]} />

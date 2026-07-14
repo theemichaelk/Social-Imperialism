@@ -16,13 +16,14 @@ Rules:
 
 export const MASTERY_QUICK_PROMPTS = [
   'Walk me through A-Z setup now',
+  'Resume A→Z Setup',
   'Where am I in campaign setup?',
   'Continue my next setup step',
   'Show campaign mastery progress',
 ];
 
 export function isMasteryRequest(text: string): boolean {
-  return /walk\s+(me\s+)?through|a[\s-]?z\s+setup|campaign\s+mastery|show\s+campaign\s+mastery|continue\s+(my\s+)?(next\s+)?(setup|onboarding)|continue\s+my\s+next\s+setup\s+step|next\s+setup\s+step|where\s+am\s+i(\s+in)?(\s+campaign)?(\s+setup)?|finish\s+setup|get\s+started|full\s+setup|step\s+by\s+step|start\s+from\s+(the\s+)?beginn?ing|from\s+(the\s+)?beginn?ing|from\s+scratch|square\s+one|help\s+me\s+start(?:\s+from)?|help\s+me\s+(get\s+)?start|brand\s+new\s+setup|never\s+set\s+up/i.test(text);
+  return /walk\s+(me\s+)?through|resume\s+a[\s-]?z|a[\s-]?z\s+setup|campaign\s+mastery|show\s+campaign\s+mastery|continue\s+(my\s+)?(next\s+)?(setup|onboarding)|continue\s+my\s+next\s+setup\s+step|next\s+setup\s+step|where\s+am\s+i(\s+in)?(\s+campaign)?(\s+setup)?|finish\s+setup|get\s+started|full\s+setup|step\s+by\s+step|start\s+from\s+(the\s+)?beginn?ing|from\s+(the\s+)?beginn?ing|from\s+scratch|square\s+one|help\s+me\s+start(?:\s+from)?|help\s+me\s+(get\s+)?start|brand\s+new\s+setup|never\s+set\s+up/i.test(text);
 }
 
 /** Progress summary only — no sidebar navigation or step advance. */

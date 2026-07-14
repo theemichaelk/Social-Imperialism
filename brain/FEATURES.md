@@ -34,7 +34,7 @@ Desktop (Electron) and web/SaaS share IPC channel parity. This catalog is the br
 
 - AI generation, RSS, stock media, publish queue, calendar scheduling
 - Thumbnail studio (FLUX, FAL, Grok Imagine, Advanced Workflow) — **web tabs: Thumbnails, Grok & Infographic**
-- Grok bar on: `content-hub`, `design-studio`, `brand`, `integrations`, `dns`, `content-library` — **web `GrokToolbar` on all six surfaces**
+- Grok bar on: `content-hub`, `design-studio`, `brand`, `integrations`, `content-library`, `video-studio` — **web `GrokToolbar` on creative surfaces only** (not DNS — Route53 has no Grok workflow)
 - **Web tabs added:** Media/Video, Repurpose, Q&A Composer, Comments inbox, Post Analytics, Content Utilities
 - **Desktop tabs unchanged** — full tab set already in `content-hub.html`
 
@@ -110,7 +110,7 @@ Persistent requirement for all past, current, and future modules — every actio
 | Welcome email drip | `leadCaptureService` + scheduler | — |
 | Predictive motivation | — | `PredictiveMotivationPanel` on dashboard |
 
-**IPC handlers:** **405** (verify via `npm run audit:accuracy`)
+**IPC handlers:** **424** (verify via `npm run audit:accuracy`)
 
 ## Imperialism Brain extensions (July 2026)
 
@@ -130,6 +130,20 @@ Persistent requirement for all past, current, and future modules — every actio
 | `/dashboard/admin` | Admin directory + live guide push |
 | `/dashboard/users` | My Account |
 
+## Social Imperialism SERP Engine (July 2026 — complements SerpAPI)
+
+**Brain:** [features/SOCIAL_IMPERIALISM_SERP.md](./features/SOCIAL_IMPERIALISM_SERP.md)
+
+| Capability | Core | Web |
+|------------|------|-----|
+| Multi-engine browser SERP | `siSerpClient.js` | Integrations → Data & Research |
+| Provider router (SI SERP → SerpAPI) | `serpProvider.js` | Same `serp-search` IPC |
+| Page extract + megasearch | `serp-search` payload `extract`, `mega` | Content Hub utilities |
+| Video Studio research | `web-research` tool | `/video-studio` |
+| Provider status | `get-serp-provider-status` | API metrics `Social Imperialism SERP` |
+
+Does **not** remove SerpAPI keys or THEE_MICHAEL SEO REST routes — additive provider layer.
+
 ## Imperial Video Studio (July 2026)
 
 **Brain:** [features/IMPERIAL_VIDEO_STUDIO.md](./features/IMPERIAL_VIDEO_STUDIO.md) · **Route:** `/video-studio` · **Skills:** [skills/video-studio/INDEX.md](./skills/video-studio/INDEX.md)
@@ -138,13 +152,13 @@ Persistent requirement for all past, current, and future modules — every actio
 |------------|------------|-----|
 | 12 agentic pipelines | `imperialVideoStudio.js` | `ImperialVideoStudioPanel.tsx` |
 | 52-tool registry | `get-imperial-video-tool-registry` | Capability menu in panel |
-| 500+ agent skills | `get-imperial-video-skills-index` | Brain + coding agents |
+| 620 agent skills | `get-imperial-video-skills-index` | Brain + coding agents |
 | Reference video analysis | `analyze-reference-video` | URL paste → concepts |
 | 7-stage production flow | `run-imperial-video-pipeline` | Production board |
 | Approval gates | THEE_MICHAEL notification ledger | Script/assets gates |
 | Compose & publish | `run-imperial-video-compose` | → Content Hub Media |
 
-**IPC handlers:** **405** (verify via `npm run audit:accuracy`)
+**IPC handlers:** **424** (verify via `npm run audit:accuracy`)
 
 ## Design Studio — Imperialism Design Compositor (July 2026)
 

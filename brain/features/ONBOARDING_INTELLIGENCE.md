@@ -17,6 +17,7 @@
 ## Capabilities
 
 - Brand research orchestration (keywords, monitors, auto-rules seed)
+- **SERP (complement):** Integrations step may configure **Social Imperialism SERP** (self-hosted) or SerpAPI — see [SOCIAL_IMPERIALISM_SERP.md](./SOCIAL_IMPERIALISM_SERP.md); does not alter wizard IPC channel list
 - Verified node campaign bootstrap
 - Onboarding drip email sequences
 - Live Support routing for stuck setup steps

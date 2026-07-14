@@ -25,7 +25,7 @@
 
 ## Signals evaluated
 
-- APIs connected (`buildApiMetrics`)
+- APIs connected (`buildApiMetrics`) — `hasSerpOrSeo` true for **Social Imperialism SERP** (`siSerpBaseUrl`), **SerpAPI**, or DomDetailer ([SOCIAL_IMPERIALISM_SERP.md](./SOCIAL_IMPERIALISM_SERP.md))
 - Keyword count
 - Linked accounts count
 - Manual step overrides per campaign

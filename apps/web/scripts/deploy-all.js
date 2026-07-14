@@ -7,6 +7,15 @@ const REPO = path.resolve(ROOT, '../..');
 const BUCKET = 'social-imperialism';
 const REGION = 'us-east-1';
 
+function rmSafe(target) {
+  if (!fs.existsSync(target)) return;
+  try {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 });
+  } catch {
+    execSync(`cmd /c rmdir /s /q "${target}"`, { stdio: 'ignore', shell: true });
+  }
+}
+
 function run(cmd, opts = {}) {
   console.log(`\n> ${cmd}`);
   execSync(cmd, { stdio: 'inherit', shell: true, ...opts });
@@ -24,6 +33,7 @@ run('node scripts/build-export.js', { cwd: ROOT });
 
 // 2) Production .next build (SSR / Amplify) — after export so .next is production mode
 console.log('\nStep 2: Production Next.js build (.next)');
+rmSafe(path.join(ROOT, '.next'));
 run('npm run build', { cwd: ROOT });
 
 if (!fs.existsSync(path.join(ROOT, '.next'))) {

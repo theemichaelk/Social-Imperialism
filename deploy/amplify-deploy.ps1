@@ -1,4 +1,4 @@
-# Amplify web deploy — git-connected apps use start-job; manual apps upload a pre-built zip.
+# Amplify web deploy - git-connected apps use start-job; manual apps upload a pre-built zip.
 param(
   [string]$AppId = "d204r2r6gar3c8",
   [string]$Branch = "main",
@@ -9,7 +9,7 @@ param(
 $appMeta = aws amplify get-app --app-id $AppId --region us-east-1 --output json 2>$null | ConvertFrom-Json
 $repository = $appMeta.app.repository
 if ($repository -and -not $ForceZip) {
-  Write-Host "Amplify app is git-connected ($repository) — triggering rebuild from $Branch..."
+  Write-Host "Amplify app is git-connected ($repository) - triggering rebuild from $Branch..."
   $job = aws amplify start-job `
     --app-id $AppId `
     --branch-name $Branch `
@@ -19,7 +19,7 @@ if ($repository -and -not $ForceZip) {
   $jobId = $job.jobSummary.jobId
   Write-Host "Started Amplify job $jobId (RELEASE from git)"
   Write-Host "Monitor: aws amplify get-job --app-id $AppId --branch-name $Branch --job-id $jobId --region us-east-1"
-  Write-Host "URL: https://main.${AppId}.amplifyapp.com"
+  Write-Host ('URL: https://main.' + $AppId + '.amplifyapp.com')
   exit 0
 }
 
@@ -66,4 +66,4 @@ aws amplify start-deployment --app-id $AppId --branch-name $Branch --job-id $job
 
 Write-Host ""
 Write-Host "Monitor: aws amplify get-job --app-id $AppId --branch-name $Branch --job-id $jobId --region us-east-1"
-Write-Host "URL: https://main.${AppId}.amplifyapp.com"
+Write-Host ('URL: https://main.' + $AppId + '.amplifyapp.com')

@@ -40,7 +40,7 @@ python -m pip install piper-tts || echo "[skip] piper-tts — cloud TTS will be 
 
 if [[ ! -f .env ]] && [[ -f .env.example ]]; then
   cp .env.example .env
-  echo "Created .env from .env.example"
+  echo "Created .env from .env.example — every key is optional; add what you have"
 elif [[ -f .env ]]; then
   echo ".env already exists — skipping"
 fi
@@ -54,3 +54,5 @@ echo ""
 echo "Done! OpenMontage ready at $VENDOR"
 echo "  Activate: source $VENDOR/.venv/bin/activate"
 echo "  No make? This script is the manual equivalent of: make setup"
+echo "  Agents: pipeline first -> manifest -> stage skill -> tools (AGENT_GUIDE.md Rule Zero)"
+echo "  API keys (optional — more keys = more tools): .env or Settings -> Integrations"

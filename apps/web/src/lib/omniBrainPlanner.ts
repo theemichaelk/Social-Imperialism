@@ -116,7 +116,7 @@ const INTENT_PATTERNS: Array<{ patterns: RegExp[]; route: IntentRoute }> = [
   },
   {
     patterns: [/thee_michael/i, /admin\s+approv/i, /go\s+live\s+for\s+every/i],
-    route: { intent: 'admin', label: 'Ask THEE_MICHAEL', href: '/settings?tab=guardian-api', module: 'Admin Approval' },
+    route: { intent: 'admin', label: 'Admin approval', href: '/settings?tab=guardian-api', module: 'Admin Approval' },
   },
 ];
 
@@ -327,6 +327,8 @@ export function handleSensitiveRequest(request: string) {
 
 export const OMNI_PLACEHOLDERS = [
   'Take me to Integrations…',
+  'Open Mission Control…',
+  'Resume A→Z Setup…',
   'Open billing in Settings…',
   'Create a LinkedIn post about AI automation…',
   'Find people talking about social media growth…',

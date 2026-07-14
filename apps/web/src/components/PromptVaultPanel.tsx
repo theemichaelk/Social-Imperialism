@@ -238,7 +238,10 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
                 <strong>{p.title}</strong>
                 <span className="post-meta">
                   {featureLabel(p.feature || 'general')}
-                  {(p.keywords || []).length ? ` · ${(p.keywords || []).slice(0, 3).join(', ')}` : ''}
+                  {p.galleryTier ? ` · ${p.galleryTier}` : ''}
+                  {p.pipeline ? ` · ${p.pipeline}` : ''}
+                  {p.estimatedCost ? ` · ${p.estimatedCost}` : ''}
+                  {(p.keywords || []).length && !p.galleryTier ? ` · ${(p.keywords || []).slice(0, 3).join(', ')}` : ''}
                   {p.usageCount ? ` · ${p.usageCount}×` : ''}
                 </span>
               </button>
@@ -274,6 +277,18 @@ export function PromptVaultPanel({ defaultFeature = 'general', onLoad }: Props) 
               onChange={(e) => setEdit({ ...edit, keywords: e.target.value.split(/[,;\n]+/).map((k) => k.trim()).filter(Boolean) })}
             />
           </div>
+          {(edit.galleryTier || edit.pipeline || edit.deliverable) && (
+            <div className="form-group pv-gallery-meta">
+              {edit.galleryTier && <p className="settings-panel-desc" style={{ margin: '0 0 4px' }}><strong>Tier:</strong> {edit.galleryTier}</p>}
+              {edit.pipeline && <p className="settings-panel-desc" style={{ margin: '0 0 4px' }}><strong>Pipeline:</strong> {edit.pipeline}</p>}
+              {(edit.estimatedCost || edit.estimatedMinutes) && (
+                <p className="settings-panel-desc" style={{ margin: '0 0 4px' }}>
+                  <strong>Est.:</strong> {[edit.estimatedMinutes, edit.estimatedCost].filter(Boolean).join(' · ')}
+                </p>
+              )}
+              {edit.deliverable && <p className="settings-panel-desc" style={{ margin: 0 }}><strong>Deliverable:</strong> {edit.deliverable}</p>}
+            </div>
+          )}
           <div className="form-group">
             <label>Prompt body</label>
             <textarea

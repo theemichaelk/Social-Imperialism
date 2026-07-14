@@ -29,6 +29,10 @@ function statusLabel(status: string): string {
   return status;
 }
 
+function countLabel(n: number, singular: string, plural = `${singular}s`): string {
+  return n === 1 ? `1 ${singular}` : `${n} ${plural}`;
+}
+
 export function OverlordInterventionBanner() {
   const [current, setCurrent] = useState<OverlordIntervention | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -130,15 +134,15 @@ export function OverlordInterventionBanner() {
           onClick={() => setShowHistory(true)}
         >
           {resumable.length > 0
-            ? `${resumable.length} action(s) ready to continue · View history`
-            : `View ${history.length} notification(s) in history`}
+            ? `${countLabel(resumable.length, 'action')} ready to continue · View history`
+            : `View ${countLabel(history.length, 'notification')} in history`}
         </button>
       )}
 
       {showHistory && history.length > 0 && (
         <div className="thee-michael-notification-history card">
           <div className="thee-michael-notification-history-head">
-            <strong>THEE_MICHAEL notification history</strong>
+            <strong>Imperialism Brain · Action history</strong>
             <button type="button" className="btn" onClick={() => setShowHistory(false)}>Hide</button>
           </div>
           <ul className="thee-michael-notification-history-list">

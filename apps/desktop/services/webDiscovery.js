@@ -166,6 +166,23 @@ async function searchViaDuckDuckGo(query, hostPattern, limit = 15) {
 }
 
 async function searchViaSerp(query, keys, limit = 15) {
+  try {
+    const path = require('path');
+    const { serpSearch, isSerpConfigured } = require(path.join(__dirname, '../../../packages/core/src/serpProvider'));
+    if (isSerpConfigured(keys)) {
+      const res = await serpSearch(keys, { query, limit: Math.min(limit, 20), engine: 'google' });
+      if (res?.success && Array.isArray(res.data) && res.data.length) {
+        return res.data.slice(0, limit).map((r) => ({
+          url: r.url || r.link,
+          title: cleanTitle(r.title || '', r.url || r.link),
+          snippet: r.snippet || r.description || '',
+        })).filter((h) => h.url);
+      }
+    }
+  } catch (e) {
+    console.warn('Unified SERP discovery:', e.message);
+  }
+
   if (!keys?.serpApiKey) return [];
   try {
     const res = await axios.get('https://serpapi.com/search.json', {
@@ -183,8 +200,26 @@ async function searchViaSerp(query, keys, limit = 15) {
   }
 }
 
+const PROFILE_SEARCH_QUERIES = {
+  YouTube: (kw) => [`site:youtube.com/@ ${kw}`, `site:youtube.com/channel ${kw}`],
+  LinkedIn: (kw) => [`site:linkedin.com/company ${kw}`, `site:linkedin.com/in ${kw}`],
+  Instagram: (kw) => [`site:instagram.com ${kw}`],
+  TikTok: (kw) => [`site:tiktok.com/@ ${kw}`],
+  Twitter: (kw) => [`site:twitter.com ${kw}`, `site:x.com ${kw}`],
+  Facebook: (kw) => [`site:facebook.com ${kw}`],
+  Pinterest: (kw) => [`site:pinterest.com ${kw}`],
+  Threads: (kw) => [`site:threads.net/@ ${kw}`],
+  Twitch: (kw) => [`site:twitch.tv ${kw}`],
+  Quora: (kw) => [`site:quora.com/topic ${kw}`, `site:quora.com/profile ${kw}`],
+  Discord: (kw) => [`site:discord.com/invite ${kw}`],
+  Telegram: (kw) => [`site:t.me ${kw}`],
+};
+
 async function discoverSitePosts({ site, hostPattern, keyword, keys, limit = 5, platform }) {
-  const q = `site:${site} ${keyword}`;
+  const profileQuery = PROFILE_SEARCH_QUERIES[platform]?.(keyword)?.[0];
+  const queries = profileQuery
+    ? [profileQuery, `site:${site} ${keyword}`]
+    : [`site:${site} ${keyword}`];
   const seen = new Set();
   const out = [];
 
@@ -204,7 +239,7 @@ async function discoverSitePosts({ site, hostPattern, keyword, keys, limit = 5, 
         externalId: redditId || `${platform.toLowerCase()}_${Buffer.from(h.url).toString('base64').slice(0, 20)}`,
         content: title,
         url: h.url,
-        author: platform,
+        author: '',
         time: 'recent',
         createdAt: Date.now(),
         matchScore: looksLikeQuestion ? 72 : 55,
@@ -218,10 +253,19 @@ async function discoverSitePosts({ site, hostPattern, keyword, keys, limit = 5, 
   };
 
   const quick = process.env.SI_TEST_QUICK === '1';
-  merge(await searchViaSerp(q, keys, limit));
-  if (out.length < limit && !quick) merge(await searchViaBrave(q, hostPattern, limit));
-  if (out.length < limit && !quick) merge(await searchViaDuckDuckGo(q, hostPattern, limit));
-  if (out.length < limit && !quick) merge(await searchViaMojeek(q, hostPattern, limit));
+
+  async function searchQuery(q) {
+    merge(await searchViaSerp(q, keys, limit));
+    if (out.length >= limit || quick) return;
+    merge(await searchViaBrave(q, hostPattern, limit));
+    if (out.length >= limit) return;
+    merge(await searchViaMojeek(q, hostPattern, limit));
+  }
+
+  for (const q of queries) {
+    if (out.length >= limit) break;
+    await searchQuery(q);
+  }
 
   return out.slice(0, limit);
 }

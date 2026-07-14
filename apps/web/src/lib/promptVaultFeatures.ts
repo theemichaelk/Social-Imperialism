@@ -10,6 +10,7 @@ export const PROMPT_VAULT_FEATURES = [
   { id: 'seo', label: 'SEO Tools', icon: '🔍' },
   { id: 'automations', label: 'Auto-Rules / Visual Builder', icon: '⚙️' },
   { id: 'analytics', label: 'Analytics & Reports', icon: '📊' },
+  { id: 'video-studio', label: 'Imperial Video Studio', icon: '🎬' },
 ] as const;
 
 export type PromptVaultFeatureId = (typeof PROMPT_VAULT_FEATURES)[number]['id'];

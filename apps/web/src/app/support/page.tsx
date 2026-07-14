@@ -44,7 +44,7 @@ export default function SupportPage() {
               id="support-search"
               type="search"
               className="support-search-input"
-              placeholder="THEE_MICHAEL approval, connect platform, fix reply…"
+              placeholder="Connect platform, brand research, fix reply, schedule posts…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -80,7 +80,7 @@ export default function SupportPage() {
         </div>
 
         <div className="support-chat-col">
-          <LiveSupportPanel embedded />
+          <LiveSupportPanel embedded initContext="support" />
         </div>
       </div>
     </div>

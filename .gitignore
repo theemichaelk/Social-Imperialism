@@ -63,3 +63,9 @@ apps/api/.setup-wizard-qa-report.json
 apps/api/.dashboard-qa-report.json
 apps/api/.browse-posts-qa-report.json
 apps/api/.settings-qa-report.json
+# Runtime API storage (Backlot etc.)
+apps/api/storage/
+# Local OpenSERP binary + logs
+apps/desktop/tools/openserp/*.exe
+apps/desktop/tools/openserp/logs.txt
+

@@ -35,7 +35,9 @@
 
 ## Live data
 
-Requires `SERP_API_KEY` under Integrations → Connections. Without SerpAPI: framework routing still works; live pulse returns connect guidance.
+Requires `SERP_API_KEY` (server env) or tenant **Social Imperialism SERP / SerpAPI** under Integrations → Data & Research for IPC `serp-search`. Without any SERP provider: framework routing still works; live pulse returns connect guidance.
+
+**Complements (does not replace):** [SOCIAL_IMPERIALISM_SERP.md](./SOCIAL_IMPERIALISM_SERP.md) — multi-engine browser SERP + `extract=N` page grounding. Social Imperialism SERP preferred when `siSerpBaseUrl` is set; SerpAPI remains fallback.
 
 ## Audit accuracy rule (mandatory)
 

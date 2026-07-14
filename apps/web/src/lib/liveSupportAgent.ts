@@ -3,6 +3,7 @@
  * Canonical doc: brain/LIVE_SUPPORT_AGENT.md
  */
 
+import { buildProductKnowledgeAppend } from '@/lib/productKnowledge';
 import { OVERLORD_SYSTEM_APPEND } from '@/lib/theeMichaelOverlord';
 import { recordApprovalResolution } from '@/lib/theeMichaelNotificationLedger';
 import { isSeoIntelligencePrompt, THEE_MICHAEL_SEO_EXPERT_APPEND, SEO_QUICK_PROMPTS } from '@/lib/theeMichaelSeoExpert';
@@ -12,10 +13,23 @@ import { isMasteryRequest, MASTERY_EXPERT_APPEND, MASTERY_QUICK_PROMPTS } from '
 
 export const ADMIN_IDENTITY = 'THEE_MICHAEL';
 
-export const INIT_MESSAGE_VERSION = 4;
+export type InitContext = 'default' | 'support' | '404';
 
-export const INIT_MESSAGE =
-  'Welcome to Social Imperialism — I\'m **Imperialism Brain**. I can walk you A→Z through every module (26 steps) and remember where you left off. New here? Tap **Walk me through A-Z setup now** or say "help me start from the beginning." What should we tackle first?';
+export const INIT_MESSAGE_VERSION = 5;
+
+export function getInitMessage(context: InitContext = 'default'): string {
+  switch (context) {
+    case '404':
+      return 'That link didn\'t match any module — **what can I help you find?** Tell me your goal (e.g. connect LinkedIn, schedule posts, Be-First monitors) and I\'ll take you there.';
+    case 'support':
+      return '**What can I help you with?** Setup, integrations, replies, SEO, automation — ask anything or use a quick prompt below.';
+    default:
+      return '**What can I help you with?** Ask about any Social Imperialism module — I\'ll answer and route you to the right place.';
+  }
+}
+
+/** @deprecated Use getInitMessage() — kept for imports that expect a string constant */
+export const INIT_MESSAGE = getInitMessage('default');
 
 export const LIVE_SUPPORT_SYSTEM_PROMPT = `You are Imperialism Brain, the official live support agent for Social Imperialism (socialimperialism.com).
 Help users set up, troubleshoot, optimize, and launch social media growth workflows.
@@ -24,23 +38,30 @@ Keep answers short and scannable. Focus on the next useful action inside Social 
 If stuck, ask ONE focused question before a long answer.
 Never say "As an AI language model" or robotic phrases.
 Never introduce yourself as ${ADMIN_IDENTITY}. Never open with "Hey, I'm ${ADMIN_IDENTITY}" or any self-introduction — jump straight to the answer.
+Never repeat the long onboarding welcome ("Welcome to Social Imperialism", "26 steps", "Walk me through A-Z setup now") unless the user explicitly asks for full A→Z setup or campaign mastery.
 You are Imperialism Brain (Live Support), not ${ADMIN_IDENTITY}. ${ADMIN_IDENTITY} is the admin identity for approvals only.
 Never expose credentials, tokens, API keys, or passwords.
+Answer product questions using PRODUCT KNOWLEDGE when appended — modules, platforms, IPC, Be-First, Video Studio, SEO, billing, integrations.
 For sensitive global changes (billing, server settings, mass auto-reply rules, deleting core data), say approval from ${ADMIN_IDENTITY} is required before going live.
 Reference ${ADMIN_IDENTITY} sparingly — only for admin approval context, never as a greeting.
-Use user-facing labels: Connect Platform, Review Replies, Open Engagement Queue, Schedule Campaign, Ask ${ADMIN_IDENTITY}, Create Drafts, Refresh Feed, Generate Report.
+Use user-facing labels: Connect Platform, Review Replies, Open Engagement Queue, Schedule Campaign, Request admin approval, Create Drafts, Refresh Feed, Generate Report.
 Modules: Mission Control, Setup Wizard, Integrations Hub, Content Hub, Calendar, AI Replies, Keywords, SEO Tools, Growth Lab, Quora Ops, Auto-Rules, Accounts, Settings, Analytics.
 SEO intelligence: You have live AEO, GEO, local, and national SEO frameworks plus multi-engine SERP pulse (Google, Bing, Yahoo, DuckDuckGo, Brave, Edge). When LIVE SEO INTELLIGENCE is appended below, prioritize it over stale priors.
 
 Live navigation: When the user asks you to open, show, take them to, or find something in the left sidebar or a tab, you CAN and SHOULD trigger a live browser redirect. End your reply with exactly one directive on its own line: [[NAV:/path?tab=optional|Human Label]] (example: [[NAV:/integrations?tab=connections|Integrations]]). Use real paths from the product: /dashboard, /integrations, /settings?tab=billing, /history?tab=pending, /campaign-manager, /support, etc. Say "Taking you there now" briefly — do not only paste a link when navigation was requested.`;
 
-/** Strip repetitive THEE_MICHAEL self-intros from model output. */
+const REPETITIVE_WELCOME_RE = /welcome to social imperialism[^.]*(?:26 steps|walk me through a-z|help me start from the beginning)[^.]*\.?\s*/gi;
+const REPETITIVE_BRAIN_INTRO_RE = /i(?:'m| am)\s+(?:\*\*)?imperialism brain(?:\*\*)?[^.]*(?:26 steps|a→z|a-z setup)[^.]*\.?\s*/gi;
+
+/** Strip repetitive THEE_MICHAEL self-intros and canned onboarding welcomes from model output. */
 export function sanitizeAgentReply(text: string): string {
   let out = String(text || '').trim();
   const introPattern = /^(?:hey|hi|hello)[,!]?\s*(?:i['']?m\s+)?thee_michael\s*[—–\-:,]?\s*/i;
   while (introPattern.test(out)) {
     out = out.replace(introPattern, '').trim();
   }
+  out = out.replace(REPETITIVE_WELCOME_RE, '').trim();
+  out = out.replace(REPETITIVE_BRAIN_INTRO_RE, '').trim();
   return out;
 }
 
@@ -105,14 +126,20 @@ const SENSITIVE_PATTERNS = [
 export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = [
   {
     patterns: [/thee_michael/i, /ask\s+thee/i, /admin\s+approval/i, /admin\s+help/i],
-    route: { label: 'Ask THEE_MICHAEL', href: '/support', action: 'admin-approval' },
+    route: { label: 'Admin approval', href: '/settings?tab=guardian-api', action: 'admin-approval' },
   },
   {
     patterns: [/connect\s+(a\s+)?platform/i, /link\s+(a\s+)?platform/i, /oauth\s+connect/i, /expired\s+token/i],
     route: { label: 'Account Hub', href: '/account-hub', action: 'connect-platform' },
   },
   {
-    patterns: [/integration/i, /api\s+keys?/i],
+    patterns: [
+      /take\s+me\s+to\s+integrations?/i,
+      /open\s+integrations?/i,
+      /go\s+to\s+integrations?/i,
+      /integration/i,
+      /api\s+keys?/i,
+    ],
     route: { label: 'Integrations · Connections', href: '/integrations?tab=connections' },
   },
   {
@@ -128,8 +155,17 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
     route: { label: 'Content Calendar', href: '/calendar' },
   },
   {
-    patterns: [/mission\s+control/i, /live\s+feed/i, /dashboard/i, /worker\s+status/i],
-    route: { label: 'Refresh Feed', href: '/dashboard' },
+    patterns: [
+      /take\s+me\s+to\s+mission\s+control/i,
+      /open\s+mission\s+control/i,
+      /go\s+to\s+mission\s+control/i,
+      /mission\s+control/i,
+      /live\s+feed/i,
+      /home\s+dashboard/i,
+      /\bdashboard\b/i,
+      /worker\s+status/i,
+    ],
+    route: { label: 'Mission Control', href: '/dashboard' },
   },
   {
     patterns: [/\bae[no]\b/i, /answer\s+engine/i, /featured\s+snippet/i, /\bpaa\b/i, /people\s+also\s+ask/i],
@@ -174,6 +210,10 @@ export const SEARCH_ROUTES: Array<{ patterns: RegExp[]; route: SearchRoute }> = 
   {
     patterns: [/desktop\s+app/i, /download\s+app/i, /install\s+desktop/i, /electron/i, /windows\s+installer/i],
     route: { label: 'Download Desktop App', href: '/download' },
+  },
+  {
+    patterns: [/404|page\s+not\s+found|can't\s+find|cannot\s+find|lost\s+page|wrong\s+url/i],
+    route: { label: 'Find a module', href: '/support', action: 'lost-page' },
   },
   {
     patterns: [/\bneed\s+help\b/i, /\bget\s+help\b/i, /\bstuck\b/i, /troubleshoot/i, /live\s+support/i, /\bsupport\s+(page|workspace)\b/i],
@@ -286,7 +326,7 @@ export function buildSeoIntelligenceFallback(query: string, brandHint?: string):
 }
 
 export function shouldAutoExecuteRoute(query: string): boolean {
-  const q = query.trim();
+  const q = query.trim().replace(/[\u2026]+$/g, '').replace(/\.{2,}$/g, '').trim();
   if (!q) return false;
   if (isSeoIntelligencePrompt(q)) return false;
   if (QUICK_PROMPTS.some((p) => p.toLowerCase() === q.toLowerCase())) return true;
@@ -399,7 +439,11 @@ export function buildSupportPrompt(
   const healBlock = context?.selfHealIntel ? `\n${context.selfHealIntel}` : '';
   const onboardBlock = context?.onboardingIntel ? `\n${context.onboardingIntel}` : '';
   const masteryBlock = context?.masteryIntel ? `\n${context.masteryIntel}` : '';
-  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${THEE_MICHAEL_SEO_EXPERT_APPEND}${SELF_HEAL_EXPERT_APPEND}${ONBOARDING_EXPERT_APPEND}${MASTERY_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${seoBlock}${healBlock}${onboardBlock}${masteryBlock}
+  const productBlock = buildProductKnowledgeAppend();
+  const lostPage = context?.pathname === '/404' || context?.pathname?.includes('not-found')
+    ? '\nUser is on a 404 / lost page — prioritize finding the right module and [[NAV:...]] routing.'
+    : '';
+  return `${LIVE_SUPPORT_SYSTEM_PROMPT}${productBlock}${THEE_MICHAEL_SEO_EXPERT_APPEND}${SELF_HEAL_EXPERT_APPEND}${ONBOARDING_EXPERT_APPEND}${MASTERY_EXPERT_APPEND}${OVERLORD_SYSTEM_APPEND}${ctx}${lostPage}${seoBlock}${healBlock}${onboardBlock}${masteryBlock}
 
 Conversation:
 ${history}

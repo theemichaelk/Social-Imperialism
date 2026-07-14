@@ -55,16 +55,17 @@ export function BeFirstTargetDiscovery({
         platform: platformFilter,
         limit: 50,
       });
-      if (!res.success) {
+      if (res.success === false) {
         setError(res.error || 'Discovery returned no results');
         setTargets([]);
         setMeta(null);
         return;
       }
-      setTargets(res.targets || []);
+      const list = res.targets || [];
+      setTargets(list);
       setMeta({ postCount: res.postCount, scannedPlatforms: res.scannedPlatforms });
-      if (!res.targets?.length) {
-        setError('No accounts or communities found — try different keywords or connect more APIs in Integrations.');
+      if (!list.length) {
+        setError('No accounts or communities found — try different keywords, add SerpAPI or Social Imperialism SERP in Integrations, or pick one platform.');
       }
     } catch (e) {
       setError((e as Error).message || 'Discovery failed');

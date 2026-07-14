@@ -6,8 +6,9 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@/lib/api';
 import {
-  INIT_MESSAGE,
+  getInitMessage,
   INIT_MESSAGE_VERSION,
+  type InitContext,
   buildSeoIntelligenceFallback,
   buildConnectPlatformReply,
   buildSchedulingTroubleshootReply,
@@ -84,6 +85,28 @@ import { OverlordCognitiveTrace } from './OverlordCognitiveTrace';
 
 const PANEL_KEY = 'si_support_panel_open';
 const INIT_MSG_VERSION_KEY = 'si_support_init_version';
+const MESSAGES_KEY = 'si_support_messages';
+
+function loadInitialMessages(initContext: InitContext): SupportMessage[] {
+  const greeting = getInitMessage(initContext);
+  if (typeof window === 'undefined') {
+    return [{ role: 'assistant', content: greeting, ts: new Date().toISOString() }];
+  }
+  try {
+    const version = Number(localStorage.getItem(INIT_MSG_VERSION_KEY) || '0');
+    if (version !== INIT_MESSAGE_VERSION) {
+      localStorage.setItem(INIT_MSG_VERSION_KEY, String(INIT_MESSAGE_VERSION));
+      sessionStorage.removeItem(MESSAGES_KEY);
+    } else {
+      const raw = sessionStorage.getItem(MESSAGES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SupportMessage[];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    }
+  } catch { /* ignore */ }
+  return [{ role: 'assistant', content: greeting, ts: new Date().toISOString() }];
+}
 
 /** Renders assistant/user text with basic **bold** (no raw markdown in UI). */
 function SupportMessageBody({ content }: { content: string }) {
@@ -101,20 +124,16 @@ function SupportMessageBody({ content }: { content: string }) {
   return <div className="live-support-bubble-body">{parts.length ? parts : content}</div>;
 }
 
-export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
+export function LiveSupportPanel({
+  embedded = false,
+  initContext = 'default',
+}: {
+  embedded?: boolean;
+  initContext?: InitContext;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(embedded);
-  const [messages, setMessages] = useState<SupportMessage[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const v = Number(localStorage.getItem(INIT_MSG_VERSION_KEY) || '0');
-        if (v !== INIT_MESSAGE_VERSION) {
-          localStorage.setItem(INIT_MSG_VERSION_KEY, String(INIT_MESSAGE_VERSION));
-        }
-      } catch { /* ignore */ }
-    }
-    return [{ role: 'assistant', content: INIT_MESSAGE, ts: new Date().toISOString() }];
-  });
+  const [messages, setMessages] = useState<SupportMessage[]>(() => loadInitialMessages(initContext));
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -169,6 +188,13 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(MESSAGES_KEY, JSON.stringify(messages.slice(-40)));
+    } catch { /* ignore */ }
+  }, [messages]);
 
   const handleIngest = useCallback(async (file: File) => {
     setLoading(true);
@@ -662,9 +688,15 @@ export function LiveSupportPanel({ embedded = false }: { embedded?: boolean }) {
             <ImperialismBrainAvatar size="lg" />
           </div>
           <div>
-            <p className="live-support-eyebrow">Live Support</p>
+            <p className="live-support-eyebrow">
+              {initContext === '404' ? 'THEE_MICHAEL · Guide' : 'Live Support'}
+            </p>
             <h3 className="live-support-title">Imperialism Brain</h3>
-            <p className="live-support-sub">Setup, troubleshooting, SEO intelligence, and growth guidance</p>
+            <p className="live-support-sub">
+              {initContext === '404'
+                ? 'What can I help you find? Describe your goal and I\'ll route you.'
+                : 'Setup, troubleshooting, SEO intelligence, and growth guidance'}
+            </p>
           </div>
         </div>
         <div className="live-support-header-actions">

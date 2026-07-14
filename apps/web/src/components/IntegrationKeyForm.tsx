@@ -68,6 +68,7 @@ export function IntegrationKeyForm({ keys, apiStatus, keySources, onChange, onMe
         const probeId = metric === 'NewsAPI' ? 'news'
           : metric === 'Unsplash' || metric === 'Stock Media' ? 'stock'
           : metric === 'SerpAPI' ? 'serp'
+          : metric === 'Social Imperialism SERP' ? 'serp'
           : metric === 'DomDetailer' ? 'domain'
           : metric === 'YouTube' ? 'youtube'
           : metric === 'TinyURL' ? 'tinyurl'

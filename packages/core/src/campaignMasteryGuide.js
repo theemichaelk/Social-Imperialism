@@ -20,7 +20,7 @@ const MASTERY_STEPS = [
     phase: 'A — Foundation',
     section: 'Create & Publish',
     label: 'Setup Wizard · Brand Profile',
-    href: '/onboarding',
+    href: '/onboarding?step=1',
     navId: 'onboarding',
     instructions: [
       'Enter brand name, domain, description, tone, and audience.',
@@ -49,7 +49,7 @@ const MASTERY_STEPS = [
     phase: 'A — Foundation',
     section: 'Discovery & Replies',
     label: 'Keywords & Platforms',
-    href: '/onboarding',
+    href: '/onboarding?step=3',
     navId: 'onboarding',
     instructions: [
       'In Setup Wizard step 3, add 5+ keywords tied to your offer.',
@@ -76,7 +76,7 @@ const MASTERY_STEPS = [
     phase: 'A — Foundation',
     section: 'Create & Publish',
     label: 'Setup Wizard · Go Live',
-    href: '/onboarding',
+    href: '/onboarding?step=4',
     navId: 'onboarding',
     instructions: [
       'Preview the live feed in Setup Wizard step 4.',
@@ -420,7 +420,14 @@ function buildMasteryContext(store, resolveKeys, buildApiMetrics) {
     hasFeedActivity: keywords.length > 0 && onboardingComplete,
     hasBrandGuidelines: !!(brandGuidelines?.affiliateLinks || brandGuidelines?.tone || campaign?.tone),
     hasPromptVault: promptVault.length > 0,
-    hasSerpOrSeo: !!(globalKeys.serpApiKey || globalKeys.domDetailer),
+    hasSerpOrSeo: !!(
+      globalKeys.serpApiKey
+      || globalKeys.siSerpBaseUrl
+      || globalKeys.siSerpApiKey
+      || globalKeys.openSerpBaseUrl
+      || globalKeys.openSerpApiKey
+      || globalKeys.domDetailer
+    ),
     hasContentActivity: contentQueue.length > 0 || contentLibrary.count > 0 || scheduledPosts.length > 0,
     hasScheduledPosts: scheduledPosts.length > 0,
     workerEnabled: workerSettings.enabled !== false,

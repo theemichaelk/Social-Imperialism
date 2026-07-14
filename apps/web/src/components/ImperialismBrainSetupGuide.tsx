@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ImperialismBrainAvatar } from '@/components/ImperialismBrainAvatar';
 import { SetupConnectionsPanel } from '@/components/SetupConnectionsPanel';
 import { BeFirstTargetDiscovery } from '@/components/BeFirstTargetDiscovery';
+import { BeFirstFrequencySelect } from '@/components/BeFirstFrequencySelect';
 import type { DiscoveredTarget } from '@/lib/beFirstTargets';
 import type { BrandResearchResult } from '@/lib/onboardingIntelligence';
 
@@ -769,17 +770,13 @@ export function ImperialismBrainSetupGuide({
               </select>
             </div>
             <div>
-              <label className="brain-setup-field-label">Be-First monitor frequency</label>
-              <select
+              <BeFirstFrequencySelect
+                label="Be-First monitor frequency"
                 className="input"
                 value={beFirstFreq}
-                onChange={(e) => onBeFirstFreqChange?.(e.target.value)}
+                onChange={(v) => onBeFirstFreqChange?.(v)}
                 disabled={loading}
-              >
-                {['5m', '10m', '15m', '30m', 'hourly', 'daily', 'realtime'].map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
+              />
             </div>
           </div>
           <label className="brain-setup-field-label">Be-First Monitor — watch keyword, page, or account</label>

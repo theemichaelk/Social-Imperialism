@@ -8,7 +8,7 @@ const PROBE_DEFS = [
   { id: 'news', label: 'NewsAPI Headlines', metric: 'NewsAPI', category: 'Feed', channel: 'get-live-news', args: ['technology'] },
   { id: 'trending', label: 'Trending Topics', category: 'Feed', channel: 'get-trending-topics', args: [] },
   { id: 'stock', label: 'Stock Photo Search', metric: 'Unsplash', category: 'Media', channel: 'search-stock-photo', args: ['business technology'] },
-  { id: 'serp', label: 'SerpAPI Research', metric: 'SerpAPI', category: 'SEO', channel: 'serp-search', args: ['social media automation'] },
+  { id: 'serp', label: 'SERP Research', metric: 'Social Imperialism SERP', category: 'SEO', channel: 'serp-search', args: [{ query: 'social media automation', engine: 'bing', limit: 3 }] },
   { id: 'domain', label: 'DomDetailer Metrics', metric: 'DomDetailer', category: 'SEO', channel: 'get-domain-metrics', args: ['google.com'] },
   { id: 'youtube', label: 'YouTube Channels', metric: 'YouTube', category: 'Social', channel: 'get-youtube-channels', args: [] },
   { id: 'tinyurl', label: 'TinyURL Shorten', metric: 'TinyURL', category: 'Utility', channel: 'shorten-url', args: ['https://example.com/test'] },

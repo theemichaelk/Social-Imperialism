@@ -32,6 +32,10 @@
 - `campaign-mastery` — A→Z campaign guide
 - `imperial-video-studio` — 12 agentic video pipelines (see [IMPERIAL_VIDEO_STUDIO.md](./IMPERIAL_VIDEO_STUDIO.md))
 
+## SERP research (complement)
+
+Live Support SEO routing and planner workflows may call IPC `serp-search`. Provider: **Social Imperialism SERP** (preferred) or SerpAPI — [SOCIAL_IMPERIALISM_SERP.md](./SOCIAL_IMPERIALISM_SERP.md). Brain name stays **Imperialism Brain**; SERP engine is infrastructure, not a separate user-facing agent.
+
 ## Prompt Vault seeds
 
 - `pv_seed_omni_brain` (`feature: omni-brain`)

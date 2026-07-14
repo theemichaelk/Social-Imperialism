@@ -3,6 +3,8 @@
  * Used by Content Hub, Grok, Keywords, Replies, Growth Lab, and brain workflows.
  */
 
+const { VIDEO_PROMPT_GALLERY_SEED } = require('./promptVaultVideoGallery.js');
+
 const DEFAULT_SEED = [
   {
     id: 'pv_seed_linkedin_post',
@@ -71,6 +73,9 @@ const DEFAULT_SEED = [
   },
 ];
 
+/** General (8) + OpenMontage Prompt Gallery (36) — merged into vaults on read. */
+const ALL_SEED_PROMPTS = [...DEFAULT_SEED, ...VIDEO_PROMPT_GALLERY_SEED];
+
 function vaultKey(store) {
   const id = store.getItem('activeCampaignId') || 'default';
   return `promptVault_${id}`;
@@ -121,6 +126,11 @@ function searchItems(items, query) {
       item.platform,
       ...(item.keywords || []),
       ...(item.tags || []),
+      item.galleryTier,
+      item.pipeline,
+      item.deliverable,
+      item.estimatedCost,
+      item.estimatedMinutes,
     ].join(' ').toLowerCase();
     return terms.every((t) => hay.includes(t));
   });
@@ -160,17 +170,39 @@ function findDuplicateIndex(items, item) {
   return items.findIndex((i) => promptFingerprint(i) === fp);
 }
 
+function seedItem(s, now, existing) {
+  return {
+    ...s,
+    seedRevision: s.seedRevision || 1,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+    usageCount: existing?.usageCount || 0,
+  };
+}
+
 function ensureSeeded(store) {
   let items = readVault(store);
-  if (items.length) return items;
   const now = new Date().toISOString();
-  items = DEFAULT_SEED.map((s) => ({
-    ...s,
-    createdAt: now,
-    updatedAt: now,
-    usageCount: 0,
-  }));
-  writeVault(store, items);
+  const byId = new Map(items.map((i) => [i.id, i]));
+  let changed = 0;
+  for (const seed of ALL_SEED_PROMPTS) {
+    const existing = byId.get(seed.id);
+    const nextRev = seed.seedRevision || 1;
+    const curRev = existing?.seedRevision || 0;
+    if (!existing) {
+      const item = seedItem(seed, now);
+      items.push(item);
+      byId.set(seed.id, item);
+      changed += 1;
+    } else if (nextRev > curRev) {
+      const idx = items.findIndex((i) => i.id === seed.id);
+      if (idx >= 0) {
+        items[idx] = seedItem(seed, now, existing);
+        changed += 1;
+      }
+    }
+  }
+  if (changed > 0) writeVault(store, items);
   return items;
 }
 
@@ -188,6 +220,12 @@ function normalizeItem(payload, existing) {
     feature: payload.feature || 'general',
     platform: payload.platform || '',
     tags: Array.isArray(payload.tags) ? payload.tags : [],
+    galleryTier: payload.galleryTier ?? existing?.galleryTier ?? '',
+    estimatedCost: payload.estimatedCost ?? existing?.estimatedCost ?? '',
+    estimatedMinutes: payload.estimatedMinutes ?? existing?.estimatedMinutes ?? '',
+    pipeline: payload.pipeline ?? existing?.pipeline ?? '',
+    deliverable: payload.deliverable ?? existing?.deliverable ?? '',
+    seedRevision: payload.seedRevision ?? existing?.seedRevision ?? 1,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
     usageCount: existing?.usageCount || 0,
@@ -215,7 +253,7 @@ function registerPromptVaultHandlers(ipcMain, { store, generateAI }) {
 
   ipcMain.handle('search-prompt-vault', (event, payload = {}) => {
     const q = payload.query || payload.keyword || '';
-    const items = readVault(store);
+    const items = ensureSeeded(store);
     const filtered = searchItems(
       payload.feature ? items.filter((i) => i.feature === payload.feature || i.feature === 'general') : items,
       q,
@@ -298,7 +336,7 @@ Return JSON only: { "title": "short name", "body": "full prompt with {{keyword}}
   ipcMain.handle('load-prompt-vault-item', (event, payload = {}) => {
     const id = payload.id;
     if (!id) return { success: false, error: 'Prompt id required' };
-    const items = readVault(store);
+    const items = ensureSeeded(store);
     const idx = items.findIndex((i) => i.id === id);
     if (idx < 0) return { success: false, error: 'Prompt not found' };
     const ctx = getCampaignContext(store);
@@ -325,7 +363,7 @@ Return JSON only: { "title": "short name", "body": "full prompt with {{keyword}}
   });
 
   ipcMain.handle('export-prompt-vault', (event, payload = {}) => {
-    let items = readVault(store);
+    let items = ensureSeeded(store);
     if (payload.feature) items = items.filter((i) => i.feature === payload.feature);
     if (payload.query || payload.keyword) items = searchItems(items, payload.query || payload.keyword);
     const ctx = getCampaignContext(store);
@@ -343,10 +381,14 @@ Return JSON only: { "title": "short name", "body": "full prompt with {{keyword}}
 module.exports = {
   registerPromptVaultHandlers,
   readVault,
+  ensureSeeded,
   searchItems,
   applyContext,
   getCampaignContext,
   dedupeVaultItems,
   isQaTestPrompt,
   promptFingerprint,
+  ALL_SEED_PROMPTS,
+  DEFAULT_SEED,
+  VIDEO_PROMPT_GALLERY_SEED,
 };

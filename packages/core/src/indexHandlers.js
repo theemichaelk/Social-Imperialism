@@ -3,6 +3,7 @@
  */
 const path = require('path');
 const axios = require('axios');
+const { serpSearch, getSerpProviderStatus } = require('./serpProvider');
 
 function registerIndexHandlers(deps) {
   const {
@@ -451,19 +452,22 @@ function registerIndexHandlers(deps) {
 
   // Media / integrations
   ipcMain.handle('generate-image', async (event, prompt) => generateImageForStudio(prompt));
+  ipcMain.handle('get-serp-provider-status', async () => {
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const { getSerpProviderStatusAsync } = require('./serpProvider');
+    return { success: true, ...(await getSerpProviderStatusAsync(keys)) };
+  });
+
   ipcMain.handle('serp-search', async (event, q) => {
-    const key = getGlobalKey('serpApiKey');
-    if (!key) return { success: false, error: 'No SerpAPI key' };
-    try {
-      const res = await axios.get(`https://serpapi.com/search.json?q=${encodeURIComponent(q)}&api_key=${key}`, { timeout: 20000 });
-      return { success: true, data: res.data.organic_results || [] };
-    } catch (e) {
-      const msg = e.message || '';
-      if (msg.includes('429') || msg.includes('403')) {
-        return { success: true, rateLimited: true, data: [], note: 'SerpAPI rate limited — retry later or use Keyword Research' };
-      }
-      return { success: false, error: msg };
+    const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const status = getSerpProviderStatus(keys);
+    if (!status.configured) {
+      return {
+        success: false,
+        error: 'No SERP provider — add Social Imperialism SERP (siSerpBaseUrl) or SerpAPI key in Integrations → Data & Research',
+      };
     }
+    return serpSearch(keys, q);
   });
   ipcMain.handle('search-stock-photo', async (event, query) => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));

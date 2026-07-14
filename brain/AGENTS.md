@@ -31,6 +31,7 @@
 | `create post`, `schedule`, `find people`, `workflow`, `plan` | Imperialism Brain prompt bar |
 | `what should I improve`, `run audit`, `self heal` | Live Support → self-heal recommendations |
 | `SEO`, `AEO`, `GEO`, `local SEO`, `SERP` | Live Support → SEO intelligence brief |
+| `SERP engine`, `megasearch`, `SERP extract`, `rank track` | Integrations → Social Imperialism SERP + `serp-search` — [features/SOCIAL_IMPERIALISM_SERP.md](./features/SOCIAL_IMPERIALISM_SERP.md) |
 | `issue control`, `gitops`, `broken module` | `/dashboard/issues` |
 | `campaign mastery`, `setup checklist` | Dashboard → Campaign Mastery panel |
 

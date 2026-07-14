@@ -6,7 +6,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'si-dev-secret-change-in-production
 const SESSION_DAYS = parseInt(process.env.SESSION_DAYS || '7', 10);
 
 function signToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: `${SESSION_DAYS}d` });
+  // jti ensures concurrent logins never produce identical JWTs (same userId+iat second).
+  return jwt.sign(
+    { ...payload, jti: crypto.randomBytes(16).toString('hex') },
+    JWT_SECRET,
+    { expiresIn: `${SESSION_DAYS}d` },
+  );
 }
 
 function hashToken(token) {
@@ -16,13 +21,26 @@ function hashToken(token) {
 async function createSession(userId, token) {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + SESSION_DAYS);
-  await prisma.session.create({
-    data: {
-      userId,
-      token: hashToken(token),
-      expiresAt,
-    },
-  });
+  const hashed = hashToken(token);
+  try {
+    await prisma.session.create({
+      data: {
+        userId,
+        token: hashed,
+        expiresAt,
+      },
+    });
+  } catch (e) {
+    // Unique constraint race: treat as success if the session already exists.
+    if (e?.code === 'P2002') {
+      await prisma.session.update({
+        where: { token: hashed },
+        data: { userId, expiresAt },
+      }).catch(() => {});
+      return;
+    }
+    throw e;
+  }
 }
 
 async function revokeSession(token) {

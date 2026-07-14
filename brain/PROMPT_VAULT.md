@@ -24,7 +24,7 @@ Reusable prompt templates per campaign — searched by the Growth Brain before d
 
 ## Feature tags (`feature` field)
 
-`general`, `content-hub`, `grok`, `keywords`, `replies`, `engagement`, `quora`, `reddit`, `seo`, `automations`, `analytics`, `sovereign`, `guardian`, `support`, `omni-brain`
+`general`, `content-hub`, `grok`, `keywords`, `replies`, `engagement`, `quora`, `reddit`, `seo`, `automations`, `analytics`, `video-studio`, `sovereign`, `guardian`, `support`, `omni-brain`
 
 Pickers filter by feature + `general` fallbacks.
 
@@ -38,7 +38,8 @@ Pickers filter by feature + `general` fallbacks.
 ## Storage
 
 - Desktop / SaaS bridge: `promptVault_{activeCampaignId}` in project store
-- Seeded with **8** starter templates on first access
+- Seeded with **44** templates on first access (**8** general + **36** OpenMontage Prompt Gallery for `video-studio`)
+- Existing vaults **merge** missing seed ids on read (`ensureSeeded`) — gallery prompts appear without wiping custom templates
 - Does not overwrite keywords, post history, or automation rules on delete
 
 ## THEE_MICHAEL Security Control (security)
@@ -54,5 +55,6 @@ All Prompt Vault workflows on socialimperialism.com must comply with [SOVEREIGN_
 
 ## Implementation
 
-- Core: `packages/core/src/promptVault.js`
+- Core: `packages/core/src/promptVault.js`, `packages/core/src/promptVaultVideoGallery.js`
 - Web: `apps/web/src/components/PromptVaultPanel.tsx`, `PromptVaultPicker.tsx`
+- Video Studio picker: `ImperialVideoStudioPanel` → `feature="video-studio"`
