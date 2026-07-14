@@ -261,24 +261,109 @@ function writeStageBacklotArtifacts(projectDir, stage, text, ctx = {}) {
   return {};
 }
 
+function normalizeStageName(stage) {
+  return String(stage || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '_');
+}
+
 function approveSiGate(projectDir, stage) {
   if (!projectDir || !stage) return { success: false, error: 'projectDir and stage required' };
-  const cpPath = path.join(projectDir, `checkpoint_${stage}.json`);
-  if (!fs.existsSync(cpPath)) return { success: false, error: `No checkpoint for ${stage}` };
+  const normalized = normalizeStageName(stage);
+  const candidates = [normalized, stage, String(stage).trim()];
+  let cpPath = null;
+  let resolvedStage = normalized;
+  for (const name of candidates) {
+    const p = path.join(projectDir, `checkpoint_${name}.json`);
+    if (fs.existsSync(p)) {
+      cpPath = p;
+      resolvedStage = name;
+      break;
+    }
+  }
+  if (!cpPath) {
+    // Scan for case-insensitive match (Backlot may use proposal vs Proposal)
+    try {
+      const files = fs.readdirSync(projectDir).filter((f) => f.startsWith('checkpoint_') && f.endsWith('.json'));
+      const hit = files.find((f) => normalizeStageName(f.slice('checkpoint_'.length, -'.json'.length)) === normalized);
+      if (hit) {
+        cpPath = path.join(projectDir, hit);
+        resolvedStage = hit.slice('checkpoint_'.length, -'.json'.length);
+      }
+    } catch { /* ignore */ }
+  }
+  if (!cpPath) return { success: false, error: `No checkpoint for ${stage}` };
   let cp;
   try { cp = JSON.parse(fs.readFileSync(cpPath, 'utf8')); } catch (e) {
     return { success: false, error: e.message };
   }
   if (cp.status !== 'awaiting_human') {
-    return { success: true, alreadyApproved: true, status: cp.status };
+    return { success: true, alreadyApproved: true, status: cp.status, stage: resolvedStage };
   }
   cp.status = 'completed';
   cp.human_approved = true;
   cp.timestamp = nowIso();
   cp.completed_at = nowIso();
   fs.writeFileSync(cpPath, JSON.stringify(cp, null, 2), 'utf8');
-  appendSiEvent(projectDir, { type: 'gate_approved', stage, source: 'social-imperialism-video-studio' });
-  return { success: true, stage, status: 'completed' };
+  appendSiEvent(projectDir, { type: 'gate_approved', stage: resolvedStage, source: 'social-imperialism-video-studio' });
+  return { success: true, stage: resolvedStage, status: 'completed' };
+}
+
+/**
+ * Pytest-free Backlot demo production — used when OpenMontage's
+ * scripts/backlot_simulate_run.py fails (missing pytest on cloud hosts).
+ */
+function runSiNativeBacklotSimulate({ projectId = 'backlot-demo-run', brief } = {}) {
+  const omRoot = resolveOpenMontageRoot();
+  if (!omRoot) return { success: false, error: 'OpenMontage not available' };
+
+  const pid = projectId || 'backlot-demo-run';
+  const projectDir = path.join(omRoot, 'projects', pid);
+  try {
+    if (fs.existsSync(projectDir)) fs.rmSync(projectDir, { recursive: true, force: true });
+  } catch { /* best effort */ }
+  ensureDir(projectDir);
+  ensureDir(path.join(projectDir, 'artifacts'));
+
+  const title = brief || 'The Last Lighthouse';
+  const marker = {
+    id: pid,
+    title,
+    pipeline_type: 'cinematic',
+    style_playbook: 'clean-professional',
+    created_at: nowIso(),
+    source: 'social-imperialism-si-native-simulate',
+  };
+  fs.writeFileSync(path.join(projectDir, 'project.json'), JSON.stringify(marker, null, 2), 'utf8');
+
+  const stages = [
+    { id: 'research', gated: false, text: `Research brief for "${title}": coastal lore, storm nights, solitary keepers.` },
+    { id: 'proposal', gated: true, text: `Proposal: 21s cinematic short. Tone elegiac. 4 scenes. Style clean-professional.` },
+    { id: 'script', gated: true, text: 'Scene 1: A lighthouse at dusk. Narration: The coast holds its breath.\nScene 2: The beam sweeps the water. Narration: Every night, the same promise.\nScene 3: A storm builds offshore. Narration: Until the night the light went out.\nScene 4: The keeper climbs the stairs. Narration: Someone still has to climb.' },
+    { id: 'scene_plan', gated: true, text: 'Four generated scenes with hero moment on the storm beat.' },
+    { id: 'assets', gated: true, text: 'Contact sheet: flux stills for sc1–sc4 (demo placeholders).' },
+    { id: 'edit', gated: false, text: 'Edit decisions: 4 cuts, music swell on sc3, hold on sc4 climb.' },
+    { id: 'compose', gated: false, text: 'Render report: final.mp4 queued (demo — no real encode).' },
+  ];
+
+  for (const s of stages) {
+    syncSiStageToBacklot(projectDir, s.id, s.text, {
+      brief: title,
+      pipelineId: 'cinematic',
+      approval: s.gated,
+    });
+  }
+
+  appendSiEvent(projectDir, { type: 'simulate_complete', source: 'si-native', projectId: pid });
+  return {
+    success: true,
+    projectId: pid,
+    projectDir,
+    method: 'si-native',
+    message: `Simulated production "${pid}" written to disk (SI native — no pytest). Open Backlot or refresh the stage rail.`,
+  };
 }
 
 function syncSiStageToBacklot(projectDir, stage, text, ctx = {}) {
@@ -318,6 +403,8 @@ module.exports = {
   writeStageBacklotArtifacts,
   syncSiStageToBacklot,
   approveSiGate,
+  runSiNativeBacklotSimulate,
+  normalizeStageName,
   buildScriptArtifact,
   buildScenePlanArtifact,
   buildAssetManifestArtifact,

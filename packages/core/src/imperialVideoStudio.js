@@ -512,8 +512,9 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
   ipcMain.handle('run-backlot-simulate', async (_event, payload = {}) => {
     const result = await runBacklotSimulate({
       projectId: payload.projectId || 'backlot-demo-run',
-      fast: !!payload.fast,
+      fast: payload.fast !== false, // default fast for SaaS responsiveness
       openBoard: payload.openBoard !== false,
+      brief: payload.brief,
     });
     if (result.success && result.projectId) {
       const prev = readVideoJob(store) || {};
@@ -527,21 +528,27 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
   });
 
   ipcMain.handle('approve-imperial-video-gate', async (_event, payload = {}) => {
-    const stage = payload.stage || payload.stageId;
+    const stage = payload.stage || payload.stageId || payload.gateId || payload.name || payload.gate;
     const projectId = payload.projectId || payload.backlotProjectId;
-    if (!stage) return { success: false, error: 'stage required' };
+    if (!stage) return { success: false, error: 'stage required (send stage, stageId, or gateId)' };
     const job = readVideoJob(store) || {};
     const pid = projectId || job.backlotProjectId;
-    if (!pid) return { success: false, error: 'No Backlot project — run pipeline first' };
+    if (!pid) return { success: false, error: 'No Backlot project — run pipeline or Watch simulated run first' };
     const { resolveOpenMontageRoot } = require('./openMontageBridge');
+    const { resolveSiProjectDir } = require('./backlotBridge');
     const omRoot = resolveOpenMontageRoot();
     if (!omRoot) return { success: false, error: 'OpenMontage not available' };
-    const projectDir = require('path').join(omRoot, 'projects', pid);
+    const projectDir = resolveSiProjectDir(pid) || require('path').join(omRoot, 'projects', pid);
+    if (!require('fs').existsSync(projectDir)) {
+      return { success: false, error: `Project "${pid}" not found — run Watch simulated run first`, projectId: pid };
+    }
     const approved = approveSiGate(projectDir, stage);
     if (approved.success) {
+      const key = approved.stage || stage;
       writeVideoJob(store, {
         ...job,
-        gateApprovals: { ...(job.gateApprovals || {}), [stage]: new Date().toISOString() },
+        backlotProjectId: pid,
+        gateApprovals: { ...(job.gateApprovals || {}), [key]: new Date().toISOString() },
       });
     }
     return { ...approved, projectId: pid };

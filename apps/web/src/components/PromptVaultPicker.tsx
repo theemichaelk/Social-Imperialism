@@ -14,15 +14,32 @@ export type VaultPrompt = {
   platform?: string;
   tags?: string[];
   usageCount?: number;
+  galleryTier?: string;
+  estimatedCost?: string;
+  estimatedMinutes?: string;
+  pipeline?: string;
+  deliverable?: string;
 };
+
+function galleryMeta(p: VaultPrompt) {
+  const parts = [
+    p.galleryTier,
+    p.pipeline ? `pipeline: ${p.pipeline}` : '',
+    p.estimatedCost ? p.estimatedCost : '',
+    p.estimatedMinutes ? p.estimatedMinutes : '',
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : '';
+}
 
 type Props = {
   feature?: PromptVaultFeatureId | string;
   onLoad: (text: string, prompt?: VaultPrompt) => void;
   compact?: boolean;
+  /** Max templates shown in dropdown (default 8; gallery features may need more). */
+  limit?: number;
 };
 
-export function PromptVaultPicker({ feature = 'general', onLoad, compact }: Props) {
+export function PromptVaultPicker({ feature = 'general', onLoad, compact, limit = 8 }: Props) {
   const [query, setQuery] = useState('');
   const [prompts, setPrompts] = useState<VaultPrompt[]>([]);
   const [open, setOpen] = useState(false);
@@ -105,12 +122,12 @@ export function PromptVaultPicker({ feature = 'general', onLoad, compact }: Prop
             Feature: <strong>{featureLabel(feature)}</strong> — templates apply brand + campaign context on load.
           </p>
           <div className="pv-picker-list">
-            {prompts.slice(0, 8).map((p) => (
+            {prompts.slice(0, limit).map((p) => (
               <div key={p.id} className="pv-picker-item">
                 <div>
                   <strong>{p.title}</strong>
                   <div className="post-meta">
-                    {(p.keywords || []).slice(0, 4).join(', ')}
+                    {galleryMeta(p) || (p.keywords || []).slice(0, 4).join(', ')}
                     {p.usageCount ? ` · used ${p.usageCount}×` : ''}
                   </div>
                 </div>

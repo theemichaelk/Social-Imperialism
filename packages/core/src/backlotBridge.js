@@ -91,14 +91,78 @@ async function listBacklotProjects(port = backlotPort()) {
 
 async function getBacklotBoardState(projectId, port = backlotPort()) {
   if (!projectId) return { success: false, error: 'projectId required' };
-  try {
-    const res = await httpGetJson(`/api/project/${encodeURIComponent(projectId)}/state`, port, 10000);
-    if (res.status === 404) return { success: false, error: 'Project not found on Backlot board' };
-    if (res.status !== 200) return { success: false, error: `Backlot HTTP ${res.status}` };
-    return { success: true, projectId, state: res.data, boardUrl: `http://127.0.0.1:${port}/p/${projectId}` };
-  } catch (e) {
-    return { success: false, error: e.message || 'Backlot unreachable' };
+  // Always ensure the board server is up before reading (SaaS poll path).
+  const ensured = await ensureBacklotRunning();
+  if (!ensured.success) {
+    return {
+      success: false,
+      error: ensured.error || 'Backlot server unavailable',
+      projectId,
+      ...diskBacklotStateFallback(projectId),
+    };
   }
+  const livePort = ensured.port || port;
+  try {
+    const res = await httpGetJson(`/api/project/${encodeURIComponent(projectId)}/state`, livePort, 10000);
+    if (res.status === 404) {
+      const disk = diskBacklotStateFallback(projectId);
+      if (disk.state) return { success: true, projectId, ...disk, boardUrl: `http://127.0.0.1:${livePort}/p/${projectId}`, source: 'disk' };
+      return { success: false, error: 'Project not found on Backlot board', projectId };
+    }
+    if (res.status !== 200) return { success: false, error: `Backlot HTTP ${res.status}`, projectId };
+    return {
+      success: true,
+      projectId,
+      state: res.data,
+      boardUrl: `http://127.0.0.1:${livePort}/p/${projectId}`,
+      source: 'live',
+      // SaaS browsers cannot open 127.0.0.1 on the API host — UI should use embedded rail.
+      boardLocalOnly: true,
+    };
+  } catch (e) {
+    const disk = diskBacklotStateFallback(projectId);
+    if (disk.state) return { success: true, projectId, ...disk, error: e.message, source: 'disk' };
+    return { success: false, error: e.message || 'Backlot unreachable', projectId };
+  }
+}
+
+/** Build a minimal board-shaped state from on-disk checkpoints when HTTP board is down. */
+function diskBacklotStateFallback(projectId) {
+  const dir = resolveSiProjectDir(projectId);
+  if (!dir) return {};
+  const stages = [];
+  try {
+    const files = fs.readdirSync(dir).filter((f) => f.startsWith('checkpoint_') && f.endsWith('.json'));
+    for (const f of files) {
+      const name = f.slice('checkpoint_'.length, -'.json'.length);
+      let cp = {};
+      try { cp = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); } catch { /* ignore */ }
+      stages.push({
+        name,
+        gated: !!cp.review || cp.status === 'awaiting_human',
+        status: cp.status || 'pending',
+        timestamp: cp.timestamp || cp.completed_at || null,
+        review: cp.review || null,
+        cost_snapshot: cp.cost_snapshot || null,
+        human_approved: !!cp.human_approved,
+      });
+    }
+  } catch { /* ignore */ }
+  if (!stages.length) return {};
+  let title = projectId;
+  try {
+    const marker = JSON.parse(fs.readFileSync(path.join(dir, 'project.json'), 'utf8'));
+    title = marker.title || title;
+  } catch { /* ignore */ }
+  return {
+    state: {
+      project_id: projectId,
+      title,
+      stages,
+      live: false,
+      source: 'disk',
+    },
+  };
 }
 
 async function runBacklotSimulate(opts = {}) {
@@ -107,21 +171,38 @@ async function runBacklotSimulate(opts = {}) {
 
   const py = resolvePythonBin();
   const projectId = opts.projectId || 'backlot-demo-run';
-  const args = [path.join(omRoot, 'scripts', 'backlot_simulate_run.py'), '--project', projectId];
-  if (opts.fast) args.push('--fast');
+  const scriptPath = path.join(omRoot, 'scripts', 'backlot_simulate_run.py');
+  let method = 'openmontage-script';
+  let output = '';
+  let simulateError = null;
 
-  const { spawnSync } = require('child_process');
-  const res = spawnSync(py, args, {
-    cwd: omRoot,
-    encoding: 'utf8',
-    timeout: opts.timeoutMs || 180000,
-  });
+  if (fs.existsSync(scriptPath)) {
+    const args = [scriptPath, '--project', projectId];
+    if (opts.fast) args.push('--fast');
+    const { spawnSync } = require('child_process');
+    const res = spawnSync(py, args, {
+      cwd: omRoot,
+      encoding: 'utf8',
+      timeout: opts.timeoutMs || 180000,
+    });
+    if (res.status === 0) {
+      output = (res.stdout || '').trim().split('\n').slice(-3).join('\n');
+    } else {
+      simulateError = (res.stderr || res.stdout || 'backlot_simulate_run failed').slice(0, 600);
+    }
+  } else {
+    simulateError = 'backlot_simulate_run.py not found';
+  }
 
-  if (res.status !== 0) {
-    return {
-      success: false,
-      error: (res.stderr || res.stdout || 'backlot_simulate_run failed').slice(0, 600),
-    };
+  // Cloud/SaaS often lacks pytest (script imports sample_artifact from tests) — fall back to SI-native disk sim.
+  if (simulateError) {
+    const { runSiNativeBacklotSimulate } = require('./siBacklotProject');
+    const native = runSiNativeBacklotSimulate({ projectId, brief: opts.brief });
+    if (!native.success) {
+      return { success: false, error: simulateError, nativeError: native.error };
+    }
+    method = native.method || 'si-native';
+    output = native.message || output;
   }
 
   let board = null;
@@ -132,9 +213,14 @@ async function runBacklotSimulate(opts = {}) {
   return {
     success: true,
     projectId,
-    message: `Simulated production "${projectId}" written to disk — open Backlot to watch live or replay.`,
+    method,
+    message: method === 'si-native'
+      ? `Simulated production "${projectId}" (SI native fallback) — refresh the stage rail; approve gates below.`
+      : `Simulated production "${projectId}" written to disk — open Backlot to watch live or replay.`,
     boardUrl: board?.boardUrl || `http://127.0.0.1:${backlotPort()}/p/${projectId}`,
-    output: (res.stdout || '').trim().split('\n').slice(-3).join('\n'),
+    boardLocalOnly: true,
+    pythonError: simulateError || null,
+    output,
   };
 }
 
@@ -180,14 +266,17 @@ async function openBacklotBoard(projectId = null) {
   if (!ensured.success) return ensured;
   const base = ensured.url.replace(/\/$/, '');
   const boardUrl = projectId ? `${base}/p/${encodeURIComponent(projectId)}` : base;
+  // Board binds to loopback on the API host — browsers on Amplify cannot reach it.
+  // Desktop + same-machine API can open the URL; SaaS should use get-backlot-board-state rail.
   return {
     success: true,
     boardUrl,
+    boardLocalOnly: true,
     port: ensured.port,
     projectId: projectId || null,
     message: projectId
-      ? `Backlot board ready for project "${projectId}"`
-      : 'Backlot library ready — all projects',
+      ? `Backlot board ready for project "${projectId}" (local URL — use stage rail on SaaS)`
+      : 'Backlot library ready — all projects (local URL — use stage rail on SaaS)',
   };
 }
 
