@@ -46,6 +46,7 @@ function buildApiMetrics(resolveKeys, keys) {
     Twitch: status(!!k.twitchStreamKey || hasTwitchKeys(k)),
     NewsAPI: status(!!k.newsApiKey),
     SerpAPI: status(!!k.serpApiKey),
+    'Social Imperialism SERP': status(!!(k.siSerpBaseUrl || k.siSerpApiKey || k.openSerpBaseUrl || k.openSerpApiKey)),
     'Gemini AI': status(!!k.gemini),
     OpenRouter: status(!!k.openrouter),
     Unsplash: status(!!k.unsplashAccessKey),

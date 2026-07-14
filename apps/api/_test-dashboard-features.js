@@ -21,7 +21,12 @@ const FEATURES = [
   { area: 'Overview', name: 'Trending topics (topic field)', channel: 'get-trending-topics',
     validate: (d) => Array.isArray(d) && d.length > 0 && (d[0].topic || d[0].title) },
   { area: 'Overview', name: 'Daily social trends (platform + topic)', channel: 'get-daily-social-trends',
-    validate: (d) => Array.isArray(d) && (d.length === 0 || (d[0].topic && d[0].platform)) },
+    validate: (d) => {
+      const trends = Array.isArray(d) ? d : (d?.trends || []);
+      return Array.isArray(trends) && (trends.length === 0 || (trends[0].topic && trends[0].platform));
+    } },
+  { area: 'Overview', name: 'Open TikTok trends login', channel: 'open-tiktok-trends-login',
+    validate: (d) => d && (d.url || d.message || d.success !== undefined || d.trendsUrl) },
   { area: 'Feed', name: 'Engagement queue', channel: 'get-engagement-queue',
     validate: (d) => Array.isArray(d) },
   { area: 'Overview', name: 'Live news (array)', channel: 'get-live-news', args: ['technology'],

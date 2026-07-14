@@ -448,27 +448,42 @@ const DAILY_SOCIAL_PLATFORMS = [
   {
     platform: 'X (Twitter)',
     hostPattern: '(?:twitter|x)\\.com',
-    queries: ['trending hashtags twitter today', 'trending topics X twitter today'],
+    queries: ['site:x.com/explore trending today', 'X twitter breaking news today'],
     twitterQuery: 'trending OR (#trending -is:retweet lang:en)',
+    liveSource: 'x',
+    exploreUrl: 'https://x.com/explore/tabs/trending',
   },
   {
-    platform: 'Instagram',
-    hostPattern: 'instagram\\.com',
-    queries: ['trending hashtags instagram today', 'top instagram hashtags today'],
+    platform: 'TikTok',
+    hostPattern: 'tiktok\\.com',
+    queries: ['tiktok trending hashtags US today', 'site:ads.tiktok.com creative center hashtag trends'],
+    liveSource: 'tiktok',
   },
   {
     platform: 'LinkedIn',
     hostPattern: 'linkedin\\.com',
-    queries: ['trending topics linkedin today', 'linkedin trending hashtags business'],
+    queries: ['site:linkedin.com/news top stories today', 'linkedin news headlines today'],
+    liveSource: 'linkedin',
+    exploreUrl: 'https://www.linkedin.com/news/',
+  },
+  {
+    platform: 'Instagram',
+    hostPattern: 'instagram\\.com',
+    queries: ['instagram trending hashtags today', 'instagram explore trending topics'],
   },
   {
     platform: 'Facebook',
     hostPattern: 'facebook\\.com',
-    queries: ['trending topics facebook today', 'facebook trending hashtags today'],
+    queries: ['facebook trending topics today', 'facebook news trending'],
+  },
+  {
+    platform: 'YouTube',
+    hostPattern: '(?:youtube\\.com|youtu\\.be)',
+    queries: ['youtube trending today', 'youtube trending hashtags shorts'],
   },
 ];
 
-let dailySocialTrendsCache = { day: '', data: [] };
+let dailySocialTrendsCache = { hour: '', trends: [], meta: {} };
 
 function todayCacheKey() {
   return new Date().toISOString().slice(0, 10);
@@ -485,11 +500,14 @@ const GENERIC_TREND_SLUGS = new Set([
   'top-content', 'popular', 'hashtags', 'topics', 'news', 'explore',
 ]);
 
+/** Curated last-resort topics when live scrape + Serp/web return nothing (never use #Trending junk). */
 const PLATFORM_TREND_FALLBACKS = {
-  'X (Twitter)': ['#Trending', '#BreakingNews', '#Marketing', '#AI'],
-  Instagram: ['#Reels', '#Explore', '#Marketing', '#Trending'],
-  LinkedIn: ['#Leadership', '#Innovation', '#Hiring', '#Marketing'],
-  Facebook: ['#Trending', '#Community', '#Marketing', '#News'],
+  'X (Twitter)': ['#AIMarketing', '#CreatorEconomy', '#GrowthTips'],
+  TikTok: ['#CreatorTips', '#ShortFormVideo', '#SocialMediaTips'],
+  LinkedIn: ['#B2BMarketing', '#Leadership', '#DigitalStrategy'],
+  Instagram: ['#ContentMarketing', '#ReelsTips', '#BrandBuilding'],
+  Facebook: ['#CommunityGrowth', '#SocialSelling', '#SmallBusiness'],
+  YouTube: ['#YouTubeShorts', '#VideoMarketing', '#ContentCreation'],
 };
 
 const NAV_TREND_STOPWORDS = new Set([
@@ -659,8 +677,35 @@ async function fetchSerpQueryTrends(keys, query, platform, limit = 4) {
   }
 }
 
-async function fetchPlatformDailyTrends(cfg, keys, seedKeywords, limit = 4) {
+async function fetchLivePlatformTrends(cfg, store, userDataPath, limit = 4) {
+  if (!store || !userDataPath) return [];
+  try {
+    const scraper = require('./socialTrendsScraper');
+    if (cfg.liveSource === 'x') {
+      return scraper.fetchXTrendsLive(store, userDataPath, limit);
+    }
+    if (cfg.liveSource === 'linkedin') {
+      return scraper.fetchLinkedInNewsLive(store, userDataPath, limit);
+    }
+    if (cfg.liveSource === 'tiktok') {
+      const res = await scraper.fetchTikTokTrendsLive(store, userDataPath, limit);
+      return { items: res.items || [], needsLogin: !!res.needsLogin };
+    }
+  } catch (e) {
+    console.warn(`Live trends ${cfg.platform}:`, e.message);
+  }
+  return [];
+}
+
+async function fetchPlatformDailyTrends(cfg, keys, seedKeywords, limit = 4, ctx = {}) {
   let items = [];
+
+  if (ctx.store && ctx.userDataPath && cfg.liveSource) {
+    const live = await fetchLivePlatformTrends(cfg, ctx.store, ctx.userDataPath, limit);
+    if (live?.needsLogin) ctx.tiktokNeedsLogin = true;
+    const liveItems = Array.isArray(live) ? live : (live?.items || []);
+    if (liveItems.length) return liveItems.slice(0, limit);
+  }
 
   if (cfg.platform === 'X (Twitter)' && cfg.twitterQuery && hasTwitterKeys(keys)) {
     try {
@@ -705,48 +750,80 @@ async function fetchPlatformDailyTrends(cfg, keys, seedKeywords, limit = 4) {
   }
 
   if (items.length < limit && seedKeywords.length) {
-    const seed = String(seedKeywords[0] || '').trim();
-    if (seed) {
+    const seen = new Set(items.map((i) => i.topic.toLowerCase()));
+    for (const raw of seedKeywords.slice(0, 4)) {
+      if (items.length >= limit) break;
+      const seed = String(raw || '').trim();
+      if (!seed) continue;
       const tag = seed.startsWith('#') ? seed : `#${seed.replace(/\s+/g, '')}`;
-      const seen = new Set(items.map((i) => i.topic.toLowerCase()));
-      if (!seen.has(tag.toLowerCase())) {
-        items.push({
-          topic: tag,
-          type: 'hashtag',
-          platform: cfg.platform,
-          momentum: 'Brand',
-          searchVolume: 'Tracked',
-          url: null,
-        });
-      }
+      if (tag.length < 3 || tag.length > 40 || seen.has(tag.toLowerCase())) continue;
+      if (isLowQualityTrendTopic(tag)) continue;
+      seen.add(tag.toLowerCase());
+      items.push({
+        topic: tag,
+        type: 'hashtag',
+        platform: cfg.platform,
+        momentum: 'Brand',
+        searchVolume: 'Tracked',
+        url: null,
+      });
     }
   }
 
   items = items.filter((it) => !isLowQualityTrendTopic(it.topic));
-  if (items.length < limit) appendPlatformFallbacks(items, cfg.platform, limit);
+  if (items.length < limit && PLATFORM_TREND_FALLBACKS[cfg.platform]) {
+    appendPlatformFallbacks(items, cfg.platform, limit);
+  }
 
   return items.slice(0, limit);
 }
 
-async function fetchDailySocialTrends(keys, seedKeywords = []) {
-  const day = todayCacheKey();
-  if (dailySocialTrendsCache.day === day && dailySocialTrendsCache.data?.length) {
-    return dailySocialTrendsCache.data;
+async function fetchDailySocialTrends(keys, seedKeywords = [], ctx = {}) {
+  const hour = new Date().toISOString().slice(0, 13);
+  if (
+    dailySocialTrendsCache.hour === hour
+    && dailySocialTrendsCache.trends?.length
+    && !ctx.forceRefresh
+  ) {
+    return { trends: dailySocialTrendsCache.trends, meta: dailySocialTrendsCache.meta || {} };
   }
 
+  const scrapeCtx = { ...ctx, tiktokNeedsLogin: false };
   const seed = (Array.isArray(seedKeywords) ? seedKeywords : []).map((k) => String(k).trim()).filter(Boolean);
+  const perPlatform = 3;
   const chunks = await Promise.all(
-    DAILY_SOCIAL_PLATFORMS.map((cfg) => fetchPlatformDailyTrends(cfg, keys, seed, 4)),
+    DAILY_SOCIAL_PLATFORMS.map((cfg) => fetchPlatformDailyTrends(cfg, keys, seed, perPlatform, scrapeCtx)),
   );
-  const merged = chunks.flat().filter((t) => t.topic);
-  dailySocialTrendsCache = { day, data: merged };
-  return merged;
+  const merged = dedupeDailyTrends(chunks.flat().filter((t) => t.topic));
+  const meta = { tiktokNeedsLogin: !!scrapeCtx.tiktokNeedsLogin };
+  dailySocialTrendsCache = { hour, trends: merged, meta };
+  return { trends: merged, meta };
+}
+
+function dedupeDailyTrends(items) {
+  const seen = new Set();
+  return items.filter((it) => {
+    const k = `${it.platform}:${String(it.topic).toLowerCase()}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+function clearDailySocialTrendsCache() {
+  dailySocialTrendsCache = { hour: '', trends: [], meta: {} };
+  try {
+    const scraper = require('./socialTrendsScraper');
+    scraper.clearSocialTrendsCache();
+  } catch (e) { /* ignore */ }
 }
 
 module.exports = {
   fetchRealFeed,
   fetchTrendingTopics,
   fetchDailySocialTrends,
+  clearDailySocialTrendsCache,
+  DAILY_SOCIAL_PLATFORMS,
   fetchRssTrending,
   fetchNewsAsPosts,
   fetchTopHeadlinesAsPosts,

@@ -59,7 +59,23 @@ type TrendItem = {
   searchVolume?: string | number;
 };
 
-const DAILY_SOCIAL_PLATFORMS = ['X (Twitter)', 'Instagram', 'LinkedIn', 'Facebook'] as const;
+const DAILY_SOCIAL_PLATFORMS = [
+  'X (Twitter)', 'TikTok', 'LinkedIn', 'Instagram', 'Facebook', 'YouTube',
+] as const;
+
+type DailySocialTrendsMeta = { tiktokNeedsLogin?: boolean };
+
+function parseDailySocialTrends(data: unknown): { trends: TrendItem[]; meta: DailySocialTrendsMeta } {
+  if (Array.isArray(data)) {
+    return { trends: asTrending(data), meta: {} };
+  }
+  if (data && typeof data === 'object') {
+    const obj = data as { trends?: unknown; items?: unknown; meta?: DailySocialTrendsMeta };
+    const raw = obj.trends ?? obj.items ?? [];
+    return { trends: asTrending(raw), meta: obj.meta || {} };
+  }
+  return { trends: [], meta: {} };
+}
 type NewsItem = { title: string; url?: string; source?: string };
 type DashboardStats = {
   totalPosts?: number;
@@ -126,6 +142,9 @@ function DashboardPageInner() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [trending, setTrending] = useState<TrendItem[]>([]);
   const [socialTrends, setSocialTrends] = useState<TrendItem[]>([]);
+  const [socialTrendsMeta, setSocialTrendsMeta] = useState<DailySocialTrendsMeta>({});
+  const [socialTrendsLoading, setSocialTrendsLoading] = useState(false);
+  const [tiktokLoginMsg, setTiktokLoginMsg] = useState('');
   const [leads, setLeads] = useState<unknown[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [worker, setWorker] = useState<WorkerStatus>({});
@@ -242,8 +261,9 @@ function DashboardPageInner() {
       ]);
       setStats(s || {});
       setNews(asNews(n));
-      const socialItems = asTrending(social);
+      const { trends: socialItems, meta: socialMeta } = parseDailySocialTrends(social);
       setSocialTrends(socialItems);
+      setSocialTrendsMeta(socialMeta);
       setTrending(socialItems.length ? socialItems : asTrending(t));
       setCampaign(c || {});
       setWorker(w || {});
@@ -312,33 +332,38 @@ function DashboardPageInner() {
     }
   }
 
-  async function engage(action: string) {
-    if (!selectedPost) {
+  async function engage(action: string, postOverride?: Post | null) {
+    const target = postOverride || selectedPost;
+    if (!target) {
       setActionMsg('Select a post and draft a reply first.');
       return;
     }
+    if (postOverride) setSelectedPost(postOverride);
     setActionMsg('');
     try {
       const engRes = await invoke<{ queued?: boolean; message?: string }>('engage-post', {
         action,
-        platform: selectedPost.platform,
-        postContent: selectedPost.content,
+        platform: target.platform,
+        postContent: target.content,
         content: draft,
-        url: selectedPost.url,
-        externalId: selectedPost.externalId,
-        postId: selectedPost.externalId,
+        url: target.url,
+        externalId: target.externalId,
+        postId: target.externalId,
       });
-      await invoke('save-ai-reply', {
-        originalPost: selectedPost.content,
-        replyContent: draft,
-        platform: selectedPost.platform,
-        status: action === 'reply' ? 'published' : 'draft',
-        externalId: selectedPost.externalId,
-        url: selectedPost.url,
-      });
+      if (action === 'reply' || draft.trim()) {
+        await invoke('save-ai-reply', {
+          originalPost: target.content,
+          replyContent: draft || (action === 'like' ? '(liked)' : action === 'share' ? '(shared)' : ''),
+          platform: target.platform,
+          status: action === 'reply' ? 'published' : 'draft',
+          externalId: target.externalId,
+          url: target.url,
+        });
+      }
+      const verb = action === 'like' ? 'Liked' : action === 'share' ? 'Shared' : 'Replied on';
       setActionMsg(engRes?.queued
-        ? (engRes.message || `Engagement queued for ${selectedPost.platform}.`)
-        : `${action === 'like' ? 'Liked' : 'Replied on'} ${selectedPost.platform} successfully.`);
+        ? (engRes.message || `Engagement queued for ${target.platform}.`)
+        : `${verb} ${target.platform} successfully.`);
       refresh();
     } catch (e) {
       setActionMsg((e as Error).message);
@@ -354,6 +379,44 @@ function DashboardPageInner() {
       setTopicAnalysis(res.analysis?.textAnalysis || res.textAnalysis || JSON.stringify(res));
     } catch (e) {
       setTopicAnalysis((e as Error).message);
+    }
+  }
+
+  async function refreshSocialTrends(force = true) {
+    setSocialTrendsLoading(true);
+    setTiktokLoginMsg('');
+    try {
+      const social = await invoke<unknown>('get-daily-social-trends', { forceRefresh: force });
+      const { trends, meta } = parseDailySocialTrends(social);
+      setSocialTrends(trends);
+      setSocialTrendsMeta(meta);
+      if (trends.length) setTrending(trends);
+    } catch (e) {
+      setActionMsg((e as Error).message || 'Failed to refresh social trends');
+    } finally {
+      setSocialTrendsLoading(false);
+    }
+  }
+
+  async function openTikTokTrendsLogin() {
+    setTiktokLoginMsg('Opening browser…');
+    const fallbackUrl = 'https://ads.tiktok.com/';
+    try {
+      const res = await invoke<{ message?: string; success?: boolean; url?: string }>('open-tiktok-trends-login');
+      setTiktokLoginMsg(res?.message || 'Browser opened — log in to TikTok Ads, then refresh trends.');
+      // Always open the URL client-side when provided (SaaS cannot launch a server GUI browser).
+      if (res?.url && typeof window !== 'undefined' && res.success === false) {
+        window.open(res.url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (e) {
+      const msg = (e as Error).message || 'Could not open TikTok login browser';
+      // Unknown channel on older API deploys — still open TikTok Ads for the user.
+      if (/unknown channel|not available|headless|saas|ENOENT|spawn/i.test(msg)) {
+        setTiktokLoginMsg('Open TikTok Ads in a new tab, log in, then click Refresh trends. Live cookie scrape works best in the desktop app.');
+        if (typeof window !== 'undefined') window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        setTiktokLoginMsg(msg);
+      }
     }
   }
 
@@ -411,6 +474,7 @@ function DashboardPageInner() {
       <CampaignMasteryPanel />
 
       {tab === 'overview' && (
+        <>
         <div className="grid grid-2" style={{ marginBottom: 12 }}>
           <DataPanel title="Campaign Pulse" live>
             <p style={{ color: '#e2e8f0', fontSize: '0.95rem', margin: '0 0 8px' }}>
@@ -420,7 +484,7 @@ function DashboardPageInner() {
               { label: 'Mode', value: stats.autoRulesEnabled ? 'Auto' : 'Manual', status: stats.autoRulesEnabled ? 'ok' : 'warn' },
               { label: 'Setup', value: String(setup.nextStep ?? '—') },
               { label: 'Queue', value: engagementQueue.length, status: engagementQueue.length ? 'warn' : 'ok' },
-              { label: 'Worker', value: worker.running || worker.isRunning ? 'Active' : 'Idle', status: worker.running ? 'ok' : 'off' },
+              { label: 'Worker', value: worker.running || worker.isRunning ? 'Active' : 'Idle', status: (worker.running || worker.isRunning) ? 'ok' : 'off' },
             ]} />
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: 12, marginBottom: 0 }}>
               {worker.statusString || stats.workerStatus || 'Worker idle'} · {connectedApis}/{totalApis} APIs connected
@@ -436,7 +500,7 @@ function DashboardPageInner() {
                 <button className="btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => analyzeTopic(t.topic || '', t.platform || 'Twitter')}>Analyze</button>
               </div>
             ))}
-            {!trending.length && <p className="settings-panel-desc">Daily social trends load from Instagram, X, LinkedIn, and Facebook.</p>}
+            {!trending.length && <p className="settings-panel-desc">Live trends from X, TikTok, LinkedIn, Instagram, Facebook, and YouTube.</p>}
             {topicAnalysis && <div className="post-card" style={{ marginTop: 8, fontSize: '0.85rem' }}>{topicAnalysis}</div>}
           </DataPanel>
           <DataPanel title="Live Headlines" live>
@@ -447,49 +511,77 @@ function DashboardPageInner() {
               </div>
             ))}
           </DataPanel>
-          <DataPanel title="Daily Social Trends" live>
-            <p className="settings-panel-desc" style={{ marginTop: 0 }}>
-              Today&apos;s topics and hashtags — Instagram, X (Twitter), LinkedIn, Facebook
-            </p>
-            <div className="dash-social-trends-grid">
-              {DAILY_SOCIAL_PLATFORMS.map((platform) => {
-                const items = socialTrends.filter((t) => t.platform === platform);
-                return (
-                  <div key={platform} className="dash-social-trends-col">
-                    <h4 className="dash-social-trends-platform">{platform}</h4>
-                    {items.length ? items.map((t, i) => (
-                      <div key={`${platform}-${t.topic}-${i}`} className="dash-social-trend-item">
-                        <span className={`dash-social-trend-tag ${t.type === 'hashtag' ? 'is-hashtag' : ''}`}>
-                          {t.topic}
-                        </span>
-                        <span className="dash-social-trend-meta">{t.momentum || 'Today'}</span>
-                        {t.url ? (
-                          <a href={t.url} target="_blank" rel="noopener noreferrer" className="dash-social-trend-link">Open</a>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-sm"
-                            style={{ padding: '2px 6px', fontSize: '0.68rem' }}
-                            onClick={() => analyzeTopic(t.topic || '', platform)}
-                          >
-                            Analyze
-                          </button>
-                        )}
-                      </div>
-                    )) : (
-                      <p className="settings-panel-desc" style={{ margin: 0, fontSize: '0.78rem' }}>Scanning…</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            {!socialTrends.length && (
-              <p className="settings-panel-desc" style={{ marginBottom: 0 }}>
-                Add SerpAPI or X API keys in Settings for live daily trends, or run Full Scan after adding keywords.
-              </p>
-            )}
-          </DataPanel>
         </div>
+        <div style={{ marginBottom: 12 }}>
+        <DataPanel title="Daily Social Trends LIVE" live>
+          <div className="dash-social-trends-header">
+            <p className="settings-panel-desc" style={{ margin: 0 }}>
+              Today&apos;s topics and hashtags — live from X, TikTok Creative Center, LinkedIn News, and web discovery
+            </p>
+            <div className="dash-social-trends-actions">
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => refreshSocialTrends(true)}
+                disabled={socialTrendsLoading}
+              >
+                {socialTrendsLoading ? 'Refreshing…' : 'Refresh trends'}
+              </button>
+              <button type="button" className="btn btn-sm" onClick={openTikTokTrendsLogin}>
+                Open TikTok login
+              </button>
+            </div>
+          </div>
+          {tiktokLoginMsg && (
+            <p className="settings-panel-desc" style={{ margin: '8px 0 0', color: '#38bdf8' }}>{tiktokLoginMsg}</p>
+          )}
+          <div className="dash-social-trends-grid">
+            {DAILY_SOCIAL_PLATFORMS.map((platform) => {
+              const items = socialTrends.filter((t) => t.platform === platform);
+              const tiktokLoginRequired = platform === 'TikTok' && socialTrendsMeta.tiktokNeedsLogin;
+              return (
+                <div key={platform} className="dash-social-trends-col">
+                  <h4 className="dash-social-trends-platform">{platform}</h4>
+                  {items.length ? items.map((t, i) => (
+                    <div key={`${platform}-${t.topic}-${i}`} className="dash-social-trend-item">
+                      <span className={`dash-social-trend-tag ${t.type === 'hashtag' ? 'is-hashtag' : ''}`}>
+                        {t.topic}
+                      </span>
+                      <span className="dash-social-trend-meta">{t.momentum || t.searchVolume || 'Live'}</span>
+                      {t.url ? (
+                        <a href={t.url} target="_blank" rel="noopener noreferrer" className="dash-social-trend-link">Open</a>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                          onClick={() => analyzeTopic(t.topic || '', platform)}
+                        >
+                          Analyze
+                        </button>
+                      )}
+                    </div>
+                  )) : (
+                    <p className="settings-panel-desc" style={{ margin: 0, fontSize: '0.78rem' }}>
+                      {socialTrendsLoading
+                        ? 'Scanning…'
+                        : tiktokLoginRequired
+                          ? 'Log in via Open TikTok login, then refresh.'
+                          : 'No live trends yet — try Refresh trends.'}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {!socialTrends.length && !socialTrendsLoading && (
+            <p className="settings-panel-desc" style={{ marginBottom: 0, marginTop: 8 }}>
+              X and LinkedIn use live browser scraping. TikTok uses Creative Center (login once). Other platforms use SerpAPI or web search when keys are configured.
+            </p>
+          )}
+        </DataPanel>
+        </div>
+      </>
       )}
 
       <PageShell
@@ -607,8 +699,8 @@ function DashboardPageInner() {
                   <button className="btn" onClick={() => setExplorerPost(p)}>View Post</button>
                   {engageable ? (
                     <>
-                      <button className="btn" onClick={() => { setSelectedPost(p); engage('like'); }}>Like</button>
-                      <button className="btn" onClick={() => { setSelectedPost(p); engage('share'); }}>Share</button>
+                      <button className="btn" onClick={() => engage('like', p)}>Like</button>
+                      <button className="btn" onClick={() => engage('share', p)}>Share</button>
                     </>
                   ) : null}
                   {p.url && <a href={p.url} target="_blank" rel="noreferrer">Open →</a>}
@@ -758,10 +850,10 @@ function DashboardPageInner() {
         <div className="grid grid-2">
           <DataPanel title="Background Worker" live>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <RingChart percent={worker.running || worker.isRunning ? 85 : 15} label="Activity" color={worker.running ? '#22c55e' : '#64748b'} />
+              <RingChart percent={worker.running || worker.isRunning ? 85 : 15} label="Activity" color={(worker.running || worker.isRunning) ? '#22c55e' : '#64748b'} />
               <div>
                 <p style={{ color: worker.running || worker.isRunning ? '#10b981' : '#94a3b8', margin: 0 }}>
-                  {worker.statusString || (worker.running ? 'Running' : 'Idle')}
+                  {worker.statusString || ((worker.running || worker.isRunning) ? 'Running' : 'Idle')}
                 </p>
                 <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '4px 0 0' }}>{worker.pendingTasks ?? workerTasks.length} pending tasks</p>
               </div>

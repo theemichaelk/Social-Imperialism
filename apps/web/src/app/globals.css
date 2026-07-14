@@ -2198,9 +2198,23 @@ textarea.input { min-height: 100px; resize: vertical; }
 .fetch-profiles-panel { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
 /* Dashboard — daily social trends (replaces Feed Platform Mix) */
+.dash-social-trends-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 4px;
+}
+.dash-social-trends-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .dash-social-trends-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, auto);
   gap: 12px;
   margin-top: 8px;
 }
@@ -2230,6 +2244,18 @@ textarea.input { min-height: 100px; resize: vertical; }
 .dash-social-trend-meta { grid-column: 1; font-size: 0.68rem; color: #64748b; }
 .dash-social-trend-link,
 .dash-social-trend-item .btn { grid-column: 2; grid-row: 1 / span 2; font-size: 0.68rem; }
+
+@media (max-width: 900px) {
+  .dash-social-trends-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+  }
+}
+@media (max-width: 520px) {
+  .dash-social-trends-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 @media (max-width: 768px) {
   .history-reply-row { grid-template-columns: 1fr; }
@@ -3189,7 +3215,35 @@ textarea.input { min-height: 100px; resize: vertical; }
 .ivs-prereqs-body { margin-top: 0.65rem; }
 .ivs-prereqs-body h4 { margin: 0.5rem 0 0.35rem; font-size: 0.85rem; }
 .ivs-prereqs-list { margin: 0 0 0.5rem; padding-left: 1.2rem; font-size: 0.78rem; line-height: 1.5; }
+.ivs-zero-keys-table {
+  width: 100%; border-collapse: collapse; font-size: 0.72rem; line-height: 1.45; margin: 0 0 0.35rem;
+}
+.ivs-zero-keys-table th,
+.ivs-zero-keys-table td {
+  border: 1px solid var(--border); padding: 0.35rem 0.45rem; text-align: left; vertical-align: top;
+}
+.ivs-zero-keys-table th { font-size: 0.68rem; color: var(--text-muted); background: var(--surface); }
+.ivs-zero-keys-table td:first-child { font-weight: 600; white-space: nowrap; }
+.ivs-zero-keys-table td:nth-child(2) { white-space: nowrap; }
+.ivs-style-playbooks-table { table-layout: fixed; }
+.ivs-style-playbooks-table th:first-child,
+.ivs-style-playbooks-table td:first-child { width: 38%; min-width: 10.5rem; padding-right: 0.85rem; }
+.ivs-style-playbooks-table th:last-child,
+.ivs-style-playbooks-table td:last-child { width: 62%; white-space: normal; word-break: break-word; }
+.ivs-platform-profiles-table { table-layout: fixed; }
+.ivs-platform-profiles-table th:nth-child(1),
+.ivs-platform-profiles-table td:nth-child(1) { width: 42%; min-width: 9rem; padding-right: 0.75rem; }
+.ivs-platform-profiles-table th:nth-child(2),
+.ivs-platform-profiles-table td:nth-child(2) { width: 33%; white-space: nowrap; }
+.ivs-platform-profiles-table th:nth-child(3),
+.ivs-platform-profiles-table td:nth-child(3) { width: 25%; white-space: nowrap; }
+.ivs-pipelines-table td:first-child { white-space: normal; min-width: 7rem; }
+.ivs-pipelines-table td { white-space: normal; }
 .ivs-example-briefs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ivs-prompt-tier {
+  margin: 0.85rem 0 0.35rem; font-size: 0.78rem; font-weight: 600; color: var(--accent3);
+}
+.ivs-prompt-tier-note { margin: 0 0 0.35rem; font-size: 0.72rem; }
 .ivs-backlot-rail {
   list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem;
 }

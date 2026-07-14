@@ -274,6 +274,72 @@ const promptVaultCore = path.join(ROOT, 'packages/core/src/promptVault.js');
 if (read(promptVaultCore).includes("title: 'Sovereign Threat Capture")) {
   fail('promptVault.js seed still uses Sovereign user-facing title — must be THEE_MICHAEL Security Control');
 }
+const promptVaultGallery = path.join(ROOT, 'packages/core/src/promptVaultVideoGallery.js');
+if (!exists(promptVaultGallery)) {
+  fail('Missing packages/core/src/promptVaultVideoGallery.js');
+} else {
+  const gallerySrc = read(promptVaultGallery);
+  const galleryCount = (gallerySrc.match(/id: 'pv_skill_video_/g) || []).length;
+  if (galleryCount !== 36) {
+    fail(`promptVaultVideoGallery.js must define 36 video gallery seeds (found ${galleryCount})`);
+  }
+  if (!gallerySrc.includes('npx hyperframes')) {
+    fail('promptVaultVideoGallery.js must reference npx hyperframes (not @hyperframes/cli)');
+  }
+  if (!gallerySrc.includes('Broadcast Quality')) {
+    fail('promptVaultVideoGallery.js must include Broadcast Quality gallery tier');
+  }
+  if (!gallerySrc.includes('For Specific Audiences')) {
+    fail('promptVaultVideoGallery.js must include For Specific Audiences gallery tier');
+  }
+  if (!gallerySrc.includes('Tips for Better Results')) {
+    fail('promptVaultVideoGallery.js must include Tips for Better Results gallery guide');
+  }
+  if (!gallerySrc.includes('How OpenMontage Works')) {
+    fail('promptVaultVideoGallery.js must include How OpenMontage Works architecture guides');
+  }
+  if (!gallerySrc.includes('Three-Layer Knowledge Architecture')) {
+    fail('promptVaultVideoGallery.js must document three-layer knowledge architecture');
+  }
+  if (!gallerySrc.includes('Supported Providers')) {
+    fail('promptVaultVideoGallery.js must include Supported Providers reference');
+  }
+  if (!gallerySrc.includes('provider_menu_summary')) {
+    fail('promptVaultVideoGallery.js must document provider_menu_summary preflight');
+  }
+  if (!gallerySrc.includes('Style System')) {
+    fail('promptVaultVideoGallery.js must include Style System playbooks');
+  }
+  if (!gallerySrc.includes('Platform Profiles')) {
+    fail('promptVaultVideoGallery.js must include Platform Profiles reference');
+  }
+  if (!gallerySrc.includes('Production Governance')) {
+    fail('promptVaultVideoGallery.js must include Production Governance reference');
+  }
+  if (!gallerySrc.includes('Agent Compatibility')) {
+    fail('promptVaultVideoGallery.js must include Agent Compatibility reference');
+  }
+  if (!gallerySrc.includes('Contributing')) {
+    fail('promptVaultVideoGallery.js must include Contributing reference');
+  }
+  if (!gallerySrc.includes('docs/PROVIDERS.md')) {
+    fail('promptVaultVideoGallery.js must link docs/PROVIDERS.md for pricing');
+  }
+  if (!gallerySrc.includes('Estimated time:')) {
+    fail('promptVaultVideoGallery.js must use Estimated time: header format');
+  }
+}
+const pvCoreSrc = read(promptVaultCore);
+if (!pvCoreSrc.includes('promptVaultVideoGallery')) {
+  fail('promptVault.js must merge VIDEO_PROMPT_GALLERY_SEED via ensureSeeded');
+}
+if (!pvCoreSrc.includes('ALL_SEED_PROMPTS')) {
+  fail('promptVault.js must define ALL_SEED_PROMPTS (8 general + 36 gallery)');
+}
+const promptVaultFeatures = path.join(ROOT, 'apps/web/src/lib/promptVaultFeatures.ts');
+if (!read(promptVaultFeatures).includes("'video-studio'")) {
+  fail('promptVaultFeatures.ts must include video-studio feature');
+}
 
 const qaSections = path.join(__dirname, '_test-qa-all-sections.js');
 if (!read(qaSections).includes('get-thee-michael-action-history')) {
@@ -393,7 +459,33 @@ else if (!read(compositorPanel).includes('compose-social-layout')) {
 const designCompositorCore = path.join(ROOT, 'packages/core/src/designCompositor.js');
 if (!exists(designCompositorCore)) fail('Missing packages/core/src/designCompositor.js');
 
-const EXPECTED_HANDLERS = 423;
+const socialTrendsScraper = path.join(ROOT, 'apps/desktop/services/socialTrendsScraper.js');
+if (!exists(socialTrendsScraper)) fail('Missing apps/desktop/services/socialTrendsScraper.js');
+else {
+  const sts = read(socialTrendsScraper);
+  if (!sts.includes('x.com/explore/tabs/trending')) fail('socialTrendsScraper.js must scrape X trending tab');
+  if (!sts.includes('x.com/explore/tabs/news')) fail('socialTrendsScraper.js must scrape X news tab');
+  if (!sts.includes('ads.tiktok.com/creative/creativeCenter/trends/hashtag')) fail('socialTrendsScraper.js must scrape TikTok Creative Center');
+  if (!sts.includes('linkedin.com/news')) fail('socialTrendsScraper.js must scrape LinkedIn News');
+}
+
+const dashboardPage = path.join(ROOT, 'apps/web/src/app/dashboard/page.tsx');
+if (!exists(dashboardPage)) fail('Missing dashboard/page.tsx');
+else {
+  const dash = read(dashboardPage);
+  if (!dash.includes("'TikTok'")) fail('dashboard page must include TikTok in DAILY_SOCIAL_PLATFORMS');
+  if (!dash.includes("'YouTube'")) fail('dashboard page must include YouTube in DAILY_SOCIAL_PLATFORMS');
+  if (!dash.includes('open-tiktok-trends-login')) fail('dashboard page must wire open-tiktok-trends-login');
+  if (!dash.includes('Daily Social Trends LIVE')) fail('dashboard page must show Daily Social Trends LIVE panel');
+}
+
+const globalsCss = path.join(ROOT, 'apps/web/src/app/globals.css');
+if (!exists(globalsCss)) fail('Missing globals.css');
+else if (!read(globalsCss).includes('grid-template-columns: repeat(3, 1fr)')) {
+  fail('globals.css must use 3-column daily social trends grid');
+}
+
+const EXPECTED_HANDLERS = 424;
 
 // --- Report (async handler count) ---
 (async () => {
@@ -416,6 +508,7 @@ const EXPECTED_HANDLERS = 423;
     if (!handlers['analyze-reference-video']) fail('handler registry missing analyze-reference-video');
     if (!handlers['run-imperial-video-compose']) fail('handler registry missing run-imperial-video-compose');
     if (!handlers['discover-keyword-targets']) fail('handler registry missing discover-keyword-targets');
+    if (!handlers['open-tiktok-trends-login']) fail('handler registry missing open-tiktok-trends-login');
     if (!handlers['get-design-compositor-config']) fail('handler registry missing get-design-compositor-config');
     if (!handlers['compose-social-layout']) fail('handler registry missing compose-social-layout');
   } catch (e) {

@@ -10,6 +10,7 @@ export function chartShortLabel(name: string, max = 8): string {
     'Reddit OAuth': 'Rd OAuth',
     'NewsAPI': 'News',
     'SerpAPI': 'Serp',
+    'Social Imperialism SERP': 'SI SERP',
     'DomDetailer': 'DomDet',
     'AI Workflows': 'Workflow',
     'Content Studio': 'Content',

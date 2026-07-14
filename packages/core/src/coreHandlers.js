@@ -484,12 +484,23 @@ Return JSON array: [{ "platform": "...", "headline": "...", "audience": "...", "
       .filter((k) => k.campaignId === activeId).map((k) => k.term);
     return fetchTrendingTopics('All', keys, seedKeywords);
   });
-  ipcMain.handle('get-daily-social-trends', async () => {
+  ipcMain.handle('get-daily-social-trends', async (_event, payload = {}) => {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
     const activeId = store.getItem('activeCampaignId') || 'default';
     const seedKeywords = JSON.parse(store.getItem('keywords') || '[]')
       .filter((k) => k.campaignId === activeId).map((k) => k.term);
-    return fetchDailySocialTrends(keys, seedKeywords);
+    const { clearDailySocialTrendsCache } = require(path.join(desktopServicesPath, 'feedFetcher'));
+    if (payload?.forceRefresh) clearDailySocialTrendsCache();
+    return fetchDailySocialTrends(keys, seedKeywords, {
+      store,
+      userDataPath,
+      forceRefresh: !!payload?.forceRefresh,
+    });
+  });
+
+  ipcMain.handle('open-tiktok-trends-login', async () => {
+    const { openTikTokTrendsLogin } = require(path.join(desktopServicesPath, 'socialTrendsScraper'));
+    return openTikTokTrendsLogin(store, userDataPath);
   });
 
   async function fetchRssHeadlines(limit = 4) {
