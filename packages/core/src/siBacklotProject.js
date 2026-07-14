@@ -6,6 +6,26 @@ const fs = require('fs');
 const path = require('path');
 const { resolveOpenMontageRoot } = require('./openMontageBridge');
 
+/** Prefer OpenMontage projects/; fall back to SI-owned storage when vendor is not on the host (EB). */
+function resolveSiProjectsRoot() {
+  const omRoot = resolveOpenMontageRoot();
+  if (omRoot) return path.join(omRoot, 'projects');
+  const candidates = [
+    process.env.SI_BACKLOT_PROJECTS_DIR,
+    path.join(__dirname, '../../../apps/api/storage/backlot-projects'),
+    path.join(process.cwd(), 'apps/api/storage/backlot-projects'),
+    path.join(process.cwd(), 'storage/backlot-projects'),
+    path.join(require('os').tmpdir(), 'si-backlot-projects'),
+  ].filter(Boolean);
+  for (const dir of candidates) {
+    try {
+      ensureDir(dir);
+      return path.resolve(dir);
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
 const STAGE_ARTIFACT_MAP = {
   research: 'research_brief',
   proposal: 'proposal_packet',
@@ -139,12 +159,12 @@ function saveArtifact(projectDir, name, data) {
 }
 
 function createSiBacklotProject({ pipelineId, brief, brandName, referenceUrl } = {}) {
-  const omRoot = resolveOpenMontageRoot();
-  if (!omRoot) return { success: false, error: 'OpenMontage not available' };
+  const projectsRoot = resolveSiProjectsRoot();
+  if (!projectsRoot) return { success: false, error: 'No writable Backlot projects directory' };
 
   const stamp = Date.now().toString(36);
   const projectId = `si-${slugify(brief || pipelineId)}-${stamp}`;
-  const projectDir = path.join(omRoot, 'projects', projectId);
+  const projectDir = path.join(projectsRoot, projectId);
   ensureDir(projectDir);
   ensureDir(path.join(projectDir, 'artifacts'));
 
@@ -316,11 +336,11 @@ function approveSiGate(projectDir, stage) {
  * scripts/backlot_simulate_run.py fails (missing pytest on cloud hosts).
  */
 function runSiNativeBacklotSimulate({ projectId = 'backlot-demo-run', brief } = {}) {
-  const omRoot = resolveOpenMontageRoot();
-  if (!omRoot) return { success: false, error: 'OpenMontage not available' };
+  const projectsRoot = resolveSiProjectsRoot();
+  if (!projectsRoot) return { success: false, error: 'No writable Backlot projects directory' };
 
   const pid = projectId || 'backlot-demo-run';
-  const projectDir = path.join(omRoot, 'projects', pid);
+  const projectDir = path.join(projectsRoot, pid);
   try {
     if (fs.existsSync(projectDir)) fs.rmSync(projectDir, { recursive: true, force: true });
   } catch { /* best effort */ }
@@ -397,6 +417,7 @@ function syncSiStageToBacklot(projectDir, stage, text, ctx = {}) {
 
 module.exports = {
   GATED_STAGES,
+  resolveSiProjectsRoot,
   createSiBacklotProject,
   writeSiCheckpoint,
   appendSiEvent,

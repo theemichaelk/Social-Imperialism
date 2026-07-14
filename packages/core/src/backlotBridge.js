@@ -167,39 +167,45 @@ function diskBacklotStateFallback(projectId) {
 
 async function runBacklotSimulate(opts = {}) {
   const omRoot = resolveOpenMontageRoot();
-  if (!omRoot) return { success: false, error: 'OpenMontage not cloned — run deploy/setup-openmontage.ps1' };
-
   const py = resolvePythonBin();
   const projectId = opts.projectId || 'backlot-demo-run';
-  const scriptPath = path.join(omRoot, 'scripts', 'backlot_simulate_run.py');
   let method = 'openmontage-script';
   let output = '';
   let simulateError = null;
 
-  if (fs.existsSync(scriptPath)) {
-    const args = [scriptPath, '--project', projectId];
-    if (opts.fast) args.push('--fast');
-    const { spawnSync } = require('child_process');
-    const res = spawnSync(py, args, {
-      cwd: omRoot,
-      encoding: 'utf8',
-      timeout: opts.timeoutMs || 180000,
-    });
-    if (res.status === 0) {
-      output = (res.stdout || '').trim().split('\n').slice(-3).join('\n');
+  if (omRoot) {
+    const scriptPath = path.join(omRoot, 'scripts', 'backlot_simulate_run.py');
+    if (fs.existsSync(scriptPath)) {
+      const args = [scriptPath, '--project', projectId];
+      if (opts.fast) args.push('--fast');
+      const { spawnSync } = require('child_process');
+      const res = spawnSync(py, args, {
+        cwd: omRoot,
+        encoding: 'utf8',
+        timeout: opts.timeoutMs || 180000,
+      });
+      if (res.status === 0) {
+        output = (res.stdout || '').trim().split('\n').slice(-3).join('\n');
+      } else {
+        simulateError = (res.stderr || res.stdout || 'backlot_simulate_run failed').slice(0, 600);
+      }
     } else {
-      simulateError = (res.stderr || res.stdout || 'backlot_simulate_run failed').slice(0, 600);
+      simulateError = 'backlot_simulate_run.py not found';
     }
   } else {
-    simulateError = 'backlot_simulate_run.py not found';
+    simulateError = 'OpenMontage not cloned on this host';
   }
 
-  // Cloud/SaaS often lacks pytest (script imports sample_artifact from tests) — fall back to SI-native disk sim.
-  if (simulateError) {
+  // Cloud/SaaS: no vendor OpenMontage and/or missing pytest — use SI-native disk sim.
+  if (simulateError || !omRoot) {
     const { runSiNativeBacklotSimulate } = require('./siBacklotProject');
     const native = runSiNativeBacklotSimulate({ projectId, brief: opts.brief });
     if (!native.success) {
-      return { success: false, error: simulateError, nativeError: native.error };
+      return {
+        success: false,
+        error: native.error || simulateError || 'Backlot simulate failed',
+        pythonError: simulateError,
+      };
     }
     method = native.method || 'si-native';
     output = native.message || output;
@@ -281,10 +287,20 @@ async function openBacklotBoard(projectId = null) {
 }
 
 function resolveSiProjectDir(projectId) {
+  if (!projectId) return null;
+  const { resolveSiProjectsRoot } = require('./siBacklotProject');
+  const roots = [];
   const omRoot = resolveOpenMontageRoot();
-  if (!omRoot || !projectId) return null;
-  const dir = path.join(omRoot, 'projects', projectId);
-  return fs.existsSync(path.join(dir, 'project.json')) ? dir : (fs.existsSync(dir) ? dir : null);
+  if (omRoot) roots.push(path.join(omRoot, 'projects'));
+  try {
+    const siRoot = resolveSiProjectsRoot();
+    if (siRoot) roots.push(siRoot);
+  } catch { /* ignore */ }
+  for (const root of roots) {
+    const dir = path.join(root, projectId);
+    if (fs.existsSync(path.join(dir, 'project.json')) || fs.existsSync(dir)) return dir;
+  }
+  return null;
 }
 
 module.exports = {

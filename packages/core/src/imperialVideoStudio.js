@@ -534,12 +534,11 @@ function registerImperialVideoStudioHandlers({ ipcMain, generateAI, store }) {
     const job = readVideoJob(store) || {};
     const pid = projectId || job.backlotProjectId;
     if (!pid) return { success: false, error: 'No Backlot project — run pipeline or Watch simulated run first' };
-    const { resolveOpenMontageRoot } = require('./openMontageBridge');
     const { resolveSiProjectDir } = require('./backlotBridge');
-    const omRoot = resolveOpenMontageRoot();
-    if (!omRoot) return { success: false, error: 'OpenMontage not available' };
-    const projectDir = resolveSiProjectDir(pid) || require('path').join(omRoot, 'projects', pid);
-    if (!require('fs').existsSync(projectDir)) {
+    const { resolveSiProjectsRoot } = require('./siBacklotProject');
+    const projectDir = resolveSiProjectDir(pid)
+      || (resolveSiProjectsRoot() ? require('path').join(resolveSiProjectsRoot(), pid) : null);
+    if (!projectDir || !require('fs').existsSync(projectDir)) {
       return { success: false, error: `Project "${pid}" not found — run Watch simulated run first`, projectId: pid };
     }
     const approved = approveSiGate(projectDir, stage);
