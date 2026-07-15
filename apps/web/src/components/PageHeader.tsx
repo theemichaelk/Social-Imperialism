@@ -10,7 +10,7 @@ function navEyebrow(pathname: string): string {
   for (const section of NAV_SECTIONS) {
     if (section.items.some((item) => item.href === pathname)) return section.label;
   }
-  return 'Mission Control';
+  return 'Dashboard';
 }
 
 export function PageHeader({

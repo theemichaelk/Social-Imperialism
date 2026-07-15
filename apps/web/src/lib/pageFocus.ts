@@ -33,7 +33,7 @@ export const GLOBAL_FOCUS_PATH = [
 export const PAGE_FOCUS: Record<string, PageFocusConfig> = {
   '/dashboard': {
     id: 'dashboard',
-    title: 'Mission Control',
+    title: 'Dashboard',
     outcome: 'See what is happening right now and act on the highest-value opportunities.',
     subtitle: 'Real-time pulse — feed, worker, leads, and campaign health in one view.',
     flow: ['Overview', 'Live Feed', 'Draft & Engage', 'Worker', 'Analytics'],

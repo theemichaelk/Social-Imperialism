@@ -467,12 +467,82 @@ function DashboardPageInner() {
     || (domain as { data?: { mozDA?: number } }).data?.mozDA != null
     || (domain as { success?: boolean }).success === true;
 
+  /** Prefer keyword/API trending; fall back to daily social so the 2×4 grid stays populated. */
+  const trendingLiveItems = (trending.length ? trending : socialTrends).slice(0, 8);
+
   return (
     <div>
+      {/* Top: Today's outcome + Imperialism Center */}
+      <PageShell
+        title={campaign.brandName || 'Dashboard'}
+        subtitle={campaign.domain ? `${campaign.domain}` : undefined}
+        eyebrow="Dashboard"
+        useFocusSubtitle={false}
+        actions={
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <CampaignSwitcher onSwitch={() => refresh(false)} />
+            <button className="btn" onClick={() => refresh(false)} disabled={loading}>Quick Refresh</button>
+            <button className="btn primary" onClick={() => refresh(true)} disabled={loading || feedLoading}>
+              {feedLoading ? 'Scanning…' : 'Full Scan'}
+            </button>
+          </div>
+        }
+        focusStats={{
+          Drafts: stats.aiDrafts ?? 0,
+          Leads: stats.leadsGenerated ?? 0,
+          Queue: engagementQueue.length,
+        }}
+        onFocusAction={(a) => {
+          if (a.label === 'Full Scan') refresh(true);
+        }}
+        onFocusTab={setTabAndUrl}
+      />
+      <PredictiveMotivationPanel status={setup as Record<string, unknown>} />
       <CampaignMasteryPanel />
+
+      <ManageableTabNav
+        pageId="dashboard"
+        catalog={[...dashboardTabs]}
+        active={tab}
+        onChange={onDashboardTab}
+        grouped
+        focusTabIds={[...DASHBOARD_FOCUS_TABS]}
+        collapseGroups={[...DASHBOARD_COLLAPSE_GROUPS]}
+      />
+
+      {loadError && (
+        <div className="card" style={{ marginBottom: 12, borderColor: '#ef4444' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>
+            Dashboard sync error: {loadError}. Try{' '}
+            <button type="button" className="btn" onClick={() => refresh(false)} disabled={loading}>
+              {loading ? 'Refreshing…' : 'Quick Refresh'}
+            </button>
+            {' '}or log out and back in if this persists.
+          </p>
+        </div>
+      )}
+
+      {actionMsg && (
+        <div className="card" style={{ marginBottom: 12, borderColor: actionMsg.includes('success') || actionMsg.includes('Liked') || actionMsg.includes('scheduled') ? '#10b981' : '#f59e0b' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>{actionMsg}</p>
+        </div>
+      )}
 
       {tab === 'overview' && (
         <>
+        <SectionLivePanel section="dashboard" className="dash-section-live" />
+
+        {isSurfaceEnabled('dashboard') && accounts[0] && (
+          <div className="card" style={{ marginBottom: '1rem' }}>
+            <IntelligenceRecommendations
+              account={accounts[0]}
+              settings={settings}
+              title="Account intelligence — recommended next actions"
+              maxItems={3}
+            />
+          </div>
+        )}
+
         <div className="grid grid-2" style={{ marginBottom: 12 }}>
           <DataPanel title="Campaign Pulse" live>
             <p style={{ color: '#e2e8f0', fontSize: '0.95rem', margin: '0 0 8px' }}>
@@ -512,143 +582,118 @@ function DashboardPageInner() {
             ))}
           </DataPanel>
         </div>
+
         <div style={{ marginBottom: 12 }}>
-        <DataPanel title="Daily Social Trends LIVE" live>
-          <div className="dash-social-trends-header">
-            <p className="settings-panel-desc" style={{ margin: 0 }}>
-              Today&apos;s topics and hashtags — live from X, TikTok Creative Center, LinkedIn News, and web discovery
-            </p>
-            <div className="dash-social-trends-actions">
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => refreshSocialTrends(true)}
-                disabled={socialTrendsLoading}
-              >
-                {socialTrendsLoading ? 'Refreshing…' : 'Refresh trends'}
-              </button>
-              <button type="button" className="btn btn-sm" onClick={openTikTokTrendsLogin}>
-                Open TikTok login
-              </button>
+          <DataPanel title="Daily Social Trends LIVE" live>
+            <div className="dash-social-trends-header">
+              <p className="settings-panel-desc" style={{ margin: 0 }}>
+                Today&apos;s topics and hashtags — live from X, TikTok Creative Center, LinkedIn News, and web discovery
+              </p>
+              <div className="dash-social-trends-actions">
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => refreshSocialTrends(true)}
+                  disabled={socialTrendsLoading}
+                >
+                  {socialTrendsLoading ? 'Refreshing…' : 'Refresh trends'}
+                </button>
+                <button type="button" className="btn btn-sm" onClick={openTikTokTrendsLogin}>
+                  Open TikTok login
+                </button>
+              </div>
             </div>
-          </div>
-          {tiktokLoginMsg && (
-            <p className="settings-panel-desc" style={{ margin: '8px 0 0', color: '#38bdf8' }}>{tiktokLoginMsg}</p>
-          )}
-          <div className="dash-social-trends-grid">
-            {DAILY_SOCIAL_PLATFORMS.map((platform) => {
-              const items = socialTrends.filter((t) => t.platform === platform);
-              const tiktokLoginRequired = platform === 'TikTok' && socialTrendsMeta.tiktokNeedsLogin;
-              return (
-                <div key={platform} className="dash-social-trends-col">
-                  <h4 className="dash-social-trends-platform">{platform}</h4>
-                  {items.length ? items.map((t, i) => (
-                    <div key={`${platform}-${t.topic}-${i}`} className="dash-social-trend-item">
-                      <span className={`dash-social-trend-tag ${t.type === 'hashtag' ? 'is-hashtag' : ''}`}>
-                        {t.topic}
-                      </span>
-                      <span className="dash-social-trend-meta">{t.momentum || t.searchVolume || 'Live'}</span>
-                      {t.url ? (
-                        <a href={t.url} target="_blank" rel="noopener noreferrer" className="dash-social-trend-link">Open</a>
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          style={{ padding: '2px 6px', fontSize: '0.68rem' }}
-                          onClick={() => analyzeTopic(t.topic || '', platform)}
-                        >
-                          Analyze
-                        </button>
-                      )}
-                    </div>
-                  )) : (
-                    <p className="settings-panel-desc" style={{ margin: 0, fontSize: '0.78rem' }}>
-                      {socialTrendsLoading
-                        ? 'Scanning…'
-                        : tiktokLoginRequired
-                          ? 'Log in via Open TikTok login, then refresh.'
-                          : 'No live trends yet — try Refresh trends.'}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          {!socialTrends.length && !socialTrendsLoading && (
-            <p className="settings-panel-desc" style={{ marginBottom: 0, marginTop: 8 }}>
-              X and LinkedIn use live browser scraping. TikTok uses Creative Center (login once). Other platforms use SerpAPI or web search when keys are configured.
-            </p>
-          )}
-        </DataPanel>
+            {tiktokLoginMsg && (
+              <p className="settings-panel-desc" style={{ margin: '8px 0 0', color: '#38bdf8' }}>{tiktokLoginMsg}</p>
+            )}
+            <div className="dash-social-trends-grid">
+              {DAILY_SOCIAL_PLATFORMS.map((platform) => {
+                const items = socialTrends.filter((t) => t.platform === platform);
+                const tiktokLoginRequired = platform === 'TikTok' && socialTrendsMeta.tiktokNeedsLogin;
+                return (
+                  <div key={platform} className="dash-social-trends-col">
+                    <h4 className="dash-social-trends-platform">{platform}</h4>
+                    {items.length ? items.map((t, i) => (
+                      <div key={`${platform}-${t.topic}-${i}`} className="dash-social-trend-item">
+                        <span className={`dash-social-trend-tag ${t.type === 'hashtag' ? 'is-hashtag' : ''}`}>
+                          {t.topic}
+                        </span>
+                        <span className="dash-social-trend-meta">{t.momentum || t.searchVolume || 'Live'}</span>
+                        {t.url ? (
+                          <a href={t.url} target="_blank" rel="noopener noreferrer" className="dash-social-trend-link">Open</a>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            style={{ padding: '2px 6px', fontSize: '0.68rem' }}
+                            onClick={() => analyzeTopic(t.topic || '', platform)}
+                          >
+                            Analyze
+                          </button>
+                        )}
+                      </div>
+                    )) : (
+                      <p className="settings-panel-desc" style={{ margin: 0, fontSize: '0.78rem' }}>
+                        {socialTrendsLoading
+                          ? 'Scanning…'
+                          : tiktokLoginRequired
+                            ? 'Log in via Open TikTok login, then refresh.'
+                            : 'No live trends yet — try Refresh trends.'}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {!socialTrends.length && !socialTrendsLoading && (
+              <p className="settings-panel-desc" style={{ marginBottom: 0, marginTop: 8 }}>
+                X and LinkedIn use live browser scraping. TikTok uses Creative Center (login once). Other platforms use SerpAPI or web search when keys are configured.
+              </p>
+            )}
+          </DataPanel>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <DataPanel
+            title="Trending LIVE"
+            live
+            action={
+              <button type="button" className="btn btn-sm" onClick={() => refreshSocialTrends(false)} disabled={socialTrendsLoading}>
+                {socialTrendsLoading ? '…' : 'Sync'}
+              </button>
+            }
+          >
+            {trendingLiveItems.length ? (
+              <div className="dash-trending-live-grid">
+                {trendingLiveItems.map((t, i) => (
+                  <div key={`${t.platform || 't'}-${t.topic}-${i}`} className="dash-trending-live-cell">
+                    <span className="dash-trending-live-topic">
+                      {t.platform && <span className="badge" style={{ marginRight: 6 }}>{t.platform}</span>}
+                      {t.topic}
+                    </span>
+                    <span className="dash-trending-live-meta">
+                      {t.momentum || t.searchVolume || 'Live'}
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        style={{ marginLeft: 6, padding: '2px 6px', fontSize: '0.65rem' }}
+                        onClick={() => analyzeTopic(t.topic || '', t.platform || 'Twitter')}
+                      >
+                        Analyze
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="settings-panel-desc" style={{ margin: 0 }}>
+                Live from keywords + APIs — refresh Daily Social Trends above or run Full Scan.
+              </p>
+            )}
+          </DataPanel>
         </div>
       </>
       )}
-
-      <PageShell
-        title="Mission Control"
-        subtitle={`${campaign.brandName || 'Campaign'} · ${campaign.domain || 'no domain'}`}
-        useFocusSubtitle={false}
-        actions={
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <CampaignSwitcher onSwitch={() => refresh(false)} />
-            <button className="btn" onClick={() => refresh(false)} disabled={loading}>Quick Refresh</button>
-            <button className="btn primary" onClick={() => refresh(true)} disabled={loading || feedLoading}>
-              {feedLoading ? 'Scanning…' : 'Full Scan'}
-            </button>
-          </div>
-        }
-        focusStats={{
-          Drafts: stats.aiDrafts ?? 0,
-          Leads: stats.leadsGenerated ?? 0,
-          Queue: engagementQueue.length,
-        }}
-        onFocusAction={(a) => {
-          if (a.label === 'Full Scan') refresh(true);
-        }}
-        onFocusTab={setTabAndUrl}
-      />
-
-      <PredictiveMotivationPanel status={setup as Record<string, unknown>} />
-      <SectionLivePanel section="dashboard" className="dash-section-live" />
-
-      {loadError && (
-        <div className="card" style={{ marginBottom: 12, borderColor: '#ef4444' }}>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Mission Control sync error: {loadError}. Try{' '}
-            <button type="button" className="btn" onClick={() => refresh(false)} disabled={loading}>
-              {loading ? 'Refreshing…' : 'Quick Refresh'}
-            </button>
-            {' '}or log out and back in if this persists.
-          </p>
-        </div>
-      )}
-
-      {isSurfaceEnabled('dashboard') && accounts[0] && (
-        <div className="card" style={{ marginBottom: '1rem' }}>
-          <IntelligenceRecommendations
-            account={accounts[0]}
-            settings={settings}
-            title="Account intelligence — recommended next actions"
-            maxItems={3}
-          />
-        </div>
-      )}
-
-      {actionMsg && (
-        <div className="card" style={{ marginBottom: 12, borderColor: actionMsg.includes('success') || actionMsg.includes('Liked') || actionMsg.includes('scheduled') ? '#10b981' : '#f59e0b' }}>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>{actionMsg}</p>
-        </div>
-      )}
-
-      <ManageableTabNav
-        pageId="dashboard"
-        catalog={[...dashboardTabs]}
-        active={tab}
-        onChange={onDashboardTab}
-        grouped
-        focusTabIds={[...DASHBOARD_FOCUS_TABS]}
-        collapseGroups={[...DASHBOARD_COLLAPSE_GROUPS]}
-      />
 
       {tab === 'feed' && (
         <div className="grid grid-2">
@@ -946,7 +991,7 @@ export default function DashboardPage() {
   return (
     <Suspense fallback={
       <div className="dash-loading" style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Loading Mission Control…</p>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Loading dashboard…</p>
       </div>
     }>
       <DashboardPageInner />

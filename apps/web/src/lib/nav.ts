@@ -50,7 +50,7 @@ export function findActiveNavSectionId(ctx: NavActiveContext): string | undefine
 }
 
 export const NAV_SECTIONS: NavSection[] = [
-  { id: 'mission', label: 'Mission Control', items: [
+  { id: 'mission', label: 'Dashboard', items: [
     { id: 'dashboard', href: '/dashboard', icon: '🏠', label: 'Dashboard' },
     { id: 'browse-posts', href: '/browse-posts', icon: '🧭', label: 'Browse Posts' },
   ]},

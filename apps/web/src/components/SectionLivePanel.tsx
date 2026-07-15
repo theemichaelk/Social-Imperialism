@@ -52,7 +52,8 @@ const COMPACT: WidgetConfig = {
 const SECTION_WIDGETS: Record<string, WidgetConfig> = {
   dashboard: {
     tiles: true,
-    trending: true,
+    /** Trending LIVE is rendered under Daily Social Trends on the dashboard page (2×4 grid). */
+    trending: false,
     accounts: true,
     breakdown: true,
     scheduleWindows: false,
