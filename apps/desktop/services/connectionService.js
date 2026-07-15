@@ -30,6 +30,7 @@ const CONNECT_HINTS = {
   YouTube: 'Credentials tab: enter your Google email + password to sign in and pull every channel on that account. Add redirect URI http://127.0.0.1:42813/oauth/callback in Google Cloud and add yourself as a test user.',
   Quora: 'Username = Quora profile handle. SerpAPI key in Settings enables Q&A discovery. Answers queue to Content Hub for copy/post.',
   Reddit: 'Add redirect URI http://127.0.0.1:42813/oauth/callback in your Reddit app (reddit.com/prefs/apps), then use OAuth tab here.',
+  LinkedIn: 'OAuth: add LinkedIn Client ID + Secret in Integrations, then OAuth Connect. Token path: paste access token (AQW…) as password — not your LinkedIn website password.',
 };
 
 function validateConnectInput(platform, { email, password, username, method }, keys = {}) {

@@ -218,6 +218,22 @@ async function authenticateWithCredentials(platform, keys, { email, password, us
     );
   }
 
+  if (platform === 'LinkedIn' && pw && looksLikeLoginPassword(pw)) {
+    throw new Error(
+      'LinkedIn does not accept your website login password here. '
+      + 'Use OAuth Connect (add LinkedIn Client ID + Secret in Integrations first), '
+      + 'or paste a LinkedIn access token (starts with AQW…) in the password field.',
+    );
+  }
+
+  if ((platform === 'Facebook' || platform === 'Instagram' || platform === 'Threads') && pw && looksLikeLoginPassword(pw)) {
+    throw new Error(
+      `${platform} does not accept your website login password here. `
+      + 'Use OAuth Connect (Meta App ID + Secret in Integrations), '
+      + 'or paste a Meta access token (starts with EAA…) in the password field.',
+    );
+  }
+
   const tokenFromPassword = looksLikeAccessToken(pw) ? pw : null;
   const effectiveToken = tokenFromPassword || storedToken || null;
 

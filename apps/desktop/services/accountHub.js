@@ -27,15 +27,37 @@ function platformKeyStatus(keys) {
     Instagram: hasMetaKeys(keys),
     YouTube: hasYouTubeKeys(keys),
     Reddit: hasRedditKeys(keys),
-    TikTok: hasTikTokKeys(keys) || true,
-    Discord: !!(keys.discordClientId && keys.discordClientSecret) || !!keys.discordBotToken || true,
-    Pinterest: hasPinterestKeys(keys) || true,
+    // Only true when real credentials exist (do not force-green)
+    TikTok: hasTikTokKeys(keys),
+    Discord: !!(keys.discordClientId && keys.discordClientSecret) || !!keys.discordBotToken,
+    Pinterest: hasPinterestKeys(keys),
     Threads: hasMetaKeys(keys),
-    Telegram: true,
-    WhatsApp: true,
-    Snapchat: hasSnapchatKeys(keys) || true,
-    Quora: true,
-    Twitch: hasTwitchKeys(keys) || true,
+    Telegram: hasTelegramKeys(keys),
+    WhatsApp: hasWhatsAppKeys(keys),
+    Snapchat: hasSnapchatKeys(keys),
+    Quora: true, // browser-session path always available
+    Twitch: hasTwitchKeys(keys),
+  };
+}
+
+/** Client ID + Secret ready for SaaS/desktop OAuth popup (not token-only). */
+function platformOAuthReady(keys) {
+  return {
+    Twitter: !!(keys.twId && keys.twSecret),
+    LinkedIn: !!(keys.liId && keys.liSecret),
+    Facebook: !!(keys.fbId && keys.fbSecret),
+    Instagram: !!(keys.fbId && keys.fbSecret),
+    YouTube: !!(keys.ytId && keys.ytSecret),
+    Reddit: !!(keys.rdId && keys.rdSecret),
+    TikTok: !!(keys.tkId && keys.tkSecret),
+    Discord: !!(keys.discordClientId && keys.discordClientSecret),
+    Pinterest: !!(keys.pinterestAppId && keys.pinterestSecret),
+    Threads: !!(keys.fbId && keys.fbSecret),
+    Snapchat: !!(keys.snapchatClientId && keys.snapchatSecret),
+    Twitch: !!(keys.twitchClientId && keys.twitchClientSecret),
+    Telegram: false,
+    WhatsApp: false,
+    Quora: false,
   };
 }
 
@@ -48,15 +70,26 @@ function getAccountHubStatus(store) {
   } catch (e) {}
 
   const platformKeys = platformKeyStatus(keys);
+  const oauthReady = platformOAuthReady(keys);
   const configured = Object.values(platformKeys).filter(Boolean).length;
   const linkedPlatforms = new Set(accounts.map((a) => a.platform).filter(Boolean)).size;
+  const oauthConfigured = Object.values(oauthReady).filter(Boolean).length;
   return {
     accountCount: accounts.length,
     linkedPlatforms,
     configured,
+    oauthConfigured,
     platformKeys,
+    oauthReady,
     hasAnyKeys: configured > 0,
     oauthPlatforms: ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'Reddit', 'TikTok', 'Discord', 'Pinterest', 'Threads', 'Snapchat', 'Twitch'],
+    connectHints: {
+      LinkedIn: oauthReady.LinkedIn
+        ? 'OAuth Connect ready — authorize LinkedIn in the popup.'
+        : (keys.linkedinAccessToken
+          ? 'Token on file may be expired. Add LinkedIn Client ID + Secret in Integrations for OAuth, or paste a fresh AQW… token as password.'
+          : 'Add LinkedIn Client ID + Secret in Integrations → Social OAuth, then use OAuth Connect. Or paste access token (AQW…) as password.'),
+    },
   };
 }
 
@@ -132,5 +165,6 @@ module.exports = {
   getAccountHubStatus,
   refreshAccountProfile,
   platformKeyStatus,
+  platformOAuthReady,
   canConnectPlatform,
 };

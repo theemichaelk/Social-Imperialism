@@ -133,9 +133,16 @@ async function discoverAccounts(credentials, keys, openExternal, options = {}) {
     case 'LinkedIn': {
       const token = accessToken || keys.linkedinAccessToken;
       if (!token && !(keys.liId && keys.liSecret)) {
-        throw new Error('LinkedIn not configured. Add OAuth credentials or an access token in Settings.');
+        throw new Error('LinkedIn not configured. Add Client ID + Secret in Integrations (for OAuth) or paste an access token in the password field.');
       }
-      const accounts = await linkedin.discoverAccounts(keys, username, token);
+      if (!token) {
+        throw new Error('LinkedIn OAuth Client ID/Secret are set, but no access token yet. Use OAuth Connect in Account Hub (do not use website login password).');
+      }
+      // Never create ghost/placeholder accounts on failed or expired tokens
+      const accounts = await linkedin.discoverAccounts(keys, username, token, { allowPlaceholder: false });
+      if (!accounts?.length) {
+        throw new Error('LinkedIn returned no accounts. Token may be expired — re-authorize with OAuth Connect, or paste a fresh access token (AQW…).');
+      }
       return accounts.map((a) => ({
         ...a,
         loginEmail,

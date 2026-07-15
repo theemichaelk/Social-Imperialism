@@ -72,9 +72,13 @@ type AutomationTarget = {
 
 type HubStatus = {
   platformKeys?: Record<string, boolean>;
+  /** Client ID + Secret ready for OAuth popup (not token-only) */
+  oauthReady?: Record<string, boolean>;
   configured?: number;
+  oauthConfigured?: number;
   linkedPlatforms?: number;
   accountCount?: number;
+  connectHints?: Record<string, string>;
 };
 
 export default function AccountHubPage() {
@@ -246,6 +250,15 @@ export default function AccountHubPage() {
       setMsg('Select a proxy from the pool or connect without proxy');
       return;
     }
+    if (method === 'oauth' && hubStatus.oauthReady && hubStatus.oauthReady[connectPlatform] === false) {
+      setMsg(
+        `${connectPlatform} OAuth is not configured yet. Open Integrations → Social OAuth and add Client ID + Secret, then try OAuth Connect again. `
+        + (connectPlatform === 'LinkedIn'
+          ? 'Or paste a LinkedIn access token (AQW…) as password and use Email & Password.'
+          : 'Or paste an access token as password and use Email & Password.'),
+      );
+      return;
+    }
     setConnecting(true);
     setMsg(`Connecting ${connectPlatform}…`);
     try {
@@ -261,7 +274,10 @@ export default function AccountHubPage() {
           },
         );
         if (!begin.success || !begin.oauthUrl || !begin.state) {
-          setMsg(begin.error || 'OAuth not configured — add API keys in Settings → Integrations');
+          setMsg(
+            begin.error
+            || 'OAuth not configured — add Client ID + Secret in Integrations → Social OAuth, then retry.',
+          );
           return;
         }
         openOAuthPopup(begin.oauthUrl);
@@ -371,10 +387,14 @@ export default function AccountHubPage() {
   }
 
   const pk = hubStatus.platformKeys || {};
+  const oauthReady = hubStatus.oauthReady || {};
   const profile = normalizeProfile(selected?.profile);
   const linkedPlatformCount = new Set(accounts.map((a) => a.platform).filter(Boolean)).size;
   const keysConfigured = hubStatus.configured ?? Object.values(pk).filter(Boolean).length;
+  const oauthConfigured = hubStatus.oauthConfigured ?? Object.values(oauthReady).filter(Boolean).length;
   const needsRelink = profile?.needsRelink || profile?.authStatus;
+  const platformOAuthReady = oauthReady[connectPlatform] === true;
+  const dynamicHint = hubStatus.connectHints?.[connectPlatform] || connectHintFor(connectPlatform);
 
   async function removeDuplicateAccounts() {
     if (!window.confirm('Remove duplicate linked accounts (same platform + OAuth connection)?')) return;
@@ -395,12 +415,13 @@ export default function AccountHubPage() {
       <SectionLivePanel section="account-hub" />
 
       <div className="card" style={{ marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.85rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.85rem', alignItems: 'center' }}>
           {['Twitter', 'LinkedIn', 'Facebook', 'Reddit', 'YouTube'].map((p) => (
-            <span key={p} className={`badge ${pk[p] ? 'status-ok' : ''}`} style={{ opacity: pk[p] ? 1 : 0.5 }}>
-              {pk[p] ? '●' : '○'} {p}
+            <span key={p} className={`badge ${oauthReady[p] ? 'status-ok' : pk[p] ? '' : ''}`} style={{ opacity: oauthReady[p] || pk[p] ? 1 : 0.5 }} title={oauthReady[p] ? 'OAuth ready' : pk[p] ? 'Token/API key present' : 'Not configured'}>
+              {oauthReady[p] ? '● OAuth' : pk[p] ? '◐ Key' : '○'} {p}
             </span>
           ))}
+          <Link href="/integrations" className="btn" style={{ fontSize: '0.8rem', marginLeft: 'auto' }}>Integrations →</Link>
         </div>
       </div>
 
@@ -408,7 +429,7 @@ export default function AccountHubPage() {
         <div className="card kpi"><div className="kpi-val">{accounts.length}</div><div className="kpi-label">Linked</div></div>
         <div className="card kpi"><div className="kpi-val">{linkedPlatformCount}</div><div className="kpi-label">Platforms live</div></div>
         <div className="card kpi"><div className="kpi-val">{keysConfigured}</div><div className="kpi-label">API keys ready</div></div>
-        <div className="card kpi"><div className="kpi-val status-ok">Live</div><div className="kpi-label">Hub Status</div></div>
+        <div className="card kpi"><div className="kpi-val">{oauthConfigured}</div><div className="kpi-label">OAuth apps ready</div></div>
       </div>
 
       <div className="grid grid-2">
@@ -479,11 +500,32 @@ export default function AccountHubPage() {
             {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
           <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: 10, lineHeight: 1.45 }}>
-            {connectHintFor(connectPlatform)}
+            {dynamicHint}
           </p>
+          {!platformOAuthReady && !['Telegram', 'WhatsApp', 'Quora'].includes(connectPlatform) && (
+            <p style={{ fontSize: '0.8rem', color: '#fbbf24', marginBottom: 10, lineHeight: 1.45 }}>
+              OAuth Connect needs Client ID + Secret in{' '}
+              <Link href="/integrations">Integrations → Social OAuth</Link>
+              {connectPlatform === 'LinkedIn' ? ' (LinkedIn Client ID + Secret).' : '.'}
+              {' '}Token path still works if you paste a valid access token as password.
+            </p>
+          )}
           <input className="input" placeholder={connectPlatform === 'YouTube' ? 'Google email' : 'Email (optional)'} value={creds.email} onChange={(e) => setCreds({ ...creds, email: e.target.value })} style={{ marginBottom: 8 }} />
           <input className="input" placeholder="Username / @handle (optional)" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} style={{ marginBottom: 8 }} />
-          <input className="input" type="password" placeholder={connectPlatform === 'YouTube' ? 'Google password (Email & Password tab)' : 'Password or API token'} value={creds.password} onChange={(e) => setCreds({ ...creds, password: e.target.value })} style={{ marginBottom: 8 }} />
+          <input
+            className="input"
+            type="password"
+            placeholder={
+              connectPlatform === 'YouTube'
+                ? 'Google password (Email & Password tab)'
+                : connectPlatform === 'LinkedIn'
+                  ? 'LinkedIn access token (AQW…) — not website password'
+                  : 'Access token (or password where supported)'
+            }
+            value={creds.password}
+            onChange={(e) => setCreds({ ...creds, password: e.target.value })}
+            style={{ marginBottom: 8 }}
+          />
 
           <div className="card" style={{ marginBottom: 12, padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.45)' }}>
             <h4 style={{ margin: '0 0 8px', fontSize: '0.9rem' }}>Connection route (Proxy / IP)</h4>
@@ -513,14 +555,23 @@ export default function AccountHubPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn primary" onClick={() => connect('oauth')} disabled={connecting}>
-              {connecting ? 'Connecting…' : 'OAuth Connect'}
+            <button
+              className="btn primary"
+              onClick={() => connect('oauth')}
+              disabled={connecting}
+              title={platformOAuthReady ? 'Authorize via OAuth popup' : 'Add Client ID + Secret in Integrations first'}
+            >
+              {connecting ? 'Connecting…' : platformOAuthReady ? 'OAuth Connect' : 'OAuth Connect (setup needed)'}
             </button>
             <button className="btn" onClick={() => connect('credentials')} disabled={connecting}>
               {connecting ? 'Connecting…' : 'Email & Password'}
             </button>
           </div>
-          {msg && <p style={{ marginTop: 8, color: '#94a3b8', fontSize: '0.85rem' }}>{msg}</p>}
+          {msg && (
+            <p style={{ marginTop: 8, color: msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('not') || msg.toLowerCase().includes('error') || msg.toLowerCase().includes('expired') ? '#fbbf24' : '#94a3b8', fontSize: '0.85rem', lineHeight: 1.45 }}>
+              {msg}
+            </p>
+          )}
         </div>
       </div>
 

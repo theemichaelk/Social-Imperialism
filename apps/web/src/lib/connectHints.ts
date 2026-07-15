@@ -15,7 +15,7 @@ export const CONNECT_HINTS: Record<string, string> = {
   Twitch: 'OAuth: Twitch Client ID/Secret in Settings → Integrations.',
   Reddit: 'Email & Password: username + password or token. OAuth: add redirect URI in Reddit app settings.',
   Quora: 'Email & Password: Quora email + password opens a browser session to save cookies.',
-  LinkedIn: 'OAuth recommended. Email & Password: paste LinkedIn access token as password.',
+  LinkedIn: 'OAuth recommended: add Client ID + Secret under Integrations → Social OAuth, then OAuth Connect. Token path: paste access token (AQW…) as password — not your website password.',
   Discord: 'OAuth or paste bot token as password.',
 };
 

@@ -36,7 +36,9 @@ export const INTEGRATION_GROUPS: IntegrationGroup[] = [
     icon: '🌐',
     color: '#34d399',
     fields: [
-      { key: 'linkedinAccessToken', label: 'LinkedIn Access Token', type: 'password', metric: 'LinkedIn' },
+      { key: 'liId', label: 'LinkedIn Client ID', type: 'text', metric: 'LinkedIn', hint: 'LinkedIn Developer App → Auth. Required for OAuth Connect in Account Hub. Add redirect URI: https://www.socialimperialism.com/oauth/callback' },
+      { key: 'liSecret', label: 'LinkedIn Client Secret', type: 'password', metric: 'LinkedIn', hint: 'Pair with Client ID for OAuth. Products: Sign In with LinkedIn + Share on LinkedIn / Community Management as needed.' },
+      { key: 'linkedinAccessToken', label: 'LinkedIn Access Token (optional)', type: 'password', metric: 'LinkedIn', hint: 'Optional fallback if you already have a token (AQW…). Prefer OAuth Connect so tokens refresh correctly.' },
       { key: 'twId', label: 'Twitter / X Client ID', type: 'text', metric: 'Twitter / X' },
       { key: 'twSecret', label: 'Twitter / X Client Secret', type: 'password', metric: 'Twitter / X' },
       { key: 'twBearer', label: 'Twitter Bearer Token', type: 'password', metric: 'Twitter / X' },
