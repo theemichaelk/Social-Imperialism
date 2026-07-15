@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
 
+# Public discovery — blog articles + marketing pages (not private app modules)
 Sitemap: https://www.socialimperialism.com/sitemap.xml
+
+# RSS (all published articles): https://www.socialimperialism.com/feed.xml

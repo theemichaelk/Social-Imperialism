@@ -5,12 +5,17 @@ import { NavAnchor } from '@/components/NavAnchor';
 import { HomeFooter } from '@/components/HomeFooter';
 import { HomePublicNav } from '@/components/HomePublicNav';
 import { BLOG_POSTS, BLOG_SILOS, type BlogSilo } from '@/lib/blogPosts';
+import { getArticleDiscoveryCoverage, getPublicDiscoveryStats } from '@/lib/publicSiteFeed';
 import { SITE_BRAND } from '@/lib/siteBlueprint';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function BlogIndexPage() {
   const [filter, setFilter] = useState<BlogSilo | 'all'>('all');
   const posts = filter === 'all' ? BLOG_POSTS : BLOG_POSTS.filter((p) => p.silo === filter);
+  const coverage = useMemo(() => getArticleDiscoveryCoverage(), []);
+  const stats = useMemo(() => getPublicDiscoveryStats(), []);
+  const articleCount = coverage.articleCount || BLOG_POSTS.length;
+  const allIndexed = coverage.allInSitemap && coverage.allInRss;
 
   return (
     <div className="home-page blog-index-page">
@@ -25,11 +30,13 @@ export default function BlogIndexPage() {
           <span className="home-section-eyebrow">Insights</span>
           <h1>{SITE_BRAND.name} Blog</h1>
           <p className="blog-index-lead">
-            Ten SEO-optimized guides on AI social automation, multi-platform publishing, growth prospecting,
-            analytics, and silo architecture — built for teams running mission-control workflows.
+            {articleCount} SEO-optimized guides on AI social automation, multi-platform publishing, growth prospecting,
+            analytics, and silo architecture — built for teams running growth workflows.
           </p>
           <div className="blog-silo-tabs">
-            <button type="button" className={`tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All</button>
+            <button type="button" className={`tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
+              All ({BLOG_POSTS.length})
+            </button>
             {(Object.keys(BLOG_SILOS) as BlogSilo[]).map((silo) => (
               <button
                 key={silo}
@@ -37,7 +44,7 @@ export default function BlogIndexPage() {
                 className={`tab ${filter === silo ? 'active' : ''}`}
                 onClick={() => setFilter(silo)}
               >
-                {BLOG_SILOS[silo].label}
+                {BLOG_SILOS[silo].label} ({BLOG_POSTS.filter((p) => p.silo === silo).length})
               </button>
             ))}
           </div>
@@ -75,13 +82,37 @@ export default function BlogIndexPage() {
 
       <section className="home-section">
         <div className="home-container home-glass-panel blog-discovery">
-          <h2>Discovery</h2>
+          <h2>Discovery &amp; indexing</h2>
           <p>
-            All articles are indexed in our{' '}
-            <NavAnchor href="/sitemap.html">HTML sitemap</NavAnchor>,{' '}
+            {allIndexed
+              ? `All ${articleCount} articles are indexed in our `
+              : `${articleCount} articles are published. Index coverage: `}
+            <NavAnchor href="/sitemap.html">HTML sitemap</NavAnchor>
+            {' '}({stats.sitemapTotal} public URLs),{' '}
             <NavAnchor href="/sitemap.xml">XML sitemap</NavAnchor>, and{' '}
-            <NavAnchor href="/feed.xml">RSS feed</NavAnchor>.
+            <NavAnchor href="/feed.xml">RSS feed</NavAnchor>
+            {' '}({stats.feedTotal} article items)
+            {allIndexed ? '.' : ' — verify missing slugs after deploy.'}
           </p>
+          <ul className="blog-discovery-list" style={{ margin: '12px 0 0', paddingLeft: '1.2rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+            <li>
+              <strong style={{ color: '#cbd5e1' }}>HTML</strong> — human-readable, grouped by blog / marketing / legal
+            </li>
+            <li>
+              <strong style={{ color: '#cbd5e1' }}>XML</strong> — for Google Search Console &amp; other crawlers (
+              <code style={{ color: '#64748b' }}>robots.txt</code> points here)
+            </li>
+            <li>
+              <strong style={{ color: '#cbd5e1' }}>RSS</strong> — subscribe in any reader at{' '}
+              <NavAnchor href="/feed.xml">/feed.xml</NavAnchor>
+            </li>
+          </ul>
+          {!allIndexed && (coverage.missingSitemap.length > 0 || coverage.missingRss.length > 0) && (
+            <p style={{ marginTop: 10, color: '#fbbf24', fontSize: '0.85rem' }}>
+              Coverage gap — sitemap missing: {coverage.missingSitemap.join(', ') || 'none'}; RSS missing:{' '}
+              {coverage.missingRss.join(', ') || 'none'}.
+            </p>
+          )}
         </div>
       </section>
 

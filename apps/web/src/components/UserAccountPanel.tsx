@@ -148,12 +148,12 @@ export function UserAccountPanel({ compact = false }: { compact?: boolean }) {
       <div className="card" style={{ marginTop: '1rem' }}>
         <h3 style={{ marginTop: 0 }}>Site discovery — sitemap &amp; feed</h3>
         <p style={{ color: '#94a3b8', fontSize: '0.88rem', marginTop: 0 }}>
-          Public routes for search engines and RSS readers. Sitemap includes {discovery.staticRoutes} static pages
-          plus {discovery.moduleRoutes} module routes; the RSS feed lists the home entry plus {discovery.feedModules} modules.
+          Public SEO discovery only (marketing + blog). Sitemap lists {discovery.sitemapTotal} crawlable URLs;
+          RSS lists {discovery.feedTotal} published articles. Private app modules are excluded from the public sitemap.
         </p>
         <div className="grid grid-2" style={{ marginBottom: 12 }}>
-          <MetricTile label="Sitemap URLs" value={discovery.sitemapTotal} sub="/sitemap.html" />
-          <MetricTile label="Feed items" value={discovery.feedTotal} sub="/feed.xml" />
+          <MetricTile label="Sitemap URLs" value={discovery.sitemapTotal} sub="/sitemap.html · /sitemap.xml" />
+          <MetricTile label="RSS articles" value={discovery.feedTotal} sub="/feed.xml" />
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a href="/sitemap.html" target="_blank" rel="noopener noreferrer" className="btn primary">Open sitemap.html</a>
