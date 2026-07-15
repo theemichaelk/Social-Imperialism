@@ -106,6 +106,7 @@ export default function BlogIndexPage() {
                     alt={post.title}
                     width={400}
                     height={220}
+                    unoptimized
                     className="blog-card-img"
                   />
                   <span className="blog-card-silo">{post.siloLabel}</span>

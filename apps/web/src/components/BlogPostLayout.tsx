@@ -3,6 +3,7 @@ import { NavAnchor } from '@/components/NavAnchor';
 import { HomeFooter } from '@/components/HomeFooter';
 import { HomePublicNav } from '@/components/HomePublicNav';
 import { BlogArticleSidebar } from '@/components/BlogArticleSidebar';
+import { BlogInlineSiloLinks } from '@/components/BlogInlineSiloLinks';
 import type { BlogPostMeta } from '@/lib/blogPosts';
 import type { BlogArticleBody } from '@/content/blog/articles';
 import {
@@ -31,7 +32,6 @@ function midImageSlots(slug: string, sectionCount: number): [number, number] {
 
 export function BlogPostLayout({ post, loggedIn = false }: Props) {
   const published = getPublishedPosts();
-  // Prefer same-silo, then fill to 8 cards for a full 4×2 Related Topics grid
   const related = (() => {
     const same = getPostsBySilo(post.silo).filter((p) => p.slug !== post.slug);
     const others = published.filter((p) => p.silo !== post.silo && p.slug !== post.slug);
@@ -48,6 +48,8 @@ export function BlogPostLayout({ post, loggedIn = false }: Props) {
 
   const [imgSlotA, imgSlotB] = midImageSlots(post.slug, post.body.sections.length);
   const otherSilos = (Object.keys(BLOG_SILOS) as BlogSilo[]).filter((s) => s !== post.silo).slice(0, 3);
+  const midSection = Math.floor(post.body.sections.length / 2);
+  const lateSection = Math.max(midSection + 1, post.body.sections.length - 2);
 
   return (
     <div className="home-page blog-page si-blog-page">
@@ -88,23 +90,14 @@ export function BlogPostLayout({ post, loggedIn = false }: Props) {
               </div>
             </header>
 
-            <nav className="si-silo-crosslinks" aria-label="Related silos">
-              <span className="si-silo-crosslinks__label">Related silos:</span>
+            <nav className="si-silo-crosslinks" aria-label="Related topics">
+              <span className="si-silo-crosslinks__label">Also explore:</span>
               {otherSilos.map((s) => (
                 <NavAnchor key={s} href={`/blog?silo=${s}`} className="si-silo-crosslink" rel="related">
                   {BLOG_SILOS[s].label}
                 </NavAnchor>
               ))}
             </nav>
-            <p className="si-silo-cluster-hub">
-              <span className="si-silo-cluster-hub__label">Silo cluster:</span>{' '}
-              <NavAnchor href={`/#features`}>{post.siloLabel} · Social Imperialism</NavAnchor>
-            </p>
-            <p className="si-silo-article-hub">
-              <NavAnchor href={`/blog?silo=${post.silo}`}>Browse all {post.siloLabel} coverage</NavAnchor>
-              {' · '}
-              <NavAnchor href="/">Homepage {post.siloLabel} section</NavAnchor>
-            </p>
 
             {(post.aeoAnswer || post.geoLead) && (
               <>
@@ -142,28 +135,13 @@ export function BlogPostLayout({ post, loggedIn = false }: Props) {
               <Image
                 src={post.headerImage}
                 alt={post.title}
-                width={900}
-                height={400}
+                width={1200}
+                height={560}
                 priority
+                unoptimized
                 className="si-article-hero-img"
                 itemProp="image"
               />
-            </div>
-
-            <div className="si-article-silo-links home-glass-panel">
-              <h2>Silo links</h2>
-              <ul className="blog-silo-links-list">
-                {post.siloLinks.map((link) => (
-                  <li key={link.href + link.label}>
-                    <span className={`blog-link-badge blog-link-${link.kind}`}>{link.kind}</span>
-                    {link.kind === 'authority' ? (
-                      <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
-                    ) : (
-                      <NavAnchor href={link.href}>{link.label}</NavAnchor>
-                    )}
-                  </li>
-                ))}
-              </ul>
             </div>
 
             <div className="si-article-body" itemProp="articleBody">
@@ -174,32 +152,44 @@ export function BlogPostLayout({ post, loggedIn = false }: Props) {
                     {section.paragraphs.map((para, pIdx) => (
                       <p key={`${post.slug}-p-${idx}-${pIdx}`} className="blog-para">{para}</p>
                     ))}
+                    {/* Intelligent silo placement inside the narrative — never a labeled “Silo links” box */}
+                    {idx === 0 && post.siloLinks?.length ? (
+                      <BlogInlineSiloLinks links={post.siloLinks} placement="early" />
+                    ) : null}
+                    {idx === midSection && post.siloLinks?.length ? (
+                      <BlogInlineSiloLinks links={post.siloLinks} placement="mid" />
+                    ) : null}
+                    {idx === lateSection && post.siloLinks?.length ? (
+                      <BlogInlineSiloLinks links={post.siloLinks} placement="late" />
+                    ) : null}
                   </section>
                   {idx === imgSlotA && (
                     <figure className="si-inline-figure">
                       <Image
                         src={post.midImage1 || post.thumbnail}
-                        alt={`${post.title} — illustration`}
-                        width={880}
-                        height={420}
+                        alt={`${post.title} — news visual`}
+                        width={1200}
+                        height={640}
+                        unoptimized
                         className="si-inline-img"
                       />
-                      <figcaption>{post.midImage1Caption || 'Field illustration — operational systems in practice.'}</figcaption>
+                      <figcaption>{post.midImage1Caption || 'News visual for this briefing.'}</figcaption>
                     </figure>
                   )}
                   {idx === imgSlotB && (
                     <figure className="si-inline-figure">
                       <Image
                         src={post.midImage2 || post.bottomImage}
-                        alt={`${post.title} — supporting visual`}
-                        width={880}
-                        height={420}
+                        alt={`${post.title} — supporting news visual`}
+                        width={1200}
+                        height={640}
+                        unoptimized
                         className="si-inline-img"
                       />
-                      <figcaption>{post.midImage2Caption || 'Supporting visual — measurement and iteration loops.'}</figcaption>
+                      <figcaption>{post.midImage2Caption || 'Supporting news graphic.'}</figcaption>
                     </figure>
                   )}
-                  {idx === Math.floor(post.body.sections.length / 2) && post.videoUrl && (
+                  {idx === midSection && post.videoUrl && (
                     <figure className="blog-video-embed">
                       <video
                         src={post.videoUrl}
@@ -223,7 +213,7 @@ export function BlogPostLayout({ post, loggedIn = false }: Props) {
                   <div>
                     <h2>Related Topics</h2>
                     <p className="si-article-related__sub">
-                      More from {post.siloLabel} and adjacent growth systems — 4 × 2 coverage grid
+                      More from {post.siloLabel} and adjacent growth systems
                     </p>
                   </div>
                   <NavAnchor href={`/blog?silo=${post.silo}`} className="si-article-related__all">
@@ -239,6 +229,7 @@ export function BlogPostLayout({ post, loggedIn = false }: Props) {
                           alt=""
                           width={400}
                           height={225}
+                          unoptimized
                           className="si-related-card__img"
                         />
                       </NavAnchor>
@@ -274,7 +265,11 @@ export function BlogJsonLd({ post, baseUrl }: { post: BlogPostMeta; baseUrl: str
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.description,
-    image: [`${baseUrl}${post.headerImage}`, `${baseUrl}${post.midImage1 || post.thumbnail}`, `${baseUrl}${post.midImage2 || post.bottomImage}`],
+    image: [
+      `${baseUrl}${post.headerImage}`,
+      `${baseUrl}${post.midImage1 || post.thumbnail}`,
+      `${baseUrl}${post.midImage2 || post.bottomImage}`,
+    ],
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
     author: {

@@ -106,6 +106,9 @@ export const FOOTER_LINKS = [
   { href: '/login', label: 'Sign In' },
   { href: '/download', label: 'Download Desktop' },
   { href: '/founder', label: 'Founder' },
+  { href: '/sitemap.html', label: 'HTML Sitemap' },
+  { href: '/sitemap.xml', label: 'XML Sitemap' },
+  { href: '/feed.xml', label: 'RSS Feed' },
   ...FOOTER_LEGAL_LINKS,
 ] as const;
 

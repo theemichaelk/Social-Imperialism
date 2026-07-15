@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1f1a"/>
+      <stop offset="55%" stop-color="#14b8a6" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#5eead4" stop-opacity="0.75"/>
+    </linearGradient>
+    <radialGradient id="r" cx="80%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="#5eead4" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#0a1f1a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#g)"/>
+  <rect width="800" height="450" fill="url(#r)"/>
+  <rect x="0" y="0" width="8" height="450" fill="#14b8a6"/>
+  <text x="64" y="72" fill="#5eead4" font-family="Segoe UI, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="3">GROWTH · NEWS</text>
+  <text x="64" y="189" fill="#f8fafc" font-family="Segoe UI, system-ui, sans-serif" font-size="28" font-weight="700">Keyword Intelligence for</text>
+<text x="64" y="225" fill="#f8fafc" font-family="Segoe UI, system-ui, sans-serif" font-size="28" font-weight="700">Social Growth in 2026</text>
+  <text x="64" y="402" fill="#94a3b8" font-family="Segoe UI, system-ui, sans-serif" font-size="16">Social Imperialism · AEO / GEO Intelligence</text>
+  <circle cx="680" cy="350" r="54" fill="none" stroke="#14b8a6" stroke-width="2" opacity="0.5"/>
+  <circle cx="710" cy="110" r="28" fill="none" stroke="#5eead4" stroke-width="2" opacity="0.4"/>
+</svg>

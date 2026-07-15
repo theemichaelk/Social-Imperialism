@@ -1986,6 +1986,18 @@ textarea.input { min-height: 100px; resize: vertical; }
 }
 .home-footer-legal a:hover { color: var(--accent); }
 .home-page .home-footer-legal a { text-decoration: none; }
+.home-footer-discovery {
+  display: flex; flex-wrap: wrap; gap: 0.75rem 1.1rem; justify-content: center;
+  margin: 0.65rem 0 0.35rem;
+}
+.home-footer-discovery a {
+  color: #7dd3fc; text-decoration: none; font-size: 0.85rem; font-weight: 600;
+  padding: 0.2rem 0.55rem; border-radius: 999px;
+  border: 1px solid rgba(56,189,248,0.28); background: rgba(15,23,42,0.45);
+}
+.home-footer-discovery a:hover { color: #fff; border-color: rgba(56,189,248,0.55); }
+.si-inline-silo-prose a { color: #38bdf8; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.si-inline-silo-prose a:hover { color: #7dd3fc; }
 .home-footer-copy { color: #64748b; font-size: 0.78rem; margin: 0; }
 .home-footer .home-footer-copy + .home-footer-copy { margin-top: 0.35rem; }
 .home-footer-copy a, .app-footer-credit a, .login-footer-credit a { color: var(--accent); text-decoration: none; }
@@ -2167,14 +2179,19 @@ textarea.input { min-height: 100px; resize: vertical; }
   position: relative;
   align-self: start;
 }
-.si-blog-sidebar__sticky {
-  /* Clear sticky site nav (~64px) so Explore tracks scroll on desktop */
-  position: sticky; top: 5.25rem; max-height: calc(100vh - 5.75rem); overflow-y: auto;
+.si-blog-sidebar__sticky,
+.si-blog-sidebar__sticky--live {
+  /* Clear sticky site nav; JS also updates --top for live scroll tracking */
+  position: sticky;
+  top: var(--si-sticky-top, 5.25rem);
+  max-height: calc(100vh - var(--si-sticky-top, 5.25rem) - 1rem);
+  overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid rgba(56,189,248,0.2); border-radius: 16px;
   background: rgba(15,23,42,0.92); backdrop-filter: blur(10px);
   padding: 1rem 0.95rem 1.15rem; display: flex; flex-direction: column; gap: 0.85rem;
   z-index: 5;
+  will-change: top;
 }
 .si-blog-sidebar__title { margin: 0; font-size: 1.05rem; letter-spacing: -0.01em; }
 .si-sidebar-widget {

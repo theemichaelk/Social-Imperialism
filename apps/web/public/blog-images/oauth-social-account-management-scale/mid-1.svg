@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="55%" stop-color="#0ea5e9" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.75"/>
+    </linearGradient>
+    <radialGradient id="r" cx="80%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#0b1220" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="640" fill="url(#g)"/>
+  <rect width="1200" height="640" fill="url(#r)"/>
+  <rect x="0" y="0" width="8" height="640" fill="#0ea5e9"/>
+  <text x="64" y="72" fill="#22d3ee" font-family="Segoe UI, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="3">PLATFORMS · NEWS</text>
+  <text x="64" y="268.8" fill="#f8fafc" font-family="Segoe UI, system-ui, sans-serif" font-size="40" font-weight="700">OAuth Social Account Management at Scale</text>
+  <text x="64" y="592" fill="#94a3b8" font-family="Segoe UI, system-ui, sans-serif" font-size="16">Social Imperialism · AEO / GEO Intelligence</text>
+  <circle cx="1080" cy="540" r="54" fill="none" stroke="#0ea5e9" stroke-width="2" opacity="0.5"/>
+  <circle cx="1110" cy="110" r="28" fill="none" stroke="#22d3ee" stroke-width="2" opacity="0.4"/>
+</svg>

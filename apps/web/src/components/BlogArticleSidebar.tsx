@@ -11,6 +11,7 @@ import {
   type BlogSilo,
 } from '@/lib/blogPosts';
 import { SITE_BRAND } from '@/lib/siteBlueprint';
+import { StickyExploreRail } from '@/components/StickyExploreRail';
 
 type Props = {
   post: BlogPostMeta;
@@ -45,8 +46,7 @@ export function BlogArticleSidebar({ post }: Props) {
   }, [q, published]);
 
   return (
-    <aside id="article-sidebar" className="si-blog-sidebar" aria-label="Blog sidebar">
-      <div className="si-blog-sidebar__sticky">
+    <StickyExploreRail>
         <header className="si-blog-sidebar__head">
           <h2 className="si-blog-sidebar__title">Explore</h2>
         </header>
@@ -177,10 +177,9 @@ export function BlogArticleSidebar({ post }: Props) {
             <NavAnchor href="/blog">Blog index</NavAnchor>
             <NavAnchor href="/sitemap.html">HTML sitemap</NavAnchor>
             <a href="/sitemap.xml">XML sitemap</a>
-            <a href="/feed.xml">RSS</a>
+            <a href="/feed.xml">RSS feed</a>
           </div>
         </section>
-      </div>
-    </aside>
+    </StickyExploreRail>
   );
 }

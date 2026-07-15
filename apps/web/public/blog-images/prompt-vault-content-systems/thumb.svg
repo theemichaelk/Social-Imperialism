@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="55%" stop-color="#a855f7" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#f472b6" stop-opacity="0.75"/>
+    </linearGradient>
+    <radialGradient id="r" cx="80%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="#f472b6" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#111827" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#g)"/>
+  <rect width="800" height="450" fill="url(#r)"/>
+  <rect x="0" y="0" width="8" height="450" fill="#a855f7"/>
+  <text x="64" y="72" fill="#f472b6" font-family="Segoe UI, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="3">AUTOMATION · NEWS</text>
+  <text x="64" y="189" fill="#f8fafc" font-family="Segoe UI, system-ui, sans-serif" font-size="28" font-weight="700">Prompt Vault Systems for</text>
+<text x="64" y="225" fill="#f8fafc" font-family="Segoe UI, system-ui, sans-serif" font-size="28" font-weight="700">Consistent Brand Voice at</text>
+<text x="64" y="261" fill="#f8fafc" font-family="Segoe UI, system-ui, sans-serif" font-size="28" font-weight="700">Scale</text>
+  <text x="64" y="402" fill="#94a3b8" font-family="Segoe UI, system-ui, sans-serif" font-size="16">Social Imperialism · AEO / GEO Intelligence</text>
+  <circle cx="680" cy="350" r="54" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.5"/>
+  <circle cx="710" cy="110" r="28" fill="none" stroke="#f472b6" stroke-width="2" opacity="0.4"/>
+</svg>

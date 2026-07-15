@@ -202,7 +202,7 @@ export default function HomePage() {
               <article key={post.slug} className="home-glass-panel blog-card">
                 <NavAnchor href={`/blog/${post.slug}`} className="blog-card-link">
                   <div className="blog-card-thumb">
-                    <Image src={post.thumbnail} alt={post.title} width={400} height={220} className="blog-card-img" />
+                    <Image src={post.thumbnail} alt={post.title} width={400} height={220} unoptimized className="blog-card-img" />
                     <span className="blog-card-silo">{post.siloLabel}</span>
                   </div>
                   <div className="blog-card-body">
