@@ -58,6 +58,8 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
     platformSchedule[plat] = (platformSchedule[plat] || 0) + 1;
   });
 
+  // API health (connected/total/pct) is Settings → Live Audit only — never attach to module live panels.
+  const isSettingsAudit = section === 'settings' || section === 'settings-audit' || section === 'integrations';
   const base = {
     section,
     updatedAt: new Date().toISOString(),
@@ -70,14 +72,17 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
       library: library.length,
       monitors: monitors.length,
       queue: engagementQueue.length,
-      apiConnected: connectedApis,
-      apiTotal: Object.keys(apiMetrics).length,
+      ...(isSettingsAudit ? {
+        apiConnected: connectedApis,
+        apiTotal: Object.keys(apiMetrics).length,
+      } : {}),
     },
     platformSchedule,
     accounts: linkedAccounts.map((a) => ({
       id: a.id, platform: a.platform, handle: a.handle, status: a.status || 'connected',
     })),
-    apiMetrics,
+    // Keep raw metrics only for settings/integrations audit surfaces
+    ...(isSettingsAudit ? { apiMetrics } : {}),
   };
 
   switch (section) {
@@ -256,8 +261,10 @@ function buildSectionMetrics(store, activeId, section, keys, buildApiMetrics) {
     }
     case 'integrations':
     case 'settings':
+    case 'settings-audit':
       return {
         ...base,
+        // Used only by Settings → Live Audit (SettingsLiveProbes); not by SectionLivePanel modules.
         apiHealth: {
           connected: connectedApis,
           total: Object.keys(apiMetrics).length,

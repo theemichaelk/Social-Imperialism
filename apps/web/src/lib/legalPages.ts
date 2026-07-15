@@ -71,7 +71,7 @@ export function getContactPageContent(): StaticPageContent {
         bullets: [
           'Open Support from the sidebar after signing in',
           'Use the Setup Wizard for first-time brand and API wiring',
-          'Check Integrations → Live Probes for API health',
+          'Check Settings → Live Audit for API health',
         ],
       },
       {

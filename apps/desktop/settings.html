@@ -1127,14 +1127,11 @@ async function loadSettingsStatus() {
   if (!bar) return;
   try {
     const status = await ipcRenderer.invoke('get-settings-status');
+    // Campaign/plan summary only — full API health is Health tab + API Keys status bar.
     const pills = [];
     pills.push(`<span class="api-pill ${status.campaignCount > 0 ? 'ok' : 'miss'}">${status.campaignCount || 0} campaign(s)</span>`);
-    if (status.apiMetrics) {
-      const connected = Object.entries(status.apiMetrics).filter(([, v]) => v === 'Connected').length;
-      const total = Object.keys(status.apiMetrics).length;
-      pills.push(`<span class="api-pill ${connected > 0 ? 'ok' : 'miss'}">${connected}/${total} APIs connected</span>`);
-    }
     pills.push(`<span class="api-pill ok">Plan: ${escapeHtml((status.billingPlan || 'starter').toUpperCase())}</span>`);
+    pills.push(`<span class="api-pill ok">API health → Health / API Keys</span>`);
     bar.innerHTML = pills.join('');
   } catch (e) {
     bar.innerHTML = `<span class="api-pill miss">Status unavailable</span>`;

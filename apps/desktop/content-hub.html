@@ -1355,18 +1355,14 @@ async function loadApiStatus() {
   try {
     const stats = await ipcRenderer.invoke('get-dashboard-stats');
     const hub = await ipcRenderer.invoke('get-account-hub-status');
+    // API health lives only on Settings → Health / Live Audit — not every module bar.
     const pills = [];
-    if (stats.apiMetrics) {
-      Object.entries(stats.apiMetrics).forEach(([name, status]) => {
-        const ok = String(status).includes('Connected');
-        pills.push(`<span class="api-pill ${ok ? 'ok' : 'miss'}">${ok ? '✓' : '✗'} ${escapeHtml(name)}</span>`);
-      });
-    }
     pills.push(`<span class="api-pill ${stats.linkedAccounts > 0 ? 'ok' : 'miss'}">${stats.linkedAccounts || 0} linked accounts</span>`);
     if (hub.platformKeys) {
       const connected = Object.entries(hub.platformKeys).filter(([, v]) => v).map(([k]) => k);
-      if (connected.length) pills.push(`<span class="api-pill ok">Keys: ${escapeHtml(connected.join(', '))}</span>`);
+      if (connected.length) pills.push(`<span class="api-pill ok">${connected.length} platform key(s)</span>`);
     }
+    pills.push(`<a href="settings.html" class="api-pill ok" style="text-decoration:none;">API health → Settings</a>`);
     bar.innerHTML = pills.join('');
     const noAcc = document.getElementById('noAccountsBanner');
     if (noAcc) noAcc.style.display = (stats.linkedAccounts > 0) ? 'none' : 'flex';

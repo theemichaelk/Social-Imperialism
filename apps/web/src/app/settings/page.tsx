@@ -9,7 +9,7 @@ import { PageShell } from '@/components/PageShell';
 import { CampaignSwitcher } from '@/components/CampaignSwitcher';
 import { IntegrationKeyForm } from '@/components/IntegrationKeyForm';
 import { SettingsHealthPanel } from '@/components/SettingsHealthPanel';
-import { apiStatusToBars, BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { BarChart, chartShortLabel, DataPanel, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
 import { INTEGRATION_GROUPS } from '@/lib/integrationCatalog';
 import { SettingsLiveProbes } from '@/components/SettingsLiveProbes';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
@@ -140,8 +140,6 @@ function SettingsContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const connected = Object.values(apiStatus).filter((v) => v === 'Connected').length;
-  const totalApis = Object.keys(apiStatus).length || 1;
   const keysSet = INTEGRATION_GROUPS.flatMap((g) => g.fields).filter((f) => keys[f.key]?.trim()).length;
   const keysTotal = INTEGRATION_GROUPS.flatMap((g) => g.fields).length;
 
@@ -268,8 +266,6 @@ function SettingsContent() {
     setMsg('Billing email saved');
   }
 
-  const apiBars = apiStatusToBars(apiStatus, 12);
-
   const groupBars = INTEGRATION_GROUPS.map((g) => ({
     label: chartShortLabel(g.title, 10),
     title: `${g.title}: ${g.fields.filter((f) => keys[f.key]?.trim()).length}/${g.fields.length} keys`,
@@ -287,24 +283,9 @@ function SettingsContent() {
             <button className="btn" onClick={() => refresh()} disabled={loading}>Refresh</button>
           </div>
         }
-        focusStats={{ APIs: `${connected}/${totalApis}`, Campaigns: campaigns.length, Plan: billing.planName || 'Starter' }}
+        focusStats={{ Campaigns: campaigns.length, Plan: billing.planName || 'Starter', Keys: `${keysSet}/${keysTotal}` }}
         onFocusTab={(t) => { if (TABS.some((x) => x.id === t)) setTabAndUrl(t as TabId); }}
       />
-
-      <div className="dash-hero">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-          <RingChart percent={(connected / totalApis) * 100} label="APIs Live" color="#22c55e" />
-          <RingChart percent={keysTotal ? (keysSet / keysTotal) * 100 : 0} label="Keys Set" color="#38bdf8" />
-          <div className="dash-hero-grid" style={{ flex: 1, minWidth: 240 }}>
-            <MetricTile label="Campaigns" value={campaigns.length} />
-            <MetricTile label="APIs Live" value={connected} sub={`of ${totalApis}`} accent="#22c55e" />
-            <MetricTile label="Keys" value={`${keysSet}/${keysTotal}`} accent="#38bdf8" />
-            <MetricTile label="Plan" value={billing.planName || 'Starter'} accent="#a855f7" />
-            <MetricTile label="Env Keys" value={keySources.envKeyCount ?? 0} sub={keySources.isAdminEnv ? 'admin' : 'none'} />
-          </div>
-          <LivePulse label={connected >= 8 ? 'LIVE' : 'PARTIAL'} />
-        </div>
-      </div>
 
       {msg && (
         <div className="card settings-msg-card" style={{ borderColor: msg.includes('Saved') || msg.includes('connected') || msg.includes('updated') || msg.includes('created') ? '#10b981' : '#f59e0b' }}>
@@ -325,35 +306,40 @@ function SettingsContent() {
 
       {tab === 'overview' && (
         <>
+        <div className="dash-hero" style={{ marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', position: 'relative', zIndex: 1 }}>
+            <RingChart percent={keysTotal ? (keysSet / keysTotal) * 100 : 0} label="Keys Set" color="#38bdf8" />
+            <div className="dash-hero-grid" style={{ flex: 1, minWidth: 240 }}>
+              <MetricTile label="Campaigns" value={campaigns.length} />
+              <MetricTile label="Keys" value={`${keysSet}/${keysTotal}`} accent="#38bdf8" />
+              <MetricTile label="Plan" value={billing.planName || 'Starter'} accent="#a855f7" />
+              <MetricTile label="Env Keys" value={keySources.envKeyCount ?? 0} sub={keySources.isAdminEnv ? 'admin' : 'none'} />
+            </div>
+          </div>
+        </div>
         <div className="settings-quick-links">
           <button type="button" className="btn primary" onClick={() => setTabAndUrl('site-tracking')}>Site & Tracking</button>
           <button type="button" className="btn" onClick={() => setTabAndUrl('api-keys')}>API Keys</button>
-          <button type="button" className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Probes</button>
+          <button type="button" className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Audit →</button>
           <Link href="/campaign-manager" className="btn">Campaign Manager</Link>
         </div>
         <div className="grid grid-2">
-          <DataPanel title="Connection Pulse" live>
-            <SparkRow items={[
-              { label: 'Connected', value: connected, status: connected >= 8 ? 'ok' : 'warn' },
-              { label: 'Keys Set', value: keysSet, status: 'ok' },
-              { label: 'Campaigns', value: campaigns.length },
-            ]} />
-            <BarChart items={apiBars.slice(0, 10)} maxHeight={90} />
-          </DataPanel>
           <DataPanel title="Key Coverage by Group" live>
             <BarChart items={groupBars} maxHeight={90} />
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-              <button className="btn primary" onClick={testConnections} disabled={loading}>Run Live Audit</button>
+              <button className="btn primary" onClick={() => setTabAndUrl('live-probes')}>Open Live Audit</button>
               <button className="btn" onClick={() => setTabAndUrl('api-keys')}>Configure API Keys</button>
-              <button className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Probes →</button>
             </div>
+            <p className="settings-panel-desc" style={{ marginTop: 10, marginBottom: 0 }}>
+              Full API health and connection audit live under <strong>Live Audit</strong> only.
+            </p>
           </DataPanel>
           <DataPanel title="Credential Mode" live>
             <p className="settings-panel-desc">{keySources.message}</p>
             <SparkRow items={[
               { label: '.env', value: keySources.envKeyCount ?? 0, status: keySources.isAdminEnv ? 'ok' : 'off' },
               { label: 'User', value: keySources.userKeyCount ?? 0 },
-              { label: 'Live APIs', value: connected, status: connected >= 5 ? 'ok' : 'warn' },
+              { label: 'Campaigns', value: campaigns.length },
             ]} />
           </DataPanel>
           <DataPanel title="Quick Actions" live>
@@ -379,7 +365,11 @@ function SettingsContent() {
       )}
 
       {tab === 'live-probes' && (
-        <SettingsLiveProbes onMetrics={(m) => setApiStatus(m)} onMessage={setMsg} />
+        <SettingsLiveProbes
+          apiStatus={apiStatus}
+          onMetrics={(m) => setApiStatus(m)}
+          onMessage={setMsg}
+        />
       )}
 
       {tab === 'api-keys' && (
@@ -395,7 +385,7 @@ function SettingsContent() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <button className="btn primary" onClick={saveKeys} disabled={loading}>Save All Keys</button>
             <button className="btn" onClick={testConnections} disabled={loading}>Test Connections</button>
-            <button className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Probes →</button>
+            <button className="btn" onClick={() => setTabAndUrl('live-probes')}>Live Audit →</button>
           </div>
           <IntegrationKeyForm
             keys={keys}
@@ -551,9 +541,11 @@ function SettingsContent() {
           <DataPanel title="Settings Status" live>
             <BarChart items={[
               { label: 'Camps', value: campaigns.length || 1, color: '#38bdf8' },
-              { label: 'APIs', value: connected || 1, color: '#22c55e' },
               { label: 'Keys', value: keysSet || 1, color: '#a855f7' },
             ]} maxHeight={90} />
+            <p className="settings-panel-desc" style={{ marginTop: 8 }}>
+              API health is under <button type="button" className="btn" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => setTabAndUrl('live-probes')}>Live Audit</button>
+            </p>
             <pre style={{ fontSize: '0.7rem', overflow: 'auto', marginTop: 12, maxHeight: 200 }}>{JSON.stringify(settingsStatus, null, 2)}</pre>
           </DataPanel>
           <DataPanel title="Payment & Export" live>

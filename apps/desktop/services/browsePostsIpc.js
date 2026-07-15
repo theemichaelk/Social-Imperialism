@@ -61,10 +61,6 @@ function registerBrowsePostsHandlers({ ipcMain, store, resolveKeys, buildApiMetr
       queueByAction[a] = (queueByAction[a] || 0) + 1;
     });
 
-    const apiMetrics = buildApiMetrics ? buildApiMetrics(keys) : {};
-    const connectedApis = Object.entries(apiMetrics).filter(([, v]) => v === 'Connected').length;
-    const totalApis = Object.keys(apiMetrics).length;
-
     return {
       success: true,
       updatedAt: new Date().toISOString(),
@@ -107,8 +103,7 @@ function registerBrowsePostsHandlers({ ipcMain, store, resolveKeys, buildApiMetr
         handle: a.handle,
         status: a.status || 'connected',
       })),
-      apiMetrics,
-      apiHealth: { connected: connectedApis, total: totalApis, pct: totalApis ? Math.round((connectedApis / totalApis) * 100) : 0 },
+      // API health (connected/total ring) is Settings → Live Audit only.
     };
   });
 }

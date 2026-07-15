@@ -1,5 +1,6 @@
 'use client';
 import { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@/lib/api';
 
@@ -452,9 +453,6 @@ function DashboardPageInner() {
   const onDashboardTab = (id: string) => {
     setTabAndUrl(id);
   };
-  const apiEntries = Object.entries(stats.apiMetrics || setup.apiMetrics as Record<string, string> || {});
-  const connectedApis = apiEntries.filter(([, v]) => v === 'Connected').length;
-  const totalApis = apiEntries.length || 1;
   const feedPlatforms = platformBreakdown(feed);
   const workerTasks = asArray<{ action?: string; platform?: string }>(worker.tasks);
   const taskBars = workerTasks.slice(0, 6).map((t, i) => ({
@@ -487,7 +485,9 @@ function DashboardPageInner() {
               { label: 'Worker', value: worker.running || worker.isRunning ? 'Active' : 'Idle', status: (worker.running || worker.isRunning) ? 'ok' : 'off' },
             ]} />
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginTop: 12, marginBottom: 0 }}>
-              {worker.statusString || stats.workerStatus || 'Worker idle'} · {connectedApis}/{totalApis} APIs connected
+              {worker.statusString || stats.workerStatus || 'Worker idle'}
+              {' · '}
+              <Link href="/settings?tab=live-probes" style={{ color: '#38bdf8' }}>API health → Live Audit</Link>
             </p>
           </DataPanel>
           <DataPanel title="Topic analysis" live>

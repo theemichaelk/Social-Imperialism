@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { invoke } from '@/lib/api';
 import { decodeHtmlEntities } from '@/lib/textUtils';
 import { useSiEvents } from '@/hooks/useSiEvents';
-import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, RingChart, SparkRow } from '@/components/DashboardViz';
+import { BarChart, chartShortLabel, DataPanel, LivePulse, MetricTile, SparkRow } from '@/components/DashboardViz';
 
 type LiveData = {
   section?: string;
@@ -18,7 +18,6 @@ type LiveData = {
   bestHours?: Array<{ hour: number; count: number }>;
   accounts?: Array<{ id: string; platform: string; handle?: string; status?: string }>;
   apiMetrics?: Record<string, string>;
-  apiHealth?: { connected: number; total: number; pct: number };
   trending?: Array<{ topic?: string; momentum?: string }>;
   lists?: Array<{ id: string; name: string; type?: string }>;
   replyStats?: { draft?: number; published?: number; total?: number };
@@ -28,7 +27,6 @@ type LiveData = {
 type WidgetConfig = {
   tiles: boolean;
   trending: boolean;
-  apiHealth: boolean;
   accounts: boolean;
   breakdown: boolean;
   scheduleWindows: boolean;
@@ -41,7 +39,6 @@ type WidgetConfig = {
 const COMPACT: WidgetConfig = {
   tiles: true,
   trending: false,
-  apiHealth: false,
   accounts: false,
   breakdown: false,
   scheduleWindows: false,
@@ -51,11 +48,11 @@ const COMPACT: WidgetConfig = {
   timestamp: true,
 };
 
+/** Module live panels never show the "API health" ring — that UI is Settings → Live Audit only. */
 const SECTION_WIDGETS: Record<string, WidgetConfig> = {
   dashboard: {
     tiles: true,
     trending: true,
-    apiHealth: true,
     accounts: true,
     breakdown: true,
     scheduleWindows: false,
@@ -79,7 +76,7 @@ const SECTION_WIDGETS: Record<string, WidgetConfig> = {
   'quora-traffic': { ...COMPACT, accounts: true },
   automations: { ...COMPACT },
   rules: { ...COMPACT, worker: true },
-  'account-hub': { ...COMPACT, accounts: true, apiHealth: true },
+  'account-hub': { ...COMPACT, accounts: true },
   'account-creator': { ...COMPACT, accounts: true },
   onboarding: { ...COMPACT, accounts: true },
   'prompt-vault': { ...COMPACT },
@@ -149,8 +146,8 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
   ],
   keywords: [
     { key: 'keywords', label: 'Keywords', sub: 'tracked', accent: '#38bdf8' },
-    { key: 'apiConnected', label: 'APIs', sub: 'live' },
     { key: 'accounts', label: 'Accounts', sub: 'platforms' },
+    { key: 'monitors', label: 'Monitors', sub: 'watching' },
   ],
   dns: [
     { key: 'sites', label: 'Sites', sub: 'registered' },
@@ -160,7 +157,7 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
   'seo-tools': [
     { key: 'keywords', label: 'Keywords', sub: 'research' },
     { key: 'serpConnected', label: 'SerpAPI', sub: 'status', accent: '#22c55e' },
-    { key: 'apiConnected', label: 'APIs', sub: 'on' },
+    { key: 'accounts', label: 'Accounts', sub: 'linked' },
   ],
   'reddit-ai': [
     { key: 'leads', label: 'Leads', sub: 'captured', accent: '#f59e0b' },
@@ -186,7 +183,6 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
     { key: 'accounts', label: 'Linked', sub: 'accounts', accent: '#22c55e' },
     { key: 'linkedPlatforms', label: 'Platforms', sub: 'connected' },
     { key: 'proxies', label: 'Proxies', sub: 'pool' },
-    { key: 'apiConnected', label: 'APIs', sub: 'ready' },
   ],
   'account-creator': [
     { key: 'kits', label: 'Kits', sub: 'profiles', accent: '#a855f7' },
@@ -208,7 +204,6 @@ const SECTION_TILES: Record<string, Array<{ key: string; label: string; sub?: st
     { key: 'users', label: 'Users', sub: 'platform' },
     { key: 'organizations', label: 'Orgs', sub: 'tenants' },
     { key: 'projects', label: 'Projects', sub: 'campaigns' },
-    { key: 'apiConnected', label: 'APIs', sub: 'live' },
   ],
   'dashboard-issues': [
     { key: 'issuesPending', label: 'Pending', sub: 'queue', accent: '#f59e0b' },
@@ -294,10 +289,6 @@ export function SectionLivePanel({ section, showAccounts = true, accountPlatform
     color: 'linear-gradient(180deg, #6366f1, #8b5cf6)',
   }));
 
-  const apiPct = data.apiHealth?.pct ?? (stats.apiTotal
-    ? Math.round(((Number(stats.apiConnected) || 0) / Number(stats.apiTotal)) * 100)
-    : 0);
-
   const workerActive = stats.workerRunning === true;
 
   return (
@@ -380,22 +371,6 @@ export function SectionLivePanel({ section, showAccounts = true, accountPlatform
         </DataPanel>
       )}
 
-      {widgets.apiHealth && (
-        <DataPanel title="API health" live>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <RingChart percent={apiPct} label="connected" color="#38bdf8" />
-            <span className="settings-panel-desc" style={{ margin: 0 }}>
-              {stats.apiConnected ?? data.apiHealth?.connected ?? 0} / {stats.apiTotal ?? data.apiHealth?.total ?? 0} integrations
-            </span>
-          </div>
-          {widgets.timestamp && data.updatedAt && (
-            <p className="settings-panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>
-              <LivePulse /> {new Date(data.updatedAt).toLocaleTimeString()}
-            </p>
-          )}
-        </DataPanel>
-      )}
-
       {widgets.accounts && (() => {
         const platformNeedle = accountPlatform?.toLowerCase();
         const filteredAccounts = platformNeedle
@@ -421,7 +396,7 @@ export function SectionLivePanel({ section, showAccounts = true, accountPlatform
         );
       })()}
 
-      {widgets.timestamp && !widgets.apiHealth && data.updatedAt && (
+      {widgets.timestamp && data.updatedAt && (
         <p className="settings-panel-desc section-live-ts" style={{ gridColumn: '1 / -1', margin: '0 0 4px' }}>
           <LivePulse /> {new Date(data.updatedAt).toLocaleTimeString()}
         </p>

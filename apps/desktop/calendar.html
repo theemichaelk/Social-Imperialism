@@ -325,17 +325,12 @@ async function loadApiStatus() {
     const dueNow = status.dueNow ?? scheduledPosts.filter((p) => new Date(p.timestamp).getTime() <= now).length;
     const upcoming = status.upcoming ?? scheduledPosts.filter((p) => new Date(p.timestamp).getTime() > now).length;
     const count = status.scheduledCount ?? scheduledPosts.length;
+    // Schedule status only — full API health is Settings → Health / Live Audit.
     const pills = [
       `<span class="api-pill ok">${count} scheduled</span>`,
       dueNow > 0 ? `<span class="api-pill warn">${dueNow} due now</span>` : '',
       `<span class="api-pill ok">${upcoming} upcoming</span>`,
     ];
-    if (status.apiMetrics) {
-      Object.entries(status.apiMetrics).forEach(([name, st]) => {
-        const ok = st === 'Connected';
-        pills.push(`<span class="api-pill ${ok ? 'ok' : 'miss'}">${ok ? '✓' : '✗'} ${escapeHtml(name)}</span>`);
-      });
-    }
     bar.innerHTML = pills.filter(Boolean).join('');
   };
 

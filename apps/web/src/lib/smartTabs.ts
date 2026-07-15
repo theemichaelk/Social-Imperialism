@@ -54,7 +54,8 @@ export const SETTINGS_TABS = [
   { id: 'guardian-api', label: 'Guardian & API', group: "Today's Focus" },
   { id: 'billing', label: 'Billing', group: 'Account' },
   { id: 'site-tracking', label: 'Site & Tracking', group: 'Advanced' },
-  { id: 'live-probes', label: 'Live Probes', group: 'Advanced' },
+  /** Live connection audit + API health (only surface for full API health UI). */
+  { id: 'live-probes', label: 'Live Audit', group: 'Advanced' },
   { id: 'system', label: 'System', group: 'Advanced' },
 ] as const;
 
@@ -66,6 +67,9 @@ export const SETTINGS_LEGACY_TAB_MAP: Record<string, SettingsTabId> = {
   'site-health': 'overview',
   'account-intelligence': 'overview',
   connect: 'live-probes',
+  /** Alias for Settings → Live Audit (API health home). */
+  audit: 'live-probes',
+  'live-audit': 'live-probes',
   grok: 'overview',
   tutorials: 'system',
   health: 'system',
