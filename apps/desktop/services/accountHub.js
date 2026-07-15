@@ -85,11 +85,12 @@ function getAccountHubStatus(store) {
     oauthPlatforms: ['Twitter', 'LinkedIn', 'Facebook', 'Instagram', 'YouTube', 'Reddit', 'TikTok', 'Discord', 'Pinterest', 'Threads', 'Snapchat', 'Twitch'],
     connectHints: {
       LinkedIn: oauthReady.LinkedIn
-        ? 'OAuth Connect ready — authorize LinkedIn in the popup.'
+        ? 'Enter your LinkedIn email (optional) and click Connect — your browser opens, details are filled when possible, then we pull every profile & company page.'
         : (keys.linkedinAccessToken
-          ? 'Token on file may be expired. Add LinkedIn Client ID + Secret in Integrations for OAuth, or paste a fresh AQW… token as password.'
-          : 'Add LinkedIn Client ID + Secret in Integrations → Social OAuth, then use OAuth Connect. Or paste access token (AQW…) as password.'),
+          ? 'Enter email + password to open LinkedIn in your browser, or paste a fresh access token (AQW…). For full OAuth browser connect, add Client ID + Secret in Integrations.'
+          : 'Enter email + password → Connect opens your browser to LinkedIn. For API publish/reply after login, add LinkedIn Client ID + Secret in Integrations (one-time).'),
     },
+    browserConnect: true,
   };
 }
 

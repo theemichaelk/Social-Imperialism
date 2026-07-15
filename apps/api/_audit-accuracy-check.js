@@ -485,7 +485,7 @@ else if (!read(globalsCss).includes('grid-template-columns: repeat(3, 1fr)')) {
   fail('globals.css must use 3-column daily social trends grid');
 }
 
-const EXPECTED_HANDLERS = 424;
+const EXPECTED_HANDLERS = 426;
 
 // --- Report (async handler count) ---
 (async () => {

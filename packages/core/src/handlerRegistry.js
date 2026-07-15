@@ -113,6 +113,7 @@ async function registerAllHandlers(store, deps = {}) {
   registerAccountHandlers({
     ipcMain, store, resolveKeys, integrations,
     openExternal: (url) => { deps.pendingOAuthUrl = url; },
+    userDataPath,
   });
 
   const { registerVerifiedNodeHandlers } = require(path.join(DESKTOP_SERVICES, 'verifiedNodeEngine/verifiedNodeIpc'));

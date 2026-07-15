@@ -128,11 +128,12 @@ function buildAuthUrl(platform, keys, state, pkce, redirectUri = REDIRECT_URI, o
 
     case 'LinkedIn':
       if (!keys.liId) return null;
-      return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${keys.liId}&redirect_uri=${encodedRedirect}&state=${state}&scope=${encodeURIComponent('openid profile email w_member_social r_organization_social w_organization_social r_organization_admin rw_organization_admin')}`;
+      // login_hint pre-fills email on LinkedIn's authorize/login screen when supported
+      return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${keys.liId}&redirect_uri=${encodedRedirect}&state=${state}&scope=${encodeURIComponent('openid profile email w_member_social r_organization_social w_organization_social r_organization_admin rw_organization_admin')}${loginHint}`;
 
     case 'Facebook':
       if (!keys.fbId) return null;
-      return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${keys.fbId}&redirect_uri=${encodedRedirect}&state=${state}&scope=${encodeURIComponent('public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts,publish_to_groups,business_management,groups_access_member_info')}`;
+      return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${keys.fbId}&redirect_uri=${encodedRedirect}&state=${state}&scope=${encodeURIComponent('public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts,publish_to_groups,business_management,groups_access_member_info')}${loginHint ? `&auth_type=rerequest${loginHint}` : ''}`;
 
     case 'Instagram':
       if (!keys.fbId) return null;

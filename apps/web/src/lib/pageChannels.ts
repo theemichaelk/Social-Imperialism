@@ -108,7 +108,8 @@ export const PAGE_CHANNELS = {
   ],
   accountHub: [
     'get-linked-accounts', 'get-account-hub-status', 'refresh-account-profile', 'connect-platform',
-    'begin-platform-oauth', 'finish-platform-oauth-connect', 'use-selected-accounts', 'unlink-account',
+    'begin-platform-oauth', 'begin-browser-platform-connect', 'finish-platform-oauth-connect',
+    'finish-browser-platform-connect', 'use-selected-accounts', 'unlink-account',
     'get-account-automation-targets', 'save-automation-target-selection', 'set-account-proxy',
     'get-proxy-pool', 'dedupe-linked-accounts', 'get-section-live',
   ],

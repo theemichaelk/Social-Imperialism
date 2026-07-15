@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { invoke } from '@/lib/api';
-import { openOAuthPopup, pollOAuthUntilComplete } from '@/lib/oauthConnect';
+import { openBrowserTab, pollOAuthUntilComplete, startBrowserConnect } from '@/lib/oauthConnect';
 import { PageShell } from '@/components/PageShell';
 import { IntelligenceProfilePanel } from '@/components/IntelligenceProfilePanel';
 import { IntelligenceRecommendations } from '@/components/IntelligenceRecommendations';
@@ -228,15 +228,29 @@ export default function AccountHubPage() {
 
   async function finishOAuthConnect(state: string) {
     setConnecting(true);
-    setMsg('Finalizing OAuth connection…');
+    setMsg('Browser login complete — pulling every account detail…');
     try {
-      const res = await invoke<ConnectResult>('finish-platform-oauth-connect', {
-        state,
-        platform: connectPlatform,
-        ...creds,
-        useProxy: useProxyOnConnect,
-        proxyId: useProxyOnConnect ? connectProxyId : null,
-      });
+      // Prefer browser finish (auto-link all + full profiles); fall back to classic finish
+      let res: ConnectResult;
+      try {
+        res = await invoke<ConnectResult>('finish-browser-platform-connect', {
+          state,
+          platform: connectPlatform,
+          ...creds,
+          useProxy: useProxyOnConnect,
+          proxyId: useProxyOnConnect ? connectProxyId : null,
+          autoLinkAll: true,
+        });
+      } catch {
+        res = await invoke<ConnectResult>('finish-platform-oauth-connect', {
+          state,
+          platform: connectPlatform,
+          ...creds,
+          useProxy: useProxyOnConnect,
+          proxyId: useProxyOnConnect ? connectProxyId : null,
+          autoLinkAll: true,
+        });
+      }
       handleConnectResult(res);
     } catch (e) {
       setMsg((e as Error).message);
@@ -245,62 +259,110 @@ export default function AccountHubPage() {
     }
   }
 
-  async function connect(method: 'oauth' | 'credentials') {
+  /**
+   * Both OAuth Connect and Email & Password open the user's browser:
+   * - OAuth platforms: full tab to authorize (email prefilled when supported)
+   * - Access tokens: direct API link
+   * - Website passwords: browser login path (desktop also autofills when possible)
+   */
+  async function connect(_method: 'oauth' | 'credentials') {
     if (useProxyOnConnect && !connectProxyId) {
       setMsg('Select a proxy from the pool or connect without proxy');
       return;
     }
-    if (method === 'oauth' && hubStatus.oauthReady && hubStatus.oauthReady[connectPlatform] === false) {
-      setMsg(
-        `${connectPlatform} OAuth is not configured yet. Open Integrations → Social OAuth and add Client ID + Secret, then try OAuth Connect again. `
-        + (connectPlatform === 'LinkedIn'
-          ? 'Or paste a LinkedIn access token (AQW…) as password and use Email & Password.'
-          : 'Or paste an access token as password and use Email & Password.'),
-      );
-      return;
-    }
     setConnecting(true);
-    setMsg(`Connecting ${connectPlatform}…`);
+    setMsg(`Opening ${connectPlatform} in your browser…`);
     try {
-      if (method === 'oauth') {
-        const begin = await invoke<{ success?: boolean; error?: string; oauthUrl?: string; state?: string }>(
-          'begin-platform-oauth',
-          {
-            platform: connectPlatform,
-            email: creds.email,
-            username: creds.username,
-            useProxy: useProxyOnConnect,
-            proxyId: useProxyOnConnect ? connectProxyId : null,
-          },
-        );
-        if (!begin.success || !begin.oauthUrl || !begin.state) {
-          setMsg(
-            begin.error
-            || 'OAuth not configured — add Client ID + Secret in Integrations → Social OAuth, then retry.',
-          );
-          return;
-        }
-        openOAuthPopup(begin.oauthUrl);
-        setMsg('Authorize in the popup window…');
-        const polled = await pollOAuthUntilComplete(begin.state);
-        if (!polled.ok) {
-          setMsg(polled.error || 'OAuth failed');
-          return;
-        }
-        await finishOAuthConnect(begin.state);
-        return;
-      }
-
-      const res = await invoke<ConnectResult>('connect-platform', {
+      const begin = await startBrowserConnect({
         platform: connectPlatform,
-        method: 'credentials',
         email: creds.email,
         username: creds.username,
         password: creds.password,
         useProxy: useProxyOnConnect,
         proxyId: useProxyOnConnect ? connectProxyId : null,
       });
-      handleConnectResult(res);
+
+      if (!begin.success) {
+        // Fallback: classic connect-platform for token-only paths if browser handler missing
+        if (creds.password) {
+          const res = await invoke<ConnectResult>('connect-platform', {
+            platform: connectPlatform,
+            method: 'credentials',
+            email: creds.email,
+            username: creds.username,
+            password: creds.password,
+            useProxy: useProxyOnConnect,
+            proxyId: useProxyOnConnect ? connectProxyId : null,
+          });
+          if ((res as ConnectResult & { useBrowserConnect?: boolean; openUrl?: string; state?: string }).useBrowserConnect
+            && (res as { openUrl?: string }).openUrl) {
+            const r = res as ConnectResult & { openUrl: string; state?: string; message?: string };
+            openBrowserTab(r.openUrl);
+            setMsg(r.message || 'Sign in in the browser tab…');
+            if (r.state) {
+              const polled = await pollOAuthUntilComplete(r.state);
+              if (!polled.ok) {
+                setMsg(polled.error || 'Browser login failed');
+                return;
+              }
+              await finishOAuthConnect(r.state);
+            }
+            return;
+          }
+          handleConnectResult(res);
+          return;
+        }
+        setMsg(begin.error || 'Could not start browser connect');
+        return;
+      }
+
+      // Token mode — no browser needed
+      if (begin.mode === 'token' || begin.needsBrowser === false) {
+        setMsg(begin.message || 'Linking with access token…');
+        const res = await invoke<ConnectResult>('connect-platform', {
+          platform: connectPlatform,
+          method: 'credentials',
+          email: creds.email,
+          username: creds.username,
+          password: creds.password,
+          useProxy: useProxyOnConnect,
+          proxyId: useProxyOnConnect ? connectProxyId : null,
+        });
+        handleConnectResult(res);
+        return;
+      }
+
+      const url = begin.openUrl || begin.oauthUrl;
+      if (url && !begin.opened) {
+        openBrowserTab(url);
+      }
+
+      setMsg(
+        begin.message
+        || `Browser tab opened for ${connectPlatform}. Sign in and approve access — we will pull all profiles and pages.`,
+      );
+
+      if (begin.state && (begin.mode === 'oauth' || begin.mode === 'browser_login')) {
+        if (begin.mode === 'browser_login') {
+          // Login-only assist: wait briefly then tell user to complete OAuth setup if needed
+          const polled = await pollOAuthUntilComplete(begin.state, 30000);
+          if (polled.ok) {
+            await finishOAuthConnect(begin.state);
+            return;
+          }
+          setMsg(
+            begin.message
+            || `${connectPlatform} browser opened. After you sign in, add Client ID + Secret in Integrations if accounts did not import, then click Connect again.`,
+          );
+          return;
+        }
+        const polled = await pollOAuthUntilComplete(begin.state);
+        if (!polled.ok) {
+          setMsg(polled.error || 'Browser authorization failed or timed out');
+          return;
+        }
+        await finishOAuthConnect(begin.state);
+      }
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -502,29 +564,31 @@ export default function AccountHubPage() {
           <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: 10, lineHeight: 1.45 }}>
             {dynamicHint}
           </p>
-          {!platformOAuthReady && !['Telegram', 'WhatsApp', 'Quora'].includes(connectPlatform) && (
-            <p style={{ fontSize: '0.8rem', color: '#fbbf24', marginBottom: 10, lineHeight: 1.45 }}>
-              OAuth Connect needs Client ID + Secret in{' '}
-              <Link href="/integrations">Integrations → Social OAuth</Link>
-              {connectPlatform === 'LinkedIn' ? ' (LinkedIn Client ID + Secret).' : '.'}
-              {' '}Token path still works if you paste a valid access token as password.
-            </p>
-          )}
-          <input className="input" placeholder={connectPlatform === 'YouTube' ? 'Google email' : 'Email (optional)'} value={creds.email} onChange={(e) => setCreds({ ...creds, email: e.target.value })} style={{ marginBottom: 8 }} />
-          <input className="input" placeholder="Username / @handle (optional)" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} style={{ marginBottom: 8 }} />
+          <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 10, lineHeight: 1.45 }}>
+            Enter the email/username you use on {connectPlatform}. Click either button —{' '}
+            <strong style={{ color: '#cbd5e1' }}>your browser opens</strong>, fields are filled when possible,
+            you finish login / 2FA, then we import every profile, page, and community.
+            {!platformOAuthReady && !['Telegram', 'WhatsApp'].includes(connectPlatform) && (
+              <>
+                {' '}Full API publish needs Client ID + Secret once in{' '}
+                <Link href="/integrations">Integrations</Link>.
+              </>
+            )}
+          </p>
+          <input className="input" placeholder={connectPlatform === 'YouTube' ? 'Google email' : 'Email / login'} value={creds.email} onChange={(e) => setCreds({ ...creds, email: e.target.value })} style={{ marginBottom: 8 }} autoComplete="username" />
+          <input className="input" placeholder="Username / @handle (optional)" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} style={{ marginBottom: 8 }} autoComplete="username" />
           <input
             className="input"
             type="password"
             placeholder={
               connectPlatform === 'YouTube'
-                ? 'Google password (Email & Password tab)'
-                : connectPlatform === 'LinkedIn'
-                  ? 'LinkedIn access token (AQW…) — not website password'
-                  : 'Access token (or password where supported)'
+                ? 'Google password (opens browser & fills when possible)'
+                : 'Password (opens browser) or paste access token (AQW… / EAA…)'
             }
             value={creds.password}
             onChange={(e) => setCreds({ ...creds, password: e.target.value })}
             style={{ marginBottom: 8 }}
+            autoComplete="current-password"
           />
 
           <div className="card" style={{ marginBottom: 12, padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.45)' }}>
@@ -559,12 +623,17 @@ export default function AccountHubPage() {
               className="btn primary"
               onClick={() => connect('oauth')}
               disabled={connecting}
-              title={platformOAuthReady ? 'Authorize via OAuth popup' : 'Add Client ID + Secret in Integrations first'}
+              title="Opens your browser to sign in and import all accounts"
             >
-              {connecting ? 'Connecting…' : platformOAuthReady ? 'OAuth Connect' : 'OAuth Connect (setup needed)'}
+              {connecting ? 'Connecting…' : 'OAuth Connect — open browser'}
             </button>
-            <button className="btn" onClick={() => connect('credentials')} disabled={connecting}>
-              {connecting ? 'Connecting…' : 'Email & Password'}
+            <button
+              className="btn"
+              onClick={() => connect('credentials')}
+              disabled={connecting}
+              title="Opens your browser with email/password filled when possible"
+            >
+              {connecting ? 'Connecting…' : 'Email & Password — open browser'}
             </button>
           </div>
           {msg && (

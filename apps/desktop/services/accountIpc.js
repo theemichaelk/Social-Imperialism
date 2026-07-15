@@ -23,16 +23,20 @@ const { linkAllDiscoveredAccounts, groupAccountsByConnection } = require('./acco
 const { connectPlatform, validateConnectInput } = require('./connectionService');
 const oauth = require('./oauth');
 const oauthFlowStore = require('./oauthFlowStore');
+const browserPlatformConnect = require('./browserPlatformConnect');
+const { looksLikeAccessToken, looksLikeLoginPassword } = require('./credentialAuth');
 
-function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, openExternal }) {
+function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, openExternal, userDataPath }) {
   const channels = [
     'discover-sub-accounts',
     'link-discovered-sub-accounts',
     'connect-with-credentials',
     'connect-platform',
     'begin-platform-oauth',
+    'begin-browser-platform-connect',
     'poll-platform-oauth',
     'finish-platform-oauth-connect',
+    'finish-browser-platform-connect',
     'get-account-groups',
     'get-account-children',
     'get-automation-targets',
@@ -126,6 +130,30 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
 
   async function runConnect(payload) {
     const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+    const pw = String(payload?.password || '').trim();
+    // Website login passwords → browser-first OAuth / native fill (not silent token reuse)
+    if (pw && looksLikeLoginPassword(pw) && !looksLikeAccessToken(pw)) {
+      const browserStart = await browserPlatformConnect.beginBrowserPlatformConnect({
+        platform: payload?.platform,
+        email: payload?.email,
+        username: payload?.username,
+        password: pw,
+        keys,
+        store,
+        userDataPath,
+        openExternal,
+        useProxy: payload?.useProxy,
+        proxyId: payload?.proxyId,
+      });
+      if (browserStart.success && browserStart.needsBrowser) {
+        return {
+          ...browserStart,
+          useBrowserConnect: true,
+          success: true,
+        };
+      }
+      if (!browserStart.success) return browserStart;
+    }
     return connectPlatform({
       ...payload,
       keys,
@@ -142,39 +170,95 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
     method: 'credentials',
   }));
 
+  /** Unified browser-first connect (full tab + optional autofill + full profile pull). */
+  ipcMain.handle('begin-browser-platform-connect', async (event, payload) => {
+    try {
+      const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+      return await browserPlatformConnect.beginBrowserPlatformConnect({
+        platform: payload?.platform,
+        email: payload?.email,
+        username: payload?.username,
+        password: payload?.password,
+        keys,
+        store,
+        userDataPath,
+        openExternal,
+        useProxy: payload?.useProxy,
+        proxyId: payload?.proxyId,
+        preferNativeFill: payload?.preferNativeFill !== false,
+      });
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('finish-browser-platform-connect', async (event, payload) => {
+    try {
+      const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+      return await browserPlatformConnect.finishBrowserPlatformConnect({
+        state: payload?.state,
+        platform: payload?.platform,
+        email: payload?.email,
+        username: payload?.username,
+        keys,
+        store,
+        integrations,
+        useProxy: payload?.useProxy,
+        proxyId: payload?.proxyId,
+        autoLinkAll: payload?.autoLinkAll !== false,
+      });
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
   ipcMain.handle('begin-platform-oauth', async (event, payload) => {
     try {
-      const platform = payload?.platform;
-      if (!platform) return { success: false, error: 'Platform required' };
+      // Delegate to browser-first connect so OAuth always opens a real browser tab path
       const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-      const validation = validateConnectInput(platform, {
-        email: payload?.email,
-        password: payload?.password,
+      const result = await browserPlatformConnect.beginBrowserPlatformConnect({
+        platform: payload?.platform,
+        email: payload?.email || payload?.username,
         username: payload?.username,
-        method: 'oauth',
-      }, keys);
-      if (!validation.ok) return { success: false, error: validation.error };
-
-      const prepared = await oauth.prepareOAuthFlow(platform, keys, {
-        loginHint: validation.email || payload?.email || payload?.username,
+        password: payload?.password,
+        keys,
+        store,
+        userDataPath,
+        openExternal,
+        useProxy: payload?.useProxy,
+        proxyId: payload?.proxyId,
       });
-      const projectId = store.projectId || store.getItem('activeCampaignId');
-      if (!projectId) return { success: false, error: 'No active project' };
-
-      await oauthFlowStore.saveFlow(projectId, prepared.state, {
-        platform: prepared.platform,
-        pkceVerifier: prepared.pkce.verifier,
-        redirectUri: prepared.redirectUri,
-        loginEmail: validation.email,
-        proxyId: payload?.proxyId || null,
-        useProxy: payload?.useProxy === true,
-      });
-
+      if (!result.success) return result;
+      if (result.mode === 'token') {
+        // Fall back to classic oauth prepare if token mode unexpectedly
+        const platform = payload?.platform;
+        if (!platform) return { success: false, error: 'Platform required' };
+        const validation = validateConnectInput(platform, {
+          email: payload?.email,
+          password: payload?.password,
+          username: payload?.username,
+          method: 'oauth',
+        }, keys);
+        if (!validation.ok) return { success: false, error: validation.error };
+        const prepared = await oauth.prepareOAuthFlow(platform, keys, {
+          loginHint: validation.email || payload?.email || payload?.username,
+        });
+        const projectId = store.projectId || store.getItem('activeCampaignId');
+        if (!projectId) return { success: false, error: 'No active project' };
+        await oauthFlowStore.saveFlow(projectId, prepared.state, {
+          platform: prepared.platform,
+          pkceVerifier: prepared.pkce.verifier,
+          redirectUri: prepared.redirectUri,
+          loginEmail: validation.email,
+          proxyId: payload?.proxyId || null,
+          useProxy: payload?.useProxy === true,
+        });
+        return { success: true, oauthUrl: prepared.authUrl, openUrl: prepared.authUrl, state: prepared.state, platform, fullTab: true };
+      }
       return {
-        success: true,
-        oauthUrl: prepared.authUrl,
-        state: prepared.state,
-        platform,
+        ...result,
+        oauthUrl: result.oauthUrl || result.openUrl,
+        fullTab: true,
       };
     } catch (e) {
       return { success: false, error: e.message };
@@ -196,55 +280,20 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
 
   ipcMain.handle('finish-platform-oauth-connect', async (event, payload) => {
     try {
-      const state = payload?.state;
-      const flow = await oauthFlowStore.getFlow(state);
-      if (!flow || flow.status !== 'complete' || !flow.tokens) {
-        return { success: false, error: 'OAuth not complete yet' };
-      }
-
+      // Always use browser finish path: auto-link all accounts + pull full profiles
       const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
-      const platform = flow.platform || payload?.platform;
-      const loginEmail = (flow.loginEmail || payload?.email || `${platform.toLowerCase()}@oauth.local`).trim().toLowerCase();
-
-      const discovered = await integrations.discoverAccounts({
-        platform,
-        email: loginEmail,
-        username: payload?.username || loginEmail,
-        useCredentials: false,
-        oauthTokens: flow.tokens,
-        connectionId: payload?.connectionId,
-      }, keys, () => {});
-
-      await oauthFlowStore.removeFlow(state);
-
-      if (!discovered?.length) {
-        return { success: false, error: `No accounts returned from ${platform}` };
-      }
-
-      const withProxy = discovered.map((a) => ({
-        ...a,
-        loginEmail: a.loginEmail || loginEmail,
-        useProxy: payload?.useProxy === true || flow.useProxy,
-        proxyId: payload?.useProxy || flow.useProxy ? (payload?.proxyId || flow.proxyId) : null,
-      }));
-
-      if (withProxy.length === 1) {
-        const linkRes = await integrations.linkAllDiscoveredAccounts({
-          store,
-          integrations,
-          keys,
-          discovered: withProxy,
-          meta: { loginEmail, connectionId: withProxy[0].connectionId },
-        });
-        return {
-          success: true,
-          linked: linkRes.linked?.length || 1,
-          accounts: linkRes.linked || withProxy,
-          autoLinked: true,
-        };
-      }
-
-      return { success: true, accounts: withProxy, needsSelection: true };
+      return await browserPlatformConnect.finishBrowserPlatformConnect({
+        state: payload?.state,
+        platform: payload?.platform,
+        email: payload?.email,
+        username: payload?.username,
+        keys,
+        store,
+        integrations,
+        useProxy: payload?.useProxy,
+        proxyId: payload?.proxyId,
+        autoLinkAll: payload?.autoLinkAll !== false,
+      });
     } catch (e) {
       return { success: false, error: e.message };
     }

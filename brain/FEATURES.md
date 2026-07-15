@@ -110,7 +110,7 @@ Persistent requirement for all past, current, and future modules — every actio
 | Welcome email drip | `leadCaptureService` + scheduler | — |
 | Predictive motivation | — | `PredictiveMotivationPanel` on dashboard |
 
-**IPC handlers:** **424** (verify via `npm run audit:accuracy`)
+**IPC handlers:** **426** (verify via `npm run audit:accuracy`)
 
 ## Imperialism Brain extensions (July 2026)
 
@@ -158,7 +158,7 @@ Does **not** remove SerpAPI keys or THEE_MICHAEL SEO REST routes — additive pr
 | Approval gates | THEE_MICHAEL notification ledger | Script/assets gates |
 | Compose & publish | `run-imperial-video-compose` | → Content Hub Media |
 
-**IPC handlers:** **424** (verify via `npm run audit:accuracy`)
+**IPC handlers:** **426** (verify via `npm run audit:accuracy`)
 
 ## Design Studio — Imperialism Design Compositor (July 2026)
 

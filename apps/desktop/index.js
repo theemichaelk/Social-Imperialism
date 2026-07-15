@@ -167,6 +167,7 @@ function registerAllAccountHandlers() {
     resolveKeys,
     integrations,
     openExternal: (url) => openOAuthUrl(url),
+    userDataPath: app.getPath('userData'),
   });
 }
 
