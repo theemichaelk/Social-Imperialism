@@ -46,6 +46,9 @@ type Account = {
   profile?: Record<string, unknown>;
   profileRefreshedAt?: string;
   health?: { status: string; label: string };
+  hasSavedLogin?: boolean;
+  hasApiToken?: boolean;
+  authMethod?: string;
   counts?: {
     automationTargets?: number;
     storedGroups?: number;
@@ -56,6 +59,33 @@ type Account = {
   targetsPreview?: Array<{ id: string; name: string; type?: string; platform?: string; source?: string }>;
   groupsPreview?: Array<{ id: string; name: string; memberCount?: number | null }>;
   childrenPreview?: Array<{ id: string; platform: string; handle?: string; type?: string }>;
+};
+
+const PASSWORD_PLACEHOLDERS: Record<string, string> = {
+  Facebook: 'Facebook password or Meta access token (EAA…)',
+  Instagram: 'Instagram password or Meta access token (EAA…)',
+  WhatsApp: 'Meta Business access token (EAA…)',
+  YouTube: 'Google password (browser sign-in) or API key',
+  TikTok: 'TikTok password or access token',
+  Twitter: 'X password (browser/OAuth) or access token',
+  Pinterest: 'Pinterest password or access token',
+  Snapchat: 'Snapchat password or access token',
+  Threads: 'Threads password or Meta access token',
+  Twitch: 'Twitch password or access token',
+  LinkedIn: 'LinkedIn password (opens browser) or access token (AQW…)',
+  Reddit: 'Reddit password or access token',
+  Quora: 'Quora password (browser session for answers)',
+  Discord: 'Discord password or bot token',
+  Telegram: '@BotFather bot token (123456:ABC…)',
+};
+
+const EMAIL_PLACEHOLDERS: Record<string, string> = {
+  WhatsApp: 'Phone Number ID (Meta WhatsApp API)',
+  YouTube: 'Google email',
+  Telegram: 'Optional @channel or chat ID',
+  Reddit: 'Email (optional) — use username field for u/name',
+  Discord: 'Email / login',
+  Twitter: 'Email / phone / @handle',
 };
 
 type AutomationTarget = {
@@ -195,17 +225,31 @@ export default function AccountHubPage() {
     autoLinked?: boolean;
     needsSelection?: boolean;
     discovered?: Account[];
+    useBrowserConnect?: boolean;
+    openUrl?: string;
+    state?: string;
+    mode?: string;
+    message?: string;
   };
 
-  function handleConnectResult(res: ConnectResult) {
+  function handleConnectResult(res: ConnectResult & { message?: string; savedCredentials?: boolean }) {
     if (res.success === false) {
       setMsg(res.error || 'Connection failed');
       return;
     }
     const discovered = res.accounts || res.discovered || [];
     if (res.autoLinked || (res.linked && res.linked > 0 && !res.needsSelection)) {
-      setMsg(`Linked ${res.linked || discovered.length || 1} account(s) on ${connectPlatform}`);
-      refresh();
+      const n = res.linked || discovered.length || 1;
+      setMsg(res.message || `Saved & linked ${n} account(s) on ${connectPlatform} — profile details ready for automations`);
+      if (discovered[0]) setSelected(discovered[0] as Account);
+      refresh().then(() => {
+        const first = discovered[0] as Account | undefined;
+        if (first?.id) {
+          invoke('refresh-account-profile', first.id)
+            .then(() => refresh())
+            .catch(() => {});
+        }
+      });
       loadProxies();
       return;
     }
@@ -221,7 +265,7 @@ export default function AccountHubPage() {
       confirmSelection(attachProxyMeta(discovered as Account[]));
       return;
     }
-    setMsg('Connected — refreshing accounts…');
+    setMsg(res.message || 'Connected — refreshing accounts…');
     refresh();
     loadProxies();
   }
@@ -260,19 +304,137 @@ export default function AccountHubPage() {
   }
 
   /**
-   * Both OAuth Connect and Email & Password open the user's browser:
-   * - OAuth platforms: full tab to authorize (email prefilled when supported)
-   * - Access tokens: direct API link
-   * - Website passwords: browser login path (desktop also autofills when possible)
+   * Save email/password (or token) for the platform, pull intelligence profile details,
+   * and open browser OAuth when needed for full pages/groups import.
    */
-  async function connect(_method: 'oauth' | 'credentials') {
+  async function connect(method: 'oauth' | 'credentials') {
     if (useProxyOnConnect && !connectProxyId) {
       setMsg('Select a proxy from the pool or connect without proxy');
       return;
     }
+    if (method === 'credentials') {
+      if (!creds.password.trim()) {
+        setMsg(`Enter a password or access token for ${connectPlatform}.`);
+        return;
+      }
+      if (!creds.email.trim() && !creds.username.trim() && connectPlatform !== 'Telegram') {
+        setMsg(`Enter email or username for ${connectPlatform}.`);
+        return;
+      }
+    }
+
     setConnecting(true);
-    setMsg(`Opening ${connectPlatform} in your browser…`);
+    setMsg(method === 'credentials'
+      ? `Saving ${connectPlatform} credentials and pulling account details…`
+      : `Opening ${connectPlatform} in your browser…`);
+
     try {
+      // Email & Password path: always persist credentials + enrich profiles
+      if (method === 'credentials') {
+        type SaveLoginRes = ConnectResult & {
+          savedCredentials?: boolean;
+          browserStart?: {
+            success?: boolean;
+            needsBrowser?: boolean;
+            openUrl?: string;
+            oauthUrl?: string;
+            state?: string;
+            mode?: string;
+            message?: string;
+          } | null;
+          connectError?: string | null;
+          message?: string;
+        };
+        let saveRes: SaveLoginRes;
+        try {
+          saveRes = await invoke<SaveLoginRes>('save-platform-login', {
+            platform: connectPlatform,
+            email: creds.email,
+            username: creds.username,
+            password: creds.password,
+            useProxy: useProxyOnConnect,
+            proxyId: useProxyOnConnect ? connectProxyId : null,
+          });
+        } catch {
+          // Older API without save-platform-login — fall through to classic connect
+          saveRes = await invoke<SaveLoginRes>('connect-with-credentials', {
+            platform: connectPlatform,
+            email: creds.email,
+            username: creds.username,
+            password: creds.password,
+            useProxy: useProxyOnConnect,
+            proxyId: useProxyOnConnect ? connectProxyId : null,
+          });
+        }
+
+        if (saveRes.success === false && !saveRes.useBrowserConnect && !saveRes.browserStart) {
+          setMsg(saveRes.error || 'Could not save account credentials');
+          return;
+        }
+
+        if (saveRes.accounts?.length || saveRes.linked) {
+          handleConnectResult(saveRes);
+          setCreds((c) => ({ ...c, password: '' }));
+        }
+
+        type BrowserBits = {
+          needsBrowser?: boolean;
+          openUrl?: string;
+          oauthUrl?: string;
+          state?: string;
+          mode?: string;
+          message?: string;
+        };
+        const browser: BrowserBits | null = saveRes.browserStart
+          || (saveRes.useBrowserConnect
+            ? {
+              needsBrowser: true,
+              openUrl: saveRes.openUrl,
+              oauthUrl: (saveRes as { oauthUrl?: string }).oauthUrl,
+              state: saveRes.state,
+              mode: saveRes.mode,
+              message: saveRes.message,
+            }
+            : null);
+
+        if (browser && (browser.needsBrowser || saveRes.useBrowserConnect)) {
+          const url = browser.openUrl || browser.oauthUrl;
+          const state = browser.state;
+          if (url) openBrowserTab(url);
+          setMsg(
+            browser.message
+            || saveRes.message
+            || `Credentials saved. Complete sign-in in the browser to import all ${connectPlatform} pages/profiles.`,
+          );
+          if (state) {
+            const mode = browser.mode;
+            const waitMs = mode === 'browser_login' ? 45000 : 180000;
+            const polled = await pollOAuthUntilComplete(state, waitMs);
+            if (polled.ok) {
+              await finishOAuthConnect(state);
+            } else if (mode === 'browser_login') {
+              // Still finalize credential save + profile pull after browser window
+              try {
+                await finishOAuthConnect(state);
+              } catch {
+                setMsg((prev) => prev || (polled.error
+                  || `Credentials saved for ${connectPlatform}. Finish browser login when ready, or add OAuth keys in Integrations for full API import.`));
+              }
+            } else {
+              setMsg(polled.error || 'Browser authorization timed out — credentials are still saved on this account.');
+            }
+          }
+          await refresh();
+          return;
+        }
+
+        if (!saveRes.accounts?.length && !saveRes.linked) {
+          handleConnectResult(saveRes);
+        }
+        return;
+      }
+
+      // OAuth Connect path
       const begin = await startBrowserConnect({
         platform: connectPlatform,
         email: creds.email,
@@ -283,11 +445,10 @@ export default function AccountHubPage() {
       });
 
       if (!begin.success) {
-        // Fallback: classic connect-platform for token-only paths if browser handler missing
         if (creds.password) {
           const res = await invoke<ConnectResult>('connect-platform', {
             platform: connectPlatform,
-            method: 'credentials',
+            method: 'oauth',
             email: creds.email,
             username: creds.username,
             password: creds.password,
@@ -312,11 +473,10 @@ export default function AccountHubPage() {
           handleConnectResult(res);
           return;
         }
-        setMsg(begin.error || 'Could not start browser connect');
+        setMsg(begin.error || 'Could not start browser connect — add Client ID + Secret in Integrations or use Email & Password.');
         return;
       }
 
-      // Token mode — no browser needed
       if (begin.mode === 'token' || begin.needsBrowser === false) {
         setMsg(begin.message || 'Linking with access token…');
         const res = await invoke<ConnectResult>('connect-platform', {
@@ -344,16 +504,13 @@ export default function AccountHubPage() {
 
       if (begin.state && (begin.mode === 'oauth' || begin.mode === 'browser_login')) {
         if (begin.mode === 'browser_login') {
-          // Login-only assist: wait briefly then tell user to complete OAuth setup if needed
-          const polled = await pollOAuthUntilComplete(begin.state, 30000);
+          const polled = await pollOAuthUntilComplete(begin.state, 45000);
           if (polled.ok) {
             await finishOAuthConnect(begin.state);
             return;
           }
-          setMsg(
-            begin.message
-            || `${connectPlatform} browser opened. After you sign in, add Client ID + Secret in Integrations if accounts did not import, then click Connect again.`,
-          );
+          // Always finalize credential save after browser assist
+          await finishOAuthConnect(begin.state);
           return;
         }
         const polled = await pollOAuthUntilComplete(begin.state);
@@ -520,6 +677,12 @@ export default function AccountHubPage() {
                 {a.health?.status === 'relink' && (
                   <span className="badge status-warn" style={{ marginLeft: 6, fontSize: '0.7rem' }}>Re-link</span>
                 )}
+                {a.hasSavedLogin && (
+                  <span className="badge" style={{ marginLeft: 6, fontSize: '0.7rem', borderColor: '#22c55e', color: '#86efac' }}>Password saved</span>
+                )}
+                {a.hasApiToken && (
+                  <span className="badge" style={{ marginLeft: 6, fontSize: '0.7rem', borderColor: '#38bdf8', color: '#7dd3fc' }}>API token</span>
+                )}
                 {a.useProxy && a.proxyId && (
                   <span className="badge" style={{ marginLeft: 6, fontSize: '0.7rem' }}>Proxy</span>
                 )}
@@ -527,6 +690,7 @@ export default function AccountHubPage() {
                   {a.loginEmail && <span>{a.loginEmail} · </span>}
                   {a.counts?.automationTargets != null && <span>{a.counts.automationTargets} targets · </span>}
                   {a.counts?.storedGroups != null && a.counts.storedGroups > 0 && <span>{a.counts.storedGroups} groups · </span>}
+                  {a.profileRefreshedAt && <span>profile {new Date(a.profileRefreshedAt).toLocaleDateString()} · </span>}
                   {a.linkedAt && <span>linked {new Date(a.linkedAt).toLocaleDateString()}</span>}
                 </div>
               </div>
@@ -565,26 +729,36 @@ export default function AccountHubPage() {
             {dynamicHint}
           </p>
           <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 10, lineHeight: 1.45 }}>
-            Enter the email/username you use on {connectPlatform}. Click either button —{' '}
-            <strong style={{ color: '#cbd5e1' }}>your browser opens</strong>, fields are filled when possible,
-            you finish login / 2FA, then we import every profile, page, and community.
+            Enter the <strong style={{ color: '#cbd5e1' }}>email/username + password</strong> you use on {connectPlatform}.
+            {' '}<strong style={{ color: '#cbd5e1' }}>Email &amp; Password</strong> saves credentials, pulls profile details
+            for automations, and opens the browser when OAuth is available to import every page/community.
             {!platformOAuthReady && !['Telegram', 'WhatsApp'].includes(connectPlatform) && (
               <>
-                {' '}Full API publish needs Client ID + Secret once in{' '}
+                {' '}Full Graph API publish also needs Client ID + Secret once in{' '}
                 <Link href="/integrations">Integrations</Link>.
               </>
             )}
           </p>
-          <input className="input" placeholder={connectPlatform === 'YouTube' ? 'Google email' : 'Email / login'} value={creds.email} onChange={(e) => setCreds({ ...creds, email: e.target.value })} style={{ marginBottom: 8 }} autoComplete="username" />
-          <input className="input" placeholder="Username / @handle (optional)" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} style={{ marginBottom: 8 }} autoComplete="username" />
+          <input
+            className="input"
+            placeholder={EMAIL_PLACEHOLDERS[connectPlatform] || 'Email / login'}
+            value={creds.email}
+            onChange={(e) => setCreds({ ...creds, email: e.target.value })}
+            style={{ marginBottom: 8 }}
+            autoComplete="username"
+          />
+          <input
+            className="input"
+            placeholder={connectPlatform === 'Reddit' ? 'Reddit username (u/name)' : 'Username / @handle (optional)'}
+            value={creds.username}
+            onChange={(e) => setCreds({ ...creds, username: e.target.value })}
+            style={{ marginBottom: 8 }}
+            autoComplete="username"
+          />
           <input
             className="input"
             type="password"
-            placeholder={
-              connectPlatform === 'YouTube'
-                ? 'Google password (opens browser & fills when possible)'
-                : 'Password (opens browser) or paste access token (AQW… / EAA…)'
-            }
+            placeholder={PASSWORD_PLACEHOLDERS[connectPlatform] || 'Password or access token'}
             value={creds.password}
             onChange={(e) => setCreds({ ...creds, password: e.target.value })}
             style={{ marginBottom: 8 }}
@@ -621,21 +795,25 @@ export default function AccountHubPage() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               className="btn primary"
-              onClick={() => connect('oauth')}
+              onClick={() => connect('credentials')}
               disabled={connecting}
-              title="Opens your browser to sign in and import all accounts"
+              title="Save password/token, pull profile intelligence, open browser when needed"
             >
-              {connecting ? 'Connecting…' : 'OAuth Connect — open browser'}
+              {connecting ? 'Saving & connecting…' : 'Save password & connect'}
             </button>
             <button
               className="btn"
-              onClick={() => connect('credentials')}
+              onClick={() => connect('oauth')}
               disabled={connecting}
-              title="Opens your browser with email/password filled when possible"
+              title="Opens your browser for OAuth and imports all pages/profiles"
             >
-              {connecting ? 'Connecting…' : 'Email & Password — open browser'}
+              {connecting ? 'Connecting…' : 'OAuth Connect — open browser'}
             </button>
           </div>
+          <p className="settings-panel-desc" style={{ marginTop: 8, marginBottom: 0 }}>
+            Platforms: Facebook, Instagram, WhatsApp, YouTube, TikTok, Twitter/X, Pinterest, Snapchat, Threads, Twitch, LinkedIn, Reddit, Quora, Discord, Telegram.
+            Saved logins feed automations (publish targets, replies, discovery).
+          </p>
           {msg && (
             <p style={{ marginTop: 8, color: msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('not') || msg.toLowerCase().includes('error') || msg.toLowerCase().includes('expired') ? '#fbbf24' : '#94a3b8', fontSize: '0.85rem', lineHeight: 1.45 }}>
               {msg}

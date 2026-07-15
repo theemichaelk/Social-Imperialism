@@ -30,7 +30,7 @@ const THREAT_PATTERNS = [
 /** Channels that legitimately carry credentials — never block on credential_exfil alone */
 const TRUSTED_CREDENTIAL_CHANNELS = new Set([
   'connect-platform',
-  'connect-with-credentials',
+  'connect-with-credentials', 'save-platform-login',
   'begin-platform-oauth',
   'poll-platform-oauth',
   'finish-platform-oauth-connect',

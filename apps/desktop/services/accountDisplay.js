@@ -29,6 +29,10 @@ function profileHealth(profile) {
 function buildDetailLines(account, targets) {
   const lines = [];
   if (account.loginEmail) lines.push({ key: 'Login', value: account.loginEmail });
+  if (account.encryptedPassword || account.hasSavedLogin) {
+    lines.push({ key: 'Saved password', value: 'Yes — available to automations' });
+  }
+  if (account.authMethod) lines.push({ key: 'Auth method', value: String(account.authMethod) });
   if (account.connectionId) lines.push({ key: 'Connection', value: account.connectionId });
   if (account.orgUrn) lines.push({ key: 'Org URN', value: account.orgUrn });
   if (account.subreddit) lines.push({ key: 'Subreddit', value: `r/${account.subreddit}` });
@@ -69,6 +73,7 @@ function enrichLinkedAccount(account, allAccounts = []) {
   return {
     ...account,
     displayName: account.handle || account.username || account.id,
+    hasSavedLogin: !!(account.encryptedPassword || account.hasSavedLogin),
     health,
     counts: {
       automationTargets: targets.length,
@@ -116,7 +121,11 @@ function enrichLinkedAccounts(accounts) {
 function stripAccountSecrets(account) {
   if (!account || typeof account !== 'object') return account;
   const { encryptedTokens, encryptedPassword, ...safe } = account;
-  return safe;
+  return {
+    ...safe,
+    hasSavedLogin: !!(encryptedPassword || account.hasSavedLogin),
+    hasApiToken: !!encryptedTokens,
+  };
 }
 
 function enrichLinkedAccountsPublic(accounts) {

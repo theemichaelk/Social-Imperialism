@@ -32,6 +32,7 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
     'link-discovered-sub-accounts',
     'connect-with-credentials',
     'connect-platform',
+    'save-platform-login',
     'begin-platform-oauth',
     'begin-browser-platform-connect',
     'poll-platform-oauth',
@@ -169,6 +170,108 @@ function registerAccountHandlers({ ipcMain, store, resolveKeys, integrations, op
     ...payload,
     method: 'credentials',
   }));
+
+  /**
+   * Always save email/password (or token) for a platform, pull profile details when possible,
+   * and return browser OAuth start when full API import needs a browser tab.
+   */
+  ipcMain.handle('save-platform-login', async (event, payload) => {
+    try {
+      const keys = resolveKeys(JSON.parse(store.getItem('globalApiKeys') || '{}'));
+      const platform = payload?.platform;
+      const email = payload?.email;
+      const username = payload?.username;
+      const password = String(payload?.password || '').trim();
+      if (!platform) return { success: false, error: 'Platform required' };
+      if (!password) return { success: false, error: 'Enter a password or paste an access token.' };
+      if (!(email || username) && !['Telegram'].includes(platform)) {
+        return { success: false, error: 'Enter email or username for this account.' };
+      }
+
+      // 1) Prefer full API connect when token / bot / password-grant works
+      const direct = await runConnect({
+        platform,
+        email,
+        username,
+        password,
+        method: 'credentials',
+        useProxy: payload?.useProxy,
+        proxyId: payload?.proxyId,
+      });
+      if (direct?.useBrowserConnect && direct?.needsBrowser) {
+        // Browser path started — still save credentials shell so automations have the login
+        const saved = await browserPlatformConnect.saveCredentialLinkedAccount({
+          store,
+          integrations,
+          keys,
+          platform,
+          email,
+          username,
+          password,
+          useProxy: payload?.useProxy,
+          proxyId: payload?.proxyId,
+          authMethod: 'credentials_pending_oauth',
+        });
+        return {
+          ...direct,
+          success: true,
+          savedCredentials: true,
+          accounts: saved.accounts || direct.accounts,
+          linked: saved.linked || direct.linked,
+          message: direct.message || saved.message,
+        };
+      }
+      if (direct?.success) {
+        return { ...direct, savedCredentials: true };
+      }
+
+      // 2) Save credentials + best-effort profile even if API connect failed
+      const saved = await browserPlatformConnect.saveCredentialLinkedAccount({
+        store,
+        integrations,
+        keys,
+        platform,
+        email,
+        username,
+        password,
+        useProxy: payload?.useProxy,
+        proxyId: payload?.proxyId,
+        authMethod: 'credentials_saved',
+      });
+
+      // 3) Optionally start browser OAuth for full pages/groups pull
+      let browser = null;
+      try {
+        browser = await browserPlatformConnect.beginBrowserPlatformConnect({
+          platform,
+          email,
+          username,
+          password,
+          keys,
+          store,
+          userDataPath,
+          openExternal,
+          useProxy: payload?.useProxy,
+          proxyId: payload?.proxyId,
+        });
+      } catch {
+        browser = null;
+      }
+
+      return {
+        ...saved,
+        success: true,
+        browserStart: browser?.success ? browser : null,
+        connectError: direct?.error || null,
+        message: saved.message
+          + (browser?.success && browser.needsBrowser
+            ? ' Browser opened for full OAuth import when available.'
+            : ''),
+      };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
 
   /** Unified browser-first connect (full tab + optional autofill + full profile pull). */
   ipcMain.handle('begin-browser-platform-connect', async (event, payload) => {

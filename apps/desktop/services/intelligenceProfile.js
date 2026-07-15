@@ -115,6 +115,26 @@ async function buildIntelligenceProfile(account, keys) {
     }
   }
 
+  // Credential-linked accounts without API tokens still need automation-facing profile data
+  if (!authStatus && !apiNote && !accessToken && (account.encryptedPassword || account.authMethod)) {
+    return {
+      followers: '—',
+      likes: '—',
+      bestTime: 'Session / handle based',
+      topTrendingNiche: account.platform || '—',
+      growthVelocity: 'Credentials on file',
+      suggestedGroups: Array.isArray(account.groups)
+        ? account.groups.slice(0, 8).map((g) => g.name || g.handle).filter(Boolean)
+        : [],
+      handle: account.handle || account.username || null,
+      loginEmail: account.loginEmail || null,
+      authMethod: account.authMethod || 'credentials_saved',
+      discoveryNote: 'Login saved for automations. Complete OAuth (Client ID + Secret) for live follower/page metrics.',
+      apiNote: null,
+      needsRelink: false,
+    };
+  }
+
   if (!authStatus && !apiNote) {
     needsRelink = !!accessToken;
     authStatus = needsRelink

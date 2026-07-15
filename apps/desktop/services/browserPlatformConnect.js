@@ -90,6 +90,24 @@ const LOGIN_FLOWS = {
     password: ['input[type="password"]'],
     submit: ['button[type="submit"]'],
   },
+  Snapchat: {
+    loginUrl: 'https://accounts.snapchat.com/accounts/v2/login',
+    email: ['input[name="accountIdentifier"]', 'input[type="text"]', 'input[type="email"]'],
+    password: ['input[type="password"]', 'input[name="password"]'],
+    submit: ['button[type="submit"]'],
+  },
+  WhatsApp: {
+    loginUrl: 'https://business.facebook.com/latest/whatsapp_manager',
+    email: ['input[type="email"]', '#email'],
+    password: ['input[type="password"]', '#pass'],
+    submit: ['button[type="submit"]', 'button[name="login"]'],
+  },
+  Telegram: {
+    loginUrl: 'https://web.telegram.org/',
+    email: [],
+    password: [],
+    submit: [],
+  },
 };
 
 function delay(ms) {
@@ -377,6 +395,211 @@ async function beginBrowserPlatformConnect({
 }
 
 /**
+ * Save login credentials and create/update a linked account shell with intelligence profile.
+ * Used when OAuth app is not configured yet, or as an immediate save before browser OAuth finishes.
+ */
+async function saveCredentialLinkedAccount({
+  store,
+  integrations,
+  keys: rawKeys,
+  platform,
+  email,
+  username,
+  password,
+  useProxy,
+  proxyId,
+  authMethod = 'credentials_saved',
+  oauthTokens = null,
+}) {
+  if (!platform) return { success: false, error: 'Platform required' };
+  const keys = resolveKeys(rawKeys || {});
+  const loginEmail = (email || username || '').trim().toLowerCase();
+  const handleRaw = (username || email || platform).trim();
+  const handle = handleRaw.startsWith('@') ? handleRaw : (handleRaw.includes('@') ? handleRaw.split('@')[0] : handleRaw);
+  if (!loginEmail && !username) {
+    return { success: false, error: 'Email or username is required to save this account.' };
+  }
+  const pw = (password || '').trim();
+  if (!pw && !oauthTokens) {
+    return { success: false, error: 'Password or access token is required to save credentials.' };
+  }
+
+  const { makeConnectionId, encryptCredential, looksLikeAccessToken } = require('./credentialAuth');
+  const connectionId = makeConnectionId(platform, loginEmail || handle || platform);
+  const encryptedPassword = pw ? encryptCredential(pw) : null;
+  const tokenPayload = oauthTokens
+    ? Buffer.from(JSON.stringify(oauthTokens)).toString('base64')
+    : (pw && looksLikeAccessToken(pw)
+      ? Buffer.from(JSON.stringify({ access_token: pw })).toString('base64')
+      : null);
+
+  const stub = {
+    id: `acc_${platform.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_${Date.now().toString(36)}`,
+    platform,
+    handle: handle || loginEmail || platform,
+    type: platform === 'Telegram' ? 'Bot' : platform === 'WhatsApp' ? 'Business' : 'Profile',
+    loginEmail: loginEmail || null,
+    username: username || null,
+    connectionId,
+    encryptedTokens: tokenPayload,
+    encryptedPassword,
+    authMethod,
+    status: 'connected',
+    linkedAt: new Date().toISOString(),
+    useProxy: useProxy === true,
+    proxyId: useProxy ? (proxyId || null) : null,
+  };
+
+  // Prefer full discovery when we have a token / bot credential
+  let discovered = null;
+  try {
+    if (tokenPayload || (pw && looksLikeAccessToken(pw)) || platform === 'Telegram' || platform === 'WhatsApp') {
+      discovered = await discoverAccounts({
+        platform,
+        email: loginEmail,
+        username: username || handle,
+        password: pw,
+        useCredentials: true,
+        connectionId,
+        oauthTokens: oauthTokens || undefined,
+      }, keys, () => {});
+    }
+  } catch (e) {
+    /* fall through to stub save */
+    discovered = null;
+  }
+
+  if (discovered?.length) {
+    const linkRes = await linkAllDiscoveredAccounts({
+      store,
+      integrations,
+      keys,
+      discovered: discovered.map((a) => ({
+        ...a,
+        loginEmail: a.loginEmail || loginEmail,
+        connectionId: a.connectionId || connectionId,
+        proxyId: useProxy ? (proxyId || null) : null,
+      })),
+      meta: {
+        loginEmail,
+        connectionId,
+        encryptedPassword,
+        proxyId: useProxy ? proxyId : null,
+        sharedTokens: discovered[0]?.encryptedTokens || tokenPayload,
+      },
+    });
+    const linked = linkRes.linked || [];
+    const enriched = [];
+    for (const acc of linked) {
+      try {
+        if (integrations.refreshAccountProfile) {
+          const refreshed = await integrations.refreshAccountProfile(store, acc.id, keys);
+          enriched.push(refreshed?.account || acc);
+        } else if (integrations.buildIntelligenceProfile) {
+          const profile = await integrations.buildIntelligenceProfile(acc, keys);
+          enriched.push({ ...acc, profile, profileRefreshedAt: new Date().toISOString() });
+        } else {
+          enriched.push(acc);
+        }
+      } catch {
+        enriched.push(acc);
+      }
+    }
+    return {
+      success: true,
+      linked: enriched.length,
+      accounts: enriched,
+      autoLinked: true,
+      platform,
+      savedCredentials: true,
+      message: `Saved ${platform} credentials and linked ${enriched.length} account(s) with profile details for automations.`,
+    };
+  }
+
+  // Credential shell — still useful for automations that use browser session / handle targeting
+  let profile = null;
+  try {
+    if (integrations.buildIntelligenceProfile) {
+      profile = await integrations.buildIntelligenceProfile(stub, keys);
+    }
+  } catch {
+    profile = null;
+  }
+  if (!profile) {
+    profile = {
+      followers: '—',
+      likes: '—',
+      bestTime: 'Session-based',
+      topTrendingNiche: platform,
+      growthVelocity: 'Credentials saved',
+      suggestedGroups: [],
+      discoveryNote: 'Login saved — complete OAuth in Integrations for full API metrics, or use browser automation with this account.',
+      authMethod,
+      handle: stub.handle,
+      loginEmail: stub.loginEmail,
+    };
+  }
+
+  const entry = {
+    ...stub,
+    profile,
+    profileRefreshedAt: new Date().toISOString(),
+    settings: {
+      frequency: 'auto',
+      autoReply: false,
+      automationEnabled: true,
+      activeGroupIds: [],
+    },
+  };
+
+  const { getLinkedAccounts, saveLinkedAccounts } = require('./accountAutomation');
+  let accounts = getLinkedAccounts(store);
+  // Upsert by platform + loginEmail/handle
+  const existingIdx = accounts.findIndex((a) => (
+    a.platform === platform
+    && !a.parentAccountId
+    && (
+      (loginEmail && a.loginEmail === loginEmail)
+      || (a.handle && a.handle === entry.handle)
+    )
+  ));
+  if (existingIdx >= 0) {
+    accounts[existingIdx] = {
+      ...accounts[existingIdx],
+      ...entry,
+      id: accounts[existingIdx].id,
+      encryptedTokens: entry.encryptedTokens || accounts[existingIdx].encryptedTokens,
+      encryptedPassword: entry.encryptedPassword || accounts[existingIdx].encryptedPassword,
+      groups: accounts[existingIdx].groups || [],
+    };
+    entry.id = accounts[existingIdx].id;
+  } else {
+    accounts.push(entry);
+  }
+  if (useProxy && proxyId) {
+    try {
+      const proxyManager = require('./proxyManager');
+      proxyManager.assignProxyToAccount(store, proxyId, entry.id);
+    } catch { /* optional */ }
+  }
+  saveLinkedAccounts(store, null, accounts);
+
+  const { enrichLinkedAccount } = require('./accountDisplay');
+  return {
+    success: true,
+    linked: 1,
+    accounts: [enrichLinkedAccount(entry, accounts)],
+    autoLinked: true,
+    platform,
+    savedCredentials: true,
+    needsOAuthSetup: !tokenPayload,
+    message: tokenPayload
+      ? `Saved ${platform} account and pulled available profile details for automations.`
+      : `Saved ${platform} login (${loginEmail || handle}) for automations. Add Client ID + Secret in Integrations, then OAuth Connect to unlock full API pages/groups — credentials stay on file.`,
+  };
+}
+
+/**
  * After browser OAuth completes — link every discovered account and enrich profiles.
  */
 async function finishBrowserPlatformConnect({
@@ -384,6 +607,7 @@ async function finishBrowserPlatformConnect({
   platform: platformHint,
   email,
   username,
+  password,
   keys: rawKeys,
   store,
   integrations,
@@ -397,13 +621,32 @@ async function finishBrowserPlatformConnect({
   }
 
   if (flow.browserLoginOnly) {
-    return {
-      success: false,
-      error:
-        'Browser login opened, but this platform needs OAuth Client ID + Secret to import account details via API. '
-        + 'Add credentials in Integrations → Social OAuth, then click OAuth Connect again.',
-      needsOAuthSetup: true,
+    // Persist credentials + account shell so automations can use login/handle even without OAuth app yet
+    let plainPassword = password || null;
+    if (!plainPassword && flow.encryptedPassword) {
+      try {
+        plainPassword = Buffer.from(flow.encryptedPassword, 'base64').toString('utf8');
+      } catch {
+        plainPassword = null;
+      }
+    }
+    const saved = await saveCredentialLinkedAccount({
+      store,
+      integrations,
+      keys: rawKeys,
       platform: flow.platform || platformHint,
+      email: flow.loginEmail || email,
+      username,
+      password: plainPassword,
+      useProxy: useProxy === true || flow.useProxy,
+      proxyId: proxyId || flow.proxyId,
+      authMethod: 'browser_credentials',
+    });
+    await oauthFlowStore.removeFlow(state).catch(() => {});
+    return {
+      ...saved,
+      browserConnect: true,
+      needsOAuthSetup: saved.needsOAuthSetup !== false,
     };
   }
 
@@ -436,6 +679,13 @@ async function finishBrowserPlatformConnect({
     proxyId: (useProxy || flow.useProxy) ? (proxyId || flow.proxyId) : null,
   }));
 
+  let encryptedPassword = null;
+  if (flow.encryptedPassword) encryptedPassword = flow.encryptedPassword;
+  else if (password) {
+    const { encryptCredential } = require('./credentialAuth');
+    encryptedPassword = encryptCredential(password);
+  }
+
   // Always auto-link every discovered profile/page/channel
   if (autoLinkAll || withProxy.length === 1) {
     const linkRes = await linkAllDiscoveredAccounts({
@@ -443,7 +693,12 @@ async function finishBrowserPlatformConnect({
       integrations,
       keys,
       discovered: withProxy,
-      meta: { loginEmail, connectionId: withProxy[0].connectionId },
+      meta: {
+        loginEmail,
+        connectionId: withProxy[0].connectionId,
+        encryptedPassword,
+        proxyId: (useProxy || flow.useProxy) ? (proxyId || flow.proxyId) : null,
+      },
     });
 
     const linked = linkRes.linked || withProxy;
@@ -471,8 +726,9 @@ async function finishBrowserPlatformConnect({
       accounts: enriched,
       autoLinked: true,
       browserConnect: true,
+      savedCredentials: !!encryptedPassword,
       platform,
-      message: `Linked ${enriched.length} ${platform} account(s) and pulled profile details.`,
+      message: `Linked ${enriched.length} ${platform} account(s) and pulled profile details for automations.`,
     };
   }
 
@@ -483,6 +739,7 @@ module.exports = {
   LOGIN_FLOWS,
   beginBrowserPlatformConnect,
   finishBrowserPlatformConnect,
+  saveCredentialLinkedAccount,
   autofillInNativeBrowser,
   isSaasMode,
 };
