@@ -1,6 +1,8 @@
 /**
- * Unique news-style cover/mid images for every blog post (no shared hero slides).
- * Writes SVG assets under public/blog-images/{slug}/
+ * Blog image path wiring for every post.
+ * Prefer Grok Imagine JPG assets (header/thumb/mid-1/mid-2) when present.
+ * Falls back to unique SVG placeholders only when JPGs are missing.
+ * Writes under public/blog-images/{slug}/ and patches generatedPosts.ts paths.
  */
 import fs from 'fs';
 import path from 'path';
@@ -88,58 +90,83 @@ function makeSvg({ title, silo, kind, idx, variant }) {
 </svg>`;
 }
 
+function hasUsableJpg(filePath) {
+  try {
+    const st = fs.statSync(filePath);
+    return st.isFile() && st.size >= 10000;
+  } catch {
+    return false;
+  }
+}
+
+/** Prefer Imagine JPG; fall back to SVG placeholder only if needed. */
+function resolveAsset(dir, baseName, svgFallbackWriter) {
+  const jpgName = `${baseName}.jpg`;
+  const svgName = `${baseName}.svg`;
+  const jpgPath = path.join(dir, jpgName);
+  if (hasUsableJpg(jpgPath)) {
+    return jpgName;
+  }
+  const svgPath = path.join(dir, svgName);
+  fs.writeFileSync(svgPath, svgFallbackWriter());
+  return svgName;
+}
+
 fs.mkdirSync(outRoot, { recursive: true });
 const used = new Set();
 const updates = [];
+let jpgPosts = 0;
+let svgFallbackPosts = 0;
 
 posts.forEach((p, idx) => {
   const dir = path.join(outRoot, p.slug);
   fs.mkdirSync(dir, { recursive: true });
-  const files = {
-    thumbnail: 'thumb.svg',
-    headerImage: 'header.svg',
-    midImage1: 'mid-1.svg',
-    midImage2: 'mid-2.svg',
-    bottomImage: 'header.svg',
-  };
-  const variants = [
-    ['thumb', 0, files.thumbnail],
-    ['header', 1, files.headerImage],
-    ['mid', 2, files.midImage1],
-    ['mid', 3, files.midImage2],
-  ];
-  for (const [kind, v, name] of variants) {
+
+  const thumb = resolveAsset(dir, 'thumb', () =>
+    makeSvg({ title: p.title, silo: p.siloLabel, kind: 'thumb', idx, variant: 0 }),
+  );
+  const header = resolveAsset(dir, 'header', () =>
+    makeSvg({ title: p.title, silo: p.siloLabel, kind: 'header', idx, variant: 1 }),
+  );
+  const mid1 = resolveAsset(dir, 'mid-1', () =>
+    makeSvg({ title: p.title, silo: p.siloLabel, kind: 'mid', idx, variant: 2 }),
+  );
+  const mid2 = resolveAsset(dir, 'mid-2', () =>
+    makeSvg({ title: p.title, silo: p.siloLabel, kind: 'mid', idx, variant: 3 }),
+  );
+
+  if (thumb.endsWith('.jpg') && header.endsWith('.jpg')) jpgPosts += 1;
+  else svgFallbackPosts += 1;
+
+  for (const name of [thumb, header, mid1, mid2]) {
     const rel = `/blog-images/${p.slug}/${name}`;
-    if (used.has(rel) && name !== 'header.svg') throw new Error(`dup ${rel}`);
     used.add(rel);
-    fs.writeFileSync(
-      path.join(dir, name),
-      makeSvg({ title: p.title, silo: p.siloLabel, kind, idx, variant: v }),
-    );
   }
+
   updates.push({
     slug: p.slug,
-    thumbnail: `/blog-images/${p.slug}/thumb.svg`,
-    headerImage: `/blog-images/${p.slug}/header.svg`,
-    midImage1: `/blog-images/${p.slug}/mid-1.svg`,
-    midImage2: `/blog-images/${p.slug}/mid-2.svg`,
-    bottomImage: `/blog-images/${p.slug}/header.svg`,
+    thumbnail: `/blog-images/${p.slug}/${thumb}`,
+    headerImage: `/blog-images/${p.slug}/${header}`,
+    midImage1: `/blog-images/${p.slug}/${mid1}`,
+    midImage2: `/blog-images/${p.slug}/${mid2}`,
+    bottomImage: `/blog-images/${p.slug}/${header}`,
     midImage1Caption: `${p.siloLabel} intelligence visual — unique to this brief.`,
     midImage2Caption: `Field graphic for ${p.keywords?.[0] || p.title}.`,
   });
 });
 
-// Patch generatedPosts.ts image fields
+// Patch generatedPosts.ts image fields (preserve body + metadata)
 let postsTs = fs.readFileSync(postsPath, 'utf8');
 const nextPosts = posts.map((p) => {
   const u = updates.find((x) => x.slug === p.slug);
   return { ...p, ...u };
 });
-postsTs = `/** Auto-generated blog post metadata (10 live + 25 weekly drip). Do not hand-edit; re-run generate-blog-content.mjs + generate-blog-images.mjs */
+postsTs = `/** Auto-generated blog post metadata (10 live + 25 weekly drip). Prefer Grok Imagine JPGs; re-run generate-blog-images.mjs after adding assets. */
 export const GENERATED_BLOG_POSTS = ${JSON.stringify(nextPosts, null, 2)};
 `;
 fs.writeFileSync(postsPath, postsTs);
 
-console.log('Wrote unique image sets for', posts.length, 'posts');
+console.log('Wired image sets for', posts.length, 'posts');
+console.log('Imagine JPG preferred:', jpgPosts, '| SVG fallback posts:', svgFallbackPosts);
 console.log('Unique paths used:', used.size);
 console.log('Output:', outRoot);

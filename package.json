@@ -1,6 +1,6 @@
 {
   "name": "social-imperialism",
-  "version": "1.2.42",
+  "version": "1.2.43",
   "private": true,
   "workspaces": [
     "packages/*",
@@ -25,6 +25,7 @@
     "dev:mobile-ios": "echo Open apps/mobile-ios in Xcode — see apps/mobile-ios/README.md",
     "dev:mobile-android": "cd apps/mobile-android && gradlew.bat :app:installDebug",
     "dev:mobile": "npm run start:lan --prefix apps/mobile",
+    "deploy:mobile": "powershell -ExecutionPolicy Bypass -File apps/mobile/scripts/deploy-mobile.ps1",
     "audit:accuracy": "node apps/api/_audit-accuracy-check.js",
     "audit:desktop": "node apps/desktop/_audit-all-pages.js",
     "audit:desktop-ipc": "node apps/desktop/_ipc-parity-report.js",
