@@ -28,9 +28,14 @@ function profileHealth(profile) {
 
 function buildDetailLines(account, targets) {
   const lines = [];
-  if (account.loginEmail) lines.push({ key: 'Login', value: account.loginEmail });
+  // One Login line only (never duplicate email/username as multiple “Login” rows)
+  const login = account.loginEmail || account.username || null;
+  if (login) lines.push({ key: 'Login', value: login });
+  if (account.handle && account.handle !== login && !String(account.handle).includes('@')) {
+    lines.push({ key: 'Handle', value: account.handle });
+  }
   if (account.encryptedPassword || account.hasSavedLogin) {
-    lines.push({ key: 'Saved password', value: 'Yes — available to automations' });
+    lines.push({ key: 'Password', value: 'Saved for automations' });
   }
   if (account.authMethod) lines.push({ key: 'Auth method', value: String(account.authMethod) });
   if (account.connectionId) lines.push({ key: 'Connection', value: account.connectionId });
@@ -58,7 +63,14 @@ function buildDetailLines(account, targets) {
   if (account.profile?.apiNote && account.profile.apiNote !== account.lastApiNote) {
     lines.push({ key: 'Profile API', value: account.profile.apiNote });
   }
-  return lines;
+  // Dedupe by key so UI never shows 3× “Login”
+  const seen = new Set();
+  return lines.filter((line) => {
+    const k = String(line.key).toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 function enrichLinkedAccount(account, allAccounts = []) {

@@ -83,10 +83,15 @@ const EMAIL_PLACEHOLDERS: Record<string, string> = {
   WhatsApp: 'Phone Number ID (Meta WhatsApp API)',
   YouTube: 'Google email',
   Telegram: 'Optional @channel or chat ID',
-  Reddit: 'Email (optional) — use username field for u/name',
-  Discord: 'Email / login',
+  Reddit: 'Email (optional if username set)',
+  Discord: 'Email or username',
   Twitter: 'Email / phone / @handle',
 };
+
+/** Only these platforms need a separate handle field (avoid 3 autofilled “login” boxes). */
+function needsSeparateHandle(platform: string): boolean {
+  return platform === 'Reddit' || platform === 'YouTube' || platform === 'Telegram';
+}
 
 type AutomationTarget = {
   id: string;
@@ -317,8 +322,9 @@ export default function AccountHubPage() {
         setMsg(`Enter a password or access token for ${connectPlatform}.`);
         return;
       }
-      if (!creds.email.trim() && !creds.username.trim() && connectPlatform !== 'Telegram') {
-        setMsg(`Enter email or username for ${connectPlatform}.`);
+      const identity = (creds.email || creds.username).trim();
+      if (!identity && connectPlatform !== 'Telegram') {
+        setMsg(`Enter login (email or username) for ${connectPlatform}.`);
         return;
       }
     }
@@ -346,11 +352,13 @@ export default function AccountHubPage() {
           message?: string;
         };
         let saveRes: SaveLoginRes;
+        const loginId = (creds.email || creds.username).trim();
+        const handleId = (creds.username || creds.email).trim();
         try {
           saveRes = await invoke<SaveLoginRes>('save-platform-login', {
             platform: connectPlatform,
-            email: creds.email,
-            username: creds.username,
+            email: loginId,
+            username: handleId,
             password: creds.password,
             useProxy: useProxyOnConnect,
             proxyId: useProxyOnConnect ? connectProxyId : null,
@@ -359,8 +367,8 @@ export default function AccountHubPage() {
           // Older API without save-platform-login — fall through to classic connect
           saveRes = await invoke<SaveLoginRes>('connect-with-credentials', {
             platform: connectPlatform,
-            email: creds.email,
-            username: creds.username,
+            email: loginId,
+            username: handleId,
             password: creds.password,
             useProxy: useProxyOnConnect,
             proxyId: useProxyOnConnect ? connectProxyId : null,
@@ -722,48 +730,104 @@ export default function AccountHubPage() {
               );
             })}
           </div>
-          <select className="input" value={connectPlatform} onChange={(e) => setConnectPlatform(e.target.value)} style={{ marginBottom: 8 }}>
+          <select
+            className="input"
+            value={connectPlatform}
+            onChange={(e) => {
+              const p = e.target.value;
+              setConnectPlatform(p);
+              // Reset handle when switching platforms so autofill does not leave a second login
+              setCreds((c) => ({
+                ...c,
+                username: needsSeparateHandle(p) ? '' : c.email,
+                password: '',
+              }));
+            }}
+            style={{ marginBottom: 8 }}
+          >
             {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
           <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: 10, lineHeight: 1.45 }}>
             {dynamicHint}
           </p>
           <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 10, lineHeight: 1.45 }}>
-            Enter the <strong style={{ color: '#cbd5e1' }}>email/username + password</strong> you use on {connectPlatform}.
-            {' '}<strong style={{ color: '#cbd5e1' }}>Email &amp; Password</strong> saves credentials, pulls profile details
-            for automations, and opens the browser when OAuth is available to import every page/community.
+            One login + password for {connectPlatform}. Credentials are saved once and used by automations.
             {!platformOAuthReady && !['Telegram', 'WhatsApp'].includes(connectPlatform) && (
               <>
-                {' '}Full Graph API publish also needs Client ID + Secret once in{' '}
+                {' '}Full Graph API also needs Client ID + Secret in{' '}
                 <Link href="/integrations">Integrations</Link>.
               </>
             )}
           </p>
-          <input
-            className="input"
-            placeholder={EMAIL_PLACEHOLDERS[connectPlatform] || 'Email / login'}
-            value={creds.email}
-            onChange={(e) => setCreds({ ...creds, email: e.target.value })}
+          {/* Single identity + password — avoid dual autoComplete=username (browser was filling email twice). */}
+          <form
+            className="ah-connect-form"
+            autoComplete="off"
+            onSubmit={(e) => {
+              e.preventDefault();
+              connect('credentials');
+            }}
             style={{ marginBottom: 8 }}
-            autoComplete="username"
-          />
-          <input
-            className="input"
-            placeholder={connectPlatform === 'Reddit' ? 'Reddit username (u/name)' : 'Username / @handle (optional)'}
-            value={creds.username}
-            onChange={(e) => setCreds({ ...creds, username: e.target.value })}
-            style={{ marginBottom: 8 }}
-            autoComplete="username"
-          />
-          <input
-            className="input"
-            type="password"
-            placeholder={PASSWORD_PLACEHOLDERS[connectPlatform] || 'Password or access token'}
-            value={creds.password}
-            onChange={(e) => setCreds({ ...creds, password: e.target.value })}
-            style={{ marginBottom: 8 }}
-            autoComplete="current-password"
-          />
+          >
+            <label className="settings-panel-desc" style={{ display: 'block', marginBottom: 4 }}>
+              {connectPlatform === 'WhatsApp' ? 'Phone Number ID' : connectPlatform === 'Telegram' ? 'Channel / chat (optional)' : 'Login (email or username)'}
+            </label>
+            <input
+              className="input"
+              name="si-ah-login"
+              placeholder={EMAIL_PLACEHOLDERS[connectPlatform] || 'Email or username'}
+              value={creds.email}
+              onChange={(e) => {
+                const v = e.target.value;
+                // Keep one identity field; mirror into username only when it is not a separate @handle platform field
+                setCreds((c) => ({
+                  ...c,
+                  email: v,
+                  username: needsSeparateHandle(connectPlatform) ? c.username : v,
+                }));
+              }}
+              style={{ marginBottom: 10 }}
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
+              data-form-type="other"
+            />
+            {needsSeparateHandle(connectPlatform) && (
+              <>
+                <label className="settings-panel-desc" style={{ display: 'block', marginBottom: 4 }}>
+                  {connectPlatform === 'Reddit' ? 'Reddit username (u/name)' : 'Handle / @channel (optional)'}
+                </label>
+                <input
+                  className="input"
+                  name="si-ah-handle"
+                  placeholder={connectPlatform === 'Reddit' ? 'u/yourname' : '@handle (optional)'}
+                  value={creds.username}
+                  onChange={(e) => setCreds({ ...creds, username: e.target.value })}
+                  style={{ marginBottom: 10 }}
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
+              </>
+            )}
+            <label className="settings-panel-desc" style={{ display: 'block', marginBottom: 4 }}>
+              Password or access token
+            </label>
+            <input
+              className="input"
+              name="si-ah-secret"
+              type="password"
+              placeholder={PASSWORD_PLACEHOLDERS[connectPlatform] || 'Password or access token'}
+              value={creds.password}
+              onChange={(e) => setCreds({ ...creds, password: e.target.value })}
+              style={{ marginBottom: 4 }}
+              autoComplete="new-password"
+              data-1p-ignore
+              data-lpignore="true"
+              data-form-type="other"
+            />
+          </form>
 
           <div className="card" style={{ marginBottom: 12, padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.45)' }}>
             <h4 style={{ margin: '0 0 8px', fontSize: '0.9rem' }}>Connection route (Proxy / IP)</h4>

@@ -80,11 +80,20 @@ export function AccountConnectionDetails({ account }: { account: AccountDetails 
 
       {lines.length > 0 && (
         <div className="account-detail-lines" style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: 12 }}>
-          {lines.map((line) => (
-            <div key={line.key} style={{ marginBottom: 4 }}>
-              <strong style={{ color: '#cbd5e1' }}>{line.key}:</strong> {line.value}
-            </div>
-          ))}
+          {(() => {
+            // Dedupe keys client-side (e.g. multiple Login rows from older payloads)
+            const seen = new Set<string>();
+            return lines.filter((line) => {
+              const k = String(line.key || '').toLowerCase();
+              if (!k || seen.has(k)) return false;
+              seen.add(k);
+              return true;
+            }).map((line) => (
+              <div key={line.key} style={{ marginBottom: 4 }}>
+                <strong style={{ color: '#cbd5e1' }}>{line.key}:</strong> {line.value}
+              </div>
+            ));
+          })()}
         </div>
       )}
 
