@@ -2088,6 +2088,7 @@ textarea.input { min-height: 100px; resize: vertical; }
   align-items: start;
   padding-top: 1.25rem;
   padding-bottom: 3rem;
+  overflow: visible;
 }
 .si-article-layout__main { min-width: 0; }
 .si-breadcrumbs {
@@ -2162,12 +2163,18 @@ textarea.input { min-height: 100px; resize: vertical; }
 .si-related-card__link { font-size: 0.82rem; color: var(--accent); font-weight: 600; text-decoration: none; }
 
 /* Sticky explore sidebar */
-.si-blog-sidebar { position: relative; }
+.si-blog-sidebar {
+  position: relative;
+  align-self: start;
+}
 .si-blog-sidebar__sticky {
-  position: sticky; top: 1rem; max-height: calc(100vh - 1.5rem); overflow-y: auto;
+  /* Clear sticky site nav (~64px) so Explore tracks scroll on desktop */
+  position: sticky; top: 5.25rem; max-height: calc(100vh - 5.75rem); overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(56,189,248,0.2); border-radius: 16px;
-  background: rgba(15,23,42,0.88); backdrop-filter: blur(10px);
+  background: rgba(15,23,42,0.92); backdrop-filter: blur(10px);
   padding: 1rem 0.95rem 1.15rem; display: flex; flex-direction: column; gap: 0.85rem;
+  z-index: 5;
 }
 .si-blog-sidebar__title { margin: 0; font-size: 1.05rem; letter-spacing: -0.01em; }
 .si-sidebar-widget {

@@ -31,10 +31,20 @@ function midImageSlots(slug: string, sectionCount: number): [number, number] {
 
 export function BlogPostLayout({ post, loggedIn = false }: Props) {
   const published = getPublishedPosts();
-  const related = [
-    ...getPostsBySilo(post.silo).filter((p) => p.slug !== post.slug && new Date(p.publishedAt) <= new Date()),
-    ...published.filter((p) => p.silo !== post.silo && p.slug !== post.slug),
-  ].slice(0, 8);
+  // Prefer same-silo, then fill to 8 cards for a full 4×2 Related Topics grid
+  const related = (() => {
+    const same = getPostsBySilo(post.silo).filter((p) => p.slug !== post.slug);
+    const others = published.filter((p) => p.silo !== post.silo && p.slug !== post.slug);
+    const seen = new Set<string>();
+    const out: typeof published = [];
+    for (const p of [...same, ...others]) {
+      if (seen.has(p.slug)) continue;
+      seen.add(p.slug);
+      out.push(p);
+      if (out.length >= 8) break;
+    }
+    return out;
+  })();
 
   const [imgSlotA, imgSlotB] = midImageSlots(post.slug, post.body.sections.length);
   const otherSilos = (Object.keys(BLOG_SILOS) as BlogSilo[]).filter((s) => s !== post.silo).slice(0, 3);
@@ -158,11 +168,11 @@ export function BlogPostLayout({ post, loggedIn = false }: Props) {
 
             <div className="si-article-body" itemProp="articleBody">
               {post.body.sections.map((section, idx) => (
-                <div key={section.heading}>
+                <div key={`${post.slug}-sec-${idx}`}>
                   <section className="home-glass-panel blog-section si-article-section">
                     <h2>{section.heading}</h2>
-                    {section.paragraphs.map((para) => (
-                      <p key={para.slice(0, 64)} className="blog-para">{para}</p>
+                    {section.paragraphs.map((para, pIdx) => (
+                      <p key={`${post.slug}-p-${idx}-${pIdx}`} className="blog-para">{para}</p>
                     ))}
                   </section>
                   {idx === imgSlotA && (
