@@ -18,6 +18,8 @@ import {
   getOnboardingSteps,
   getSiteCapabilities,
 } from '@/lib/siteBlueprint';
+import { getPublishedPosts } from '@/lib/blogPosts';
+import Image from 'next/image';
 
 const DASH_STATS = [
   { label: 'Overview', pct: 92, color: '#38bdf8' },
@@ -184,6 +186,41 @@ export default function HomePage() {
                 </NavAnchor>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="blog" className="home-section">
+        <div className="home-container">
+          <span className="home-section-eyebrow">Blog · AEO / GEO</span>
+          <h2>Authority guides for social + search operators</h2>
+          <p className="home-section-sub">
+            Long-form playbooks engineered for answer engines and generative overviews — updated weekly via drip schedule.
+          </p>
+          <div className="blog-grid home-blog-grid">
+            {getPublishedPosts().slice(0, 4).map((post) => (
+              <article key={post.slug} className="home-glass-panel blog-card">
+                <NavAnchor href={`/blog/${post.slug}`} className="blog-card-link">
+                  <div className="blog-card-thumb">
+                    <Image src={post.thumbnail} alt={post.title} width={400} height={220} className="blog-card-img" />
+                    <span className="blog-card-silo">{post.siloLabel}</span>
+                  </div>
+                  <div className="blog-card-body">
+                    <time dateTime={post.publishedAt}>
+                      {new Date(post.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </time>
+                    <h3 style={{ fontSize: '1.05rem', margin: '0.4rem 0 0.5rem' }}>{post.title}</h3>
+                    <p>{post.excerpt}</p>
+                    <span className="blog-card-cta">Read article →</span>
+                  </div>
+                </NavAnchor>
+              </article>
+            ))}
+          </div>
+          <div className="home-center-cta" style={{ marginTop: '1.5rem' }}>
+            <NavAnchor href="/blog" className="btn primary home-cta-lg home-btn-glow">View all blog posts</NavAnchor>
+            <NavAnchor href="/sitemap.html" className="btn home-cta-lg home-btn-glass">HTML sitemap</NavAnchor>
+            <NavAnchor href="/feed.xml" className="btn home-cta-lg home-btn-glass">RSS feed</NavAnchor>
           </div>
         </div>
       </section>

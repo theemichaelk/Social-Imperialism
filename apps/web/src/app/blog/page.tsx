@@ -4,17 +4,45 @@ import Image from 'next/image';
 import { NavAnchor } from '@/components/NavAnchor';
 import { HomeFooter } from '@/components/HomeFooter';
 import { HomePublicNav } from '@/components/HomePublicNav';
-import { BLOG_POSTS, BLOG_SILOS, type BlogSilo } from '@/lib/blogPosts';
+import {
+  BLOG_SILOS,
+  getPublishedPosts,
+  getScheduledPosts,
+  type BlogSilo,
+} from '@/lib/blogPosts';
 import { getArticleDiscoveryCoverage, getPublicDiscoveryStats } from '@/lib/publicSiteFeed';
 import { SITE_BRAND } from '@/lib/siteBlueprint';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 export default function BlogIndexPage() {
   const [filter, setFilter] = useState<BlogSilo | 'all'>('all');
-  const posts = filter === 'all' ? BLOG_POSTS : BLOG_POSTS.filter((p) => p.silo === filter);
+  const [q, setQ] = useState('');
+  const published = useMemo(() => getPublishedPosts(), []);
+  const scheduled = useMemo(() => getScheduledPosts(), []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const silo = params.get('silo') as BlogSilo | null;
+    const query = params.get('q');
+    if (silo && BLOG_SILOS[silo]) setFilter(silo);
+    if (query) setQ(query);
+  }, []);
+
+  const posts = useMemo(() => {
+    let list = filter === 'all' ? published : published.filter((p) => p.silo === filter);
+    const term = q.trim().toLowerCase();
+    if (term) {
+      list = list.filter((p) =>
+        [p.title, p.excerpt, p.description, p.siloLabel, ...p.keywords].join(' ').toLowerCase().includes(term),
+      );
+    }
+    return list;
+  }, [filter, published, q]);
+
   const coverage = useMemo(() => getArticleDiscoveryCoverage(), []);
   const stats = useMemo(() => getPublicDiscoveryStats(), []);
-  const articleCount = coverage.articleCount || BLOG_POSTS.length;
+  const articleCount = coverage.articleCount || published.length;
   const allIndexed = coverage.allInSitemap && coverage.allInRss;
 
   return (
@@ -27,15 +55,31 @@ export default function BlogIndexPage() {
 
       <section className="home-section blog-index-hero">
         <div className="home-container">
-          <span className="home-section-eyebrow">Insights</span>
+          <span className="home-section-eyebrow">Insights · AEO / GEO</span>
           <h1>{SITE_BRAND.name} Blog</h1>
           <p className="blog-index-lead">
-            {articleCount} SEO-optimized guides on AI social automation, multi-platform publishing, growth prospecting,
-            analytics, and silo architecture — built for teams running growth workflows.
+            {articleCount} live SEO guides engineered for answer engines and generative overviews — automation,
+            platforms, growth, and analytics. {scheduled.length > 0 && (
+              <span>{scheduled.length} more drip-scheduled weekly through {scheduled[scheduled.length - 1]?.publishedAt}.</span>
+            )}
           </p>
+          <form
+            className="blog-index-search"
+            role="search"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <label className="sr-only" htmlFor="blog-index-q">Search posts</label>
+            <input
+              id="blog-index-q"
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search posts by keyword…"
+            />
+          </form>
           <div className="blog-silo-tabs">
             <button type="button" className={`tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
-              All ({BLOG_POSTS.length})
+              All ({published.length})
             </button>
             {(Object.keys(BLOG_SILOS) as BlogSilo[]).map((silo) => (
               <button
@@ -44,7 +88,7 @@ export default function BlogIndexPage() {
                 className={`tab ${filter === silo ? 'active' : ''}`}
                 onClick={() => setFilter(silo)}
               >
-                {BLOG_SILOS[silo].label} ({BLOG_POSTS.filter((p) => p.silo === silo).length})
+                {BLOG_SILOS[silo].label} ({published.filter((p) => p.silo === silo).length})
               </button>
             ))}
           </div>
@@ -77,15 +121,17 @@ export default function BlogIndexPage() {
               </NavAnchor>
             </article>
           ))}
+          {posts.length === 0 && (
+            <p className="blog-index-empty">No posts match your filters.</p>
+          )}
         </div>
       </section>
 
       <section className="home-section">
         <div className="home-container home-glass-panel blog-discovery">
-          <h2>Discovery &amp; indexing</h2>
           <p>
             {allIndexed
-              ? `All ${articleCount} articles are indexed in our `
+              ? `All ${articleCount} live articles are indexed in our `
               : `${articleCount} articles are published. Index coverage: `}
             <NavAnchor href="/sitemap.html">HTML sitemap</NavAnchor>
             {' '}({stats.sitemapTotal} public URLs),{' '}
@@ -94,25 +140,6 @@ export default function BlogIndexPage() {
             {' '}({stats.feedTotal} article items)
             {allIndexed ? '.' : ' — verify missing slugs after deploy.'}
           </p>
-          <ul className="blog-discovery-list" style={{ margin: '12px 0 0', paddingLeft: '1.2rem', color: '#94a3b8', fontSize: '0.9rem' }}>
-            <li>
-              <strong style={{ color: '#cbd5e1' }}>HTML</strong> — human-readable, grouped by blog / marketing / legal
-            </li>
-            <li>
-              <strong style={{ color: '#cbd5e1' }}>XML</strong> — for Google Search Console &amp; other crawlers (
-              <code style={{ color: '#64748b' }}>robots.txt</code> points here)
-            </li>
-            <li>
-              <strong style={{ color: '#cbd5e1' }}>RSS</strong> — subscribe in any reader at{' '}
-              <NavAnchor href="/feed.xml">/feed.xml</NavAnchor>
-            </li>
-          </ul>
-          {!allIndexed && (coverage.missingSitemap.length > 0 || coverage.missingRss.length > 0) && (
-            <p style={{ marginTop: 10, color: '#fbbf24', fontSize: '0.85rem' }}>
-              Coverage gap — sitemap missing: {coverage.missingSitemap.join(', ') || 'none'}; RSS missing:{' '}
-              {coverage.missingRss.join(', ') || 'none'}.
-            </p>
-          )}
         </div>
       </section>
 

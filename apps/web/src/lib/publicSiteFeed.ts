@@ -1,4 +1,4 @@
-import { BLOG_POSTS } from '@/lib/blogPosts';
+import { BLOG_POSTS, getPublishedPosts } from '@/lib/blogPosts';
 import { FOOTER_LEGAL_LINKS, PUBLIC_NAV_ROUTES, SITE_BRAND } from '@/lib/siteBlueprint';
 
 /**
@@ -21,6 +21,7 @@ const PUBLIC_MARKETING_PATHS = [
   '/sitemap.html',
   '/sitemap.xml',
   '/feed.xml',
+  '/rss',
 ] as const;
 
 function xmlEscape(s: string): string {
@@ -77,11 +78,13 @@ function pathGroup(path: string): SitemapEntry['group'] {
 export function buildSitemapEntries(): SitemapEntry[] {
   const base = getSiteBaseUrl();
   const today = new Date().toISOString().split('T')[0];
+  // Only published posts — weekly drip remains out of crawlers until publishedAt
+  const published = getPublishedPosts();
   const paths = new Set<string>([
     ...PUBLIC_MARKETING_PATHS,
     ...FOOTER_LEGAL_LINKS.map((l) => l.href),
     ...PUBLIC_NAV_ROUTES.map((r) => r.href),
-    ...BLOG_POSTS.map((p) => `/blog/${p.slug}`),
+    ...published.map((p) => `/blog/${p.slug}`),
   ]);
 
   return [...paths]
@@ -112,7 +115,8 @@ export function buildSitemapEntries(): SitemapEntry[] {
 /** Every published blog article must appear in sitemap + RSS — used by UI claim + audits. */
 export function getArticleDiscoveryCoverage() {
   const base = getSiteBaseUrl();
-  const articles = BLOG_POSTS.map((p) => ({
+  const published = getPublishedPosts();
+  const articles = published.map((p) => ({
     slug: p.slug,
     title: p.title,
     path: `/blog/${p.slug}`,
@@ -126,6 +130,7 @@ export function getArticleDiscoveryCoverage() {
   const missingRss = articles.filter((a) => !rss.some((i) => i.link === a.url));
   return {
     articleCount: articles.length,
+    scheduledCount: BLOG_POSTS.length - published.length,
     sitemapTotal: sm.length,
     rssArticleCount: rss.length,
     allInSitemap: missingSitemap.length === 0,
@@ -160,19 +165,17 @@ export type RssItem = {
   category?: string;
 };
 
-/** RSS items = published articles only (no private app routes). */
+/** RSS items = published articles only (no private app routes, no future drip). */
 export function buildRssItems(): RssItem[] {
   const base = getSiteBaseUrl();
-  return [...BLOG_POSTS]
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .map((p) => ({
-      title: p.title,
-      link: `${base}/blog/${p.slug}`,
-      description: p.excerpt || p.description,
-      pubDate: new Date(p.publishedAt).toUTCString(),
-      guid: `${base}/blog/${p.slug}`,
-      category: p.siloLabel,
-    }));
+  return getPublishedPosts().map((p) => ({
+    title: p.title,
+    link: `${base}/blog/${p.slug}`,
+    description: p.excerpt || p.description,
+    pubDate: new Date(p.publishedAt).toUTCString(),
+    guid: `${base}/blog/${p.slug}`,
+    category: p.siloLabel,
+  }));
 }
 
 export function renderSitemapHtml(): string {
@@ -203,43 +206,60 @@ export function renderSitemapHtml(): string {
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>${xmlEscape(SITE_BRAND.name)} — Sitemap</title>
-  <meta name="description" content="HTML sitemap for ${xmlEscape(SITE_BRAND.name)} — ${coverage.articleCount} blog articles plus public marketing pages." />
+  <title>${xmlEscape(SITE_BRAND.name)} — HTML Sitemap</title>
+  <meta name="description" content="Visual HTML sitemap for ${xmlEscape(SITE_BRAND.name)} — ${coverage.articleCount} published blog articles plus public marketing pages." />
   <meta name="robots" content="index,follow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="alternate" type="application/rss+xml" title="${xmlEscape(SITE_BRAND.name)} RSS" href="/feed.xml" />
   <style>
-    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; padding: 2rem; max-width: 800px; margin: 0 auto; line-height: 1.45; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
-    h2 { font-size: 1.05rem; margin: 1.75rem 0 0.5rem; color: #38bdf8; display: flex; align-items: center; gap: 0.5rem; }
-    .count { font-size: 0.75rem; color: #94a3b8; font-weight: 500; background: #1e293b; padding: 0.15rem 0.5rem; border-radius: 999px; }
-    p { color: #94a3b8; font-size: 0.9rem; }
-    .badge { display: inline-block; background: rgba(34,197,94,0.12); color: #86efac; border: 1px solid rgba(34,197,94,0.35); border-radius: 999px; padding: 0.2rem 0.65rem; font-size: 0.78rem; margin-right: 0.35rem; }
-    ul { list-style: none; padding: 0; margin: 0; }
-    li { padding: 0.55rem 0; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; gap: 1rem; }
-    a { color: #38bdf8; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .date { color: #64748b; font-size: 0.8rem; white-space: nowrap; }
-    nav a { margin-right: 0.75rem; }
+    :root { --bg:#020617; --card:#0f172a; --line:rgba(56,189,248,.18); --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --violet:#a855f7; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, Segoe UI, sans-serif; background:
+      radial-gradient(900px 420px at 10% -10%, rgba(56,189,248,.18), transparent 55%),
+      radial-gradient(700px 380px at 90% 0%, rgba(168,85,247,.14), transparent 50%),
+      var(--bg); color: var(--text); line-height: 1.5; min-height: 100vh; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    .hero { border:1px solid var(--line); background: linear-gradient(145deg, rgba(15,23,42,.95), rgba(15,23,42,.7)); border-radius: 20px; padding: 1.75rem 1.5rem; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+    h1 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 0 0 .5rem; letter-spacing: -0.02em; }
+    .lead { color: var(--muted); margin: 0 0 1rem; max-width: 62ch; }
+    .badges { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom: 1rem; }
+    .badge { display:inline-flex; align-items:center; gap:.35rem; background: rgba(34,197,94,.1); color:#86efac; border:1px solid rgba(34,197,94,.35); border-radius:999px; padding:.25rem .7rem; font-size:.78rem; font-weight:600; }
+    .badge.alt { background: rgba(56,189,248,.1); color:#7dd3fc; border-color: rgba(56,189,248,.35); }
+    nav { display:flex; flex-wrap:wrap; gap:.65rem; }
+    nav a { color: var(--accent); text-decoration:none; font-size:.9rem; padding:.35rem .7rem; border-radius:999px; border:1px solid var(--line); background: rgba(15,23,42,.6); }
+    nav a:hover { border-color: var(--accent); background: rgba(56,189,248,.08); }
+    h2 { font-size: 1.05rem; margin: 2rem 0 .75rem; color: var(--accent); display:flex; align-items:center; gap:.55rem; }
+    .count { font-size:.72rem; color:var(--muted); font-weight:600; background:rgba(30,41,59,.9); padding:.15rem .5rem; border-radius:999px; border:1px solid var(--line); }
+    ul { list-style:none; padding:0; margin:0; display:grid; gap:.45rem; }
+    li { display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:.75rem 1rem; border:1px solid var(--line); border-radius:14px; background: rgba(15,23,42,.72); transition: border-color .15s, transform .15s; }
+    li:hover { border-color: rgba(56,189,248,.45); transform: translateY(-1px); }
+    li a { color: var(--text); text-decoration:none; font-weight:500; }
+    li a:hover { color: var(--accent); }
+    .date { color:#64748b; font-size:.78rem; white-space:nowrap; }
+    footer { margin-top: 2.5rem; color:#64748b; font-size:.82rem; text-align:center; }
   </style>
 </head>
 <body>
-  <h1>${xmlEscape(SITE_BRAND.name)} Sitemap</h1>
-  <p>
-    <span class="badge">${coverage.articleCount} articles indexed</span>
-    <span class="badge">${entries.length} public URLs</span>
-  </p>
-  <p>
-    All blog articles appear in this HTML sitemap, the
-    <a href="/sitemap.xml">XML sitemap</a>, and the
-    <a href="/feed.xml">RSS feed</a>. Private app modules (dashboard, settings, account hub) are not listed — they require login.
-  </p>
-  <nav>
-    <a href="/">Home</a>
-    <a href="/blog">Blog</a>
-    <a href="/sitemap.xml">XML</a>
-    <a href="/feed.xml">RSS</a>
-  </nav>
+  <div class="wrap">
+    <div class="hero">
+      <h1>${xmlEscape(SITE_BRAND.name)} · HTML Sitemap</h1>
+      <p class="lead">Human-readable map of every public page. Blog articles are AEO/GEO-ready guides. Private app modules (dashboard, settings, account hub) require login and are intentionally omitted.</p>
+      <div class="badges">
+        <span class="badge">${coverage.articleCount} articles live</span>
+        <span class="badge alt">${entries.length} public URLs</span>
+        <span class="badge alt">${coverage.scheduledCount || 0} scheduled drip</span>
+      </div>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/blog">Blog</a>
+        <a href="/sitemap.xml">XML sitemap</a>
+        <a href="/feed.xml">RSS feed</a>
+        <a href="/subscribe">Subscribe</a>
+      </nav>
+    </div>
 ${sections}
+    <footer>Machine-readable: <a href="/sitemap.xml" style="color:var(--accent)">sitemap.xml</a> · <a href="/feed.xml" style="color:var(--accent)">feed.xml</a></footer>
+  </div>
 </body>
 </html>`;
 }

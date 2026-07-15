@@ -2,9 +2,15 @@ import Image from 'next/image';
 import { NavAnchor } from '@/components/NavAnchor';
 import { HomeFooter } from '@/components/HomeFooter';
 import { HomePublicNav } from '@/components/HomePublicNav';
+import { BlogArticleSidebar } from '@/components/BlogArticleSidebar';
 import type { BlogPostMeta } from '@/lib/blogPosts';
 import type { BlogArticleBody } from '@/content/blog/articles';
-import { BLOG_SILOS, getPostsBySilo } from '@/lib/blogPosts';
+import {
+  BLOG_SILOS,
+  getPublishedPosts,
+  getPostsBySilo,
+  type BlogSilo,
+} from '@/lib/blogPosts';
 import { SITE_BRAND } from '@/lib/siteBlueprint';
 
 type Props = {
@@ -12,111 +18,240 @@ type Props = {
   loggedIn?: boolean;
 };
 
+/** Deterministic mid-body image slots from slug (2 images placed within article). */
+function midImageSlots(slug: string, sectionCount: number): [number, number] {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
+  const max = Math.max(2, sectionCount - 1);
+  const a = 1 + (h % Math.min(3, max));
+  let b = 2 + ((h >>> 3) % Math.min(4, max));
+  if (b <= a) b = Math.min(max, a + 1 + (h % 2));
+  return [a, b];
+}
+
 export function BlogPostLayout({ post, loggedIn = false }: Props) {
-  const related = getPostsBySilo(post.silo).filter((p) => p.slug !== post.slug).slice(0, 3);
-  const videoMid = Math.floor(post.body.sections.length / 2);
+  const published = getPublishedPosts();
+  const related = [
+    ...getPostsBySilo(post.silo).filter((p) => p.slug !== post.slug && new Date(p.publishedAt) <= new Date()),
+    ...published.filter((p) => p.silo !== post.silo && p.slug !== post.slug),
+  ].slice(0, 8);
+
+  const [imgSlotA, imgSlotB] = midImageSlots(post.slug, post.body.sections.length);
+  const otherSilos = (Object.keys(BLOG_SILOS) as BlogSilo[]).filter((s) => s !== post.silo).slice(0, 3);
 
   return (
-    <div className="home-page blog-page">
+    <div className="home-page blog-page si-blog-page">
       <div className="home-bg-grid" aria-hidden />
       <div className="home-floating-orb home-orb-1" aria-hidden />
       <div className="home-floating-orb home-orb-2" aria-hidden />
 
       <HomePublicNav loggedIn={loggedIn} variant="founder" />
 
-      <article className="blog-article">
-        <header className="blog-article-header">
-          <div className="home-container blog-article-header-inner">
-            <NavAnchor href="/blog" className="blog-back-link">← Blog</NavAnchor>
-            <span className="home-section-eyebrow">{post.siloLabel} Silo</span>
-            <h1>{post.title}</h1>
-            <p className="blog-article-excerpt">{post.excerpt}</p>
-            <div className="blog-article-meta">
-              <time dateTime={post.publishedAt}>{new Date(post.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time>
-              <span>·</span>
-              <span>{post.readMinutes} min read</span>
-              <span>·</span>
-              <span>{BLOG_SILOS[post.silo].label}</span>
-            </div>
-          </div>
-          <div className="blog-article-hero">
-            <Image
-              src={post.headerImage}
-              alt={`${post.title} — header`}
-              width={1200}
-              height={500}
-              priority
-              className="blog-hero-img"
-            />
-          </div>
-        </header>
+      <div className="home-container si-article-layout">
+        <div className="si-article-layout__main">
+          <nav className="si-breadcrumbs" aria-label="Breadcrumb">
+            <NavAnchor href="/">Home</NavAnchor>
+            <span aria-hidden> / </span>
+            <NavAnchor href="/blog">Blog</NavAnchor>
+            <span aria-hidden> / </span>
+            <NavAnchor href={`/blog?silo=${post.silo}`}>{post.siloLabel}</NavAnchor>
+            <span aria-hidden> / </span>
+            <span className="si-breadcrumbs__current">{post.title}</span>
+          </nav>
 
-        <div className="home-container blog-article-body">
-          <div className="home-glass-panel blog-silo-links">
-            <h2>Silo links</h2>
-            <ul className="blog-silo-links-list">
-              {post.siloLinks.map((link) => (
-                <li key={link.href}>
-                  <span className={`blog-link-badge blog-link-${link.kind}`}>{link.kind}</span>
-                  {link.kind === 'authority' ? (
-                    <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
-                  ) : (
-                    <NavAnchor href={link.href}>{link.label}</NavAnchor>
-                  )}
-                </li>
+          <article className="si-article" itemScope itemType="https://schema.org/BlogPosting">
+            <header className="si-article-header">
+              <div className="si-article-category">
+                <NavAnchor href={`/blog?silo=${post.silo}`}>{post.siloLabel}</NavAnchor>
+              </div>
+              <h1 itemProp="headline">{post.title}</h1>
+              <div className="si-article-meta">
+                <span>By <span itemProp="author">Michael Kaswatuka</span></span>
+                <time dateTime={post.publishedAt} itemProp="datePublished">
+                  {new Date(post.publishedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </time>
+                <span>{post.readMinutes} min read</span>
+              </div>
+            </header>
+
+            <nav className="si-silo-crosslinks" aria-label="Related silos">
+              <span className="si-silo-crosslinks__label">Related silos:</span>
+              {otherSilos.map((s) => (
+                <NavAnchor key={s} href={`/blog?silo=${s}`} className="si-silo-crosslink" rel="related">
+                  {BLOG_SILOS[s].label}
+                </NavAnchor>
               ))}
-            </ul>
-          </div>
+            </nav>
+            <p className="si-silo-cluster-hub">
+              <span className="si-silo-cluster-hub__label">Silo cluster:</span>{' '}
+              <NavAnchor href={`/#features`}>{post.siloLabel} · Social Imperialism</NavAnchor>
+            </p>
+            <p className="si-silo-article-hub">
+              <NavAnchor href={`/blog?silo=${post.silo}`}>Browse all {post.siloLabel} coverage</NavAnchor>
+              {' · '}
+              <NavAnchor href="/">Homepage {post.siloLabel} section</NavAnchor>
+            </p>
 
-          {post.body.sections.map((section, idx) => (
-            <div key={section.heading}>
-              <section className="home-glass-panel blog-section">
-                <h2>{section.heading}</h2>
-                {section.paragraphs.map((para) => (
-                  <p key={para.slice(0, 48)} className="blog-para">{para}</p>
-                ))}
-              </section>
-              {idx === videoMid && (
-                <figure className="blog-video-embed">
-                  <video
-                    src={post.videoUrl}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    poster={post.thumbnail}
-                    className="blog-video"
-                    aria-label={post.videoCaption}
-                  />
-                  <figcaption>{post.videoCaption}</figcaption>
-                </figure>
-              )}
+            {(post.aeoAnswer || post.geoLead) && (
+              <>
+                {post.aeoAnswer && (
+                  <aside className="si-aeo-answer" data-speakable>
+                    <div className="si-aeo-answer__label">Quick Answer (AEO)</div>
+                    <p>{post.aeoAnswer}</p>
+                  </aside>
+                )}
+                {(post.geoLead || (post.geoPoints && post.geoPoints.length > 0)) && (
+                  <aside className="si-geo-summary" data-geo data-speakable>
+                    <div className="si-geo-summary__label">AI Overview Summary (GEO)</div>
+                    {post.geoLead && (
+                      <p className="si-geo-summary__lead">
+                        <strong>{post.title}</strong> — {post.geoLead}
+                      </p>
+                    )}
+                    {post.geoPoints && post.geoPoints.length > 0 && (
+                      <ul className="si-geo-summary__points">
+                        {post.geoPoints.map((pt) => (
+                          <li key={pt.slice(0, 40)}>{pt}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="si-geo-summary__cite">
+                      Source: <NavAnchor href={`/blog/${post.slug}`}>{SITE_BRAND.name}</NavAnchor>
+                      {' · '}Optimized for generative search &amp; Google AI Overviews
+                    </p>
+                  </aside>
+                )}
+              </>
+            )}
+
+            <div className="si-article-hero-image">
+              <Image
+                src={post.headerImage}
+                alt={post.title}
+                width={900}
+                height={400}
+                priority
+                className="si-article-hero-img"
+                itemProp="image"
+              />
             </div>
-          ))}
 
-          <figure className="blog-bottom-image">
-            <Image
-              src={post.bottomImage}
-              alt={`${post.title} — closing visual`}
-              width={900}
-              height={400}
-              className="blog-bottom-img"
-            />
-          </figure>
-
-          {related.length > 0 && (
-            <aside className="home-glass-panel blog-related">
-              <h2>More in {post.siloLabel}</h2>
-              <ul>
-                {related.map((r) => (
-                  <li key={r.slug}>
-                    <NavAnchor href={`/blog/${r.slug}`}>{r.title}</NavAnchor>
+            <div className="si-article-silo-links home-glass-panel">
+              <h2>Silo links</h2>
+              <ul className="blog-silo-links-list">
+                {post.siloLinks.map((link) => (
+                  <li key={link.href + link.label}>
+                    <span className={`blog-link-badge blog-link-${link.kind}`}>{link.kind}</span>
+                    {link.kind === 'authority' ? (
+                      <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                    ) : (
+                      <NavAnchor href={link.href}>{link.label}</NavAnchor>
+                    )}
                   </li>
                 ))}
               </ul>
-            </aside>
-          )}
+            </div>
+
+            <div className="si-article-body" itemProp="articleBody">
+              {post.body.sections.map((section, idx) => (
+                <div key={section.heading}>
+                  <section className="home-glass-panel blog-section si-article-section">
+                    <h2>{section.heading}</h2>
+                    {section.paragraphs.map((para) => (
+                      <p key={para.slice(0, 64)} className="blog-para">{para}</p>
+                    ))}
+                  </section>
+                  {idx === imgSlotA && (
+                    <figure className="si-inline-figure">
+                      <Image
+                        src={post.midImage1 || post.thumbnail}
+                        alt={`${post.title} — illustration`}
+                        width={880}
+                        height={420}
+                        className="si-inline-img"
+                      />
+                      <figcaption>{post.midImage1Caption || 'Field illustration — operational systems in practice.'}</figcaption>
+                    </figure>
+                  )}
+                  {idx === imgSlotB && (
+                    <figure className="si-inline-figure">
+                      <Image
+                        src={post.midImage2 || post.bottomImage}
+                        alt={`${post.title} — supporting visual`}
+                        width={880}
+                        height={420}
+                        className="si-inline-img"
+                      />
+                      <figcaption>{post.midImage2Caption || 'Supporting visual — measurement and iteration loops.'}</figcaption>
+                    </figure>
+                  )}
+                  {idx === Math.floor(post.body.sections.length / 2) && post.videoUrl && (
+                    <figure className="blog-video-embed">
+                      <video
+                        src={post.videoUrl}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        poster={post.thumbnail}
+                        className="blog-video"
+                        aria-label={post.videoCaption}
+                      />
+                      <figcaption>{post.videoCaption}</figcaption>
+                    </figure>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {related.length > 0 && (
+              <section className="si-article-related" aria-label="Related coverage">
+                <header className="si-article-related__head">
+                  <div>
+                    <h2>Related Topics</h2>
+                    <p className="si-article-related__sub">
+                      More from {post.siloLabel} and adjacent growth systems — 4 × 2 coverage grid
+                    </p>
+                  </div>
+                  <NavAnchor href={`/blog?silo=${post.silo}`} className="si-article-related__all">
+                    View all {post.siloLabel} →
+                  </NavAnchor>
+                </header>
+                <div className="si-related-grid">
+                  {related.map((r) => (
+                    <article key={r.slug} className="si-related-card home-glass-panel">
+                      <NavAnchor href={`/blog/${r.slug}`} className="si-related-card__media" tabIndex={-1} aria-hidden>
+                        <Image
+                          src={r.thumbnail}
+                          alt=""
+                          width={400}
+                          height={225}
+                          className="si-related-card__img"
+                        />
+                      </NavAnchor>
+                      <div className="si-related-card__body">
+                        <span className="si-related-card__silo">{r.siloLabel}</span>
+                        <h3 className="si-related-card__title">
+                          <NavAnchor href={`/blog/${r.slug}`}>{r.title}</NavAnchor>
+                        </h3>
+                        <p className="si-related-card__excerpt">{r.excerpt}</p>
+                        <NavAnchor href={`/blog/${r.slug}`} className="si-related-card__link">
+                          Read article →
+                        </NavAnchor>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+          </article>
         </div>
-      </article>
+
+        <BlogArticleSidebar post={post} />
+      </div>
 
       <HomeFooter loggedIn={loggedIn} />
     </div>
@@ -129,13 +264,22 @@ export function BlogJsonLd({ post, baseUrl }: { post: BlogPostMeta; baseUrl: str
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.description,
-    image: [`${baseUrl}${post.headerImage}`],
+    image: [`${baseUrl}${post.headerImage}`, `${baseUrl}${post.midImage1 || post.thumbnail}`, `${baseUrl}${post.midImage2 || post.bottomImage}`],
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
-    author: { '@type': 'Organization', name: SITE_BRAND.name },
-    publisher: { '@type': 'Organization', name: SITE_BRAND.name },
+    author: {
+      '@type': 'Person',
+      name: 'Michael Kaswatuka',
+      jobTitle: 'Founder & Editor-in-Chief',
+      url: `${baseUrl}/founder`,
+    },
+    publisher: { '@type': 'Organization', name: SITE_BRAND.name, url: baseUrl },
     mainEntityOfPage: `${baseUrl}/blog/${post.slug}`,
     keywords: post.keywords.join(', '),
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['.si-aeo-answer', '.si-geo-summary'],
+    },
   };
   return (
     <script
