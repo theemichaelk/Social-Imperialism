@@ -40,26 +40,15 @@ if ($Bootstrap -or $true) {
   Write-Host "Bootstrapping SI bucket..."
   Push-Location $RepoRoot
   try {
-    node deploy/floci-bootstrap.mjs
+    node deploy/floci-bootstrap.js
   } finally {
     Pop-Location
   }
 }
 
 Write-Host ""
-Write-Host "QP (Quick Path) local env — add to apps/api/.env (and desktop if needed):"
-Write-Host @"
-STORAGE_PROVIDER=floci
-FLOCI_ENDPOINT=http://127.0.0.1:4566
-AWS_S3_ENDPOINT=http://127.0.0.1:4566
-AWS_S3_FORCE_PATH_STYLE=true
-AWS_S3_BUCKET_NAME=social-imperialism
-AWS_S3_REGION=us-east-1
-AWS_ACCESS_KEY_ID=test
-AWS_SECRET_ACCESS_KEY=test
-AWS_S3_UPLOAD_PREFIX=social-imperialism/uploads
-AWS_S3_PUBLIC_BASE_URL=http://127.0.0.1:4566/social-imperialism
-# Leave CLOUDFLARE_R2_* empty or unset for local free storage
-"@
-Write-Host "Then: npm run dev   (API + web locally — no Amplify deploys)"
-Write-Host "Go-live still uses Amplify + real S3/R2 (STORAGE_PROVIDER=auto or s3/r2)."
+Write-Host "Ensuring QP env in apps/api/.env ..."
+node (Join-Path $RepoRoot "deploy\ensure-qp-env.js")
+Write-Host "One-shot stack: npm run dev:local"
+Write-Host "Or: npm run dev  (API + web; Floci already up)"
+Write-Host "Go-live: Amplify + real S3/R2 (STORAGE_PROVIDER=auto|r2|s3 on EB)."

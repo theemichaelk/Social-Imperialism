@@ -1,13 +1,13 @@
-{
-    "appId": "d204r2r6gar3c8",
-    "defaultDomain": "d204r2r6gar3c8.amplifyapp.com",
-    "productionUrl": "https://main.d204r2r6gar3c8.amplifyapp.com",
-    "repository": "https://github.com/theemichaelk/Social-Imperialism",
-    "branch": "main",
-    "framework": "Next.js - SSR",
-    "monorepoRoot": "apps/web",
-    "bucket": "social-imperialism",
-    "buildsPrefix": "builds/web",
-    "lastJobId": "3",
-    "lastJobStatus": "SUCCEED"
+﻿{
+    "appId":  "d204r2r6gar3c8",
+    "defaultDomain":  "d204r2r6gar3c8.amplifyapp.com",
+    "productionUrl":  "https://main.d204r2r6gar3c8.amplifyapp.com",
+    "repository":  "https://github.com/theemichaelk/Social-Imperialism",
+    "branch":  "main",
+    "framework":  "Next.js - SSR",
+    "monorepoRoot":  "apps/web",
+    "bucket":  "social-imperialism",
+    "buildsPrefix":  "builds/web",
+    "lastJobId":  "248",
+    "lastJobStatus":  "SUCCEED"
 }

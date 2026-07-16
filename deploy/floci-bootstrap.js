@@ -1,6 +1,6 @@
 /**
  * Create SI bucket + smoke put/list against local Floci (or any S3 endpoint).
- * Usage: node deploy/floci-bootstrap.mjs
+ * Usage: node deploy/floci-bootstrap.js
  */
 const {
   S3Client,

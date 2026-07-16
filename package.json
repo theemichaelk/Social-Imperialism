@@ -11,6 +11,10 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:local": "powershell -ExecutionPolicy Bypass -File deploy/dev-local.ps1",
+    "dev:local:api": "powershell -ExecutionPolicy Bypass -File deploy/dev-local.ps1 -NoWeb",
+    "qp:ensure": "node deploy/ensure-qp-env.js",
+    "qp:ensure:force": "node deploy/ensure-qp-env.js --force-provider",
     "dev:api": "npm run dev -w @si/api",
     "dev:web": "npm run dev -w @si/web",
     "dev:worker": "npm run dev -w @si/worker",
@@ -60,7 +64,7 @@
     "openserp:verify-all": "node C:/Users/PC54/openserp-study/verify-three-clients-concurrent.mjs",
     "si-serp:verify": "node -e \"const p=require('./packages/core/src/serpProvider'); const k={siSerpBaseUrl:process.env.SI_SERP_BASE_URL||'http://127.0.0.1:7000'}; p.getSerpProviderStatusAsync(k).then(s=>console.log(JSON.stringify(s,null,2))).catch(e=>{console.error(e);process.exit(1)})\"",
     "floci:up": "powershell -ExecutionPolicy Bypass -File deploy/floci-up.ps1",
-    "floci:bootstrap": "node deploy/floci-bootstrap.mjs",
+    "floci:bootstrap": "node deploy/floci-bootstrap.js",
     "floci:down": "docker compose -f deploy/docker-compose.floci.yml down"
   },
   "devDependencies": {

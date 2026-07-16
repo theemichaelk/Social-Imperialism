@@ -51,14 +51,30 @@ Manual dev: Node 20+, pnpm 9+, Bun; `pnpm install` → `pnpm dev` with Floci cor
 
 ## SI Quick Start (local free storage)
 
+**One shot (recommended):**
+
 ```powershell
-# 1) Start emulator + create bucket
-npm run floci:up
+npm run dev:local
+```
 
-# 2) Point API at Floci — QP env block below → apps/api/.env
+That will:
 
-# 3) Run SI without Amplify
-npm run dev
+1. Auto-append missing **QP** keys to `apps/api/.env` (`npm run qp:ensure`)
+2. Start Floci on `:4566` + bootstrap bucket
+3. Run API (`:4000`) + web (`:3000`) — **no Amplify**
+
+**Manual steps:**
+
+```powershell
+npm run qp:ensure          # append QP to apps/api/.env when missing
+npm run floci:up           # emulator + bucket
+npm run dev                # API + web
+```
+
+Force `STORAGE_PROVIDER=floci` even if something else was set:
+
+```powershell
+npm run qp:ensure:force
 ```
 
 Optional console: clone [floci-ui](https://github.com/floci-io/floci-ui) and `docker compose up` → http://localhost:4500
@@ -135,7 +151,11 @@ Web go-live remains: **`deploy/amplify-deploy.ps1`** / Amplify git `main` — no
 
 | Script | Action |
 |--------|--------|
-| `npm run floci:up` | Docker Floci on 4566 + bootstrap bucket |
+| `npm run dev:local` | **QP ensure + Floci + API + web** (one shot) |
+| `npm run dev:local:api` | Same without Next web |
+| `npm run qp:ensure` | Auto-append missing QP keys to `apps/api/.env` |
+| `npm run qp:ensure:force` | Also force `STORAGE_PROVIDER=floci` |
+| `npm run floci:up` | Docker Floci on 4566 + bootstrap + qp ensure |
 | `npm run floci:bootstrap` | Create bucket + smoke put |
 | `npm run floci:down` | Stop compose stack |
 
