@@ -163,6 +163,7 @@ app.use('/api/self-heal', requireAuth, require('./routes/selfHeal'));
 app.use('/api/onboarding', requireAuth, require('./routes/onboardingIntel'));
 app.use('/api/desktop', require('./routes/desktop'));
 app.use('/api/orgs', requireAuth, orgRoutes);
+app.use('/api/mobile', requireAuth, require('./routes/mobile'));
 app.use('/api/v1', partnerRoutes);
 
 app.get('/api/channels', requireAuth, requireActiveSubscription, async (req, res) => {

@@ -5,6 +5,7 @@
 - Stack: Electron, Node.js, HTML/JS/CSS, Next.js web, Prisma API.
 - Local storage (`node-localstorage`) for desktop settings persistence.
 - Agent brain docs: `brain/BRAIN.md`, `brain/FEATURES.md`, `brain/GROK.md`
+- Mobile: `apps/mobile` Expo Command Center v2.2. Offline cache (`lib/cache.ts`, `invokeWithCache`), push (`lib/push.ts`, `/api/mobile/device-token`), deploy via `npm run deploy:mobile` → S3 `mobile/` + `static/mobile/` + `public/mobile`. URL: https://www.socialimperialism.com/mobile/
 
 ## Grok Engine (browser session — no API)
 - Platform: **grok** · URL: https://grok.com/

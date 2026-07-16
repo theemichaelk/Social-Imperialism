@@ -1,10 +1,51 @@
+/** Social Imperialism mobile design tokens — Command Center v2 */
 export const theme = {
   bg: '#020408',
+  bgElevated: '#060b16',
   panel: '#0a1228',
+  panelSoft: '#0d1630',
+  panelBorder: 'rgba(0, 212, 255, 0.22)',
+  panelBorderStrong: 'rgba(180, 74, 255, 0.45)',
   accent: '#00d4ff',
   accent2: '#b44aff',
+  accentGlow: 'rgba(0, 212, 255, 0.15)',
+  purpleGlow: 'rgba(180, 74, 255, 0.18)',
   text: '#eef6ff',
+  textSoft: '#c5d6ef',
   muted: '#7b94b8',
+  mutedDim: '#5a7194',
   warn: '#ffb020',
+  danger: '#ff5c7a',
   success: '#00ff9d',
-};
+  live: '#00ff9d',
+  tabBar: '#070d1a',
+  tabBorder: 'rgba(0, 212, 255, 0.18)',
+  platform: {
+    x: '#e7e9ea',
+    twitter: '#1da1f2',
+    linkedin: '#0a66c2',
+    reddit: '#ff4500',
+    facebook: '#1877f2',
+    instagram: '#e1306c',
+    youtube: '#ff0000',
+    tiktok: '#25f4ee',
+    quora: '#b92b27',
+    default: '#7b94b8',
+  } as Record<string, string>,
+  radius: {
+    sm: 10,
+    md: 14,
+    lg: 18,
+    xl: 22,
+    full: 999,
+  },
+  space: {
+    xs: 6,
+    sm: 10,
+    md: 14,
+    lg: 18,
+    xl: 24,
+  },
+} as const;
+
+export type Theme = typeof theme;
