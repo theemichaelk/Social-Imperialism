@@ -248,11 +248,12 @@ function DashboardPageInner() {
     setActionMsg('');
     setLoadError('');
     try {
-      const [s, n, t, social, c, w, st, ld, fp, eq] = await Promise.all([
+      // Keep daily social trends OUT of the critical path — live browser scrapes
+      // used to hang SaaS for 45–90s and leave Trending LIVE empty on timeout.
+      const [s, n, t, c, w, st, ld, fp, eq] = await Promise.all([
         invoke<DashboardStats>('get-dashboard-stats'),
         invoke<unknown>('get-live-news', 'technology'),
         invoke<unknown>('get-trending-topics'),
-        invoke<unknown>('get-daily-social-trends').catch(() => []),
         invoke<Record<string, string>>('get-active-campaign'),
         invoke<WorkerStatus>('get-worker-status'),
         invoke<Record<string, unknown>>('get-setup-status'),
@@ -262,16 +263,29 @@ function DashboardPageInner() {
       ]);
       setStats(s || {});
       setNews(asNews(n));
-      const { trends: socialItems, meta: socialMeta } = parseDailySocialTrends(social);
-      setSocialTrends(socialItems);
-      setSocialTrendsMeta(socialMeta);
-      setTrending(socialItems.length ? socialItems : asTrending(t));
+      const topicTrends = asTrending(t);
+      setTrending(topicTrends);
       setCampaign(c || {});
       setWorker(w || {});
       setSetup(st || {});
       setLeads(asArray(ld));
       setFanpage(fp || {});
       setEngagementQueue(asArray(eq));
+
+      // Hydrate Daily Social Trends + upgrade Trending LIVE in background.
+      setSocialTrendsLoading(true);
+      invoke<unknown>('get-daily-social-trends')
+        .then((social) => {
+          const { trends: socialItems, meta: socialMeta } = parseDailySocialTrends(social);
+          setSocialTrends(socialItems);
+          setSocialTrendsMeta(socialMeta);
+          if (socialItems.length) setTrending(socialItems);
+          else if (!topicTrends.length) setTrending([]);
+        })
+        .catch((e) => {
+          console.warn('get-daily-social-trends:', (e as Error).message);
+        })
+        .finally(() => setSocialTrendsLoading(false));
 
       if (c?.domain) {
         invoke<Record<string, unknown>>('get-domdetailer-metrics', c.domain)

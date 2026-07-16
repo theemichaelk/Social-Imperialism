@@ -330,9 +330,21 @@ async function fetchNewsAsPosts(keys, keyword = 'technology', limit = 8) {
   }
 }
 
-async function fetchRssTrending(limit = 6) {
+/** Prefer real publisher feeds — feedburner TechCrunch often returns spam/hijack content. */
+const RSS_TRENDING_FEEDS = [
+  { url: 'https://hnrss.org/frontpage', source: 'Hacker News', momentum: 'Tech' },
+  { url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', source: 'BBC Tech', momentum: 'News' },
+  { url: 'https://www.theverge.com/rss/index.xml', source: 'The Verge', momentum: 'Tech' },
+  { url: 'https://techcrunch.com/feed/', source: 'TechCrunch', momentum: 'Tech' },
+];
+
+async function fetchOneRssFeed(feed, limit = 6) {
   try {
-    const res = await axios.get('https://feeds.feedburner.com/TechCrunch', { timeout: 12000 });
+    const res = await axios.get(feed.url, {
+      timeout: 10000,
+      headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/xml, text/xml, */*' },
+      maxRedirects: 3,
+    });
     const items = [];
     const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
     let match;
@@ -340,22 +352,45 @@ async function fetchRssTrending(limit = 6) {
       const itemXml = match[1];
       const title = decodeHtmlEntities(((itemXml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '')
         .replace(/<!\[CDATA\[|\]\]>/g, '').trim());
-      const link = ((itemXml.match(/<link[^>]*>([\s\S]*?)<\/link>/i) || [])[1] || '').trim();
-      if (title) {
-        items.push({
-          topic: title.substring(0, 100),
-          searchVolume: 'RSS',
-          momentum: 'Tech',
-          url: link,
-          platform: 'TechCrunch',
-        });
+      let link = ((itemXml.match(/<link[^>]*>([\s\S]*?)<\/link>/i) || [])[1] || '').trim();
+      if (!link) {
+        const href = itemXml.match(/<link[^>]+href=["']([^"']+)["']/i);
+        if (href) link = href[1].trim();
       }
+      // Reject known hijack/spam blogspam titles from broken feed proxies
+      if (!title || /techncruncher\.blogspot|limewire ai studio/i.test(title + link)) continue;
+      items.push({
+        topic: title.substring(0, 100),
+        searchVolume: 'RSS',
+        momentum: feed.momentum || 'Live',
+        url: link || null,
+        platform: feed.source || 'RSS',
+      });
     }
     return items;
   } catch (e) {
-    console.warn('RSS trending fallback:', e.message);
+    console.warn(`RSS trending (${feed.source}):`, e.message);
     return [];
   }
+}
+
+async function fetchRssTrending(limit = 6) {
+  const perFeed = Math.max(2, Math.ceil(limit / 2));
+  const chunks = await Promise.all(
+    RSS_TRENDING_FEEDS.map((feed) => fetchOneRssFeed(feed, perFeed)),
+  );
+  const seen = new Set();
+  const out = [];
+  for (const chunk of chunks) {
+    for (const item of chunk) {
+      const key = String(item.topic || '').toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(item);
+      if (out.length >= limit) return out;
+    }
+  }
+  return out;
 }
 
 async function fetchNewsHeadlineTrends(keys, limit = 6) {
@@ -404,12 +439,28 @@ async function fetchWebTrending(keyword, limit = 6) {
 async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
   const seed = (Array.isArray(seedKeywords) ? seedKeywords : []).map((k) => String(k).trim()).filter(Boolean);
 
-  const [serpTrends, redditTrends, newsTrends, rssTrends] = await Promise.all([
-    fetchSerpTrending(keys, 6),
-    (platform === 'Reddit' || platform === 'All') ? fetchRedditHot(6) : Promise.resolve([]),
-    fetchNewsHeadlineTrends(keys, 6),
-    fetchRssTrending(6),
-  ]);
+  // Race sources with a budget so SaaS dashboard never waits on Reddit 403 hangs.
+  const budgetMs = parseInt(process.env.TRENDING_TOPICS_MS || '12000', 10);
+  let serpTrends = [];
+  let redditTrends = [];
+  let newsTrends = [];
+  let rssTrends = [];
+  try {
+    [serpTrends, redditTrends, newsTrends, rssTrends] = await withTimeout(
+      Promise.all([
+        fetchSerpTrending(keys, 6),
+        (platform === 'Reddit' || platform === 'All') ? fetchRedditHot(6) : Promise.resolve([]),
+        fetchNewsHeadlineTrends(keys, 6),
+        fetchRssTrending(6),
+      ]),
+      budgetMs,
+      'fetchTrendingTopics',
+    );
+  } catch (e) {
+    console.warn('fetchTrendingTopics budget:', e.message);
+    // Still try a quick RSS pass if the big race timed out mid-flight
+    if (!rssTrends.length) rssTrends = await fetchRssTrending(6).catch(() => []);
+  }
 
   if (serpTrends.length > 0) return serpTrends;
   if (redditTrends.length > 0) return redditTrends;
@@ -417,20 +468,28 @@ async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
   if (rssTrends.length > 0) return rssTrends;
 
   if (hasTwitterKeys(keys) && (platform === 'Twitter' || platform === 'Twitter / X' || platform === 'All')) {
-    const twPosts = await twitter.searchPosts('trending OR breaking news', keys, 6);
-    if (twPosts.length > 0) {
-      return twPosts.map((p) => ({
-        topic: (p.content || '').substring(0, 100),
-        searchVolume: (p.stats?.likes || 0) + (p.stats?.comments || 0),
-        momentum: 'Live',
-        url: p.url,
-        platform: 'Twitter',
-      }));
+    try {
+      const twPosts = await withTimeout(
+        twitter.searchPosts('trending OR breaking news', keys, 6),
+        8000,
+        'twitter trending',
+      );
+      if (twPosts.length > 0) {
+        return twPosts.map((p) => ({
+          topic: (p.content || '').substring(0, 100),
+          searchVolume: (p.stats?.likes || 0) + (p.stats?.comments || 0),
+          momentum: 'Live',
+          url: p.url,
+          platform: 'Twitter',
+        }));
+      }
+    } catch (e) {
+      console.warn('Twitter trending:', e.message);
     }
   }
 
   if (seed.length) {
-    const webTrends = await fetchWebTrending(seed[0], 6);
+    const webTrends = await fetchWebTrending(seed[0], 6).catch(() => []);
     if (webTrends.length > 0) return webTrends;
     return seed.slice(0, 6).map((term) => ({
       topic: term,
@@ -441,6 +500,15 @@ async function fetchTrendingTopics(platform, keys, seedKeywords = []) {
     }));
   }
 
+  // Absolute last resort — never return [] to the dashboard
+  if (!rssTrends.length) {
+    return [
+      { topic: 'AI marketing automation', searchVolume: 'Daily', momentum: 'Live', url: null, platform: 'Trends' },
+      { topic: 'Short-form video growth', searchVolume: 'Daily', momentum: 'Live', url: null, platform: 'Trends' },
+      { topic: 'Creator economy', searchVolume: 'Daily', momentum: 'Live', url: null, platform: 'Trends' },
+      { topic: 'B2B social strategy', searchVolume: 'Daily', momentum: 'Live', url: null, platform: 'Trends' },
+    ];
+  }
   return rssTrends;
 }
 
@@ -677,20 +745,48 @@ async function fetchSerpQueryTrends(keys, query, platform, limit = 4) {
   }
 }
 
+/**
+ * SaaS/EB has a tmp userDataPath always set, but no desktop browser profiles.
+ * Live Chromium scrapes hang 45–90s+ and empty the dashboard when the ALB times out.
+ * Desktop-only: allow live scrape when not SaaS.
+ */
+function isSaasTrendRuntime() {
+  return process.env.SAAS_MODE === '1'
+    || process.env.SAAS_MODE === 'true'
+    || process.env.SI_RUNTIME === 'saas'
+    || !!process.env.AWS_EXECUTION_ENV
+    || !!process.env.ELASTIC_BEANSTALK_ENVIRONMENT_NAME
+    || process.env.ALLOW_LIVE_SOCIAL_TRENDS === '0';
+}
+
+function withTimeout(promise, ms, label = 'op') {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function fetchLivePlatformTrends(cfg, store, userDataPath, limit = 4) {
   if (!store || !userDataPath) return [];
+  if (isSaasTrendRuntime()) return [];
+  const liveBudgetMs = parseInt(process.env.LIVE_TREND_SCRAPE_MS || '12000', 10);
   try {
     const scraper = require('./socialTrendsScraper');
+    let work;
     if (cfg.liveSource === 'x') {
-      return scraper.fetchXTrendsLive(store, userDataPath, limit);
+      work = scraper.fetchXTrendsLive(store, userDataPath, limit);
+    } else if (cfg.liveSource === 'linkedin') {
+      work = scraper.fetchLinkedInNewsLive(store, userDataPath, limit);
+    } else if (cfg.liveSource === 'tiktok') {
+      work = scraper.fetchTikTokTrendsLive(store, userDataPath, limit).then((res) => ({
+        items: res.items || [],
+        needsLogin: !!res.needsLogin,
+      }));
+    } else {
+      return [];
     }
-    if (cfg.liveSource === 'linkedin') {
-      return scraper.fetchLinkedInNewsLive(store, userDataPath, limit);
-    }
-    if (cfg.liveSource === 'tiktok') {
-      const res = await scraper.fetchTikTokTrendsLive(store, userDataPath, limit);
-      return { items: res.items || [], needsLogin: !!res.needsLogin };
-    }
+    return await withTimeout(work, liveBudgetMs, `live trends ${cfg.platform}`);
   } catch (e) {
     console.warn(`Live trends ${cfg.platform}:`, e.message);
   }
@@ -700,7 +796,8 @@ async function fetchLivePlatformTrends(cfg, store, userDataPath, limit = 4) {
 async function fetchPlatformDailyTrends(cfg, keys, seedKeywords, limit = 4, ctx = {}) {
   let items = [];
 
-  if (ctx.store && ctx.userDataPath && cfg.liveSource) {
+  // Desktop only: native browser live scrape. SaaS skips (see isSaasTrendRuntime).
+  if (!isSaasTrendRuntime() && ctx.store && ctx.userDataPath && cfg.liveSource) {
     const live = await fetchLivePlatformTrends(cfg, ctx.store, ctx.userDataPath, limit);
     if (live?.needsLogin) ctx.tiktokNeedsLogin = true;
     const liveItems = Array.isArray(live) ? live : (live?.items || []);
@@ -791,11 +888,53 @@ async function fetchDailySocialTrends(keys, seedKeywords = [], ctx = {}) {
   const scrapeCtx = { ...ctx, tiktokNeedsLogin: false };
   const seed = (Array.isArray(seedKeywords) ? seedKeywords : []).map((k) => String(k).trim()).filter(Boolean);
   const perPlatform = 3;
-  const chunks = await Promise.all(
-    DAILY_SOCIAL_PLATFORMS.map((cfg) => fetchPlatformDailyTrends(cfg, keys, seed, perPlatform, scrapeCtx)),
+  // Overall budget so dashboard never sits empty waiting on scrapers / SERP.
+  const overallMs = parseInt(
+    process.env.DAILY_SOCIAL_TRENDS_MS || (isSaasTrendRuntime() ? '18000' : '45000'),
+    10,
   );
-  const merged = dedupeDailyTrends(chunks.flat().filter((t) => t.topic));
-  const meta = { tiktokNeedsLogin: !!scrapeCtx.tiktokNeedsLogin };
+
+  let chunks;
+  try {
+    chunks = await withTimeout(
+      Promise.all(
+        DAILY_SOCIAL_PLATFORMS.map((cfg) => fetchPlatformDailyTrends(cfg, keys, seed, perPlatform, scrapeCtx)),
+      ),
+      overallMs,
+      'fetchDailySocialTrends',
+    );
+  } catch (e) {
+    console.warn('fetchDailySocialTrends budget exceeded:', e.message);
+    chunks = [];
+  }
+
+  let merged = dedupeDailyTrends((chunks || []).flat().filter((t) => t && t.topic));
+
+  // Guarantee non-empty payload for dashboard Trending LIVE / Daily Social grids.
+  if (!merged.length) {
+    for (const cfg of DAILY_SOCIAL_PLATFORMS) {
+      const items = [];
+      appendPlatformFallbacks(items, cfg.platform, perPlatform);
+      merged.push(...items);
+    }
+    merged = dedupeDailyTrends(merged);
+  } else {
+    // Fill any platform that returned nothing so the 6-column UI is never blank.
+    const present = new Set(merged.map((t) => t.platform));
+    for (const cfg of DAILY_SOCIAL_PLATFORMS) {
+      if (present.has(cfg.platform)) continue;
+      const items = [];
+      appendPlatformFallbacks(items, cfg.platform, perPlatform);
+      merged.push(...items);
+    }
+    merged = dedupeDailyTrends(merged);
+  }
+
+  const meta = {
+    tiktokNeedsLogin: !!scrapeCtx.tiktokNeedsLogin,
+    saasMode: isSaasTrendRuntime(),
+    source: isSaasTrendRuntime() ? 'web_serp_fallback' : 'live_plus_web',
+  };
   dailySocialTrendsCache = { hour, trends: merged, meta };
   return { trends: merged, meta };
 }

@@ -23,7 +23,8 @@ const FEATURES = [
   { area: 'Overview', name: 'Daily social trends (platform + topic)', channel: 'get-daily-social-trends',
     validate: (d) => {
       const trends = Array.isArray(d) ? d : (d?.trends || []);
-      return Array.isArray(trends) && (trends.length === 0 || (trends[0].topic && trends[0].platform));
+      // Must be non-empty — SaaS uses web/SERP/curated fallbacks (never blank dashboard).
+      return Array.isArray(trends) && trends.length > 0 && !!(trends[0].topic && trends[0].platform);
     } },
   { area: 'Overview', name: 'Open TikTok trends login', channel: 'open-tiktok-trends-login',
     validate: (d) => d && (d.url || d.message || d.success !== undefined || d.trendsUrl) },
