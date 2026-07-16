@@ -256,6 +256,7 @@ export function SitePagesTrackingPanel({ onMessage }: Props) {
               />
               Enable GA4 gtag.js
             </label>
+            <label className="ac-label">Measurement ID (public tag)</label>
             <input
               className="input"
               placeholder="G-XXXXXXXXXX"
@@ -265,7 +266,18 @@ export function SitePagesTrackingPanel({ onMessage }: Props) {
                 patchSettings({ ga4MeasurementId, ga4Enabled: !!ga4MeasurementId || settings.ga4Enabled });
               }}
             />
-            <p className="settings-panel-desc">Measurement ID from GA4 Admin → Data Streams.</p>
+            <p className="settings-panel-desc">Measurement ID from GA4 Admin → Data Streams (browser tag only).</p>
+            <label className="ac-label">Property ID (admin traffic reports)</label>
+            <input
+              className="input"
+              placeholder="123456789"
+              value={settings.ga4PropertyId || ''}
+              onChange={(e) => patchSettings({ ga4PropertyId: e.target.value.trim().replace(/^properties\//, '') })}
+            />
+            <p className="settings-panel-desc">
+              Numeric property id from GA4 Admin → Property Settings (not the G- tag). Used by Dashboard → Analytics
+              admin traffic panel with a server service account.
+            </p>
           </DataPanel>
 
           <DataPanel title="Google Tag Manager" live>
@@ -313,6 +325,17 @@ export function SitePagesTrackingPanel({ onMessage }: Props) {
               value={settings.googleSearchConsoleVerification}
               onChange={(e) => patchSettings({ googleSearchConsoleVerification: e.target.value.trim() })}
             />
+            <label className="ac-label" style={{ marginTop: 12 }}>GSC property URL (admin reports)</label>
+            <input
+              className="input"
+              placeholder="sc-domain:socialimperialism.com or https://www.example.com/"
+              value={settings.gscSiteUrl || ''}
+              onChange={(e) => patchSettings({ gscSiteUrl: e.target.value.trim() })}
+            />
+            <p className="settings-panel-desc">
+              Exact property string as shown in Search Console. Share the property with the Google service account
+              email so Dashboard → Analytics can pull clicks, impressions, and queries.
+            </p>
           </DataPanel>
 
           <DataPanel title="Bing Webmaster Tools" live>

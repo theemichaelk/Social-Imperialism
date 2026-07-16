@@ -19,3 +19,4 @@
 
 ## SaaS admin (separate from Grok)
 - Seed login: set `SEED_EMAIL` and `SEED_PASSWORD` in `apps/api/.env` (see `.env.example`)
+- Admin GSC + GA4 traffic: `GET /api/admin/traffic` + Dashboard Analytics / Admin panels. Env: `GOOGLE_SERVICE_ACCOUNT_JSON`, `GSC_SITE_URL`, `GA4_PROPERTY_ID`. Docs: `docs/ADMIN_GSC_GA4.md`

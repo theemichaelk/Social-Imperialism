@@ -26,6 +26,10 @@ function emptySettings() {
     globalFooterHtml: '',
     ga4MeasurementId: '',
     ga4Enabled: false,
+    /** Numeric GA4 property id for Data API reports (admin traffic dashboard). Not the G- tag. */
+    ga4PropertyId: '',
+    /** GSC property URL, e.g. sc-domain:example.com or https://www.example.com/ */
+    gscSiteUrl: '',
     gtmContainerId: '',
     gtmEnabled: false,
     googleSearchConsoleVerification: '',

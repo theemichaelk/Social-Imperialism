@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/PageShell';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { AdminDirectoryPanel } from '@/components/AdminDirectoryPanel';
+import { AdminTrafficPanel } from '@/components/AdminTrafficPanel';
 import { LiveGuideRedirectPanel } from '@/components/LiveGuideRedirectPanel';
 import { checkPlatformAdmin } from '@/lib/adminAccess';
 
@@ -36,11 +37,14 @@ export default function DashboardAdminPage() {
     <>
       <PageShell
         title="Admin Directory"
-        subtitle="Platform-wide view — all users, organizations, and campaigns"
+        subtitle="Platform-wide view — traffic (GSC + GA4), users, organizations, and campaigns"
         eyebrow="Dashboard / Admin"
       />
       <SectionLivePanel section="dashboard-admin" />
       <LiveGuideRedirectPanel />
+      <div style={{ marginBottom: 20 }}>
+        <AdminTrafficPanel />
+      </div>
       <AdminDirectoryPanel />
     </>
   );

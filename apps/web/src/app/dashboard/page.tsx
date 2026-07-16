@@ -3,6 +3,7 @@ import { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { invoke } from '@/lib/api';
+import { checkPlatformAdmin } from '@/lib/adminAccess';
 
 import { PageShell } from '@/components/PageShell';
 import { InvokePanel } from '@/components/InvokePanel';
@@ -17,6 +18,7 @@ import { QaSettingsPanel } from '@/components/QaSettingsPanel';
 import { SectionLivePanel } from '@/components/SectionLivePanel';
 import { PredictiveMotivationPanel } from '@/components/PredictiveMotivationPanel';
 import { CampaignMasteryPanel } from '@/components/CampaignMasteryPanel';
+import { AdminTrafficPanel } from '@/components/AdminTrafficPanel';
 import { useSiEvents } from '@/hooks/useSiEvents';
 import { ManageableTabNav } from '@/components/ManageableTabNav';
 import {
@@ -146,6 +148,7 @@ function DashboardPageInner() {
   const [socialTrendsMeta, setSocialTrendsMeta] = useState<DailySocialTrendsMeta>({});
   const [socialTrendsLoading, setSocialTrendsLoading] = useState(false);
   const [tiktokLoginMsg, setTiktokLoginMsg] = useState('');
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [leads, setLeads] = useState<unknown[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [worker, setWorker] = useState<WorkerStatus>({});
@@ -312,6 +315,10 @@ function DashboardPageInner() {
   }, [loadFeed]);
 
   useEffect(() => { refresh().catch(console.error); }, [refresh]);
+
+  useEffect(() => {
+    checkPlatformAdmin().then(setIsPlatformAdmin).catch(() => setIsPlatformAdmin(false));
+  }, []);
 
   useEffect(() => {
     if (tab !== 'feed') return;
@@ -939,54 +946,61 @@ function DashboardPageInner() {
       )}
 
       {tab === 'analytics' && (
-        <div className="grid grid-2">
-          <DataPanel title={`Domain Authority — ${campaign.domain || '—'}`} live>
-            {hasDomainMetrics ? (
-              <>
-                <BarChart items={[
-                  { label: 'DA', value: Number((domain as { da?: number }).da ?? (domain as { data?: { mozDA?: number } }).data?.mozDA) || 0, color: '#38bdf8' },
-                  { label: 'PA', value: Number((domain as { pa?: number }).pa ?? (domain as { data?: { mozPA?: number } }).data?.mozPA) || 0, color: '#a855f7' },
-                  { label: 'TF', value: Number((domain as { trustFlow?: number }).trustFlow) || 0, color: '#22c55e' },
-                  { label: 'CF', value: Number((domain as { citationFlow?: number }).citationFlow) || 0, color: '#f59e0b' },
-                ]} />
-                <SparkRow items={[
-                  { label: 'DA', value: (domain as { da?: number }).da ?? (domain as { data?: { mozDA?: number } }).data?.mozDA ?? '—' },
-                  { label: 'PA', value: (domain as { pa?: number }).pa ?? (domain as { data?: { mozPA?: number } }).data?.mozPA ?? '—' },
-                  { label: 'Replies', value: (projectMetrics as { repliesDraft?: number }).repliesDraft ?? 0 },
-                  { label: 'Leads', value: (projectMetrics as { leads?: number }).leads ?? 0 },
-                ]} />
-              </>
-            ) : domainError ? (
-              <p style={{ color: '#f59e0b', fontSize: '0.85rem' }}>
-                Domain metrics unavailable: {domainError}. Add your DomDetailer API key in Settings → API Keys, then run Full Scan.
-              </p>
-            ) : !campaign.domain ? (
-              <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Set a campaign domain in Setup Wizard to load domain authority.</p>
-            ) : (
-              <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No domain metrics yet — run Full Scan or check DomDetailer in Integrations.</p>
-            )}
-          </DataPanel>
-          <DataPanel title="Project Performance" live>
-            <BarChart items={[
-              { label: 'Drafts', value: (projectMetrics as { repliesDraft?: number }).repliesDraft ?? stats.aiDrafts ?? 0, color: '#a855f7' },
-              { label: 'Sent', value: (projectMetrics as { repliesSent?: number }).repliesSent ?? 0, color: '#22c55e' },
-              { label: 'Leads', value: (projectMetrics as { leads?: number }).leads ?? stats.leadsGenerated ?? 0, color: '#f59e0b' },
-              { label: 'Posts', value: stats.totalPosts ?? 0, color: '#38bdf8' },
-            ]} />
-          </DataPanel>
-          <InvokePanel title="Export Data" channel="export-data" buttonLabel="Export Snapshot" />
-          <InvokePanel title="Stock Photo Search" channel="search-stock-photo" args={['marketing technology']} buttonLabel="Search" renderResult={(d) => {
-            const img = (d as { imageUrl?: string; source?: string }).imageUrl;
-            const src = (d as { source?: string }).source;
-            return img ? (
-              <div>
-                {src && <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Source: {src}</p>}
-                <img src={img} alt="" style={{ maxWidth: '100%', borderRadius: 8 }} />
-              </div>
-            ) : <p>No image returned</p>;
-          }} />
-          <InvokePanel title="Serp Research" channel="serp-search" args={['social media automation']} buttonLabel="Search" />
-        </div>
+        <>
+          {isPlatformAdmin && (
+            <div style={{ marginBottom: 16 }}>
+              <AdminTrafficPanel />
+            </div>
+          )}
+          <div className="grid grid-2">
+            <DataPanel title={`Domain Authority — ${campaign.domain || '—'}`} live>
+              {hasDomainMetrics ? (
+                <>
+                  <BarChart items={[
+                    { label: 'DA', value: Number((domain as { da?: number }).da ?? (domain as { data?: { mozDA?: number } }).data?.mozDA) || 0, color: '#38bdf8' },
+                    { label: 'PA', value: Number((domain as { pa?: number }).pa ?? (domain as { data?: { mozPA?: number } }).data?.mozPA) || 0, color: '#a855f7' },
+                    { label: 'TF', value: Number((domain as { trustFlow?: number }).trustFlow) || 0, color: '#22c55e' },
+                    { label: 'CF', value: Number((domain as { citationFlow?: number }).citationFlow) || 0, color: '#f59e0b' },
+                  ]} />
+                  <SparkRow items={[
+                    { label: 'DA', value: (domain as { da?: number }).da ?? (domain as { data?: { mozDA?: number } }).data?.mozDA ?? '—' },
+                    { label: 'PA', value: (domain as { pa?: number }).pa ?? (domain as { data?: { mozPA?: number } }).data?.mozPA ?? '—' },
+                    { label: 'Replies', value: (projectMetrics as { repliesDraft?: number }).repliesDraft ?? 0 },
+                    { label: 'Leads', value: (projectMetrics as { leads?: number }).leads ?? 0 },
+                  ]} />
+                </>
+              ) : domainError ? (
+                <p style={{ color: '#f59e0b', fontSize: '0.85rem' }}>
+                  Domain metrics unavailable: {domainError}. Add your DomDetailer API key in Settings → API Keys, then run Full Scan.
+                </p>
+              ) : !campaign.domain ? (
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Set a campaign domain in Setup Wizard to load domain authority.</p>
+              ) : (
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>No domain metrics yet — run Full Scan or check DomDetailer in Integrations.</p>
+              )}
+            </DataPanel>
+            <DataPanel title="Project Performance" live>
+              <BarChart items={[
+                { label: 'Drafts', value: (projectMetrics as { repliesDraft?: number }).repliesDraft ?? stats.aiDrafts ?? 0, color: '#a855f7' },
+                { label: 'Sent', value: (projectMetrics as { repliesSent?: number }).repliesSent ?? 0, color: '#22c55e' },
+                { label: 'Leads', value: (projectMetrics as { leads?: number }).leads ?? stats.leadsGenerated ?? 0, color: '#f59e0b' },
+                { label: 'Posts', value: stats.totalPosts ?? 0, color: '#38bdf8' },
+              ]} />
+            </DataPanel>
+            <InvokePanel title="Export Data" channel="export-data" buttonLabel="Export Snapshot" />
+            <InvokePanel title="Stock Photo Search" channel="search-stock-photo" args={['marketing technology']} buttonLabel="Search" renderResult={(d) => {
+              const img = (d as { imageUrl?: string; source?: string }).imageUrl;
+              const src = (d as { source?: string }).source;
+              return img ? (
+                <div>
+                  {src && <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Source: {src}</p>}
+                  <img src={img} alt="" style={{ maxWidth: '100%', borderRadius: 8 }} />
+                </div>
+              ) : <p>No image returned</p>;
+            }} />
+            <InvokePanel title="Serp Research" channel="serp-search" args={['social media automation']} buttonLabel="Search" />
+          </div>
+        </>
       )}
 
       <PostExplorerModal

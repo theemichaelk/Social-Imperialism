@@ -14,6 +14,10 @@ export type SiteTrackingSettings = {
   globalFooterHtml: string;
   ga4MeasurementId: string;
   ga4Enabled: boolean;
+  /** Numeric GA4 property id for Data API (admin traffic) — not G-XXXXXXXX */
+  ga4PropertyId: string;
+  /** GSC property: sc-domain:example.com or https://www.example.com/ */
+  gscSiteUrl: string;
   gtmContainerId: string;
   gtmEnabled: boolean;
   googleSearchConsoleVerification: string;
@@ -57,6 +61,8 @@ export const EMPTY_SITE_TRACKING: SiteTrackingSettings = {
   globalFooterHtml: '',
   ga4MeasurementId: '',
   ga4Enabled: false,
+  ga4PropertyId: '',
+  gscSiteUrl: '',
   gtmContainerId: '',
   gtmEnabled: false,
   googleSearchConsoleVerification: '',

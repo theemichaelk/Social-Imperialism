@@ -205,4 +205,64 @@ router.post('/users/:userId/revoke-sessions', async (req, res) => {
   }
 });
 
+/**
+ * Admin: GSC + GA4 traffic snapshot for the platform site.
+ * GET /api/admin/traffic?days=28&forceRefresh=1
+ */
+router.get('/traffic', async (req, res) => {
+  try {
+    const { getAdminTrafficSnapshot } = require('../services/googleTraffic');
+    const days = parseInt(String(req.query.days || '28'), 10) || 28;
+    const forceRefresh = req.query.forceRefresh === '1' || req.query.forceRefresh === 'true';
+    const overrides = {};
+    if (req.query.gscSiteUrl) overrides.gscSiteUrl = String(req.query.gscSiteUrl);
+    if (req.query.ga4PropertyId) overrides.ga4PropertyId = String(req.query.ga4PropertyId);
+
+    // Fall back to org site-tracking property ids when env not set
+    try {
+      const row = await prisma.orgSetting.findFirst({
+        where: { key: 'org_siteTrackingSettings' },
+      });
+      if (row?.value) {
+        const tracking = JSON.parse(row.value);
+        if (!overrides.gscSiteUrl && tracking.gscSiteUrl) overrides.gscSiteUrl = tracking.gscSiteUrl;
+        if (!overrides.ga4PropertyId && tracking.ga4PropertyId) overrides.ga4PropertyId = tracking.ga4PropertyId;
+        if (tracking.ga4MeasurementId) overrides.ga4MeasurementId = tracking.ga4MeasurementId;
+      }
+    } catch {
+      /* optional */
+    }
+
+    const snapshot = await getAdminTrafficSnapshot({ days, forceRefresh, ...overrides });
+    res.json(snapshot);
+  } catch (e) {
+    console.error('[admin/traffic]', e.message);
+    res.status(500).json({ error: e.message || 'Traffic snapshot failed' });
+  }
+});
+
+/** Admin: config readiness for GSC/GA4 (no external calls). */
+router.get('/traffic/status', async (req, res) => {
+  try {
+    const { getConfigStatus } = require('../services/googleTraffic');
+    const overrides = {};
+    try {
+      const row = await prisma.orgSetting.findFirst({
+        where: { key: 'org_siteTrackingSettings' },
+      });
+      if (row?.value) {
+        const tracking = JSON.parse(row.value);
+        if (tracking.gscSiteUrl) overrides.gscSiteUrl = tracking.gscSiteUrl;
+        if (tracking.ga4PropertyId) overrides.ga4PropertyId = tracking.ga4PropertyId;
+        if (tracking.ga4MeasurementId) overrides.ga4MeasurementId = tracking.ga4MeasurementId;
+      }
+    } catch {
+      /* optional */
+    }
+    res.json({ success: true, ...getConfigStatus(overrides) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
