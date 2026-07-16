@@ -7,6 +7,14 @@ const { S3Client, PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/c
 const DEFAULT_ACCOUNT_ID = 'ba963879a02685a50956ea17870c2f32';
 
 function getR2Config() {
+  // Local Floci / explicit S3 mode must not silently send traffic to paid R2.
+  const provider = String(process.env.STORAGE_PROVIDER || process.env.SI_STORAGE_PROVIDER || 'auto').toLowerCase();
+  if (provider === 'floci' || provider === 's3' || provider === 'none') return null;
+  if (process.env.FLOCI_ENDPOINT || process.env.AWS_S3_ENDPOINT) {
+    // Emulator endpoints win for local free storage unless STORAGE_PROVIDER=r2
+    if (provider !== 'r2') return null;
+  }
+
   const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID || DEFAULT_ACCOUNT_ID;
   const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;

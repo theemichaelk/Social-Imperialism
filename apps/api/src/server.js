@@ -75,6 +75,7 @@ app.get('/health', async (req, res) => {
     service: 'social-imperialism-api',
     version: APP_VERSION,
     db,
+    storageProvider: s3.resolveStorageProvider ? s3.resolveStorageProvider() : undefined,
     s3: s3.getS3Status(),
     r2: (() => { try { return require('./r2').getR2Status(); } catch (e) { return { configured: false }; } })(),
     circuits: getCircuitStatus(),

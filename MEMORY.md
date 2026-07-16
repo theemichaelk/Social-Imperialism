@@ -20,3 +20,8 @@
 ## SaaS admin (separate from Grok)
 - Seed login: set `SEED_EMAIL` and `SEED_PASSWORD` in `apps/api/.env` (see `.env.example`)
 - Admin GSC + GA4 traffic: `GET /api/admin/traffic` + Dashboard Analytics / Admin panels. Env: `GOOGLE_SERVICE_ACCOUNT_JSON`, `GSC_SITE_URL`, `GA4_PROPERTY_ID`. Docs: `docs/ADMIN_GSC_GA4.md`
+
+## Local storage (Floci — free S3 emulator)
+- Dev: `npm run floci:up` → Floci on `:4566`; `STORAGE_PROVIDER=floci` in `apps/api/.env` (QP block in `docs/FLOCI_LOCAL.md`)
+- Do **not** use Amplify for day-to-day dev — `npm run dev` only. Amplify = go-live.
+- UI console optional: clone [floci-ui](https://github.com/floci-io/floci-ui) → `docker compose up`

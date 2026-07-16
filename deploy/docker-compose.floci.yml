@@ -1,0 +1,32 @@
+# Social Imperialism — local Floci AWS emulator (S3-compatible, free, no AWS bill)
+# Usage (from repo root):
+#   docker compose -f deploy/docker-compose.floci.yml up -d
+#   npm run floci:bootstrap
+# Optional UI console:
+#   docker compose -f deploy/docker-compose.floci.yml --profile ui up -d
+#   open http://localhost:4500
+
+services:
+  floci:
+    image: floci/floci:latest-compat
+    container_name: si-floci
+    ports:
+      - "4566:4566"
+    volumes:
+      - si-floci-data:/app/data
+    environment:
+      FLOCI_STORAGE_MODE: persistent
+      FLOCI_DEFAULT_REGION: us-east-1
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4566/_floci/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+    restart: unless-stopped
+
+  # Optional UI: clone https://github.com/floci-io/floci-ui and run `docker compose up`
+  # (full stack: UI :4500 + API :4501 + Floci :4566). SI only needs the floci service above.
+
+volumes:
+  si-floci-data:
