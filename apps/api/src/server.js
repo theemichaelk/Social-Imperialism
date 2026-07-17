@@ -13,7 +13,6 @@ const { requireAuth } = require('./middleware/auth');
 const { requireActiveSubscription, requireActiveSubscriptionForInvoke } = require('./middleware/subscription');
 const { sovereignThreatShield } = require('./middleware/sovereignThreatShield');
 const { resolveActiveProject } = require('./projectEnsure');
-const s3 = require('./s3');
 
 // Load desktop .env for API keys (local dev only — production uses EB env vars)
 const desktopEnvPath = path.join(__dirname, '../../desktop/.env');
@@ -27,6 +26,40 @@ if (require('fs').existsSync(desktopEnvPath)) {
     delete process.env.DATABASE_URL;
   }
 }
+
+// Local zero-touch: if not on AWS EB and Floci routing is requested/missing, apply QP defaults.
+// Production EB sets AWS_EXECUTION_ENV / ELASTIC_BEANSTALK_* — never force floci there.
+(function applyLocalFlociDefaults() {
+  const onAws = !!(process.env.AWS_EXECUTION_ENV || process.env.ELASTIC_BEANSTALK_ENVIRONMENT_NAME || process.env.EB_IS_COMMAND_LEADER);
+  if (onAws) return;
+  const provider = String(process.env.STORAGE_PROVIDER || process.env.SI_STORAGE_PROVIDER || '').toLowerCase();
+  const wantFloci = !provider || provider === 'floci' || provider === 'auto'
+    || process.env.FLOCI_ENDPOINT || process.env.AWS_S3_ENDPOINT;
+  if (!wantFloci || provider === 'r2' || provider === 's3') return;
+  const defaults = {
+    STORAGE_PROVIDER: 'floci',
+    SI_STORAGE_PROVIDER: 'floci',
+    FLOCI_ENDPOINT: 'http://127.0.0.1:4566',
+    AWS_S3_ENDPOINT: 'http://127.0.0.1:4566',
+    AWS_S3_FORCE_PATH_STYLE: 'true',
+    AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME || 'social-imperialism',
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || 'test',
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || 'test',
+    AWS_S3_REGION: process.env.AWS_S3_REGION || 'us-east-1',
+    AWS_S3_UPLOAD_PREFIX: process.env.AWS_S3_UPLOAD_PREFIX || 'social-imperialism/uploads',
+    AWS_S3_PUBLIC_BASE_URL: process.env.AWS_S3_PUBLIC_BASE_URL || 'http://127.0.0.1:4566/social-imperialism',
+  };
+  for (const [k, v] of Object.entries(defaults)) {
+    if (!process.env[k] || String(process.env[k]).trim() === '') process.env[k] = v;
+  }
+  // Force floci when auto + local defaults (skip paid R2 in local dev)
+  if (!provider || provider === 'auto' || provider === 'floci') {
+    process.env.STORAGE_PROVIDER = 'floci';
+    process.env.SI_STORAGE_PROVIDER = 'floci';
+  }
+})();
+
+const s3 = require('./s3');
 
 const app = express();
 const PORT = process.env.PORT || process.env.API_PORT || 4000;

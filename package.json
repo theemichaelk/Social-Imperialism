@@ -10,9 +10,11 @@
     "apps/desktop"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev": "powershell -ExecutionPolicy Bypass -File deploy/dev-local.ps1",
+    "dev:app": "concurrently -n api,web -c cyan,magenta \"npm run dev:api\" \"npm run dev:web\"",
     "dev:local": "powershell -ExecutionPolicy Bypass -File deploy/dev-local.ps1",
     "dev:local:api": "powershell -ExecutionPolicy Bypass -File deploy/dev-local.ps1 -NoWeb",
+    "dev:ready": "powershell -ExecutionPolicy Bypass -File deploy/dev-local.ps1 -ReadyOnly",
     "qp:ensure": "node deploy/ensure-qp-env.js",
     "qp:ensure:force": "node deploy/ensure-qp-env.js --force-provider",
     "dev:api": "npm run dev -w @si/api",

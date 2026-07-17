@@ -51,31 +51,24 @@ Manual dev: Node 20+, pnpm 9+, Bun; `pnpm install` → `pnpm dev` with Floci cor
 
 ## SI Quick Start (local free storage)
 
-**One shot (recommended):**
+**Zero-touch (do nothing else):**
 
 ```powershell
-npm run dev:local
+npm run dev
 ```
 
-That will:
+Or double-click **`start-si.bat`** in the repo root.
 
-1. Auto-append missing **QP** keys to `apps/api/.env` (`npm run qp:ensure`)
-2. Start Floci on `:4566` + bootstrap bucket
-3. Run API (`:4000`) + web (`:3000`) — **no Amplify**
+That automatically:
 
-**Manual steps:**
+1. Starts **Docker Desktop** if needed (waits for the engine)
+2. Writes missing **QP** Floci keys into `apps/api/.env` (`STORAGE_PROVIDER=floci`)
+3. Starts **Floci** on `:4566` and creates the bucket
+4. Runs **API** (`:4000`) + **web** (`:3000`) — **no Amplify**
 
-```powershell
-npm run qp:ensure          # append QP to apps/api/.env when missing
-npm run floci:up           # emulator + bucket
-npm run dev                # API + web
-```
+First run may take a few minutes while Docker pulls `floci/floci` and the engine starts. Leave Docker Desktop running afterward for instant restarts.
 
-Force `STORAGE_PROVIDER=floci` even if something else was set:
-
-```powershell
-npm run qp:ensure:force
-```
+**App only** (infra already up): `npm run dev:app`
 
 Optional console: clone [floci-ui](https://github.com/floci-io/floci-ui) and `docker compose up` → http://localhost:4500
 
@@ -151,13 +144,13 @@ Web go-live remains: **`deploy/amplify-deploy.ps1`** / Amplify git `main` — no
 
 | Script | Action |
 |--------|--------|
-| `npm run dev:local` | **QP ensure + Floci + API + web** (one shot) |
-| `npm run dev:local:api` | Same without Next web |
+| `npm run dev` | **Zero-touch:** Docker + QP + Floci + API + web |
+| `start-si.bat` | Same — double-click, no terminal knowledge |
+| `npm run dev:app` | API + web only (Floci already running) |
+| `npm run dev:ready` | Prepare Docker/Floci/env without starting servers |
 | `npm run qp:ensure` | Auto-append missing QP keys to `apps/api/.env` |
-| `npm run qp:ensure:force` | Also force `STORAGE_PROVIDER=floci` |
 | `npm run floci:up` | Docker Floci on 4566 + bootstrap + qp ensure |
-| `npm run floci:bootstrap` | Create bucket + smoke put |
-| `npm run floci:down` | Stop compose stack |
+| `npm run floci:down` | Stop Floci container |
 
 ---
 

@@ -1,52 +1,85 @@
-# One-shot local stack: ensure QP env → start Floci → bootstrap bucket → API + web.
-# Does NOT deploy Amplify or use paid S3/R2 when QP is active.
+# Zero-touch local stack:
+#   Docker Desktop (auto-start) → QP .env → Floci S3 → API + web
+# No Amplify. No paid S3 when STORAGE_PROVIDER=floci.
 param(
   [switch]$SkipFloci,
   [switch]$ForceProvider,
-  [switch]$NoWeb
+  [switch]$NoWeb,
+  [switch]$ReadyOnly
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $RepoRoot = Split-Path $PSScriptRoot -Parent
 Set-Location $RepoRoot
 
-Write-Host "=== SI dev:local ===" -ForegroundColor Cyan
-Write-Host "Repo: $RepoRoot"
-
-# 1) QP env
-$ensureArgs = @("deploy/ensure-qp-env.js")
-if ($ForceProvider) { $ensureArgs += "--force-provider" }
-Write-Host "`n[1/3] Ensuring QP Floci env in apps/api/.env ..."
-node @ensureArgs
-if ($LASTEXITCODE -ne 0) { throw "ensure-qp-env failed" }
-
-# 2) Floci emulator
-if (-not $SkipFloci) {
-  Write-Host "`n[2/3] Starting Floci (local S3) ..."
-  if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    Write-Warning "Docker not found — skip Floci. Install Docker Desktop or use -SkipFloci after starting Floci yourself."
-  } else {
-    try {
-      powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "floci-up.ps1")
-    } catch {
-      Write-Warning "Floci start failed: $($_.Exception.Message)"
-      Write-Warning "Start Docker Desktop, then re-run: npm run floci:up"
-    }
-  }
-} else {
-  Write-Host "`n[2/3] Skip Floci (-SkipFloci)"
+function Write-Step($n, $msg) {
+  Write-Host ""
+  Write-Host "[$n] $msg" -ForegroundColor Cyan
 }
 
-# 3) API + web
-Write-Host "`n[3/3] Starting local API + web (no Amplify) ..."
-Write-Host "  Web:  http://localhost:3000"
-Write-Host "  API:  http://localhost:4000"
-Write-Host "  Floci S3: http://127.0.0.1:4566"
-Write-Host "  Ctrl+C stops API/web (Floci container keeps running — npm run floci:down to stop)"
+Write-Host "========================================" -ForegroundColor Green
+Write-Host " Social Imperialism — zero-touch local "
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "Repo: $RepoRoot"
+
+# ── 1) QP env (always force floci for local zero-touch) ──
+Write-Step "1/4" "QP env (apps/api/.env) ..."
+node (Join-Path $RepoRoot "deploy\ensure-qp-env.js") --force-provider
+if ($LASTEXITCODE -ne 0) {
+  Write-Warning "qp:ensure failed (exit $LASTEXITCODE) — continuing"
+}
+
+# ── 2) Docker ──
+$dockerOk = $false
+if (-not $SkipFloci) {
+  Write-Step "2/4" "Docker Desktop ..."
+  & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "ensure-docker.ps1")
+  $dockerOk = ($LASTEXITCODE -eq 0)
+} else {
+  Write-Step "2/4" "Docker skipped (-SkipFloci)"
+}
+
+# ── 3) Floci ──
+if (-not $SkipFloci -and $dockerOk) {
+  Write-Step "3/4" "Floci local S3 (:4566) ..."
+  & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "floci-up.ps1")
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Floci up returned $LASTEXITCODE — API may fall back if R2 keys exist"
+  }
+} elseif (-not $SkipFloci) {
+  Write-Step "3/4" "Floci skipped (Docker not ready)"
+  Write-Warning "Start Docker Desktop once, leave it running — next npm run dev will attach Floci automatically."
+} else {
+  Write-Step "3/4" "Floci skipped"
+}
+
+if ($ReadyOnly) {
+  Write-Host ""
+  Write-Host "Ready-only complete. Run: npm run dev:app" -ForegroundColor Green
+  exit 0
+}
+
+# ── 4) API + web ──
+Write-Step "4/4" "Starting API + web (no Amplify) ..."
+Write-Host "  Web   http://localhost:3000"
+Write-Host "  API   http://localhost:4000"
+Write-Host "  Floci http://127.0.0.1:4566  (if Docker was ready)"
+Write-Host "  Ctrl+C stops API/web. Floci container keeps running (npm run floci:down to stop)."
 Write-Host ""
+
+# Ensure child processes see Floci routing even if .env was incomplete mid-load
+$env:STORAGE_PROVIDER = "floci"
+$env:SI_STORAGE_PROVIDER = "floci"
+$env:FLOCI_ENDPOINT = "http://127.0.0.1:4566"
+$env:AWS_S3_ENDPOINT = "http://127.0.0.1:4566"
+$env:AWS_S3_FORCE_PATH_STYLE = "true"
+if (-not $env:AWS_S3_BUCKET_NAME) { $env:AWS_S3_BUCKET_NAME = "social-imperialism" }
+if (-not $env:AWS_ACCESS_KEY_ID) { $env:AWS_ACCESS_KEY_ID = "test" }
+if (-not $env:AWS_SECRET_ACCESS_KEY) { $env:AWS_SECRET_ACCESS_KEY = "test" }
+if (-not $env:AWS_S3_PUBLIC_BASE_URL) { $env:AWS_S3_PUBLIC_BASE_URL = "http://127.0.0.1:4566/social-imperialism" }
 
 if ($NoWeb) {
   npm run dev:api
 } else {
-  npm run dev
+  npm run dev:app
 }

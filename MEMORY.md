@@ -22,8 +22,7 @@
 - Admin GSC + GA4 traffic: `GET /api/admin/traffic` + Dashboard Analytics / Admin panels. Env: `GOOGLE_SERVICE_ACCOUNT_JSON`, `GSC_SITE_URL`, `GA4_PROPERTY_ID`. Docs: `docs/ADMIN_GSC_GA4.md`
 
 ## Local storage (Floci — free S3 emulator)
-- One shot: `npm run dev:local` (QP ensure + Floci + API + web)
-- QP auto-append: `npm run qp:ensure` → fills missing keys in `apps/api/.env`
-- Manual: `npm run floci:up` then `npm run dev`. Docs: `docs/FLOCI_LOCAL.md`
-- Do **not** use Amplify for day-to-day dev. Amplify = go-live.
+- **Zero-touch:** `npm run dev` or double-click `start-si.bat` (Docker + QP env + Floci + API + web)
+- App only: `npm run dev:app`. Docs: `docs/FLOCI_LOCAL.md`
+- Amplify = go-live only, not day-to-day dev.
 - UI console optional: clone [floci-ui](https://github.com/floci-io/floci-ui) → `docker compose up`
